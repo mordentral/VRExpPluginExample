@@ -1,10 +1,10 @@
 // Copyright 1998-2016 Epic Games, Inc. All Rights Reserved.
 
 #include "VRExpansionPluginPrivatePCH.h"
-#include "GrippableBoxComponent.h"
+#include "GrippableSkeletalMeshComponent.h"
 
   //=============================================================================
-UGrippableBoxComponent::UGrippableBoxComponent(const FObjectInitializer& ObjectInitializer)
+UGrippableSkeletalMeshComponent::UGrippableSkeletalMeshComponent(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {
 	VRGripInterfaceSettings.bDenyGripping = false;
@@ -26,92 +26,92 @@ UGrippableBoxComponent::UGrippableBoxComponent(const FObjectInitializer& ObjectI
 }
 
 //=============================================================================
-UGrippableBoxComponent::~UGrippableBoxComponent()
+UGrippableSkeletalMeshComponent::~UGrippableSkeletalMeshComponent()
 {
 }
 
 
-bool UGrippableBoxComponent::DenyGripping_Implementation()
+bool UGrippableSkeletalMeshComponent::DenyGripping_Implementation()
 {
 	return VRGripInterfaceSettings.bDenyGripping;
 }
 
-EGripInterfaceTeleportBehavior UGrippableBoxComponent::TeleportBehavior_Implementation()
+EGripInterfaceTeleportBehavior UGrippableSkeletalMeshComponent::TeleportBehavior_Implementation()
 {
 	return VRGripInterfaceSettings.OnTeleportBehavior;
 }
 
-bool UGrippableBoxComponent::SimulateOnDrop_Implementation()
+bool UGrippableSkeletalMeshComponent::SimulateOnDrop_Implementation()
 {
 	return VRGripInterfaceSettings.bSimulateOnDrop;
 }
 
-void UGrippableBoxComponent::ObjectType_Implementation(uint8 & ObjectType)
+void UGrippableSkeletalMeshComponent::ObjectType_Implementation(uint8 & ObjectType)
 {
 	ObjectType = VRGripInterfaceSettings.EnumObjectType;
 }
 
-EGripCollisionType UGrippableBoxComponent::SlotGripType_Implementation()
+EGripCollisionType UGrippableSkeletalMeshComponent::SlotGripType_Implementation()
 {
 	return VRGripInterfaceSettings.SlotDefaultGripType;
 }
 
-EGripCollisionType UGrippableBoxComponent::FreeGripType_Implementation()
+EGripCollisionType UGrippableSkeletalMeshComponent::FreeGripType_Implementation()
 {
 	return VRGripInterfaceSettings.FreeDefaultGripType;
 }
 
-bool UGrippableBoxComponent::CanHaveDoubleGrip_Implementation()
+bool UGrippableSkeletalMeshComponent::CanHaveDoubleGrip_Implementation()
 {
 	return VRGripInterfaceSettings.bCanHaveDoubleGrip;
 }
 
-/*EGripTargetType UGrippableBoxComponent::GripTargetType_Implementation()
+/*EGripTargetType UGrippableSkeletalMeshComponent::GripTargetType_Implementation()
 {
 	return VRGripInterfaceSettings.GripTarget;
 }*/
 
-EGripMovementReplicationSettings UGrippableBoxComponent::GripMovementReplicationType_Implementation()
+EGripMovementReplicationSettings UGrippableSkeletalMeshComponent::GripMovementReplicationType_Implementation()
 {
 	return VRGripInterfaceSettings.MovementReplicationType;
 }
 
-EGripLateUpdateSettings UGrippableBoxComponent::GripLateUpdateSetting_Implementation()
+EGripLateUpdateSettings UGrippableSkeletalMeshComponent::GripLateUpdateSetting_Implementation()
 {
 	return VRGripInterfaceSettings.LateUpdateSetting;
 }
 
-float UGrippableBoxComponent::GripStiffness_Implementation()
+float UGrippableSkeletalMeshComponent::GripStiffness_Implementation()
 {
 	return VRGripInterfaceSettings.ConstraintStiffness;
 }
 
-float UGrippableBoxComponent::GripDamping_Implementation()
+float UGrippableSkeletalMeshComponent::GripDamping_Implementation()
 {
 	return VRGripInterfaceSettings.ConstraintDamping;
 }
 
-float UGrippableBoxComponent::GripBreakDistance_Implementation()
+float UGrippableSkeletalMeshComponent::GripBreakDistance_Implementation()
 {
 	return VRGripInterfaceSettings.ConstraintBreakDistance;
 }
 
-void UGrippableBoxComponent::ClosestSecondarySlotInRange_Implementation(FVector WorldLocation, bool & bHadSlotInRange, FTransform & SlotWorldTransform)
+void UGrippableSkeletalMeshComponent::ClosestSecondarySlotInRange_Implementation(FVector WorldLocation, bool & bHadSlotInRange, FTransform & SlotWorldTransform)
 {
 	UVRExpansionFunctionLibrary::GetGripSlotInRangeByTypeName_Component("VRGripS", this, WorldLocation, VRGripInterfaceSettings.SecondarySlotRange, bHadSlotInRange, SlotWorldTransform);
 }
 
-void UGrippableBoxComponent::ClosestPrimarySlotInRange_Implementation(FVector WorldLocation, bool & bHadSlotInRange, FTransform & SlotWorldTransform)
+void UGrippableSkeletalMeshComponent::ClosestPrimarySlotInRange_Implementation(FVector WorldLocation, bool & bHadSlotInRange, FTransform & SlotWorldTransform)
 {
 	UVRExpansionFunctionLibrary::GetGripSlotInRangeByTypeName_Component("VRGripP", this, WorldLocation, VRGripInterfaceSettings.PrimarySlotRange, bHadSlotInRange, SlotWorldTransform);
 }
 
-bool UGrippableBoxComponent::IsInteractible_Implementation()
+bool UGrippableSkeletalMeshComponent::IsInteractible_Implementation()
 {
 	return VRGripInterfaceSettings.bIsInteractible;
 }
 
-FBPInteractionSettings UGrippableBoxComponent::GetInteractionSettings_Implementation()
+FBPInteractionSettings UGrippableSkeletalMeshComponent::GetInteractionSettings_Implementation()
 {
 	return VRGripInterfaceSettings.InteractionSettings;
 }

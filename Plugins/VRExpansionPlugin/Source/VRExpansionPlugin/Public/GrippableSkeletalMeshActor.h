@@ -4,18 +4,19 @@
 
 #include "VRBPDatatypes.h"
 #include "VRGripInterface.h"
-#include "GrippableCapsuleComponent.generated.h"
+#include "Classes/Animation/SkeletalMeshActor.h"
+#include "GrippableSkeletalMeshActor.generated.h"
 
 /**
 *
 */
 
 UCLASS(Blueprintable, meta = (BlueprintSpawnableComponent), ClassGroup = (VRExpansionPlugin))
-class VREXPANSIONPLUGIN_API UGrippableCapsuleComponent : public UCapsuleComponent, public IVRGripInterface
+class VREXPANSIONPLUGIN_API AGrippableSkeletalMeshActor : public ASkeletalMeshActor, public IVRGripInterface
 {
 	GENERATED_UCLASS_BODY()
 
-	~UGrippableCapsuleComponent();
+	~AGrippableSkeletalMeshActor();
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRGripInterface")
 	FBPInterfaceProperties VRGripInterfaceSettings;
@@ -50,7 +51,7 @@ class VREXPANSIONPLUGIN_API UGrippableCapsuleComponent : public UCapsuleComponen
 
 	// Define which grip target to use for gripping
 	//UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "VRGripInterface")
-	//	EGripTargetType GripTargetType();
+		//EGripTargetType GripTargetType();
 
 	// Define which movement repliation setting to use
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "VRGripInterface")
