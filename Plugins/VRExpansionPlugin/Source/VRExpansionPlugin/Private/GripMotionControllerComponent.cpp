@@ -2644,6 +2644,28 @@ bool UGripMotionControllerComponent::PollControllerState(FVector& Position, FRot
 			if ((MotionController != nullptr) && MotionController->GetControllerOrientationAndPosition(PlayerIndex, Hand, Orientation, Position))
 			{
 				CurrentTrackingStatus = (EBPTrackingStatus)MotionController->GetControllerTrackingStatus(PlayerIndex, Hand);
+				
+				if (bOffsetByHMD)
+				{
+					if (IsInGameThread())
+					{
+						if (GEngine->HMDDevice.IsValid() && GEngine->HMDDevice->IsHeadTrackingAllowed() && GEngine->HMDDevice->HasValidTrackingPosition())
+						{
+							FQuat curRot;
+							FVector curLoc;
+							GEngine->HMDDevice->GetCurrentOrientationAndPosition(curRot, curLoc);
+							curLoc.Z = 0;
+
+							LastLocationForLateUpdate = curLoc;
+						}
+						else
+							LastLocationForLateUpdate = FVector::ZeroVector;
+					}
+
+					Position -= LastLocationForLateUpdate;
+				}
+				
+				
 				return true;
 			}
 		}

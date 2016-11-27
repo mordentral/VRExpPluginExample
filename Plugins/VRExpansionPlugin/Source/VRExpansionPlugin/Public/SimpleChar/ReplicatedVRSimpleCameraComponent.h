@@ -3,17 +3,16 @@
 #pragma once
 
 #include "Engine.h"
-#include "ReplicatedVRCameraComponent.generated.h"
+#include "ReplicatedVRSimpleCameraComponent.generated.h"
 
 
 UCLASS(Blueprintable, meta = (BlueprintSpawnableComponent), ClassGroup = VRExpansionLibrary)
-class VREXPANSIONPLUGIN_API UReplicatedVRCameraComponent : public UCameraComponent
+class VREXPANSIONPLUGIN_API UReplicatedVRSimpleCameraComponent : public UCameraComponent
 {
 	GENERATED_UCLASS_BODY()
 		//	~UGripMotionControllerComponent();
 
 	void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction) override;
-
 	/** Whether or not this component has authority within the frame*/
 	bool bHasAuthority;
 

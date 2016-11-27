@@ -3,81 +3,97 @@
 #include "VRExpansionPluginPrivatePCH.h"
 #include "Runtime/Engine/Private/EnginePrivate.h"
 
-#include "VRCharacter.h"
+#include "VRSimpleCharacter.h"
 
-AVRCharacter::AVRCharacter(const FObjectInitializer& ObjectInitializer)
-	: Super(ObjectInitializer.DoNotCreateDefaultSubobject(ACharacter::MeshComponentName).SetDefaultSubobjectClass<UVRRootComponent>(ACharacter::CapsuleComponentName).SetDefaultSubobjectClass<UVRCharacterMovementComponent>(ACharacter::CharacterMovementComponentName))
+AVRSimpleCharacter::AVRSimpleCharacter(const FObjectInitializer& ObjectInitializer)
+ : Super(ObjectInitializer.DoNotCreateDefaultSubobject(ACharacter::MeshComponentName).SetDefaultSubobjectClass<UVRSimpleCharacterMovementComponent>(ACharacter::CharacterMovementComponentName))
+
 {
-	VRRootReference = NULL;
-	if (GetCapsuleComponent())
+	//VRRootReference = NULL;
+	if (UCapsuleComponent * cap = GetCapsuleComponent())
 	{
-		VRRootReference = Cast<UVRRootComponent>(GetCapsuleComponent());
-		VRRootReference->SetCapsuleSize(20.0f, 96.0f);
-		VRRootReference->VRCapsuleOffset = FVector(-8.0f, 0.0f, 0.0f);
-		VRRootReference->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
-		VRRootReference->SetCollisionResponseToChannel(ECollisionChannel::ECC_WorldStatic, ECollisionResponse::ECR_Block);
+		cap->SetCapsuleSize(16.0f, 96.0f);
+		//VRRootReference->VRCapsuleOffset = FVector(-8.0f, 0.0f, 0.0f);
+		cap->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
+		cap->SetCollisionResponseToChannel(ECollisionChannel::ECC_WorldStatic, ECollisionResponse::ECR_Block);
 	}
 
-	VRMovementReference = NULL;
-	if (GetMovementComponent())
+	VRMovementReference = Cast<UVRSimpleCharacterMovementComponent>(GetMovementComponent());
+
+	VRSceneComponent = CreateDefaultSubobject<USceneComponent>(TEXT("VR Scene Component"));
+
+	if (VRSceneComponent)
 	{
-		VRMovementReference = Cast<UVRCharacterMovementComponent>(GetMovementComponent());
-		//AddTickPrerequisiteComponent(this->GetCharacterMovement());
+		VRSceneComponent->SetupAttachment(RootComponent);
+		VRSceneComponent->SetRelativeLocation(FVector(0, 0, -96));
 	}
 
-	VRReplicatedCamera = CreateDefaultSubobject<UReplicatedVRCameraComponent>(TEXT("VR Replicated Camera"));
-	if (VRReplicatedCamera)
+	VRReplicatedCamera = CreateDefaultSubobject<UReplicatedVRSimpleCameraComponent>(TEXT("VR Replicated Camera"));
+	if (VRReplicatedCamera && VRSceneComponent)
 	{
-		VRReplicatedCamera->SetupAttachment(RootComponent);
-		// By default this will tick after the root, root will be one tick behind on position. Doubt it matters much
+		VRReplicatedCamera->SetupAttachment(VRSceneComponent);
+		VRReplicatedCamera->AddTickPrerequisiteComponent(VRMovementReference);
+		//VRReplicatedCamera->SetupAttachment(RootComponent);
 	}
 
 	ParentRelativeAttachment = CreateDefaultSubobject<UParentRelativeAttachmentComponent>(TEXT("Parent Relative Attachment"));
-	if (ParentRelativeAttachment && VRReplicatedCamera)
+	if (ParentRelativeAttachment && VRReplicatedCamera && VRSceneComponent)
 	{
 		// Moved this to be root relative as the camera late updates were killing how it worked
-		ParentRelativeAttachment->SetupAttachment(RootComponent);
+		//ParentRelativeAttachment->SetupAttachment(RootComponent);
+		ParentRelativeAttachment->SetupAttachment(VRSceneComponent);
 	}
 
 	LeftMotionController = CreateDefaultSubobject<UGripMotionControllerComponent>(TEXT("Left Grip Motion Controller"));
 	if (LeftMotionController)
 	{
-		LeftMotionController->SetupAttachment(RootComponent);
-		LeftMotionController->Hand = EControllerHand::Left;
-		
-		// Keep the controllers ticking after movement
-		if (this->GetCharacterMovement())
+		if (VRSceneComponent)
 		{
-			LeftMotionController->AddTickPrerequisiteComponent(this->GetCharacterMovement());
+			LeftMotionController->SetupAttachment(VRSceneComponent);
 		}
+		//LeftMotionController->SetupAttachment(RootComponent);
+		LeftMotionController->Hand = EControllerHand::Left;
+		LeftMotionController->bOffsetByHMD = true;
+		// Keep the controllers ticking after movement
+		if (VRReplicatedCamera)
+		{
+			LeftMotionController->AddTickPrerequisiteComponent(VRMovementReference);
+		}
+
+
 	}
 
 	RightMotionController = CreateDefaultSubobject<UGripMotionControllerComponent>(TEXT("Right Grip Motion Controller"));
 	if (RightMotionController)
 	{
-		RightMotionController->SetupAttachment(RootComponent);
-		RightMotionController->Hand = EControllerHand::Right;
-
-		// Keep the controllers ticking after movement
-		if (this->GetCharacterMovement())
+		if (VRSceneComponent)
 		{
-			RightMotionController->AddTickPrerequisiteComponent(this->GetCharacterMovement());
+			RightMotionController->SetupAttachment(VRSceneComponent);
+		}
+		//RightMotionController->SetupAttachment(RootComponent);
+		RightMotionController->Hand = EControllerHand::Right;
+		RightMotionController->bOffsetByHMD = true;
+		// Keep the controllers ticking after movement
+		if (VRReplicatedCamera)
+		{
+			RightMotionController->AddTickPrerequisiteComponent(VRMovementReference);
 		}
 	}
-
 }
 
 
-FVector AVRCharacter::GetTeleportLocation(FVector OriginalLocation)
+FVector AVRSimpleCharacter::GetTeleportLocation(FVector OriginalLocation)
 {
-	FVector modifier = VRRootReference->GetVRLocation() - this->GetActorLocation();
-	modifier.Z = 0.0f; // Null out Z
-	return OriginalLocation - modifier;
+	//FVector modifier = VRRootReference->GetVRLocation() - this->GetActorLocation();
+	//modifier.Z = 0.0f; // Null out Z
+	//return OriginalLocation - modifier;
+
+	return OriginalLocation;
 }
 
-bool AVRCharacter::TeleportTo(const FVector& DestLocation, const FRotator& DestRotation, bool bIsATest, bool bNoCheck)
+bool AVRSimpleCharacter::TeleportTo(const FVector& DestLocation, const FRotator& DestRotation, bool bIsATest, bool bNoCheck)
 {
-	bool bTeleportSucceeded = Super::TeleportTo(DestLocation, DestRotation, bIsATest, bNoCheck);
+	bool bTeleportSucceeded = Super::TeleportTo(DestLocation + GetCapsuleComponent()->GetScaledCapsuleHalfHeight(), DestRotation, bIsATest, bNoCheck);
 
 	if (bTeleportSucceeded)
 	{
@@ -87,11 +103,11 @@ bool AVRCharacter::TeleportTo(const FVector& DestLocation, const FRotator& DestR
 	return bTeleportSucceeded;
 }
 
-void AVRCharacter::NotifyOfTeleport_Implementation()
+void AVRSimpleCharacter::NotifyOfTeleport_Implementation()
 {
 	// Regenerate the capsule offset location - Should be done anyway in the move_impl function, but playing it safe
-	if (VRRootReference)
-		VRRootReference->GenerateOffsetToWorld();
+	//if (VRRootReference)
+	//	VRRootReference->GenerateOffsetToWorld();
 
 	if (LeftMotionController)
 		LeftMotionController->PostTeleportMoveGrippedActors();
@@ -100,39 +116,12 @@ void AVRCharacter::NotifyOfTeleport_Implementation()
 		RightMotionController->PostTeleportMoveGrippedActors();
 }
 
-FVector AVRCharacter::GetNavAgentLocation() const
-{
-	FVector AgentLocation = FNavigationSystem::InvalidLocation;
-
-	if (GetCharacterMovement() != nullptr)
-	{
-		if (UVRCharacterMovementComponent * VRMove = Cast<UVRCharacterMovementComponent>(GetCharacterMovement()))
-		{
-			AgentLocation = VRMove->GetActorFeetLocation();
-		}
-		else
-			AgentLocation = GetCharacterMovement()->GetActorFeetLocation();
-	}
-
-	if (FNavigationSystem::IsValidLocation(AgentLocation) == false && GetCapsuleComponent() != nullptr)
-	{
-		if (VRRootReference)
-		{
-			AgentLocation = VRRootReference->GetVRLocation() - FVector(0, 0, VRRootReference->GetScaledCapsuleHalfHeight());
-		}
-		else
-			AgentLocation = GetActorLocation() - FVector(0, 0, GetCapsuleComponent()->GetScaledCapsuleHalfHeight());
-	}
-
-	return AgentLocation;
-}
-
-void AVRCharacter::ExtendedSimpleMoveToLocation(const FVector& GoalLocation, float AcceptanceRadius, bool bStopOnOverlap, bool bUsePathfinding, bool bProjectDestinationToNavigation, bool bCanStrafe, TSubclassOf<UNavigationQueryFilter> FilterClass, bool bAllowPartialPaths)
+void AVRSimpleCharacter::ExtendedSimpleMoveToLocation(const FVector& GoalLocation, float AcceptanceRadius, bool bStopOnOverlap, bool bUsePathfinding, bool bProjectDestinationToNavigation, bool bCanStrafe, TSubclassOf<UNavigationQueryFilter> FilterClass, bool bAllowPartialPaths)
 {
 	UNavigationSystem* NavSys = Controller ? UNavigationSystem::GetCurrent(Controller->GetWorld()) : nullptr;
 	if (NavSys == nullptr || Controller == nullptr )
 	{
-		UE_LOG(LogTemp, Warning, TEXT("UVRCharacter::ExtendedSimpleMoveToLocation called for NavSys:%s Controller:%s (if any of these is None then there's your problem"),
+		UE_LOG(LogTemp, Warning, TEXT("UVRSimpleCharacter::ExtendedSimpleMoveToLocation called for NavSys:%s Controller:%s (if any of these is None then there's your problem"),
 			*GetNameSafe(NavSys), *GetNameSafe(Controller));
 		return;
 	}
