@@ -1240,12 +1240,7 @@ bool UGripMotionControllerComponent::HasGripMovementAuthority(const FBPActorGrip
 		}
 		else if (Grip.GripMovementReplicationSetting == EGripMovementReplicationSettings::ForceServerSideMovement)
 		{
-			if (Grip.GripCollisionType == EGripCollisionType::InteractiveCollisionWithPhysics ||
-				Grip.GripCollisionType == EGripCollisionType::ManipulationGrip)
-				return false;
-			else
-				return true;
-			
+			return false;	
 		}
 
 		// Use original movement type is overridden when initializing the grip and shouldn't happen
