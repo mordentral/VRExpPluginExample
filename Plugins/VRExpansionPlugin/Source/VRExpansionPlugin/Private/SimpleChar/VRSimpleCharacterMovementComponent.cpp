@@ -41,7 +41,6 @@ UVRSimpleCharacterMovementComponent::UVRSimpleCharacterMovementComponent(const F
 {
 	PostPhysicsTickFunction.bCanEverTick = true;
 	PostPhysicsTickFunction.bStartWithTickEnabled = false;
-	//PostPhysicsTickFunction.TickGroup = TG_PostPhysics;
 	PrimaryComponentTick.TickGroup = TG_PrePhysics;
 	VRRootCapsule = NULL;
 	//VRCameraCollider = NULL;
@@ -768,6 +767,7 @@ void UVRSimpleCharacterMovementComponent::PhysWalking(float deltaTime, int32 Ite
 
 void UVRSimpleCharacterMovementComponent::TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction)
 {
+
 	if (IsLocallyControlled())
 	{
 		FQuat curRot;
