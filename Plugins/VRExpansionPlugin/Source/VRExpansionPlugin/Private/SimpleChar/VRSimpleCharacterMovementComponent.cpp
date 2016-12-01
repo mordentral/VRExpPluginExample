@@ -819,7 +819,6 @@ void UVRSimpleCharacterMovementComponent::TickComponent(float DeltaTime, enum EL
 			owningChar->VRSceneComponent->SetRelativeLocation(FVector(0, 0, -VRRootCapsule->GetUnscaledCapsuleHalfHeight()));
 
 		owningChar->GenerateOffsetToWorld();
-		//owningChar->VRSceneComponent->SetWorldLocation(owningChar->GetCapsuleComponent()->GetComponentLocation()+ curCameraRot.RotateVector(FVector(15, 0, -owningChar->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight())));
 	}
 }
 

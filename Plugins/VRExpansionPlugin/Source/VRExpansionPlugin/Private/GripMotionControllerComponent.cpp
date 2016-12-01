@@ -1562,7 +1562,7 @@ void UGripMotionControllerComponent::TickComponent(float DeltaTime, enum ELevelT
 		FRotator Orientation;
 		bTracked = PollControllerState(Position, Orientation);
 
-		if (bTracked)
+		if (bTracked && !bUseWithoutTracking)
 		{
 			SetRelativeLocationAndRotation(Position, Orientation);
 		}
