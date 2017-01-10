@@ -2446,8 +2446,8 @@ void UGripMotionControllerComponent::HandleGripArray(TArray<FBPActorGripInformat
 					}
 				}
 
-				// Doesn't work, uses the object as the search parameter which is now null
-			//	DestroyPhysicsHandle(*Grip);
+				// Doesn't work, uses the object as the search parameter which can now be null
+				//	DestroyPhysicsHandle(*Grip);
 
 				if (!bReplicatedArray || IsServer())
 				{
