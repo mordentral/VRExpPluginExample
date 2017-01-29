@@ -3,6 +3,9 @@
 UE4 Forums Thread
 https://forums.unrealengine.com/showthread.php?116782-VR-(OpenVR)-Expansion-Plugin
 
+Example Template Project
+https://bitbucket.org/mordentral/vrexppluginexample
+
 ### Use Of This Plugin ###
 
 This Plugin is intended to add additional functionality to Open/SteamVR/(All VR now) in UE4. 
@@ -20,6 +23,9 @@ I will offer pre-compiled binaries for all builds as well eventually when the pl
 ### How do I use it? ###
 
 [VR Character Actor Information Page](https://bitbucket.org/mordentral/vrexpansionplugin/wiki/VR%20Character%20Actor)
+
+
+[VR Simple Character Actor Information Page](https://bitbucket.org/mordentral/vrexpansionplugin/wiki/VR%20Simple%20Character%20Actor)
 
 
 [VR Character Movement Component Information Page](
