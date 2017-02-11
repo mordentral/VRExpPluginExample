@@ -14,7 +14,7 @@
 #include "BlueprintDataDefinitions.generated.h"	
 
 UENUM(BlueprintType)
-enum EBPUserPrivileges
+enum class EBPUserPrivileges : uint8
 {
 	/** Whether the user can play at all, online or offline - may be age restricted */
 	CanPlay,
