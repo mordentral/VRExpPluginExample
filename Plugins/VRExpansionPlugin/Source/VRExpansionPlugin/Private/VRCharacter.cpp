@@ -1,12 +1,12 @@
 // Copyright 1998-2016 Epic Games, Inc. All Rights Reserved.
 
 #include "VRExpansionPluginPrivatePCH.h"
-#include "Runtime/Engine/Private/EnginePrivate.h"
+//#include "Runtime/Engine/Private/EnginePrivate.h"
 
 #include "VRCharacter.h"
 
 AVRCharacter::AVRCharacter(const FObjectInitializer& ObjectInitializer)
-	: Super(ObjectInitializer.DoNotCreateDefaultSubobject(ACharacter::MeshComponentName).SetDefaultSubobjectClass<UVRRootComponent>(ACharacter::CapsuleComponentName).SetDefaultSubobjectClass<UVRCharacterMovementComponent>(ACharacter::CharacterMovementComponentName))
+	: Super(ObjectInitializer.SetDefaultSubobjectClass<UVRRootComponent>(ACharacter::CapsuleComponentName).SetDefaultSubobjectClass<UVRCharacterMovementComponent>(ACharacter::CharacterMovementComponentName))
 {
 	VRRootReference = NULL;
 	if (GetCapsuleComponent())
@@ -21,56 +21,15 @@ AVRCharacter::AVRCharacter(const FObjectInitializer& ObjectInitializer)
 	VRMovementReference = NULL;
 	if (GetMovementComponent())
 	{
-		VRMovementReference = Cast<UVRCharacterMovementComponent>(GetMovementComponent());
+		VRMovementReference = Cast<UVRBaseCharacterMovementComponent>(GetMovementComponent());
 		//AddTickPrerequisiteComponent(this->GetCharacterMovement());
 	}
-
-	VRReplicatedCamera = CreateDefaultSubobject<UReplicatedVRCameraComponent>(TEXT("VR Replicated Camera"));
-	if (VRReplicatedCamera)
-	{
-		VRReplicatedCamera->SetupAttachment(RootComponent);
-		// By default this will tick after the root, root will be one tick behind on position. Doubt it matters much
-	}
-
-	ParentRelativeAttachment = CreateDefaultSubobject<UParentRelativeAttachmentComponent>(TEXT("Parent Relative Attachment"));
-	if (ParentRelativeAttachment && VRReplicatedCamera)
-	{
-		// Moved this to be root relative as the camera late updates were killing how it worked
-		ParentRelativeAttachment->SetupAttachment(RootComponent);
-	}
-
-	LeftMotionController = CreateDefaultSubobject<UGripMotionControllerComponent>(TEXT("Left Grip Motion Controller"));
-	if (LeftMotionController)
-	{
-		LeftMotionController->SetupAttachment(RootComponent);
-		LeftMotionController->Hand = EControllerHand::Left;
-		
-		// Keep the controllers ticking after movement
-		if (this->GetCharacterMovement())
-		{
-			LeftMotionController->AddTickPrerequisiteComponent(this->GetCharacterMovement());
-		}
-	}
-
-	RightMotionController = CreateDefaultSubobject<UGripMotionControllerComponent>(TEXT("Right Grip Motion Controller"));
-	if (RightMotionController)
-	{
-		RightMotionController->SetupAttachment(RootComponent);
-		RightMotionController->Hand = EControllerHand::Right;
-
-		// Keep the controllers ticking after movement
-		if (this->GetCharacterMovement())
-		{
-			RightMotionController->AddTickPrerequisiteComponent(this->GetCharacterMovement());
-		}
-	}
-
 }
 
 
 FVector AVRCharacter::GetTeleportLocation(FVector OriginalLocation)
 {
-	FVector modifier = VRRootReference->GetVRLocation() - this->GetActorLocation();
+	FVector modifier = VRRootReference->OffsetComponentToWorld.GetLocation() - this->GetActorLocation();
 	modifier.Z = 0.0f; // Null out Z
 	return OriginalLocation - modifier;
 }
@@ -118,7 +77,7 @@ FVector AVRCharacter::GetNavAgentLocation() const
 	{
 		if (VRRootReference)
 		{
-			AgentLocation = VRRootReference->GetVRLocation() - FVector(0, 0, VRRootReference->GetScaledCapsuleHalfHeight());
+			AgentLocation = VRRootReference->OffsetComponentToWorld.GetLocation() - FVector(0, 0, VRRootReference->GetScaledCapsuleHalfHeight());
 		}
 		else
 			AgentLocation = GetActorLocation() - FVector(0, 0, GetCapsuleComponent()->GetScaledCapsuleHalfHeight());

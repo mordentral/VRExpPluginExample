@@ -14,7 +14,7 @@
 #include "BlueprintDataDefinitions.generated.h"	
 
 UENUM(BlueprintType)
-enum EBPUserPrivileges
+enum class EBPUserPrivileges : uint8
 {
 	/** Whether the user can play at all, online or offline - may be age restricted */
 	CanPlay,
@@ -78,6 +78,19 @@ enum class EBlueprintResultSwitch : uint8
 	// On Success
 	OnSuccess,
 
+	// On Failure
+	OnFailure
+};
+
+// This makes a lot of the blueprint functions cleaner
+UENUM()
+enum class EBlueprintAsyncResultSwitch : uint8
+{
+	// On Success
+	OnSuccess,
+
+	// Still loading
+	AsyncLoading,
 	// On Failure
 	OnFailure
 };
@@ -156,7 +169,7 @@ public:
 
 	bool IsValid() const
 	{
-		if (bUseDirectPointer && UniqueNetIdPtr != nullptr)
+		if (bUseDirectPointer && UniqueNetIdPtr != nullptr && UniqueNetIdPtr->IsValid())
 		{
 			return true;
 		}
