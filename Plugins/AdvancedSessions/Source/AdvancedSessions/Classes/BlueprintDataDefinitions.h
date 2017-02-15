@@ -169,7 +169,7 @@ public:
 
 	bool IsValid() const
 	{
-		if (bUseDirectPointer && UniqueNetIdPtr != nullptr)
+		if (bUseDirectPointer && UniqueNetIdPtr != nullptr && UniqueNetIdPtr->IsValid())
 		{
 			return true;
 		}
