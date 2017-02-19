@@ -26,15 +26,16 @@ UVRBaseCharacterMovementComponent::UVRBaseCharacterMovementComponent(const FObje
 
 float UVRBaseCharacterMovementComponent::SlideAlongSurface(const FVector& Delta, float Time, const FVector& InNormal, FHitResult& Hit, bool bHandleImpact)
 {
+
 	/*if ((Delta | InNormal) <= -0.2)
 	{
 
 	}*/
 
 	if (IsMovingOnGround() || (MovementMode == MOVE_Custom && CustomMovementMode == (uint8)EVRCustomMovementMode::VRMOVE_Climbing))
-		return Super::SlideAlongSurface(Delta, Time * VRWallSlideScaler, InNormal, Hit, bHandleImpact);
+		return Super::Super::SlideAlongSurface(Delta * VRWallSlideScaler, Time, InNormal, Hit, bHandleImpact);
 	else
-		return Super::SlideAlongSurface(Delta, Time, InNormal, Hit, bHandleImpact);
+		return Super::Super::SlideAlongSurface(Delta, Time, InNormal, Hit, bHandleImpact);
 
 }
 
