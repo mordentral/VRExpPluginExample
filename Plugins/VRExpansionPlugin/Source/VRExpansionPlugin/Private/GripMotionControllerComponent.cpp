@@ -2767,14 +2767,6 @@ bool UGripMotionControllerComponent::SetUpPhysicsHandle(const FBPActorGripInform
 				if (NewGrip.GripCollisionType == EGripCollisionType::ManipulationGrip)
 				{
 					
-					// Setting up the joint
-					/*NewJoint->setMotion(PxD6Axis::eX, PxD6Motion::eLIMITED);
-					NewJoint->setMotion(PxD6Axis::eY, PxD6Motion::eLIMITED);
-					NewJoint->setMotion(PxD6Axis::eZ, PxD6Motion::eLIMITED);
-					PxJointLinearLimit newLimiter(1.0f, PxSpring(1500.0f, 200.0f));
-					newLimiter.restitution = 0.0f;
-					NewJoint->setLinearLimit(newLimiter);
-					*/
 					NewJoint->setMotion(PxD6Axis::eX, PxD6Motion::eFREE);
 					NewJoint->setMotion(PxD6Axis::eY, PxD6Motion::eFREE);
 					NewJoint->setMotion(PxD6Axis::eZ, PxD6Motion::eFREE);
@@ -2783,10 +2775,6 @@ bool UGripMotionControllerComponent::SetUpPhysicsHandle(const FBPActorGripInform
 					NewJoint->setMotion(PxD6Axis::eSWING1, PxD6Motion::eFREE);
 					NewJoint->setMotion(PxD6Axis::eSWING2, PxD6Motion::eFREE);
 
-				/*	PxJointLinearLimit newLimiter(10.0f, PxSpring(1500.0f, 200.0f));
-					newLimiter.restitution = 0.0f;
-					NewJoint->setLinearLimit(newLimiter);
-					*/
 					PxD6JointDrive drive = PxD6JointDrive(NewGrip.Stiffness, NewGrip.Damping, PX_MAX_F32, PxD6JointDriveFlag::eACCELERATION);
 					NewJoint->setDrive(PxD6Drive::eX, drive);
 					NewJoint->setDrive(PxD6Drive::eY, drive);
@@ -2812,8 +2800,6 @@ bool UGripMotionControllerComponent::SetUpPhysicsHandle(const FBPActorGripInform
 					NewJoint->setDrive(PxD6Drive::eX, drive);
 					NewJoint->setDrive(PxD6Drive::eY, drive);
 					NewJoint->setDrive(PxD6Drive::eZ, drive);
-					//NewJoint->setDrive(PxD6Drive::eTWIST, Angledrive);
-					//NewJoint->setDrive(PxD6Drive::eSWING, Angledrive);
 					NewJoint->setDrive(PxD6Drive::eSLERP, Angledrive);
 				}
 			}
