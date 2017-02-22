@@ -2312,6 +2312,7 @@ void UGripMotionControllerComponent::HandleGripArray(TArray<FBPActorGripInformat
 							Params.bTraceAsyncScene = root->bCheckAsyncSceneOnMove;
 							Params.AddIgnoredActor(actor);
 							Params.AddIgnoredActors(root->MoveIgnoreActors);
+
 							if (GetWorld()->ComponentOverlapMultiByChannel(Hits, root, root->GetComponentLocation(), root->GetComponentQuat(), root->GetCollisionObjectType(), Params))
 							{
 								Grip->bColliding = true;
@@ -2365,8 +2366,8 @@ void UGripMotionControllerComponent::HandleGripArray(TArray<FBPActorGripInformat
 						// Make sure that there is no collision on course before turning off collision and snapping to controller
 						FBPActorPhysicsHandleInformation * GripHandle = GetPhysicsGrip(*Grip);
 
-						if (Grip->bColliding)
-						{
+						//if (Grip->bColliding)
+						//{
 							// Check for overlap ending
 							TArray<FOverlapResult> Hits;
 							FComponentQueryParams Params(NAME_None, this->GetOwner());
@@ -2379,13 +2380,28 @@ void UGripMotionControllerComponent::HandleGripArray(TArray<FBPActorGripInformat
 							}
 							else
 							{
-								Grip->bColliding = false;
+								//Grip->bColliding = false;
+
+								// Check with next intended location and rotation
+								Hits.Empty();
+								//FComponentQueryParams Params(NAME_None, this->GetOwner());
+								Params.bTraceAsyncScene = root->bCheckAsyncSceneOnMove;
+								Params.AddIgnoredActor(actor);
+								Params.AddIgnoredActors(root->MoveIgnoreActors);
+								if (GetWorld()->ComponentOverlapMultiByChannel(Hits, root, WorldTransform.GetLocation(), WorldTransform.GetRotation(), root->GetCollisionObjectType(), Params))
+								{
+									Grip->bColliding = true;
+								}
+								else
+								{
+									Grip->bColliding = false;
+								}
 							}
-						}
-						else if (!Grip->bColliding)
-						{
+						//}
+						//else if (!Grip->bColliding)
+						//{
 							// Check for overlap beginning
-							TArray<FOverlapResult> Hits;
+						/*	TArray<FOverlapResult> Hits;
 							FComponentQueryParams Params(NAME_None, this->GetOwner());
 							Params.bTraceAsyncScene = root->bCheckAsyncSceneOnMove;
 							Params.AddIgnoredActor(actor);
@@ -2397,17 +2413,15 @@ void UGripMotionControllerComponent::HandleGripArray(TArray<FBPActorGripInformat
 							else
 							{
 								Grip->bColliding = false;
-							}
-						}
+							}*/
+						//}
 
 						if (!Grip->bColliding)
 						{
-
 							if (GripHandle)
 							{
 								if (GripHandle)
 									DestroyPhysicsHandle(*Grip);
-
 
 								switch (Grip->GripTargetType)
 								{
@@ -2422,12 +2436,23 @@ void UGripMotionControllerComponent::HandleGripArray(TArray<FBPActorGripInformat
 								}
 							}
 
+							FTransform OrigTransform = root->GetComponentTransform();
+
 							FHitResult OutHit;
 							root->SetWorldTransform(WorldTransform, true, &OutHit);
 
 							if (OutHit.bBlockingHit)
 							{
 								Grip->bColliding = true;
+								root->SetWorldTransform(OrigTransform, false);
+								root->SetSimulatePhysics(true);
+
+								SetUpPhysicsHandle(*Grip);
+							//	UpdatePhysicsHandleTransform(*Grip, OrigTransform);
+							}
+							else
+							{
+								Grip->bColliding = false;
 							}
 
 						}
