@@ -6,7 +6,7 @@ public class VRExpPluginExample : ModuleRules
 {
 	public VRExpPluginExample(TargetInfo Target)
 	{
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "AdvancedSessions", "VRExpansionPlugin" });
+        PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "AdvancedSessions", "VRExpansionPlugin" });
 
 		PrivateDependencyModuleNames.AddRange(new string[] {  });
 
