@@ -94,7 +94,7 @@ public class VRExpansionPlugin : ModuleRules
 
             PublicIncludePaths.AddRange(
             new string[] {
-                        "../Plugins/Runtime/Steam/SteamVR/Source/SteamVR/Private" // This is dumb but it isn't very open
+                        "../Plugins/Runtime/Steam/SteamVR/Source/SteamVR/Private", // This is dumb but it isn't very open
 
                 // ... add public include paths required here ...
             }
@@ -108,7 +108,7 @@ public class VRExpansionPlugin : ModuleRules
                 "OpenVR",
                 "SteamVRController"
                 });
-
+                
             // AddEngineThirdPartyPrivateStaticDependencies(Target, "OpenVR");
             //  PrivateDependencyModuleNames.AddRange(new string[] { "D3D11RHI" });     //@todo steamvr: multiplatform
         }

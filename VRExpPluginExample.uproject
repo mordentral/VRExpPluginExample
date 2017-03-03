@@ -16,6 +16,10 @@
 			"Enabled": true
 		},
 		{
+			"Name": "SteamVR",
+			"Enabled": true
+		},
+		{
 			"Name": "OnlineSubsystemSteam",
 			"Enabled": true
 		}

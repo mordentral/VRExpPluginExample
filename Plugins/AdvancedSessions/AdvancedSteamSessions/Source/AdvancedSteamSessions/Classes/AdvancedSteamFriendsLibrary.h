@@ -11,14 +11,15 @@
 #include "OnlinePresenceInterface.h"
 #include "Engine/GameInstance.h"
 #include "OnlineSessionInterface.h"
+#include "AdvancedSteamWorkShopLibrary.h"
 
 #include "UObjectIterator.h"
 
-#include "AdvancedFriendsLibrary.generated.h"
+#include "AdvancedSteamFriendsLibrary.generated.h"
 
 
 //General Advanced Sessions Log
-DECLARE_LOG_CATEGORY_EXTERN(AdvancedFriendsLog, Log, All);
+DECLARE_LOG_CATEGORY_EXTERN(AdvancedSteamFriendsLog, Log, All);
 
 UENUM(Blueprintable)
 enum class SteamAvatarSize : uint8
@@ -30,36 +31,12 @@ enum class SteamAvatarSize : uint8
 
 
 UCLASS()
-class UAdvancedFriendsLibrary : public UBlueprintFunctionLibrary
+class UAdvancedSteamFriendsLibrary : public UBlueprintFunctionLibrary
 {
 	GENERATED_BODY()
 public:
 	
 	//********* Friend List Functions *************//
-
-	// Sends an Invite to the current online session to a list of friends
-	UFUNCTION(BlueprintCallable, Category = "Online|AdvancedFriends|FriendsList", meta = (ExpandEnumAsExecs = "Result"))
-	static void SendSessionInviteToFriends(APlayerController *PlayerController, const TArray<FBPUniqueNetId> &Friends, EBlueprintResultSwitch &Result);
-
-	// Sends an Invite to the current online session to a friend
-	UFUNCTION(BlueprintCallable, Category = "Online|AdvancedFriends|FriendsList", meta = (ExpandEnumAsExecs = "Result"))
-	static void SendSessionInviteToFriend(APlayerController *PlayerController, const FBPUniqueNetId &FriendUniqueNetId, EBlueprintResultSwitch &Result);
-
-	// Get a friend from the previously read/saved friends list (Must Call GetFriends first for this to return anything)
-	UFUNCTION(BlueprintCallable, Category = "Online|AdvancedFriends|FriendsList")
-	static void GetFriend(APlayerController *PlayerController, const FBPUniqueNetId FriendUniqueNetId, FBPFriendInfo &Friend);
-
-	// Get the previously read/saved friends list (Must Call GetFriends first for this to return anything)
-	UFUNCTION(BlueprintCallable, Category = "Online|AdvancedFriends|FriendsList")
-	static void GetStoredFriendsList(APlayerController *PlayerController, TArray<FBPFriendInfo> &FriendsList);
-
-	// Get the previously read/saved recent players list (Must Call GetRecentPlayers first for this to return anything)
-	UFUNCTION(BlueprintCallable, Category = "Online|AdvancedFriends|RecentPlayersList")
-	static void GetStoredRecentPlayersList(FBPUniqueNetId UniqueNetId, TArray<FBPOnlineRecentPlayer> &PlayersList);
-
-	// Check if a UniqueNetId is a friend
-	UFUNCTION(BlueprintPure, Category = "Online|AdvancedFriends|FriendsList")
-	static void IsAFriend(APlayerController *PlayerController, const FBPUniqueNetId UniqueNetId, bool &IsFriend);
 
 	// Get a texture of a valid friends avatar, STEAM ONLY, Returns invalid texture if the subsystem hasn't loaded that size of avatar yet
 	UFUNCTION(BlueprintCallable, Category = "Online|AdvancedFriends|SteamAPI", meta = (ExpandEnumAsExecs = "Result"))
@@ -80,4 +57,12 @@ public:
 	// Creates a unique steam id directly from a string holding a uint64 value, useful for testing
 	UFUNCTION(BlueprintPure, Category = "Online|AdvancedFriends|SteamAPI")
 	static FBPUniqueNetId CreateSteamIDFromString(const FString SteamID64);
+	/*
+	// Creates a unique steam id directly from a string holding a uint64 value, useful for testing
+	UFUNCTION(BlueprintCallable, Category = "Online|AdvancedSessions|SteamAPI")
+	static FBPSteamResult AddFavoriteSteamServer(const FBlueprintSessionResult Server, int32 LastTimePlayed);
+
+	// Creates a unique steam id directly from a string holding a uint64 value, useful for testing
+	UFUNCTION(BlueprintCallable, Category = "Online|AdvancedSessions|SteamAPI")
+		static void RemoveFavoriteSteamServer(const FBlueprintSessionResult Server);*/
 };	
