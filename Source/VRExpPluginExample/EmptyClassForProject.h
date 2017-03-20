@@ -9,6 +9,7 @@
 #include "VRPlayerController.h"
 #include "VRExpansionFunctionLibrary.h"
 #include "GrippableBoxComponent.h"
+#include "VRStereoWidgetComponent.h"
 
 /**
  * 
