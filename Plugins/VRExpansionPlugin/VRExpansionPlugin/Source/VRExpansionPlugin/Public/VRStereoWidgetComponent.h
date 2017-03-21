@@ -103,13 +103,14 @@ public:
 	// Forcing quad layer so that it works with the widget better
 	/** Specifies which type of layer it is.  Note that some shapes will be supported only on certain platforms! **/
 	//UPROPERTY(EditAnywhere, BlueprintReadOnly, export, Category = "StereoLayer")
-		TEnumAsByte<enum EStereoLayerShape> StereoLayerShape;
+	//	TEnumAsByte<enum EStereoLayerShape> StereoLayerShape;
 
 	/** Render priority among all stereo layers, higher priority render on top of lower priority **/
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, export, Category = "StereoLayer")
 		int32 Priority;
 
 	bool bShouldCreateProxy;
+	bool bLastWidgetDrew;
 
 private:
 	/** Dirty state determines whether the stereo layer needs updating **/
