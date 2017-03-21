@@ -6,10 +6,11 @@
 #include "VRBPDatatypes.h"
 #include "VRGripInterface.h"
 #include "VRSimpleCharacter.h"
-#include "VRPlayerController.h"
+#include "VRPlayerController.h"	
 #include "VRExpansionFunctionLibrary.h"
 #include "GrippableBoxComponent.h"
 #include "VRStereoWidgetComponent.h"
+#include "VRCharacterMovementComponent.h"
 
 /**
  * 

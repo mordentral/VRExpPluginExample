@@ -11,7 +11,6 @@
 #include "OnlinePresenceInterface.h"
 #include "Engine/GameInstance.h"
 #include "OnlineSessionInterface.h"
-#include "AdvancedSteamWorkShopLibrary.h"
 
 #include "UObjectIterator.h"
 
@@ -57,12 +56,4 @@ public:
 	// Creates a unique steam id directly from a string holding a uint64 value, useful for testing
 	UFUNCTION(BlueprintPure, Category = "Online|AdvancedFriends|SteamAPI")
 	static FBPUniqueNetId CreateSteamIDFromString(const FString SteamID64);
-	/*
-	// Creates a unique steam id directly from a string holding a uint64 value, useful for testing
-	UFUNCTION(BlueprintCallable, Category = "Online|AdvancedSessions|SteamAPI")
-	static FBPSteamResult AddFavoriteSteamServer(const FBlueprintSessionResult Server, int32 LastTimePlayed);
-
-	// Creates a unique steam id directly from a string holding a uint64 value, useful for testing
-	UFUNCTION(BlueprintCallable, Category = "Online|AdvancedSessions|SteamAPI")
-		static void RemoveFavoriteSteamServer(const FBlueprintSessionResult Server);*/
 };	

@@ -31,44 +31,6 @@
 //General Log
 DEFINE_LOG_CATEGORY(AdvancedSteamFriendsLog);
 
-/*
-FBPSteamResult UAdvancedSteamFriendsLibrary::AddFavoriteSteamServer(const FBlueprintSessionResult Server, int32 LastTimePlayed)
-{
-#if PLATFORM_WINDOWS || PLATFORM_MAC || PLATFORM_LINUX
-	if (!Server.OnlineResult.IsValid())
-	{
-		UE_LOG(AdvancedSteamFriendsLog, Warning, TEXT("AddFavoriteSteamServer Had a bad Server struct!"));
-		return FBPSteamResult::k_EResultUnexpectedError;
-	}
-
-	if (SteamAPI_Init())
-	{
-		if (Server.OnlineResult.Session.SessionInfo.IsValid())
-		{
-			const FOnlineSessionInfoSteam* SteamSessionInfo = (const FOnlineSessionInfoSteam*)(Server.OnlineResult.Session.SessionInfo.Get());
-
-			uint32 OutIP;
-			int32 OutPort;
-			SteamSessionInfo->HostAddr->GetIp(OutIP);
-			int32 PlatformPort = SteamSessionInfo->HostAddr->GetPlatformPort();
-			SteamSessionInfo->HostAddr->GetPort(OutPort);
-
-			uint32 flags = 0;
-			//																														QueryPort
-			FBPSteamResult result = (FBPSteamResult)SteamMatchmaking()->AddFavoriteGame(SteamUtils()->GetAppID(), OutIP, OutPort, OutPort, flags, LastTimePlayed);
-			return result;	
-		}
-	}
-#endif
-	return FBPSteamResult::k_EResultUnexpectedError;
-
-}
-
-void UAdvancedSteamFriendsLibrary::RemoveFavoriteSteamServer(const FBlueprintSessionResult Server)
-{
-
-
-}*/
 
 int32 UAdvancedSteamFriendsLibrary::GetFriendSteamLevel(const FBPUniqueNetId UniqueNetId)
 {
@@ -102,7 +64,7 @@ FString UAdvancedSteamFriendsLibrary::GetSteamPersonaName(const FBPUniqueNetId U
 		UE_LOG(AdvancedSteamFriendsLog, Warning, TEXT("GetSteamPersonaName Had a bad UniqueNetId!"));
 		return FString(TEXT(""));
 	}
-	
+
 	if (SteamAPI_Init())
 	{
 		uint64 id = *((uint64*)UniqueNetId.UniqueNetId->GetBytes());
@@ -195,8 +157,9 @@ UTexture2D * UAdvancedSteamFriendsLibrary::GetSteamFriendAvatar(const FBPUniqueN
 			Result = EBlueprintAsyncResultSwitch::AsyncLoading;
 			return NULL;
 		}
+
 		SteamUtils()->GetImageSize(Picture, &Width, &Height);
-		
+
 		// STOLEN FROM ANSWERHUB :p, then fixed because answerhub wasn't releasing the memory O.o
 		// Also fixed image pixel format and switched to a memcpy instead of manual iteration.
 		// At some point I should probably reply to that answerhub post with these fixes to prevent people killing their games.....
