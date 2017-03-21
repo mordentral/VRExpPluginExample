@@ -5,10 +5,10 @@
 
 #include "VRBaseCharacter.h"
 
-FName AVRBaseCharacter::LeftMotionControllerComponentName(TEXT("Left Motion Controller Component"));
-FName AVRBaseCharacter::RightMotionControllerComponentName(TEXT("Right Motion Controller Component"));
-FName AVRBaseCharacter::ReplicatedCameraComponentName(TEXT("Replicated Camera Component"));
-FName AVRBaseCharacter::ParentRelativeAttachmentComponentName(TEXT("Parent Relative Attachment Component"));
+FName AVRBaseCharacter::LeftMotionControllerComponentName(TEXT("Left Grip Motion Controller"));
+FName AVRBaseCharacter::RightMotionControllerComponentName(TEXT("Right Grip Motion Controller"));
+FName AVRBaseCharacter::ReplicatedCameraComponentName(TEXT("VR Replicated Camera"));
+FName AVRBaseCharacter::ParentRelativeAttachmentComponentName(TEXT("Parent Relative Attachment"));
 
 
 AVRBaseCharacter::AVRBaseCharacter(const FObjectInitializer& ObjectInitializer)

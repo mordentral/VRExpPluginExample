@@ -75,7 +75,7 @@ protected:
 	//UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "StereoLayer | Cubemap Overlay Properties")
 	//	class UTexture* LeftTexture;
 
-protected:
+public:
 	/** Size of the rendered stereo layer quad **/
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, export, Category = "StereoLayer | Quad Overlay Properties")
 		FVector2D StereoLayerQuadSize;
@@ -108,6 +108,8 @@ protected:
 	/** Render priority among all stereo layers, higher priority render on top of lower priority **/
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, export, Category = "StereoLayer")
 		int32 Priority;
+
+	bool bShouldCreateProxy;
 
 private:
 	/** Dirty state determines whether the stereo layer needs updating **/
