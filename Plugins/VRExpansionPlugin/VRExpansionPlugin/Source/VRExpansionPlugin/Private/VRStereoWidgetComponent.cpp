@@ -91,7 +91,7 @@ void UVRStereoWidgetComponent::TickComponent(float DeltaTime, enum ELevelTick Ti
 	}
 	else
 	{
-		//bShouldCreateProxy = false;
+		bShouldCreateProxy = false;
 	}
 
 #if !UE_SERVER
@@ -117,7 +117,7 @@ void UVRStereoWidgetComponent::TickComponent(float DeltaTime, enum ELevelTick Ti
 	}
 	else if (Space == EWidgetSpace::Screen)
 	{
-		Transform = FTransform::Identity;
+		Transform = GetRelativeTransform();
 	}
 	else // World locked here now
 	{
@@ -194,6 +194,16 @@ void UVRStereoWidgetComponent::TickComponent(float DeltaTime, enum ELevelTick Ti
 			IStereoLayers::FLayerDesc LayerDsec;
 			LayerDsec.Priority = Priority;
 			LayerDsec.QuadSize = FVector2D(DrawSize);//StereoLayerQuadSize;
+
+			if (DrawSize.X != DrawSize.Y)
+			{
+				// This might be a SteamVR only thing, it appears to always make the quad the largest of the two on the back end
+				if (DrawSize.X > DrawSize.Y) 
+					LayerDsec.QuadSize.Y = LayerDsec.QuadSize.X;
+				else
+					LayerDsec.QuadSize.X = LayerDsec.QuadSize.Y;
+			}
+
 			LayerDsec.UVRect = UVRect;
 			LayerDsec.Transform = Transform;
 			if (RenderTarget)
@@ -304,12 +314,6 @@ void UVRStereoWidgetComponent::TickComponent(float DeltaTime, enum ELevelTick Ti
 }
 
 
-
-//void UVRStereoWidgetComponent::MarkTextureForUpdate()
-//{
-//	bTextureNeedsUpdate = true;
-//}
-
 void UVRStereoWidgetComponent::SetPriority(int32 InPriority)
 {
 	if (Priority == InPriority)
@@ -324,9 +328,6 @@ void UVRStereoWidgetComponent::SetPriority(int32 InPriority)
 void UVRStereoWidgetComponent::UpdateRenderTarget(FIntPoint DesiredRenderTargetSize)
 {
 	Super::UpdateRenderTarget(DesiredRenderTargetSize);
-
-	//if (!Texture)
-		//Texture = RenderTarget;
 }
 
 /** Represents a billboard sprite to the scene manager. */
