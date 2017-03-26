@@ -13,6 +13,15 @@
 
 class UGripMotionControllerComponent;
 
+// Custom movement modes for the characters
+UENUM(BlueprintType)
+enum class EVRLowPassFilterType : uint8
+{
+	LP_None,
+	LP_Avg,
+	LP_Exponential,
+	LP_Frequency
+};
 
 // Custom movement modes for the characters
 UENUM(BlueprintType)
