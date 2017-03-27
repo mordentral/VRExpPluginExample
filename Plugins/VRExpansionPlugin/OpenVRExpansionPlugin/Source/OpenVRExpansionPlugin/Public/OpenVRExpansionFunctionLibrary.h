@@ -166,6 +166,8 @@ class OPENVREXPANSIONPLUGIN_API UOpenVRExpansionFunctionLibrary : public UActorC
 public:
 
 	void* OpenVRDLLHandle;
+	vr::TrackedCameraHandle_t *pCameraHandle;
+
 
 	//@todo steamvr: Remove GetProcAddress() workaround once we have updated to Steamworks 1.33 or higher
 //	pVRInit VRInitFn;
@@ -231,5 +233,23 @@ public:
 	// Gets a String controller property
 	UFUNCTION(BlueprintCallable, Category = "VRExpansionFunctions|SteamVR", meta = (bIgnoreSelf = "true", DisplayName = "GetVRControllerPropertyString"))
 	bool GetVRControllerPropertyString(EVRControllerProperty_String PropertyToRetrieve, int32 DeviceID, FString & StringValue);
+
+	// VR Camera options
+
+	// Gets a screen cap from the HMD camera if there is one
+	UFUNCTION(BlueprintCallable, Category = "VRExpansionFunctions|SteamVR", meta = (bIgnoreSelf = "true", DisplayName = "HasVRCamera"))
+	bool HasVRCamera(int32 DeviceID);
+
+	// Gets a screen cap from the HMD camera if there is one
+	UFUNCTION(BlueprintCallable, Category = "VRExpansionFunctions|SteamVR", meta = (bIgnoreSelf = "true", DisplayName = "GetVRCameraFrame"))
+	bool GetVRCameraFrame(int32 DeviceID);
+
+	// Acquire the vr camera for access (wakes it up)
+	UFUNCTION(BlueprintCallable, Category = "VRExpansionFunctions|SteamVR", meta = (bIgnoreSelf = "true", DisplayName = "AcquireVRCamera"))
+	bool AcquireVRCamera(int32 DeviceID);
+
+	// Releases the vr camera from access
+	UFUNCTION(BlueprintCallable, Category = "VRExpansionFunctions|SteamVR", meta = (bIgnoreSelf = "true", DisplayName = "ReleaseVRCamera"))
+	bool ReleaseVRCamera();
 
 };	

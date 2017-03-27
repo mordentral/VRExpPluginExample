@@ -14,6 +14,7 @@ UOpenVRExpansionFunctionLibrary::UOpenVRExpansionFunctionLibrary(const FObjectIn
 	: Super(ObjectInitializer)
 {
 	PrimaryComponentTick.bCanEverTick = false;
+	pCameraHandle = nullptr;
 }
 
 //=============================================================================
@@ -139,12 +140,132 @@ bool UOpenVRExpansionFunctionLibrary::LoadOpenVRModule()
 void UOpenVRExpansionFunctionLibrary::UnloadOpenVRModule()
 {
 #if STEAMVR_SUPPORTED_PLATFORM
+	if (pCameraHandle)
+	{
+		ReleaseVRCamera();
+	}
+
 	if (OpenVRDLLHandle != nullptr)
 	{
 		FPlatformProcess::FreeDllHandle(OpenVRDLLHandle);
 		OpenVRDLLHandle = nullptr;
 		//(*VRShutdownFn)();
 	}
+#endif
+}
+
+bool UOpenVRExpansionFunctionLibrary::HasVRCamera(int32 DeviceID)
+{
+#if !STEAMVR_SUPPORTED_PLATFORM
+	return false;
+#else
+	vr::HmdError HmdErr;
+	vr::IVRTrackedCamera * VRCamera = (vr::IVRTrackedCamera*)(*VRGetGenericInterfaceFn)(vr::IVRSystem_Version, &HmdErr);
+
+	if (!VRCamera || HmdErr != vr::HmdError::VRInitError_None)
+		return false;
+
+	bool pHasCamera;
+	vr::EVRTrackedCameraError CamError = VRCamera->HasCamera(DeviceID, &pHasCamera);
+
+	if (CamError != vr::EVRTrackedCameraError::VRTrackedCameraError_None)
+		return false;
+
+	return pHasCamera;
+
+#endif
+}
+
+bool UOpenVRExpansionFunctionLibrary::AcquireVRCamera(int32 DeviceID)
+{
+#if !STEAMVR_SUPPORTED_PLATFORM
+	return false;
+#else
+	vr::HmdError HmdErr;
+	vr::IVRTrackedCamera * VRCamera = (vr::IVRTrackedCamera*)(*VRGetGenericInterfaceFn)(vr::IVRSystem_Version, &HmdErr);
+
+	if (!VRCamera || HmdErr != vr::HmdError::VRInitError_None)
+		return false;
+
+	if (!pCameraHandle)
+	{
+		vr::EVRTrackedCameraError CamError = VRCamera->AcquireVideoStreamingService(DeviceID, pCameraHandle);
+
+		if (CamError != vr::EVRTrackedCameraError::VRTrackedCameraError_None)
+			pCameraHandle = nullptr;
+	}
+
+	if (!pCameraHandle)
+		return false;
+
+	return true;
+#endif
+}
+
+bool UOpenVRExpansionFunctionLibrary::ReleaseVRCamera()
+{
+#if !STEAMVR_SUPPORTED_PLATFORM
+	return false;
+#else
+	vr::HmdError HmdErr;
+	vr::IVRTrackedCamera * VRCamera = (vr::IVRTrackedCamera*)(*VRGetGenericInterfaceFn)(vr::IVRSystem_Version, &HmdErr);
+
+	if (!VRCamera || HmdErr != vr::HmdError::VRInitError_None)
+		return false;
+
+	if (pCameraHandle)
+	{
+		vr::EVRTrackedCameraError CamError = VRCamera->ReleaseVideoStreamingService(*pCameraHandle);
+		pCameraHandle = nullptr;
+	}
+
+	return true;
+
+#endif
+}
+
+bool UOpenVRExpansionFunctionLibrary::GetVRCameraFrame(int32 DeviceID)
+{
+#if !STEAMVR_SUPPORTED_PLATFORM
+	return false;
+#else
+	vr::HmdError HmdErr;
+	vr::IVRTrackedCamera * VRCamera = (vr::IVRTrackedCamera*)(*VRGetGenericInterfaceFn)(vr::IVRSystem_Version, &HmdErr);
+
+	if (!VRCamera || HmdErr != vr::HmdError::VRInitError_None)
+		return false;
+
+	if (!pCameraHandle)
+	{
+		AcquireVRCamera(DeviceID);
+	}
+
+	if (!pCameraHandle)
+		return false;
+
+	uint32 Width;
+	uint32 Height;
+	uint32 FrameBufferSize;
+	vr::EVRTrackedCameraError CamError = VRCamera->GetCameraFrameSize(DeviceID, vr::EVRTrackedCameraFrameType::VRTrackedCameraFrameType_Distorted, &Width, &Height, &FrameBufferSize);
+
+	if (CamError != vr::EVRTrackedCameraError::VRTrackedCameraError_None)
+		return false;
+
+	// Make sure formats are correct
+	check(FrameBufferSize == (Width * Height * 4));
+
+	unsigned char * FrameBuffer = new unsigned char[FrameBufferSize];
+	vr::CameraVideoStreamFrameHeader_t CamHeader;
+
+	CamError = VRCamera->GetVideoStreamFrameBuffer(*pCameraHandle, vr::EVRTrackedCameraFrameType::VRTrackedCameraFrameType_Distorted, FrameBuffer, FrameBufferSize, &CamHeader, sizeof(vr::CameraVideoStreamFrameHeader_t));
+
+	delete[] FrameBuffer;
+
+	// No frame available = still on spin / wake up
+	if (CamError != vr::EVRTrackedCameraError::VRTrackedCameraError_None  || CamError == vr::EVRTrackedCameraError::VRTrackedCameraError_NoFrameAvailable)
+		return false;
+
+	return true;
 #endif
 }
 
