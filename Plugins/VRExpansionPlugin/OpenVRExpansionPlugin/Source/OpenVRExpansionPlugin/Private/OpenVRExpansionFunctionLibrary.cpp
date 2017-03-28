@@ -14,7 +14,6 @@ UOpenVRExpansionFunctionLibrary::UOpenVRExpansionFunctionLibrary(const FObjectIn
 	: Super(ObjectInitializer)
 {
 	PrimaryComponentTick.bCanEverTick = false;
-	pCameraHandle = nullptr;
 }
 
 //=============================================================================
@@ -140,10 +139,13 @@ bool UOpenVRExpansionFunctionLibrary::LoadOpenVRModule()
 void UOpenVRExpansionFunctionLibrary::UnloadOpenVRModule()
 {
 #if STEAMVR_SUPPORTED_PLATFORM
-	if (pCameraHandle)
+
+	EBPVRCameraResultSwitch CallResult;
+	for(int i=0; i<OpenCameraHandles.Num(); ++i)
 	{
-		ReleaseVRCamera();
+		ReleaseVRCamera(OpenCameraHandles[i], CallResult);
 	}
+	OpenCameraHandles.Empty();
 
 	if (OpenVRDLLHandle != nullptr)
 	{
@@ -154,11 +156,15 @@ void UOpenVRExpansionFunctionLibrary::UnloadOpenVRModule()
 #endif
 }
 
-bool UOpenVRExpansionFunctionLibrary::HasVRCamera(int32 DeviceID)
+bool UOpenVRExpansionFunctionLibrary::HasVRCamera()
 {
 #if !STEAMVR_SUPPORTED_PLATFORM
 	return false;
 #else
+	// Don't run anything if no HMD and if the HMD is not a steam type
+	if (!GEngine->HMDDevice.IsValid() || (GEngine->HMDDevice->GetHMDDeviceType() != EHMDDeviceType::DT_SteamVR))
+		return false;
+
 	vr::HmdError HmdErr;
 	vr::IVRTrackedCamera * VRCamera = (vr::IVRTrackedCamera*)(*VRGetGenericInterfaceFn)(vr::IVRSystem_Version, &HmdErr);
 
@@ -166,7 +172,7 @@ bool UOpenVRExpansionFunctionLibrary::HasVRCamera(int32 DeviceID)
 		return false;
 
 	bool pHasCamera;
-	vr::EVRTrackedCameraError CamError = VRCamera->HasCamera(DeviceID, &pHasCamera);
+	vr::EVRTrackedCameraError CamError = VRCamera->HasCamera(vr::k_unTrackedDeviceIndex_Hmd, &pHasCamera);
 
 	if (CamError != vr::EVRTrackedCameraError::VRTrackedCameraError_None)
 		return false;
@@ -176,96 +182,216 @@ bool UOpenVRExpansionFunctionLibrary::HasVRCamera(int32 DeviceID)
 #endif
 }
 
-bool UOpenVRExpansionFunctionLibrary::AcquireVRCamera(int32 DeviceID)
+void UOpenVRExpansionFunctionLibrary::AcquireVRCamera(FBPOpenVRCameraHandle & CameraHandle, EBPVRCameraResultSwitch & Result)
 {
 #if !STEAMVR_SUPPORTED_PLATFORM
-	return false;
+	Result = EBPVRCameraResultSwitch::OnFailed;
+	return;
 #else
+	// Don't run anything if no HMD and if the HMD is not a steam type
+	if (!GEngine->HMDDevice.IsValid() || (GEngine->HMDDevice->GetHMDDeviceType() != EHMDDeviceType::DT_SteamVR))
+	{
+		Result = EBPVRCameraResultSwitch::OnFailed;
+		return;
+	}
+
 	vr::HmdError HmdErr;
 	vr::IVRTrackedCamera * VRCamera = (vr::IVRTrackedCamera*)(*VRGetGenericInterfaceFn)(vr::IVRSystem_Version, &HmdErr);
 
 	if (!VRCamera || HmdErr != vr::HmdError::VRInitError_None)
-		return false;
-
-	if (!pCameraHandle)
 	{
-		vr::EVRTrackedCameraError CamError = VRCamera->AcquireVideoStreamingService(DeviceID, pCameraHandle);
-
-		if (CamError != vr::EVRTrackedCameraError::VRTrackedCameraError_None)
-			pCameraHandle = nullptr;
+		Result = EBPVRCameraResultSwitch::OnFailed;
+		return;
 	}
 
-	if (!pCameraHandle)
-		return false;
+	vr::EVRTrackedCameraError CamError = VRCamera->AcquireVideoStreamingService(vr::k_unTrackedDeviceIndex_Hmd, &CameraHandle.pCameraHandle);
 
-	return true;
+	if (CamError != vr::EVRTrackedCameraError::VRTrackedCameraError_None)
+		CameraHandle.pCameraHandle = INVALID_TRACKED_CAMERA_HANDLE;
+
+	if (CameraHandle.pCameraHandle == INVALID_TRACKED_CAMERA_HANDLE)
+	{
+		Result = EBPVRCameraResultSwitch::OnFailed;
+		return;
+	}
+
+	OpenCameraHandles.Add(CameraHandle);
+
+	Result = EBPVRCameraResultSwitch::OnSucceeded;
+	return;
 #endif
 }
 
-bool UOpenVRExpansionFunctionLibrary::ReleaseVRCamera()
+void UOpenVRExpansionFunctionLibrary::ReleaseVRCamera(UPARAM(ref) FBPOpenVRCameraHandle & CameraHandle, EBPVRCameraResultSwitch & Result)
 {
 #if !STEAMVR_SUPPORTED_PLATFORM
-	return false;
+	Result = EBPVRCameraResultSwitch::OnFailed;
+	return;
 #else
+	// Don't run anything if no HMD and if the HMD is not a steam type
+	if (!GEngine->HMDDevice.IsValid() || (GEngine->HMDDevice->GetHMDDeviceType() != EHMDDeviceType::DT_SteamVR))
+	{
+		Result = EBPVRCameraResultSwitch::OnFailed;
+		return;
+	}
+
+	if (!CameraHandle.IsValid())
+	{
+		Result = EBPVRCameraResultSwitch::OnFailed;
+		return;
+	}
+
 	vr::HmdError HmdErr;
 	vr::IVRTrackedCamera * VRCamera = (vr::IVRTrackedCamera*)(*VRGetGenericInterfaceFn)(vr::IVRSystem_Version, &HmdErr);
 
 	if (!VRCamera || HmdErr != vr::HmdError::VRInitError_None)
-		return false;
-
-	if (pCameraHandle)
 	{
-		vr::EVRTrackedCameraError CamError = VRCamera->ReleaseVideoStreamingService(*pCameraHandle);
-		pCameraHandle = nullptr;
+		Result = EBPVRCameraResultSwitch::OnFailed;
+		return;
 	}
 
-	return true;
+	vr::EVRTrackedCameraError CamError = VRCamera->ReleaseVideoStreamingService(CameraHandle.pCameraHandle);
+	OpenCameraHandles.Remove(CameraHandle);
+	CameraHandle.pCameraHandle = INVALID_TRACKED_CAMERA_HANDLE;
+
+	Result = EBPVRCameraResultSwitch::OnSucceeded;
+	return;
 
 #endif
 }
 
-bool UOpenVRExpansionFunctionLibrary::GetVRCameraFrame(int32 DeviceID)
+bool UOpenVRExpansionFunctionLibrary::IsValid(UPARAM(ref) FBPOpenVRCameraHandle & CameraHandle)
 {
-#if !STEAMVR_SUPPORTED_PLATFORM
-	return false;
+	return (CameraHandle.IsValid());
+}
+
+
+UTextureRenderTarget2D * UOpenVRExpansionFunctionLibrary::CreateCameraRenderTarget(UPARAM(ref) FBPOpenVRCameraHandle & CameraHandle, EOpenVRCameraFrameType FrameType, EBPVRCameraResultSwitch & Result)
+{
+#if !STEAMVR_SUPPORTED_PLATFORM 
+	Result = EBPVRCameraResultSwitch::OnFailed;
+	return nullptr;
 #else
+	// Don't run anything if no HMD and if the HMD is not a steam type
+	if (!GEngine->HMDDevice.IsValid() || (GEngine->HMDDevice->GetHMDDeviceType() != EHMDDeviceType::DT_SteamVR))
+	{
+		Result = EBPVRCameraResultSwitch::OnFailed;
+		return nullptr;
+	}
+
+	if (!CameraHandle.IsValid() || !FApp::CanEverRender())
+	{
+		Result = EBPVRCameraResultSwitch::OnFailed;
+		return nullptr;
+	}
+
 	vr::HmdError HmdErr;
 	vr::IVRTrackedCamera * VRCamera = (vr::IVRTrackedCamera*)(*VRGetGenericInterfaceFn)(vr::IVRSystem_Version, &HmdErr);
 
 	if (!VRCamera || HmdErr != vr::HmdError::VRInitError_None)
-		return false;
-
-	if (!pCameraHandle)
 	{
-		AcquireVRCamera(DeviceID);
+		Result = EBPVRCameraResultSwitch::OnFailed;
+		return nullptr;
 	}
-
-	if (!pCameraHandle)
-		return false;
 
 	uint32 Width;
 	uint32 Height;
 	uint32 FrameBufferSize;
-	vr::EVRTrackedCameraError CamError = VRCamera->GetCameraFrameSize(DeviceID, vr::EVRTrackedCameraFrameType::VRTrackedCameraFrameType_Distorted, &Width, &Height, &FrameBufferSize);
+	vr::EVRTrackedCameraError CamError = VRCamera->GetCameraFrameSize(vr::k_unTrackedDeviceIndex_Hmd, (vr::EVRTrackedCameraFrameType)FrameType, &Width, &Height, &FrameBufferSize);
 
-	if (CamError != vr::EVRTrackedCameraError::VRTrackedCameraError_None)
-		return false;
+	if (Width > 0 && Height > 0)
+	{
+		UTextureRenderTarget2D* NewRenderTarget2D = NewObject<UTextureRenderTarget2D>(GetWorld());
+		check(NewRenderTarget2D);
+		NewRenderTarget2D->InitCustomFormat(Width, Height, EPixelFormat::PF_R8G8B8A8, false);
+		NewRenderTarget2D->UpdateResourceImmediate(true);
+
+		Result = EBPVRCameraResultSwitch::OnSucceeded;
+		return NewRenderTarget2D;
+	}
+
+	Result = EBPVRCameraResultSwitch::OnFailed;
+	return nullptr;
+#endif
+}
+
+void UOpenVRExpansionFunctionLibrary::GetVRCameraFrame(UPARAM(ref) FBPOpenVRCameraHandle & CameraHandle, EOpenVRCameraFrameType FrameType, EBPVRCameraResultSwitch & Result, UTextureRenderTarget2D * TargetRenderTarget)
+{
+#if !STEAMVR_SUPPORTED_PLATFORM 
+	Result = EBPVRCameraResultSwitch::OnFailed;
+	return;
+#else
+	// Don't run anything if no HMD and if the HMD is not a steam type
+	if (!GEngine->HMDDevice.IsValid() || (GEngine->HMDDevice->GetHMDDeviceType() != EHMDDeviceType::DT_SteamVR))
+	{
+		Result = EBPVRCameraResultSwitch::OnFailed;
+		return;
+	}
+
+	if (!TargetRenderTarget || !CameraHandle.IsValid())
+	{
+		Result = EBPVRCameraResultSwitch::OnFailed;
+		return;
+	}
+
+	vr::HmdError HmdErr;
+	vr::IVRTrackedCamera * VRCamera = (vr::IVRTrackedCamera*)(*VRGetGenericInterfaceFn)(vr::IVRSystem_Version, &HmdErr);
+
+	if (!VRCamera || HmdErr != vr::HmdError::VRInitError_None)
+	{
+		Result = EBPVRCameraResultSwitch::OnFailed;
+		return;
+	}
+
+	uint32 Width;
+	uint32 Height;
+	uint32 FrameBufferSize;
+	vr::EVRTrackedCameraError CamError = VRCamera->GetCameraFrameSize(vr::k_unTrackedDeviceIndex_Hmd, (vr::EVRTrackedCameraFrameType)FrameType, &Width, &Height, &FrameBufferSize);
+
+	if (CamError != vr::EVRTrackedCameraError::VRTrackedCameraError_None || Width <= 0 || Height <= 0)
+	{
+		Result = EBPVRCameraResultSwitch::OnFailed;
+		return;
+	}
 
 	// Make sure formats are correct
 	check(FrameBufferSize == (Width * Height * 4));
 
-	unsigned char * FrameBuffer = new unsigned char[FrameBufferSize];
+	// Update the format if required, this is in case someone made a new render target NOT with my custom function
+	if (TargetRenderTarget->SizeX != Width || TargetRenderTarget->SizeY != Height || TargetRenderTarget->GetFormat() != EPixelFormat::PF_R8G8B8A8)
+	{
+		//RGBA
+		TargetRenderTarget->InitCustomFormat(Width, Height, EPixelFormat::PF_R8G8B8A8, false);
+		TargetRenderTarget->UpdateResourceImmediate(false);
+		TargetRenderTarget->UpdateResource();
+	}
+	
+	//unsigned char * FrameBuffer = new unsigned char[FrameBufferSize];
 	vr::CameraVideoStreamFrameHeader_t CamHeader;
 
-	CamError = VRCamera->GetVideoStreamFrameBuffer(*pCameraHandle, vr::EVRTrackedCameraFrameType::VRTrackedCameraFrameType_Distorted, FrameBuffer, FrameBufferSize, &CamHeader, sizeof(vr::CameraVideoStreamFrameHeader_t));
+	FTexturePlatformData ** PlatformData = TargetRenderTarget->GetRunningPlatformData();
 
-	delete[] FrameBuffer;
+	if (!PlatformData || !*PlatformData)
+	{
+		Result = EBPVRCameraResultSwitch::OnFailed;
+		return;
+	}
+	//UTexture2D * CameraTexture = Cast<UTexture2D *>(TargetRenderTarget)
+
+		
+	uint8* MipData = (uint8*)(*PlatformData)->Mips[0].BulkData.Lock(LOCK_READ_WRITE);
+	CamError = VRCamera->GetVideoStreamFrameBuffer(CameraHandle.pCameraHandle, (vr::EVRTrackedCameraFrameType)FrameType, MipData, (*PlatformData)->Mips[0].BulkData.GetBulkDataSize(), &CamHeader, sizeof(vr::CameraVideoStreamFrameHeader_t));
+	(*PlatformData)->Mips[0].BulkData.Unlock();
 
 	// No frame available = still on spin / wake up
-	if (CamError != vr::EVRTrackedCameraError::VRTrackedCameraError_None  || CamError == vr::EVRTrackedCameraError::VRTrackedCameraError_NoFrameAvailable)
-		return false;
+	if (CamError != vr::EVRTrackedCameraError::VRTrackedCameraError_None || CamError == vr::EVRTrackedCameraError::VRTrackedCameraError_NoFrameAvailable)
+	{
+		Result = EBPVRCameraResultSwitch::OnFailed;
+		return;
+	}
 
-	return true;
+	Result = EBPVRCameraResultSwitch::OnSucceeded;
+	return;
 #endif
 }
 

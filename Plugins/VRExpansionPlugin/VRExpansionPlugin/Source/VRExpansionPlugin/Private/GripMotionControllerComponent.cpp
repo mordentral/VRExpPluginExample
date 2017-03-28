@@ -438,6 +438,37 @@ void UGripMotionControllerComponent::GetGripByComponent(FBPActorGripInformation 
 	Result = EBPVRResultSwitch::OnFailed;
 }
 
+void UGripMotionControllerComponent::GetGripByObject(FBPActorGripInformation &Grip, UObject * ObjectToLookForGrip, EBPVRResultSwitch &Result)
+{
+	if (!ObjectToLookForGrip)
+	{
+		Result = EBPVRResultSwitch::OnFailed;
+		return;
+	}
+
+	for (int i = 0; i < GrippedActors.Num(); ++i)
+	{
+		if (GrippedActors[i] == ObjectToLookForGrip)
+		{
+			Grip = GrippedActors[i];
+			Result = EBPVRResultSwitch::OnSucceeded;
+			return;
+		}
+	}
+
+	for (int i = 0; i < LocallyGrippedActors.Num(); ++i)
+	{
+		if (LocallyGrippedActors[i] == ObjectToLookForGrip)
+		{
+			Grip = LocallyGrippedActors[i];
+			Result = EBPVRResultSwitch::OnSucceeded;
+			return;
+		}
+	}
+
+	Result = EBPVRResultSwitch::OnFailed;
+}
+
 void UGripMotionControllerComponent::SetGripCollisionType(const FBPActorGripInformation &Grip, EBPVRResultSwitch &Result, EGripCollisionType NewGripCollisionType)
 {
 	int fIndex = GrippedActors.Find(Grip);
