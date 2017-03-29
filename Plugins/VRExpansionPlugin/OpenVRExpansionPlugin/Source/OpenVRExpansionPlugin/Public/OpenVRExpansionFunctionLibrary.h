@@ -215,6 +215,10 @@ public:
 
 	void* OpenVRDLLHandle;
 
+	// Currently OpenVR only supports a single HMD camera as it only supports a single HMD (default index 0)
+	// So support auto releasing it with this, in case the user messes up and doesn't do so.
+	FBPOpenVRCameraHandle OpenCamera;
+
 	//@todo steamvr: Remove GetProcAddress() workaround once we have updated to Steamworks 1.33 or higher
 //	pVRInit VRInitFn;
 	//pVRShutdown VRShutdownFn;

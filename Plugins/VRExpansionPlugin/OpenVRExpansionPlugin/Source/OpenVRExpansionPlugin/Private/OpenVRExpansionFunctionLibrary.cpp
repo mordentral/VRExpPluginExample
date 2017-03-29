@@ -47,6 +47,12 @@ bool UOpenVRExpansionFunctionLibrary::CloseVRHandles()
 #if !STEAMVR_SUPPORTED_PLATFORM
 	return false;
 #else
+	if (OpenCamera.IsValid())
+	{
+		EBPVRCameraResultSwitch Result;
+		ReleaseVRCamera(OpenCamera, Result);
+	}
+
 	if (bInitialized)
 	{
 		UnloadOpenVRModule();
@@ -207,6 +213,7 @@ void UOpenVRExpansionFunctionLibrary::AcquireVRCamera(FBPOpenVRCameraHandle & Ca
 		return;
 	}
 
+	OpenCamera = CameraHandle;
 	Result = EBPVRCameraResultSwitch::OnSucceeded;
 	return;
 #endif
@@ -243,6 +250,7 @@ void UOpenVRExpansionFunctionLibrary::ReleaseVRCamera(UPARAM(ref) FBPOpenVRCamer
 	vr::EVRTrackedCameraError CamError = VRCamera->ReleaseVideoStreamingService(CameraHandle.pCameraHandle);
 	CameraHandle.pCameraHandle = INVALID_TRACKED_CAMERA_HANDLE;
 
+	OpenCamera = CameraHandle;
 	Result = EBPVRCameraResultSwitch::OnSucceeded;
 	return;
 
@@ -290,27 +298,29 @@ UTexture2D * UOpenVRExpansionFunctionLibrary::CreateCameraTexture2D(UPARAM(ref) 
 
 	if (Width > 0 && Height > 0)
 	{
-		UTexture2D * NewRenderTarget2D = NewObject<UTexture2D>(GetWorld());
+
+		UTexture2D * NewRenderTarget2D = UTexture2D::CreateTransient(Width, Height, EPixelFormat::PF_R8G8B8A8);//NewObject<UTexture2D>(GetWorld());
 		check(NewRenderTarget2D);
 
-		NewRenderTarget2D->PlatformData = new FTexturePlatformData();
-		NewRenderTarget2D->PlatformData->SizeX = Width;
-		NewRenderTarget2D->PlatformData->SizeY = Height;
-		NewRenderTarget2D->PlatformData->PixelFormat = EPixelFormat::PF_R8G8B8A8;
+		//NewRenderTarget2D->PlatformData = new FTexturePlatformData();
+		//NewRenderTarget2D->PlatformData->SizeX = Width;
+		//NewRenderTarget2D->PlatformData->SizeY = Height;
+		//NewRenderTarget2D->PlatformData->PixelFormat = EPixelFormat::PF_R8G8B8A8;
 
 		// Allocate first mipmap.
-		int32 NumBlocksX = Width / GPixelFormats[EPixelFormat::PF_R8G8B8A8].BlockSizeX;
-		int32 NumBlocksY = Height / GPixelFormats[EPixelFormat::PF_R8G8B8A8].BlockSizeY;
-		FTexture2DMipMap* Mip = new(NewRenderTarget2D->PlatformData->Mips) FTexture2DMipMap();
-		Mip->SizeX = Width;
-		Mip->SizeY = Height;
-		Mip->BulkData.Lock(LOCK_READ_WRITE);
-		Mip->BulkData.Realloc(NumBlocksX * NumBlocksY * GPixelFormats[EPixelFormat::PF_R8G8B8A8].BlockBytes);
-		Mip->BulkData.Unlock();
+		//int32 NumBlocksX = Width / GPixelFormats[EPixelFormat::PF_R8G8B8A8].BlockSizeX;
+		//int32 NumBlocksY = Height / GPixelFormats[EPixelFormat::PF_R8G8B8A8].BlockSizeY;
+		//FTexture2DMipMap* Mip = new(NewRenderTarget2D->PlatformData->Mips) FTexture2DMipMap();
+		//Mip->SizeX = Width;
+		//Mip->SizeY = Height;
+		//Mip->BulkData.Lock(LOCK_READ_WRITE);
+		//Mip->BulkData.Realloc(NumBlocksX * NumBlocksY * GPixelFormats[EPixelFormat::PF_R8G8B8A8].BlockBytes);
+		//Mip->BulkData.Unlock();
 
 		//Setting some Parameters for the Texture and finally returning it
 		NewRenderTarget2D->PlatformData->NumSlices = 1;
 		NewRenderTarget2D->NeverStream = true;
+		NewRenderTarget2D->UpdateResource();
 
 		//NewRenderTarget2D->InitCustomFormat(Width, Height, /*EPixelFormat::PF_R8G8B8A8*/EPixelFormat::PF_B8G8R8A8, false);
 		//NewRenderTarget2D->UpdateResourceImmediate(true);
@@ -364,73 +374,66 @@ void UOpenVRExpansionFunctionLibrary::GetVRCameraFrame(UPARAM(ref) FBPOpenVRCame
 	}
 
 	// Make sure formats are correct
-	check(FrameBufferSize == (Width * Height * 4));
+	check(FrameBufferSize == (Width * Height * GPixelFormats[EPixelFormat::PF_R8G8B8A8].BlockSizeX));
 
-
-
-
-	/*
-				UTexture2D* Avatar = UTexture2D::CreateTransient(Width, Height, PF_R8G8B8A8);
-			// Switched to a Memcpy instead of byte by byte transer
-			uint8* MipData = (uint8*)Avatar->PlatformData->Mips[0].BulkData.Lock(LOCK_READ_WRITE);
-			FMemory::Memcpy(MipData, (void*)oAvatarRGBA, Height * Width * 4);
-			Avatar->PlatformData->Mips[0].BulkData.Unlock();
-
-			// Original implementation was missing this!!
-			// the hell man......
-			delete[] oAvatarRGBA;
-
-			//Setting some Parameters for the Texture and finally returning it
-			Avatar->PlatformData->NumSlices = 1;
-			Avatar->NeverStream = true;
-			//Avatar->CompressionSettings = TC_EditorIcon;
-
-			Avatar->UpdateResource();
-	
-	*/
 
 	// Need to bring this back after moving from render target to this
 	// Update the format if required, this is in case someone made a new render target NOT with my custom function
-	/*if (TargetRenderTarget->GetSizeX() != Width || TargetRenderTarget->GetSizeY() != Height || TargetRenderTarget->GetFormat() != EPixelFormat::PF_R8G8B8A8)
+	// Enforces correct buffer size for the camera feed
+	if (TargetRenderTarget->GetSizeX() != Width || TargetRenderTarget->GetSizeY() != Height || TargetRenderTarget->GetPixelFormat() != EPixelFormat::PF_R8G8B8A8)
 	{
-		TargetRenderTarget->
-		//RGBA
-		TargetRenderTarget->InitCustomFormat(Width, Height, EPixelFormat::PF_R8G8B8A8, false);
-		TargetRenderTarget->UpdateResourceImmediate(false);
-		TargetRenderTarget->UpdateResource();
-	}*/
-	
-	//unsigned char * FrameBuffer = new unsigned char[FrameBufferSize];
-	vr::CameraVideoStreamFrameHeader_t CamHeader;
-
-	/*FTexturePlatformData ** PlatformData = TargetRenderTarget->GetRunningPlatformData();
-
-	if (!PlatformData || !*PlatformData)
-	{
-		Result = EBPVRCameraResultSwitch::OnFailed;
-		return;
-	}*/
-
-	//UTexture2D * CameraTexture = Cast<UTexture2D>(TargetRenderTarget);
-
-	/*if (!CameraTexture)
-	{
-		Result = EBPVRCameraResultSwitch::OnFailed;
-		return;
-	}*/
+		TargetRenderTarget->PlatformData->SizeX = Width;
+		TargetRenderTarget->PlatformData->SizeY = Height;
+		TargetRenderTarget->PlatformData->PixelFormat = EPixelFormat::PF_R8G8B8A8;
 		
-	uint8* MipData = (uint8*)TargetRenderTarget->PlatformData->Mips[0].BulkData.Lock(LOCK_READ_WRITE);
+		// Allocate first mipmap.
+		int32 NumBlocksX = Width / GPixelFormats[EPixelFormat::PF_R8G8B8A8].BlockSizeX;
+		int32 NumBlocksY = Height / GPixelFormats[EPixelFormat::PF_R8G8B8A8].BlockSizeY;
+
+		TargetRenderTarget->PlatformData->Mips[0].SizeX = Width;
+		TargetRenderTarget->PlatformData->Mips[0].SizeY = Height;
+		TargetRenderTarget->PlatformData->Mips[0].BulkData.Lock(LOCK_READ_WRITE);
+		TargetRenderTarget->PlatformData->Mips[0].BulkData.Realloc(NumBlocksX * NumBlocksY * GPixelFormats[EPixelFormat::PF_R8G8B8A8].BlockBytes);
+		TargetRenderTarget->PlatformData->Mips[0].BulkData.Unlock();
+	}
+	
+	vr::CameraVideoStreamFrameHeader_t CamHeader;
+	uint8* pData = new uint8[FrameBufferSize];
+
+	/*uint8* MipData = (uint8*)TargetRenderTarget->PlatformData->Mips[0].BulkData.Lock(LOCK_READ_WRITE);
 	CamError = VRCamera->GetVideoStreamFrameBuffer(CameraHandle.pCameraHandle, (vr::EVRTrackedCameraFrameType)FrameType, MipData, TargetRenderTarget->PlatformData->Mips[0].BulkData.GetBulkDataSize(), &CamHeader, sizeof(vr::CameraVideoStreamFrameHeader_t));
 	TargetRenderTarget->PlatformData->Mips[0].BulkData.Unlock();
-	TargetRenderTarget->UpdateResource();
+	TargetRenderTarget->UpdateResource();*/
+
+	CamError = VRCamera->GetVideoStreamFrameBuffer(CameraHandle.pCameraHandle, (vr::EVRTrackedCameraFrameType)FrameType, pData, FrameBufferSize, &CamHeader, sizeof(vr::CameraVideoStreamFrameHeader_t));
 
 	// No frame available = still on spin / wake up
 	if (CamError != vr::EVRTrackedCameraError::VRTrackedCameraError_None || CamError == vr::EVRTrackedCameraError::VRTrackedCameraError_NoFrameAvailable)
 	{
+		delete[] pData;
 		Result = EBPVRCameraResultSwitch::OnFailed;
 		return;
 	}
 
+	ENQUEUE_UNIQUE_RENDER_COMMAND_TWOPARAMETER(
+		UpdateDynamicTextureCode,
+		UTexture2D*, pTexture, TargetRenderTarget,
+		const uint8*, pData, pData,
+		{
+			FUpdateTextureRegion2D region;
+			region.SrcX = 0;
+			region.SrcY = 0;
+			region.DestX = 0;
+			region.DestY = 0;
+			region.Width = pTexture->GetSizeX();// TEX_WIDTH;
+			region.Height = pTexture->GetSizeY();//TEX_HEIGHT;
+
+			FTexture2DResource* resource = (FTexture2DResource*)pTexture->Resource;
+			RHIUpdateTexture2D(resource->GetTexture2DRHI(), 0, region, region.Width * GPixelFormats[pTexture->GetPixelFormat()].BlockBytes/*TEX_PIXEL_SIZE_IN_BYTES*/, pData);
+			delete[] pData;
+		});
+
+	// Letting the enqueued command free the memory
 	Result = EBPVRCameraResultSwitch::OnSucceeded;
 	return;
 #endif
