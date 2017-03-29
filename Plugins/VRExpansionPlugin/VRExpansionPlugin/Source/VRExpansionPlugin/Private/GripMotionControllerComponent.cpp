@@ -1,6 +1,7 @@
 // Copyright 1998-2016 Epic Games, Inc. All Rights Reserved.
 
 #include "VRExpansionPluginPrivatePCH.h"
+#include "Components/DestructibleComponent.h"
 #include "GripMotionControllerComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "KismetMathLibrary.h"

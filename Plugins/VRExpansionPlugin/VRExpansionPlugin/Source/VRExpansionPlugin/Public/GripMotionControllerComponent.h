@@ -2,7 +2,8 @@
 
 #pragma once
 
-#include "Engine.h"
+#include "EngineMinimal.h"
+#include "Engine/Engine.h"
 #include "IMotionController.h"
 #include "SceneViewExtension.h"
 #include "VRBPDatatypes.h"
