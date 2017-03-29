@@ -215,8 +215,6 @@ public:
 
 	void* OpenVRDLLHandle;
 
-	TArray<FBPOpenVRCameraHandle> OpenCameraHandles;
-
 	//@todo steamvr: Remove GetProcAddress() workaround once we have updated to Steamworks 1.33 or higher
 //	pVRInit VRInitFn;
 	//pVRShutdown VRShutdownFn;
@@ -312,17 +310,17 @@ public:
 
 	// Gets a screen cap from the HMD camera if there is one
 	UFUNCTION(BlueprintCallable, Category = "VRExpansionFunctions|SteamVR|VRCamera", meta = (bIgnoreSelf = "true", DisplayName = "GetVRCameraFrame", ExpandEnumAsExecs = "Result"))
-	void GetVRCameraFrame(UPARAM(ref) FBPOpenVRCameraHandle & CameraHandle, EOpenVRCameraFrameType FrameType, EBPVRCameraResultSwitch & Result, UTextureRenderTarget2D * TargetRenderTarget = nullptr);
+	void GetVRCameraFrame(UPARAM(ref) FBPOpenVRCameraHandle & CameraHandle, EOpenVRCameraFrameType FrameType, EBPVRCameraResultSwitch & Result, UTexture2D * TargetRenderTarget = nullptr);
 
 	// Create Camera Render Target
-	UFUNCTION(BlueprintCallable, Category = "VRExpansionFunctions|SteamVR|VRCamera", meta = (bIgnoreSelf = "true", DisplayName = "CreateCameraRenderTarget", ExpandEnumAsExecs = "Result"))
-	UTextureRenderTarget2D * CreateCameraRenderTarget(UPARAM(ref) FBPOpenVRCameraHandle & CameraHandle, EOpenVRCameraFrameType FrameType, EBPVRCameraResultSwitch & Result);
+	UFUNCTION(BlueprintCallable, Category = "VRExpansionFunctions|SteamVR|VRCamera", meta = (bIgnoreSelf = "true", DisplayName = "CreateCameraTexture2D", ExpandEnumAsExecs = "Result"))
+	UTexture2D * CreateCameraTexture2D(UPARAM(ref) FBPOpenVRCameraHandle & CameraHandle, EOpenVRCameraFrameType FrameType, EBPVRCameraResultSwitch & Result);
 
 	// Acquire the vr camera for access (wakes it up)
 	UFUNCTION(BlueprintCallable, Category = "VRExpansionFunctions|SteamVR|VRCamera", meta = (bIgnoreSelf = "true", DisplayName = "AcquireVRCamera", ExpandEnumAsExecs = "Result"))
 	void AcquireVRCamera(FBPOpenVRCameraHandle & CameraHandle, EBPVRCameraResultSwitch & Result);
 
-	// Releases the vr camera from access
+	// Releases the vr camera from access - you MUST call this when done with the camera
 	UFUNCTION(BlueprintCallable, Category = "VRExpansionFunctions|SteamVR|VRCamera", meta = (bIgnoreSelf = "true", DisplayName = "ReleaseVRCamera", ExpandEnumAsExecs = "Result"))
 	void ReleaseVRCamera(UPARAM(ref) FBPOpenVRCameraHandle & CameraHandle, EBPVRCameraResultSwitch & Result);
 

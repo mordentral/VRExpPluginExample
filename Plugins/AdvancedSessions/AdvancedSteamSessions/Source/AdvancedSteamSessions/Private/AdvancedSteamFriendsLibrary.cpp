@@ -233,7 +233,6 @@ UTexture2D * UAdvancedSteamFriendsLibrary::GetSteamFriendAvatar(const FBPUniqueN
 			}*/
 
 			UTexture2D* Avatar = UTexture2D::CreateTransient(Width, Height, PF_R8G8B8A8);
-
 			// Switched to a Memcpy instead of byte by byte transer
 			uint8* MipData = (uint8*)Avatar->PlatformData->Mips[0].BulkData.Lock(LOCK_READ_WRITE);
 			FMemory::Memcpy(MipData, (void*)oAvatarRGBA, Height * Width * 4);
