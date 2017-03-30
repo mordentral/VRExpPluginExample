@@ -476,6 +476,7 @@ public:
 		SecondaryAttachment = nullptr;
 		bHasSecondaryAttachment = false;
 
+		RelativeTransform = FTransform::Identity;
 		AdditionTransform = FTransform::Identity;
 	}
 };

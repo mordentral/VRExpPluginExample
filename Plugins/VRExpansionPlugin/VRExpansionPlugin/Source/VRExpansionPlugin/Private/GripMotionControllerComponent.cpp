@@ -6,6 +6,7 @@
 #include "Net/UnrealNetwork.h"
 #include "KismetMathLibrary.h"
 #include "PrimitiveSceneInfo.h"
+#include "DrawDebugHelpers.h"
 
 #include "PhysicsPublic.h"
 
@@ -804,7 +805,7 @@ bool UGripMotionControllerComponent::DropObjectByInterface(UObject * ObjectToDro
 bool UGripMotionControllerComponent::GripActor(
 	AActor* ActorToGrip, 
 	const FTransform &WorldOffset, 
-	bool bWorldOffsetIsRelative, 
+	bool bWorldOffsetIsRelative,
 	FName OptionalSnapToSocketName, 
 	EGripCollisionType GripCollisionType, 
 	EGripLateUpdateSettings GripLateUpdateSetting,
@@ -892,6 +893,7 @@ bool UGripMotionControllerComponent::GripActor(
 	newActorGrip.bOriginalReplicatesMovement = ActorToGrip->bReplicateMovement;
 	newActorGrip.Stiffness = GripStiffness;
 	newActorGrip.Damping = GripDamping;
+
 
 	// Ignore late update setting if it doesn't make sense with the grip
 	switch(newActorGrip.GripCollisionType)
@@ -2172,6 +2174,7 @@ void UGripMotionControllerComponent::TickGrip(float DeltaTime)
 	check(PhysicsGrips.Num() <= (GrippedActors.Num() + LocallyGrippedActors.Num()));
 
 	FTransform ParentTransform = this->GetComponentTransform();
+
 	FVector MotionControllerLocDelta = this->GetComponentLocation() - LastControllerLocation;
 
 	// Set the last controller world location for next frame
@@ -2850,7 +2853,7 @@ bool UGripMotionControllerComponent::SetUpPhysicsHandle(const FBPActorGripInform
 					NewJoint->setDrive(PxD6Drive::eX, drive);
 					NewJoint->setDrive(PxD6Drive::eY, drive);
 					NewJoint->setDrive(PxD6Drive::eZ, drive);
-					//NewJoint->setDrive(PxD6Drive::eTWIST, drive);
+					NewJoint->setDrive(PxD6Drive::eTWIST, drive);
 				}
 				else
 				{
@@ -2958,11 +2961,19 @@ void UGripMotionControllerComponent::UpdatePhysicsHandleTransform(const FBPActor
 	{
 		FTransform terns = NewTransform;
 
+
+
 		if (GrippedActor.GripCollisionType == EGripCollisionType::ManipulationGrip)
 		{
 			terns.SetLocation(this->GetComponentLocation());
 
 			KinActor->setKinematicTarget(PxTransform(U2PTransform(terns))/*PNewLocation, PNewOrientation*/);
+
+/*#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+
+				 DrawDebugSphere(GetWorld(), terns.GetLocation(), 4, 32, FColor::Cyan, false);
+				//DrawDebugSphere(GetWorld(), terns.GetLocation(), 4, 32, FColor::Cyan, false);
+#endif*/
 		}
 		else
 		{
@@ -2984,7 +2995,11 @@ void UGripMotionControllerComponent::UpdatePhysicsHandleTransform(const FBPActor
 			{
 				terns.ConcatenateRotation(skele->GetBoneTransform(0, FTransform::Identity).GetRotation());
 			}
+/*#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
 
+			DrawDebugSphere(GetWorld(), terns.GetLocation(), 4, 32, FColor::Cyan, false);
+			//DrawDebugSphere(GetWorld(), terns.GetLocation(), 4, 32, FColor::Cyan, false);
+#endif*/
 			KinActor->setKinematicTarget(PxTransform(U2PTransform(terns)) * HandleInfo->COMPosition/*PNewLocation, PNewOrientation*/);
 		}
 		

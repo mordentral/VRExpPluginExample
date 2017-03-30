@@ -25,6 +25,10 @@ bool UGripSteamVRTrackedDevice::PollControllerState(FVector& Position, FRotator&
 #else
 	if ((PlayerIndex != INDEX_NONE) && bHasAuthority && TrackedDeviceIndex != EBPVRDeviceIndex::None)
 	{
+
+		// This is a silly workaround but the VRSystem commands don't actually detect if the unit is on, only if it is a valid ID.
+		// So I would have to check against a valid tracking frame anyway and this already does it for me through a table
+		// that is not at all accessible outside of the module it is in.....
 		TArray<int32> ValidTrackedIDs;
 		USteamVRFunctionLibrary::GetValidTrackedDeviceIds(ESteamVRTrackedDeviceType::Other, ValidTrackedIDs);
 
