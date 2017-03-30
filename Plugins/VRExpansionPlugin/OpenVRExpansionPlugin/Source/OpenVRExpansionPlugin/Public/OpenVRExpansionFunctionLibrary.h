@@ -2,6 +2,7 @@
 
 #pragma once
 #include "IMotionController.h"
+#include "VRBPDataTypes.h"
 
 // #Note: Can now access VRSystem from the SteamHMD directly, however still cannot use the static pVRGenericInterface point due to 
 // linking errors since can't attain .cpp reference. So useless to convert to blueprint library as the render models wouldn't work.
@@ -42,12 +43,17 @@ DECLARE_LOG_CATEGORY_EXTERN(OpenVRExpansionFunctionLibraryLog, Log, All);
 
 // This makes a lot of the blueprint functions cleaner
 UENUM()
-enum class EBPVRCameraResultSwitch : uint8
+enum class EBPVRDeviceIndex : uint8
 {
 	// On Success
-	OnSucceeded,
-	// On Failure
-	OnFailed
+	HMD = 0,
+	FirstController = 1,
+	SecondController = 2,
+	TrackedDevice1 = 3,
+	TrackedDevice2 = 4,
+	TrackedDevice3 = 5,
+	TrackedDevice4 = 6,
+	None = 255
 };
 
 USTRUCT(BlueprintType, Category = "VRExpansionFunctions|SteamVR|VRCamera")
@@ -262,9 +268,13 @@ public:
 	UPROPERTY(BlueprintReadOnly)
 	bool bInitialized;
 
+	// Closes the handles for the library
+	UFUNCTION(BlueprintPure, Category = "VRExpansionFunctions|SteamVR", meta = (bIgnoreSelf = "true"))
+	bool IsOpenVRDeviceConnected(EBPVRDeviceIndex OpenVRDeviceIndex);
+
 	// Gets the model / texture of a SteamVR Device, can use to fill procedural mesh components or just get the texture of them to apply to a pre-made model.
 	UFUNCTION(BlueprintCallable, Category = "VRExpansionFunctions|SteamVR", meta = (bIgnoreSelf = "true", WorldContext = "WorldContextObject", DisplayName = "GetVRDeviceModelAndTexture", ExpandEnumAsExecs = "Result"))
-	UTexture2D * GetVRDeviceModelAndTexture(UObject* WorldContextObject, EBPSteamVRTrackedDeviceType DeviceType, TArray<UProceduralMeshComponent *> ProceduralMeshComponentsToFill, bool bCreateCollision, EAsyncBlueprintResultSwitch &Result/*, TArray<uint8> & OutRawTexture, bool bReturnRawTexture = false*/);
+	UTexture2D * GetVRDeviceModelAndTexture(UObject* WorldContextObject, EBPSteamVRTrackedDeviceType DeviceType, TArray<UProceduralMeshComponent *> ProceduralMeshComponentsToFill, bool bCreateCollision, EAsyncBlueprintResultSwitch &Result, EBPVRDeviceIndex OverrideDeviceID = EBPVRDeviceIndex::None);
 	
 	// Gets a String device property
 	UFUNCTION(BlueprintCallable, Category = "VRExpansionFunctions|SteamVR", meta = (bIgnoreSelf = "true", DisplayName = "GetVRDevicePropertyString"))
@@ -306,25 +316,25 @@ public:
 	*/
 
 
-	// Gets a screen cap from the HMD camera if there is one
+	// Returns if there is a VR camera and what its pixel height / width is
 	UFUNCTION(BlueprintPure, Category = "VRExpansionFunctions|SteamVR|VRCamera", meta = (bIgnoreSelf = "true", DisplayName = "HasVRCamera"))
-	bool HasVRCamera();
+	bool HasVRCamera(EOpenVRCameraFrameType FrameType, int32 &Width, int32 &Height);
 
 	// Gets a screen cap from the HMD camera if there is one
 	UFUNCTION(BlueprintCallable, Category = "VRExpansionFunctions|SteamVR|VRCamera", meta = (bIgnoreSelf = "true", DisplayName = "GetVRCameraFrame", ExpandEnumAsExecs = "Result"))
-	void GetVRCameraFrame(UPARAM(ref) FBPOpenVRCameraHandle & CameraHandle, EOpenVRCameraFrameType FrameType, EBPVRCameraResultSwitch & Result, UTexture2D * TargetRenderTarget = nullptr);
+	void GetVRCameraFrame(UPARAM(ref) FBPOpenVRCameraHandle & CameraHandle, EOpenVRCameraFrameType FrameType, EBPVRResultSwitch & Result, UTexture2D * TargetRenderTarget = nullptr);
 
 	// Create Camera Render Target
 	UFUNCTION(BlueprintCallable, Category = "VRExpansionFunctions|SteamVR|VRCamera", meta = (bIgnoreSelf = "true", DisplayName = "CreateCameraTexture2D", ExpandEnumAsExecs = "Result"))
-	UTexture2D * CreateCameraTexture2D(UPARAM(ref) FBPOpenVRCameraHandle & CameraHandle, EOpenVRCameraFrameType FrameType, EBPVRCameraResultSwitch & Result);
+	UTexture2D * CreateCameraTexture2D(UPARAM(ref) FBPOpenVRCameraHandle & CameraHandle, EOpenVRCameraFrameType FrameType, EBPVRResultSwitch & Result);
 
 	// Acquire the vr camera for access (wakes it up)
 	UFUNCTION(BlueprintCallable, Category = "VRExpansionFunctions|SteamVR|VRCamera", meta = (bIgnoreSelf = "true", DisplayName = "AcquireVRCamera", ExpandEnumAsExecs = "Result"))
-	void AcquireVRCamera(FBPOpenVRCameraHandle & CameraHandle, EBPVRCameraResultSwitch & Result);
+	void AcquireVRCamera(FBPOpenVRCameraHandle & CameraHandle, EBPVRResultSwitch & Result);
 
 	// Releases the vr camera from access - you MUST call this when done with the camera
 	UFUNCTION(BlueprintCallable, Category = "VRExpansionFunctions|SteamVR|VRCamera", meta = (bIgnoreSelf = "true", DisplayName = "ReleaseVRCamera", ExpandEnumAsExecs = "Result"))
-	void ReleaseVRCamera(UPARAM(ref) FBPOpenVRCameraHandle & CameraHandle, EBPVRCameraResultSwitch & Result);
+	void ReleaseVRCamera(UPARAM(ref) FBPOpenVRCameraHandle & CameraHandle, EBPVRResultSwitch & Result);
 
 	// Releases the vr camera from access
 	UFUNCTION(BlueprintCallable, Category = "VRExpansionFunctions|SteamVR|VRCamera", meta = (bIgnoreSelf = "true", DisplayName = "IsValid"))

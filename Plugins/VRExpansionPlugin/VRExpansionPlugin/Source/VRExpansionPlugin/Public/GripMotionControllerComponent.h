@@ -34,11 +34,11 @@ private:
 	~UGripMotionControllerComponent();
 
 	/** Which player index this motion controller should automatically follow */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MotionController")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MotionController|Types")
 		int32 PlayerIndex;
 
 	/** Which hand this component should automatically follow */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MotionController")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MotionController|Types")
 		EControllerHand Hand;
 
 	/** If false, render transforms within the motion controller hierarchy will be updated a second time immediately before rendering. */
@@ -559,18 +559,18 @@ public:
 	FBPActorPhysicsHandleInformation * CreatePhysicsGrip(const FBPActorGripInformation & GripInfo);
 	bool DestroyPhysicsHandle(int32 SceneIndex, physx::PxD6Joint** HandleData, physx::PxRigidDynamic** KinActorData);
 
-private:
+	/** If true, the Position and Orientation args will contain the most recent controller state */
+	virtual bool PollControllerState(FVector& Position, FRotator& Orientation);
+
 	/** Whether or not this component had a valid tracked controller associated with it this frame*/
 	bool bTracked;
 
 	/** Whether or not this component has authority within the frame*/
 	bool bHasAuthority;
 
+private:
 	/** Whether or not this component is currently on the network server*/
 	//bool bIsServer;
-
-	/** If true, the Position and Orientation args will contain the most recent controller state */
-	bool PollControllerState(FVector& Position, FRotator& Orientation);
 
 	/** View extension object that can persist on the render thread without the motion controller component */
 	class FViewExtension : public ISceneViewExtension, public TSharedFromThis<FViewExtension, ESPMode::ThreadSafe>

@@ -2764,7 +2764,6 @@ bool UGripMotionControllerComponent::SetUpPhysicsHandle(const FBPActorGripInform
 
 		if (NewGrip.GripCollisionType == EGripCollisionType::ManipulationGrip)
 		{
-
 			FTransform WorldTransform;
 			WorldTransform = NewGrip.RelativeTransform * this->GetComponentTransform();
 			trans.SetLocation(root->GetComponentTransform().GetLocation() - (WorldTransform.GetLocation() - this->GetComponentLocation()));
@@ -2851,7 +2850,7 @@ bool UGripMotionControllerComponent::SetUpPhysicsHandle(const FBPActorGripInform
 					NewJoint->setDrive(PxD6Drive::eX, drive);
 					NewJoint->setDrive(PxD6Drive::eY, drive);
 					NewJoint->setDrive(PxD6Drive::eZ, drive);
-					NewJoint->setDrive(PxD6Drive::eTWIST, drive);
+					//NewJoint->setDrive(PxD6Drive::eTWIST, drive);
 				}
 				else
 				{

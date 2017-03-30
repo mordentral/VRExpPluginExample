@@ -50,7 +50,7 @@ bool UOpenVRExpansionFunctionLibrary::CloseVRHandles()
 #else
 	if (OpenCamera.IsValid())
 	{
-		EBPVRCameraResultSwitch Result;
+		EBPVRResultSwitch Result;
 		ReleaseVRCamera(OpenCamera, Result);
 	}
 
@@ -155,11 +155,14 @@ void UOpenVRExpansionFunctionLibrary::UnloadOpenVRModule()
 #endif
 }
 
-bool UOpenVRExpansionFunctionLibrary::HasVRCamera()
+bool UOpenVRExpansionFunctionLibrary::HasVRCamera(EOpenVRCameraFrameType FrameType, int32 &Width, int32 &Height)
 {
 #if !STEAMVR_SUPPORTED_PLATFORM
 	return false;
 #else
+	Width = 0;
+	Height = 0;
+
 	// Don't run anything if no HMD and if the HMD is not a steam type
 	if (!GEngine->HMDDevice.IsValid() || (GEngine->HMDDevice->GetHMDDeviceType() != EHMDDeviceType::DT_SteamVR))
 		return false;
@@ -176,21 +179,29 @@ bool UOpenVRExpansionFunctionLibrary::HasVRCamera()
 	if (CamError != vr::EVRTrackedCameraError::VRTrackedCameraError_None)
 		return false;
 
+	uint32 WidthOut;
+	uint32 HeightOut;
+	uint32 FrameBufferSize;
+	CamError = VRCamera->GetCameraFrameSize(vr::k_unTrackedDeviceIndex_Hmd, (vr::EVRTrackedCameraFrameType)FrameType, &WidthOut, &HeightOut, &FrameBufferSize);
+
+	Width = WidthOut;
+	Height = HeightOut;
+
 	return pHasCamera;
 
 #endif
 }
 
-void UOpenVRExpansionFunctionLibrary::AcquireVRCamera(FBPOpenVRCameraHandle & CameraHandle, EBPVRCameraResultSwitch & Result)
+void UOpenVRExpansionFunctionLibrary::AcquireVRCamera(FBPOpenVRCameraHandle & CameraHandle, EBPVRResultSwitch & Result)
 {
 #if !STEAMVR_SUPPORTED_PLATFORM
-	Result = EBPVRCameraResultSwitch::OnFailed;
+	Result = EBPVRResultSwitch::OnFailed;
 	return;
 #else
 	// Don't run anything if no HMD and if the HMD is not a steam type
 	if (!GEngine->HMDDevice.IsValid() || (GEngine->HMDDevice->GetHMDDeviceType() != EHMDDeviceType::DT_SteamVR))
 	{
-		Result = EBPVRCameraResultSwitch::OnFailed;
+		Result = EBPVRResultSwitch::OnFailed;
 		return;
 	}
 
@@ -199,7 +210,7 @@ void UOpenVRExpansionFunctionLibrary::AcquireVRCamera(FBPOpenVRCameraHandle & Ca
 
 	if (!VRCamera || HmdErr != vr::HmdError::VRInitError_None)
 	{
-		Result = EBPVRCameraResultSwitch::OnFailed;
+		Result = EBPVRResultSwitch::OnFailed;
 		return;
 	}
 
@@ -210,32 +221,32 @@ void UOpenVRExpansionFunctionLibrary::AcquireVRCamera(FBPOpenVRCameraHandle & Ca
 
 	if (CameraHandle.pCameraHandle == INVALID_TRACKED_CAMERA_HANDLE)
 	{
-		Result = EBPVRCameraResultSwitch::OnFailed;
+		Result = EBPVRResultSwitch::OnFailed;
 		return;
 	}
 
 	OpenCamera = CameraHandle;
-	Result = EBPVRCameraResultSwitch::OnSucceeded;
+	Result = EBPVRResultSwitch::OnSucceeded;
 	return;
 #endif
 }
 
-void UOpenVRExpansionFunctionLibrary::ReleaseVRCamera(UPARAM(ref) FBPOpenVRCameraHandle & CameraHandle, EBPVRCameraResultSwitch & Result)
+void UOpenVRExpansionFunctionLibrary::ReleaseVRCamera(UPARAM(ref) FBPOpenVRCameraHandle & CameraHandle, EBPVRResultSwitch & Result)
 {
 #if !STEAMVR_SUPPORTED_PLATFORM
-	Result = EBPVRCameraResultSwitch::OnFailed;
+	Result = EBPVRResultSwitch::OnFailed;
 	return;
 #else
 	// Don't run anything if no HMD and if the HMD is not a steam type
 	if (!GEngine->HMDDevice.IsValid() || (GEngine->HMDDevice->GetHMDDeviceType() != EHMDDeviceType::DT_SteamVR))
 	{
-		Result = EBPVRCameraResultSwitch::OnFailed;
+		Result = EBPVRResultSwitch::OnFailed;
 		return;
 	}
 
 	if (!CameraHandle.IsValid())
 	{
-		Result = EBPVRCameraResultSwitch::OnFailed;
+		Result = EBPVRResultSwitch::OnFailed;
 		return;
 	}
 
@@ -244,7 +255,7 @@ void UOpenVRExpansionFunctionLibrary::ReleaseVRCamera(UPARAM(ref) FBPOpenVRCamer
 
 	if (!VRCamera || HmdErr != vr::HmdError::VRInitError_None)
 	{
-		Result = EBPVRCameraResultSwitch::OnFailed;
+		Result = EBPVRResultSwitch::OnFailed;
 		return;
 	}
 
@@ -252,7 +263,7 @@ void UOpenVRExpansionFunctionLibrary::ReleaseVRCamera(UPARAM(ref) FBPOpenVRCamer
 	CameraHandle.pCameraHandle = INVALID_TRACKED_CAMERA_HANDLE;
 
 	OpenCamera = CameraHandle;
-	Result = EBPVRCameraResultSwitch::OnSucceeded;
+	Result = EBPVRResultSwitch::OnSucceeded;
 	return;
 
 #endif
@@ -264,22 +275,22 @@ bool UOpenVRExpansionFunctionLibrary::IsValid(UPARAM(ref) FBPOpenVRCameraHandle 
 }
 
 
-UTexture2D * UOpenVRExpansionFunctionLibrary::CreateCameraTexture2D(UPARAM(ref) FBPOpenVRCameraHandle & CameraHandle, EOpenVRCameraFrameType FrameType, EBPVRCameraResultSwitch & Result)
+UTexture2D * UOpenVRExpansionFunctionLibrary::CreateCameraTexture2D(UPARAM(ref) FBPOpenVRCameraHandle & CameraHandle, EOpenVRCameraFrameType FrameType, EBPVRResultSwitch & Result)
 {
 #if !STEAMVR_SUPPORTED_PLATFORM 
-	Result = EBPVRCameraResultSwitch::OnFailed;
+	Result = EBPVRResultSwitch::OnFailed;
 	return nullptr;
 #else
 	// Don't run anything if no HMD and if the HMD is not a steam type
 	if (!GEngine->HMDDevice.IsValid() || (GEngine->HMDDevice->GetHMDDeviceType() != EHMDDeviceType::DT_SteamVR))
 	{
-		Result = EBPVRCameraResultSwitch::OnFailed;
+		Result = EBPVRResultSwitch::OnFailed;
 		return nullptr;
 	}
 
 	if (!CameraHandle.IsValid() || !FApp::CanEverRender())
 	{
-		Result = EBPVRCameraResultSwitch::OnFailed;
+		Result = EBPVRResultSwitch::OnFailed;
 		return nullptr;
 	}
 
@@ -288,7 +299,7 @@ UTexture2D * UOpenVRExpansionFunctionLibrary::CreateCameraTexture2D(UPARAM(ref) 
 
 	if (!VRCamera || HmdErr != vr::HmdError::VRInitError_None)
 	{
-		Result = EBPVRCameraResultSwitch::OnFailed;
+		Result = EBPVRResultSwitch::OnFailed;
 		return nullptr;
 	}
 
@@ -303,54 +314,36 @@ UTexture2D * UOpenVRExpansionFunctionLibrary::CreateCameraTexture2D(UPARAM(ref) 
 		UTexture2D * NewRenderTarget2D = UTexture2D::CreateTransient(Width, Height, EPixelFormat::PF_R8G8B8A8);//NewObject<UTexture2D>(GetWorld());
 		check(NewRenderTarget2D);
 
-		//NewRenderTarget2D->PlatformData = new FTexturePlatformData();
-		//NewRenderTarget2D->PlatformData->SizeX = Width;
-		//NewRenderTarget2D->PlatformData->SizeY = Height;
-		//NewRenderTarget2D->PlatformData->PixelFormat = EPixelFormat::PF_R8G8B8A8;
-
-		// Allocate first mipmap.
-		//int32 NumBlocksX = Width / GPixelFormats[EPixelFormat::PF_R8G8B8A8].BlockSizeX;
-		//int32 NumBlocksY = Height / GPixelFormats[EPixelFormat::PF_R8G8B8A8].BlockSizeY;
-		//FTexture2DMipMap* Mip = new(NewRenderTarget2D->PlatformData->Mips) FTexture2DMipMap();
-		//Mip->SizeX = Width;
-		//Mip->SizeY = Height;
-		//Mip->BulkData.Lock(LOCK_READ_WRITE);
-		//Mip->BulkData.Realloc(NumBlocksX * NumBlocksY * GPixelFormats[EPixelFormat::PF_R8G8B8A8].BlockBytes);
-		//Mip->BulkData.Unlock();
-
 		//Setting some Parameters for the Texture and finally returning it
 		NewRenderTarget2D->PlatformData->NumSlices = 1;
 		NewRenderTarget2D->NeverStream = true;
 		NewRenderTarget2D->UpdateResource();
 
-		//NewRenderTarget2D->InitCustomFormat(Width, Height, /*EPixelFormat::PF_R8G8B8A8*/EPixelFormat::PF_B8G8R8A8, false);
-		//NewRenderTarget2D->UpdateResourceImmediate(true);
-
-		Result = EBPVRCameraResultSwitch::OnSucceeded;
+		Result = EBPVRResultSwitch::OnSucceeded;
 		return NewRenderTarget2D;
 	}
 
-	Result = EBPVRCameraResultSwitch::OnFailed;
+	Result = EBPVRResultSwitch::OnFailed;
 	return nullptr;
 #endif
 }
 
-void UOpenVRExpansionFunctionLibrary::GetVRCameraFrame(UPARAM(ref) FBPOpenVRCameraHandle & CameraHandle, EOpenVRCameraFrameType FrameType, EBPVRCameraResultSwitch & Result, UTexture2D * TargetRenderTarget)
+void UOpenVRExpansionFunctionLibrary::GetVRCameraFrame(UPARAM(ref) FBPOpenVRCameraHandle & CameraHandle, EOpenVRCameraFrameType FrameType, EBPVRResultSwitch & Result, UTexture2D * TargetRenderTarget)
 {
 #if !STEAMVR_SUPPORTED_PLATFORM 
-	Result = EBPVRCameraResultSwitch::OnFailed;
+	Result = EBPVRResultSwitch::OnFailed;
 	return;
 #else
 	// Don't run anything if no HMD and if the HMD is not a steam type
 	if (!GEngine->HMDDevice.IsValid() || (GEngine->HMDDevice->GetHMDDeviceType() != EHMDDeviceType::DT_SteamVR))
 	{
-		Result = EBPVRCameraResultSwitch::OnFailed;
+		Result = EBPVRResultSwitch::OnFailed;
 		return;
 	}
 
 	if (!TargetRenderTarget || !CameraHandle.IsValid())
 	{
-		Result = EBPVRCameraResultSwitch::OnFailed;
+		Result = EBPVRResultSwitch::OnFailed;
 		return;
 	}
 
@@ -359,7 +352,7 @@ void UOpenVRExpansionFunctionLibrary::GetVRCameraFrame(UPARAM(ref) FBPOpenVRCame
 
 	if (!VRCamera || HmdErr != vr::HmdError::VRInitError_None)
 	{
-		Result = EBPVRCameraResultSwitch::OnFailed;
+		Result = EBPVRResultSwitch::OnFailed;
 		return;
 	}
 
@@ -370,12 +363,12 @@ void UOpenVRExpansionFunctionLibrary::GetVRCameraFrame(UPARAM(ref) FBPOpenVRCame
 
 	if (CamError != vr::EVRTrackedCameraError::VRTrackedCameraError_None || Width <= 0 || Height <= 0)
 	{
-		Result = EBPVRCameraResultSwitch::OnFailed;
+		Result = EBPVRResultSwitch::OnFailed;
 		return;
 	}
 
 	// Make sure formats are correct
-	check(FrameBufferSize == (Width * Height * GPixelFormats[EPixelFormat::PF_R8G8B8A8].BlockSizeX));
+	check(FrameBufferSize == (Width * Height * GPixelFormats[EPixelFormat::PF_R8G8B8A8].BlockBytes));
 
 
 	// Need to bring this back after moving from render target to this
@@ -401,18 +394,13 @@ void UOpenVRExpansionFunctionLibrary::GetVRCameraFrame(UPARAM(ref) FBPOpenVRCame
 	vr::CameraVideoStreamFrameHeader_t CamHeader;
 	uint8* pData = new uint8[FrameBufferSize];
 
-	/*uint8* MipData = (uint8*)TargetRenderTarget->PlatformData->Mips[0].BulkData.Lock(LOCK_READ_WRITE);
-	CamError = VRCamera->GetVideoStreamFrameBuffer(CameraHandle.pCameraHandle, (vr::EVRTrackedCameraFrameType)FrameType, MipData, TargetRenderTarget->PlatformData->Mips[0].BulkData.GetBulkDataSize(), &CamHeader, sizeof(vr::CameraVideoStreamFrameHeader_t));
-	TargetRenderTarget->PlatformData->Mips[0].BulkData.Unlock();
-	TargetRenderTarget->UpdateResource();*/
-
 	CamError = VRCamera->GetVideoStreamFrameBuffer(CameraHandle.pCameraHandle, (vr::EVRTrackedCameraFrameType)FrameType, pData, FrameBufferSize, &CamHeader, sizeof(vr::CameraVideoStreamFrameHeader_t));
 
 	// No frame available = still on spin / wake up
 	if (CamError != vr::EVRTrackedCameraError::VRTrackedCameraError_None || CamError == vr::EVRTrackedCameraError::VRTrackedCameraError_NoFrameAvailable)
 	{
 		delete[] pData;
-		Result = EBPVRCameraResultSwitch::OnFailed;
+		Result = EBPVRResultSwitch::OnFailed;
 		return;
 	}
 
@@ -435,7 +423,7 @@ void UOpenVRExpansionFunctionLibrary::GetVRCameraFrame(UPARAM(ref) FBPOpenVRCame
 		});
 
 	// Letting the enqueued command free the memory
-	Result = EBPVRCameraResultSwitch::OnSucceeded;
+	Result = EBPVRResultSwitch::OnSucceeded;
 	return;
 #endif
 }
@@ -572,17 +560,59 @@ bool UOpenVRExpansionFunctionLibrary::GetVRDevicePropertyFloat(EVRDeviceProperty
 #endif
 }
 
-UTexture2D * UOpenVRExpansionFunctionLibrary::GetVRDeviceModelAndTexture(UObject* WorldContextObject, EBPSteamVRTrackedDeviceType DeviceType, TArray<UProceduralMeshComponent *> ProceduralMeshComponentsToFill, bool bCreateCollision, EAsyncBlueprintResultSwitch &Result/*, TArray<uint8> & OutRawTexture, bool bReturnRawTexture*/)
+bool UOpenVRExpansionFunctionLibrary::IsOpenVRDeviceConnected(EBPVRDeviceIndex OpenVRDeviceIndex)
+{
+#if !STEAMVR_SUPPORTED_PLATFORM
+	return false;
+#else
+
+	TArray<int32> ValidTrackedIDs;
+	USteamVRFunctionLibrary::GetValidTrackedDeviceIds(ESteamVRTrackedDeviceType::Other, ValidTrackedIDs);
+
+	if (ValidTrackedIDs.Find((int32)OpenVRDeviceIndex) == INDEX_NONE)
+	{
+		return false;
+	}
+
+	return true;
+	/*if (!bInitialized)
+	{
+		UE_LOG(OpenVRExpansionFunctionLibraryLog, Warning, TEXT("OpenVR Library not initialized!!"));
+		return false;
+	}
+
+	vr::HmdError HmdErr;
+	vr::IVRSystem * VRSystem = (vr::IVRSystem*)(*VRGetGenericInterfaceFn)(vr::IVRSystem_Version, &HmdErr);
+	//vr::IVRSystem * VRSystem = (vr::IVRSystem*)vr::VR_GetGenericInterface(vr::IVRSystem_Version, &HmdErr);
+
+	if (!VRSystem)
+	{
+		UE_LOG(OpenVRExpansionFunctionLibraryLog, Warning, TEXT("VRSystem InterfaceErrorCode %i"), (int32)HmdErr);
+	}
+
+	if (!VRSystem)
+	{
+		UE_LOG(OpenVRExpansionFunctionLibraryLog, Warning, TEXT("Couldn't Get Interfaces!!"));
+		return false;
+	}
+
+	return VRSystem->IsTrackedDeviceConnected((uint32)OpenVRDeviceIndex);*/
+
+#endif
+}
+
+UTexture2D * UOpenVRExpansionFunctionLibrary::GetVRDeviceModelAndTexture(UObject* WorldContextObject, EBPSteamVRTrackedDeviceType DeviceType, TArray<UProceduralMeshComponent *> ProceduralMeshComponentsToFill, bool bCreateCollision, EAsyncBlueprintResultSwitch &Result, EBPVRDeviceIndex OverrideDeviceID)
 {
 
 #if !STEAMVR_SUPPORTED_PLATFORM
+	UE_LOG(OpenVRExpansionFunctionLibraryLog, Warning, TEXT("Not SteamVR Supported Platform!!"));
 	Result = EAsyncBlueprintResultSwitch::OnFailure;
 	return NULL;
-	UE_LOG(OpenVRExpansionFunctionLibraryLog, Warning, TEXT("Not SteamVR Supported Platform!!"));
 #else
 
 	if (!bInitialized)
 	{
+		UE_LOG(OpenVRExpansionFunctionLibraryLog, Warning, TEXT("OpenVR Library not initialized!!"));
 		Result = EAsyncBlueprintResultSwitch::OnFailure;
 		return NULL;
 	}
@@ -627,17 +657,35 @@ UTexture2D * UOpenVRExpansionFunctionLibrary::GetVRDeviceModelAndTexture(UObject
 		return nullptr;
 	}
 
-	TArray<int32> TrackedIDs;
-
-	USteamVRFunctionLibrary::GetValidTrackedDeviceIds((ESteamVRTrackedDeviceType)DeviceType, TrackedIDs);
-	if (TrackedIDs.Num() == 0)
+	uint32 DeviceID = 0;
+	if (OverrideDeviceID != EBPVRDeviceIndex::None)
 	{
-		UE_LOG(OpenVRExpansionFunctionLibraryLog, Warning, TEXT("Couldn't Get Tracked Devices!!"));
-		Result = EAsyncBlueprintResultSwitch::OnFailure;
-		return nullptr;
-	}
+		DeviceID = (uint32)OverrideDeviceID;
 
-	int32 DeviceID = TrackedIDs[0];
+		TArray<int32> ValidTrackedIDs;
+		USteamVRFunctionLibrary::GetValidTrackedDeviceIds(ESteamVRTrackedDeviceType::Other, ValidTrackedIDs);
+
+		if (ValidTrackedIDs.Find(DeviceID) == INDEX_NONE)
+		{
+			UE_LOG(OpenVRExpansionFunctionLibraryLog, Warning, TEXT("Override Tracked Device Was Missing!!"));
+			Result = EAsyncBlueprintResultSwitch::OnFailure;
+			return nullptr;
+		}
+	}
+	else
+	{
+		TArray<int32> TrackedIDs;
+
+		USteamVRFunctionLibrary::GetValidTrackedDeviceIds((ESteamVRTrackedDeviceType)DeviceType, TrackedIDs);
+		if (TrackedIDs.Num() == 0)
+		{
+			UE_LOG(OpenVRExpansionFunctionLibraryLog, Warning, TEXT("Couldn't Get Tracked Devices!!"));
+			Result = EAsyncBlueprintResultSwitch::OnFailure;
+			return nullptr;
+		}
+
+		DeviceID = TrackedIDs[0];
+	}
 
 	vr::TrackedPropertyError pError = vr::TrackedPropertyError::TrackedProp_Success;
 
