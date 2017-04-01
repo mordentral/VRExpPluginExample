@@ -1054,7 +1054,7 @@ bool UGripMotionControllerComponent::GripComponent(
 		ObjectToCheck = ComponentToGrip;
 	}
 
-	ComponentToGrip->IgnoreActorWhenMoving(this->GetOwner(), true);
+	//ComponentToGrip->IgnoreActorWhenMoving(this->GetOwner(), true);
 	// So that events caused by sweep and the like will trigger correctly
 
 	ComponentToGrip->AddTickPrerequisiteComponent(this);
@@ -1431,7 +1431,7 @@ void UGripMotionControllerComponent::NotifyDrop_Implementation(const FBPActorGri
 			root = Cast<UPrimitiveComponent>(pActor->GetRootComponent());
 
 			pActor->RemoveTickPrerequisiteComponent(this);
-			this->IgnoreActorWhenMoving(pActor, false);
+			//this->IgnoreActorWhenMoving(pActor, false);
 
 			if (APawn* OwningPawn = Cast<APawn>(GetOwner()))
 			{
