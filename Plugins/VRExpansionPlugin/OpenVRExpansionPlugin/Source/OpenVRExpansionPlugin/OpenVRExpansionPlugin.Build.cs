@@ -12,16 +12,7 @@ public class OpenVRExpansionPlugin : ModuleRules
     public OpenVRExpansionPlugin(TargetInfo Target)
 	{
 
-        // To detect VR Preview, not built out in packaged builds
-        if (UEBuildConfiguration.bBuildEditor == true)
-        {
-            PrivateDependencyModuleNames.AddRange(
-                new string[] {
-                    "UnrealEd"
-                }
-            );
-        }
-
+        Definitions.Add("WITH_OPEN_VR_EXPANSION=1");
 
         PublicIncludePaths.AddRange(
 			new string[] {
