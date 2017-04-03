@@ -53,6 +53,7 @@ public class VRExpansionPlugin : ModuleRules
                 "Engine",
                 "InputCore",
                 "PhysX",
+                //"FLEX", remove comment if building in the NVIDIA flex branch - NOTE when put in place FLEX only listed win32 and win64 at compatible platforms
                 "HeadMountedDisplay",
                 "RHI",
                 "RenderCore",
@@ -60,8 +61,6 @@ public class VRExpansionPlugin : ModuleRules
                 "NetworkReplayStreaming",
                 "AIModule",
                 "UMG"
-                //"ProceduralMeshComponent",
-               // "EngineSettings"
             });
 
 
@@ -69,8 +68,8 @@ public class VRExpansionPlugin : ModuleRules
         PrivateDependencyModuleNames.AddRange(
 			new string[]
 			{
-				"CoreUObject",
-				"Engine",
+				//"CoreUObject",
+				//"Engine",
 				"Slate",
 				"SlateCore"
 

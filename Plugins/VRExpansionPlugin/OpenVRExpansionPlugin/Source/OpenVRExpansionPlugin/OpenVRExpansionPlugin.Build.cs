@@ -41,16 +41,16 @@ public class OpenVRExpansionPlugin : ModuleRules
                // "EngineSettings"
             });
 
-        PrivateDependencyModuleNames.AddRange(
+       /* PrivateDependencyModuleNames.AddRange(
 			new string[]
 			{
-				"CoreUObject",
-				"Engine",
+				//"CoreUObject",
+				//"Engine",
 
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);
-
+            */
         // Locking steamVR out of non windows builds
         if (Target.Platform == UnrealTargetPlatform.Win32 || Target.Platform == UnrealTargetPlatform.Win64)
         {
