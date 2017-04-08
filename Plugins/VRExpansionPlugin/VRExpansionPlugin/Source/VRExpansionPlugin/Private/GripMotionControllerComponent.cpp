@@ -3171,6 +3171,7 @@ void UGripMotionControllerComponent::FViewExtension::PreRenderViewFamily_RenderT
 				// Doesn't actually update the proxies ActorPosition, may be the cause of high velocity issues with late updates
 				// Tried to manually override this and set transform manually but all variables are private
 				CachedSceneInfo->Proxy->ApplyLateUpdateTransform(LateUpdateTransform);
+
 			}
 		}
 		LateUpdatePrimitives.Reset();
