@@ -153,6 +153,88 @@ void UOpenVRExpansionFunctionLibrary::UnloadOpenVRModule()
 #endif
 }
 
+
+void UOpenVRExpansionFunctionLibrary::TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction)
+{
+	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+
+#if !STEAMVR_SUPPORTED_PLATFORM
+	return;
+#else
+	if (!bInitialized || !KeyboardHandle.IsValid())
+	{
+		return;
+	}
+
+	if (!(GEngine->HMDDevice.IsValid() && (GEngine->HMDDevice->GetHMDDeviceType() == EHMDDeviceType::DT_SteamVR)))
+	{
+		return;
+	}
+
+	vr::HmdError HmdErr;
+	vr::IVROverlay * VROverlay = (vr::IVROverlay*)(*VRGetGenericInterfaceFn)(vr::IVROverlay_Version, &HmdErr);
+
+	if (!VROverlay)
+	{
+		return;
+	}
+
+	// Poll SteamVR events
+	vr::VREvent_t VREvent;
+	while (KeyboardHandle.IsValid() && VROverlay->PollNextOverlayEvent(KeyboardHandle.VRKeyboardHandle, &VREvent, sizeof(VREvent)))
+	{
+		/*		
+			VRKeyboardEvent_None = 0,
+	VRKeyboardEvent_OverlayFocusChanged = 307, // data is overlay, global event
+	VRKeyboardEvent_OverlayShown = 500,
+	VRKeyboardEvent_OverlayHidden = 501,
+	VRKeyboardEvent_ShowKeyboard = 509, // Sent to keyboard renderer in the dashboard to invoke it
+	VRKeyboardEvent_HideKeyboard = 510, // Sent to keyboard renderer in the dashboard to hide it
+	VRKeyboardEvent_OverlayGamepadFocusGained = 511, // Sent to an overlay when IVROverlay::SetFocusOverlay is called on it
+	VRKeyboardEvent_OverlayGamepadFocusLost = 512, // Send to an overlay when it previously had focus and IVROverlay::SetFocusOverlay is called on something else
+	VRKeyboardEvent_OverlaySharedTextureChanged = 513,
+	VRKeyboardEvent_KeyboardClosed = 1200,
+	VRKeyboardEvent_KeyboardCharInput = 1201,
+	VRKeyboardEvent_KeyboardDone = 1202, // Sent when DONE button clicked on keyboard
+		*/
+		switch (VREvent.eventType)
+		{
+		case vr::VREvent_KeyboardCharInput:
+		{
+			char OutString[512];
+			uint32 TextLen = VROverlay->GetKeyboardText((char*)&OutString, 512);
+			OnKeyboardCharInput.Broadcast(FString(ANSI_TO_TCHAR(OutString)));
+		}break;
+		case vr::VREvent_KeyboardClosed:
+		{
+			if (KeyboardHandle.IsValid())
+			{
+				VROverlay->DestroyOverlay(KeyboardHandle.VRKeyboardHandle);
+				KeyboardHandle.VRKeyboardHandle = vr::k_ulOverlayHandleInvalid;
+			}
+			OnKeyboardClosed.Broadcast();
+		}break;
+		case vr::VREvent_KeyboardDone:
+		{
+			char OutString[512];
+			uint32 TextLen = VROverlay->GetKeyboardText((char*)&OutString, 512);
+			OnKeyboardDone.Broadcast(FString(ANSI_TO_TCHAR(OutString)));
+
+			if (KeyboardHandle.IsValid())
+			{
+				VROverlay->HideKeyboard();
+				VROverlay->DestroyOverlay(KeyboardHandle.VRKeyboardHandle);
+				KeyboardHandle.VRKeyboardHandle = vr::k_ulOverlayHandleInvalid;
+			}
+		}break;
+
+		default:break;
+		}
+	}
+
+#endif
+}
+
 bool UOpenVRExpansionFunctionLibrary::HasVRCamera(EOpenVRCameraFrameType FrameType, int32 &Width, int32 &Height)
 {
 #if !STEAMVR_SUPPORTED_PLATFORM

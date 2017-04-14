@@ -75,6 +75,35 @@ enum class EBPVRDeviceIndex : uint8
 	None = 255
 };
 
+//USTRUCT(BlueprintType, Category = "VRExpansionFunctions|SteamVR")
+struct OPENVREXPANSIONPLUGIN_API FBPOpenVRKeyboardHandle
+{
+	//GENERATED_BODY()
+public:
+
+	uint64_t VRKeyboardHandle;
+
+	FBPOpenVRKeyboardHandle()
+	{
+		VRKeyboardHandle = vr::k_ulOverlayHandleInvalid;
+	}
+	const bool IsValid()
+	{
+		return VRKeyboardHandle != vr::k_ulOverlayHandleInvalid;
+	}
+
+	//This is here for the Find() and Remove() functions from TArray
+	FORCEINLINE bool operator==(const FBPOpenVRKeyboardHandle &Other) const
+	{
+		if (VRKeyboardHandle == Other.VRKeyboardHandle)
+			return true;
+
+		return false;
+	}
+	//#define INVALID_TRACKED_CAMERA_HANDLE
+};
+
+
 USTRUCT(BlueprintType, Category = "VRExpansionFunctions|SteamVR|VRCamera")
 struct OPENVREXPANSIONPLUGIN_API FBPOpenVRCameraHandle
 {
@@ -226,6 +255,19 @@ Prop_TrackingRangeMaximumMeters_Float		= 4005,
 
 */
 
+//DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FActorComponentActivatedSignature, bool, bReset);
+//DECLARE_DYNAMIC_MULTICAST_DELEGATE(FActorComponentDeactivateSignature);
+
+//DECLARE_MULTICAST_DELEGATE_OneParam(FActorComponentCreatePhysicsSignature, UActorComponent*);
+//DECLARE_MULTICAST_DELEGATE_OneParam(FActorComponentDestroyPhysicsSignature, UActorComponent*);
+
+//UPROPERTY(BlueprintAssignable, Category = "Components|Activation")
+//FActorComponentActivatedSignature OnComponentActivated;
+//OnComponentActivated.Broadcast(bReset);
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FVRKeyboardStringCallbackSignature, FString, Text);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FVRKeyboardNullCallbackSignature);
+
 // Had to turn this in to a UObject, I felt the easiest way to use it was as an actor component to the player controller
 // It can be returned to just a blueprint library if epic ever upgrade steam to 1.33 or above
 UCLASS(Blueprintable, meta = (BlueprintSpawnableComponent))
@@ -238,6 +280,8 @@ public:
 
 	void* OpenVRDLLHandle;
 
+	void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction) override;
+
 	// Currently OpenVR only supports a single HMD camera as it only supports a single HMD (default index 0)
 	// So support auto releasing it with this, in case the user messes up and doesn't do so.
 	FBPOpenVRCameraHandle OpenCamera;
@@ -247,6 +291,184 @@ public:
 	//pVRShutdown VRShutdownFn;
 	//pVRIsHmdPresent VRIsHmdPresentFn;
 	//pVRGetStringForHmdError VRGetStringForHmdErrorFn;
+
+	FBPOpenVRKeyboardHandle KeyboardHandle;
+
+	// Keyboard Functions //
+
+	UPROPERTY(BlueprintAssignable, Category = "VRExpansionFunctions|SteamVR")
+	FVRKeyboardStringCallbackSignature OnKeyboardDone;
+
+	//UFUNCTION(BlueprintImplementableEvent, Category = "VRExpansionFunctions|SteamVR")
+	//void OnKeyboardDone(const FString & TextOut);
+
+	UPROPERTY(BlueprintAssignable, Category = "VRExpansionFunctions|SteamVR")
+	FVRKeyboardNullCallbackSignature OnKeyboardClosed;
+
+	//UFUNCTION(BlueprintImplementableEvent, Category = "VRExpansionFunctions|SteamVR")
+	//void OnKeyboardClosed();
+
+
+	UPROPERTY(BlueprintAssignable, Category = "VRExpansionFunctions|SteamVR")
+		FVRKeyboardStringCallbackSignature OnKeyboardCharInput;
+
+	//UFUNCTION(BlueprintImplementableEvent, Category = "VRExpansionFunctions|SteamVR")
+	//void OnKeyboardCharInput(const FString & TextOut);
+
+	// Opens the vrkeyboard, can fail if already open or in use
+	UFUNCTION(BlueprintCallable, Category = "VRExpansionFunctions|SteamVR", meta = (bIgnoreSelf = "true", ExpandEnumAsExecs = "Result"))
+	void OpenVRKeyboard(bool bIsForPassword, bool bIsMultiline, bool bUseMinimalMode, bool bIsRightHand, int32 MaxCharacters, FString Description, FString StartingString, EBPVRResultSwitch & Result)
+	{
+#if !STEAMVR_SUPPORTED_PLATFORM
+		Result = EBPVRResultSwitch::OnFailed;
+		return;
+#else
+		if (!bInitialized || KeyboardHandle.IsValid())
+		{
+			Result = EBPVRResultSwitch::OnFailed;
+			return;
+		}
+
+		if (!(GEngine->HMDDevice.IsValid() && (GEngine->HMDDevice->GetHMDDeviceType() == EHMDDeviceType::DT_SteamVR)))
+		{
+			Result = EBPVRResultSwitch::OnFailed;
+			return;
+		}
+
+		vr::HmdError HmdErr;
+		vr::IVROverlay * VROverlay = (vr::IVROverlay*)(*VRGetGenericInterfaceFn)(vr::IVROverlay_Version, &HmdErr);
+
+		if (!VROverlay)
+		{
+			Result = EBPVRResultSwitch::OnFailed;
+			return;
+		}
+
+		vr::EVROverlayError OverlayError;
+		OverlayError = VROverlay->CreateOverlay("KeyboardOverlay","Keyboard Overlay", &KeyboardHandle.VRKeyboardHandle);
+
+		if (OverlayError != vr::EVROverlayError::VROverlayError_None || !KeyboardHandle.IsValid())
+		{
+			KeyboardHandle.VRKeyboardHandle = vr::k_ulOverlayHandleInvalid;
+			Result = EBPVRResultSwitch::OnFailed;
+			return;
+		}
+
+		vr::EGamepadTextInputMode Inputmode = bIsForPassword ? vr::EGamepadTextInputMode::k_EGamepadTextInputModePassword : vr::EGamepadTextInputMode::k_EGamepadTextInputModeNormal;
+		vr::EGamepadTextInputLineMode LineInputMode = bIsMultiline ? vr::EGamepadTextInputLineMode::k_EGamepadTextInputLineModeMultipleLines : vr::EGamepadTextInputLineMode::k_EGamepadTextInputLineModeSingleLine;
+		uint32 HandInteracting = bIsRightHand ? 0 : 1;
+		
+		if (bIsForPassword)
+			OverlayError = VROverlay->ShowKeyboardForOverlay(KeyboardHandle.VRKeyboardHandle, Inputmode, LineInputMode, TCHAR_TO_ANSI(*Description), MaxCharacters, TCHAR_TO_ANSI(*StartingString), bUseMinimalMode, HandInteracting);
+		else
+			OverlayError = VROverlay->ShowKeyboardForOverlay(KeyboardHandle.VRKeyboardHandle, Inputmode, LineInputMode, TCHAR_TO_ANSI(*Description), MaxCharacters, TCHAR_TO_ANSI(*StartingString), bUseMinimalMode, HandInteracting);
+
+		if (OverlayError != vr::EVROverlayError::VROverlayError_None)
+		{
+			VROverlay->DestroyOverlay(KeyboardHandle.VRKeyboardHandle);
+			KeyboardHandle.VRKeyboardHandle = vr::k_ulOverlayHandleInvalid;
+			Result = EBPVRResultSwitch::OnFailed;
+			return;
+		}
+
+		//VROverlay->SetOverlayAlpha(KeyboardHandle.VRKeyboardHandle, 0.0f); // Might need to remove this, keyboard would be invis?
+		VROverlay->ShowOverlay(KeyboardHandle.VRKeyboardHandle);
+
+		//		/** Set the position of the keyboard in world space **/
+		//virtual void SetKeyboardTransformAbsolute(ETrackingUniverseOrigin eTrackingOrigin, const HmdMatrix34_t *pmatTrackingOriginToKeyboardTransform) = 0;
+
+
+		//		/** Set the position of the keyboard in overlay space by telling it to avoid a rectangle in the overlay. Rectangle coords have (0,0) in the bottom left **/
+		//virtual void SetKeyboardPositionForOverlay(VROverlayHandle_t ulOverlayHandle, HmdRect2_t avoidRect) = 0;
+		//VROverlay->SetOverlayTransformAbsolute(,ETrackingUniverseOrigin::TrackingUniverseStanding,HMDMatrix)
+		/*
+			const float WorldToMeterScale = FMath::Max(GetWorldToMetersScale(), 0.1f);
+	OVR_VERIFY(VROverlay->SetOverlayWidthInMeters(Layer.OverlayHandle, Layer.LayerDesc.QuadSize.X / WorldToMeterScale));
+	OVR_VERIFY(VROverlay->SetOverlayTexelAspect(Layer.OverlayHandle, Layer.LayerDesc.QuadSize.X / Layer.LayerDesc.QuadSize.Y));
+	OVR_VERIFY(VROverlay->SetOverlaySortOrder(Layer.OverlayHandle, Layer.LayerDesc.Priority));
+		*/
+		this->SetComponentTickEnabled(true);
+		Result = EBPVRResultSwitch::OnSucceeded;
+#endif
+	}
+
+	// Closes the vrkeyboard, can fail if not already open
+	UFUNCTION(BlueprintCallable, Category = "VRExpansionFunctions|SteamVR", meta = (bIgnoreSelf = "true", ExpandEnumAsExecs = "Result"))
+	void CloseVRKeyboard(EBPVRResultSwitch & Result)
+	{
+#if !STEAMVR_SUPPORTED_PLATFORM
+		Result = EBPVRResultSwitch::OnFailed;
+		return;
+#else
+		if (!bInitialized || !KeyboardHandle.IsValid())
+		{
+			Result = EBPVRResultSwitch::OnFailed;
+			return;
+		}
+
+		if (!(GEngine->HMDDevice.IsValid() && (GEngine->HMDDevice->GetHMDDeviceType() == EHMDDeviceType::DT_SteamVR)))
+		{
+			Result = EBPVRResultSwitch::OnFailed;
+			return;
+		}
+
+		vr::HmdError HmdErr;
+		vr::IVROverlay * VROverlay = (vr::IVROverlay*)(*VRGetGenericInterfaceFn)(vr::IVROverlay_Version, &HmdErr);
+
+		if (!VROverlay)
+		{
+			Result = EBPVRResultSwitch::OnFailed;
+			return;
+		}
+
+		VROverlay->HideKeyboard();
+		VROverlay->HideOverlay(KeyboardHandle.VRKeyboardHandle);
+
+		vr::EVROverlayError OverlayError;
+		OverlayError = VROverlay->DestroyOverlay(KeyboardHandle.VRKeyboardHandle);
+		KeyboardHandle.VRKeyboardHandle = vr::k_ulOverlayHandleInvalid;
+		this->SetComponentTickEnabled(false);
+		Result = EBPVRResultSwitch::OnSucceeded;
+#endif
+	}
+
+	// Closes the vrkeyboard, can fail if not already open
+	UFUNCTION(BlueprintCallable, Category = "VRExpansionFunctions|SteamVR", meta = (bIgnoreSelf = "true", ExpandEnumAsExecs = "Result"))
+	void GetVRKeyboardText(FString & Text, EBPVRResultSwitch & Result)
+	{
+#if !STEAMVR_SUPPORTED_PLATFORM
+		Result = EBPVRResultSwitch::OnFailed;
+		return;
+#else
+		if (!bInitialized || !KeyboardHandle.IsValid())
+		{
+			Result = EBPVRResultSwitch::OnFailed;
+			return;
+		}
+
+		if (!(GEngine->HMDDevice.IsValid() && (GEngine->HMDDevice->GetHMDDeviceType() == EHMDDeviceType::DT_SteamVR)))
+		{
+			Result = EBPVRResultSwitch::OnFailed;
+			return;
+		}
+
+		vr::HmdError HmdErr;
+		vr::IVROverlay * VROverlay = (vr::IVROverlay*)(*VRGetGenericInterfaceFn)(vr::IVROverlay_Version, &HmdErr);
+
+		if (!VROverlay)
+		{
+			Result = EBPVRResultSwitch::OnFailed;
+			return;
+		}
+
+		char OutString[512];
+		uint32 TextLen = VROverlay->GetKeyboardText((char*)&OutString, 512);
+
+		Text = FString(ANSI_TO_TCHAR(OutString));
+		Result = EBPVRResultSwitch::OnSucceeded;
+#endif
+	}
+
 
 
 #if STEAMVR_SUPPORTED_PLATFORM
@@ -312,28 +534,6 @@ public:
 	bool GetVRControllerPropertyString(EVRControllerProperty_String PropertyToRetrieve, int32 DeviceID, FString & StringValue);
 
 	// VR Camera options
-
-
-	/* For Reference
-
-	static const uint32_t k_unTrackedDeviceIndex_Hmd = 0;
-	static const uint32_t k_unMaxTrackedDeviceCount = 16;
-	static const uint32_t k_unTrackedDeviceIndexOther = 0xFFFFFFFE;
-	static const uint32_t k_unTrackedDeviceIndexInvalid = 0xFFFFFFFF;
-
-	// Describes what kind of object is being tracked at a given ID
-	//enum ETrackedDeviceClass
-	//{
-	//TrackedDeviceClass_Invalid = 0,				// the ID was not valid.
-	//TrackedDeviceClass_HMD = 1,					// Head-Mounted Displays
-	//TrackedDeviceClass_Controller = 2,			// Tracked controllers
-	//TrackedDeviceClass_TrackingReference = 4,	// Camera and base stations that serve as tracking reference points
-
-	//		TrackedDeviceClass_Other = 1000,
-	//	};
-
-	*/
-
 
 	// Returns if there is a VR camera and what its pixel height / width is
 	UFUNCTION(BlueprintPure, Category = "VRExpansionFunctions|SteamVR|VRCamera", meta = (bIgnoreSelf = "true", DisplayName = "HasVRCamera"))
