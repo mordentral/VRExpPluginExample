@@ -82,23 +82,49 @@ return;
 		}
 	}
 
+	/*
+	static void TransformToSteamSpace(const FTransform& In, vr::HmdMatrix34_t& Out, float WorldToMeterScale)
+{
+	const FRotator InRot = In.Rotator();
+	FRotator OutRot(InRot.Yaw, -InRot.Roll, -InRot.Pitch); // Think this is bugged right here, or at least different than non Overlay coords.
+
+	const FVector InPos = In.GetTranslation();
+	FVector OutPos(InPos.Y, InPos.Z, -InPos.X);
+	OutPos /= WorldToMeterScale;
+
+	const FVector InScale = In.GetScale3D();
+	FVector OutScale(InScale.Y, InScale.Z, -InScale.X);
+	OutScale /= WorldToMeterScale;
+
+	Out = FSteamVRHMD::ToHmdMatrix34(FTransform(OutRot, OutPos, OutScale).ToMatrixNoScale());
+}
+	
+	*/
+
+	float WorldToMetersScale = UHeadMountedDisplayFunctionLibrary::GetWorldToMetersScale(GetWorld());
+
 	// HMD Matrix
 	FTransform RelTransform = this->GetComponentTransform();
 	RelTransform = RelTransform.GetRelativeTransform(PlayerTransform);
 
-	FVector pos = RelTransform.GetTranslation();
-	RelTransform.SetTranslation(FVector(pos.Y, pos.Z, -pos.X) / UHeadMountedDisplayFunctionLibrary::GetWorldToMetersScale(GetWorld()));
+	//FRotator rot = RelTransform.Rotator();
+	// Think -Roll is wrong here, think this is for the overlay only?
+	//RelTransform.SetRotation(FRotator(rot.Yaw, -rot.Roll, -rot.Pitch).Quaternion());
+	FQuat Rot = RelTransform.GetRotation();
+	/*OutOrientation.Z = -Orientation.X; // Need to negate
+	OutOrientation.X = Orientation.Y;
+	OutOrientation.Y = Orientation.Z;
+	OutOrientation.W = -Orientation.W;*/
+	RelTransform.SetRotation(FQuat(Rot.Y, Rot.Z, -Rot.X, -Rot.W));
 
-	FRotator rot = RelTransform.GetRotation().Rotator();
-	RelTransform.SetRotation(FRotator(rot.Yaw, -rot.Roll, -rot.Pitch).Quaternion());
+	FVector pos = RelTransform.GetTranslation();
+	RelTransform.SetTranslation(FVector(pos.Y, pos.Z, -pos.X) / WorldToMetersScale);
 
 	FVector scale = RelTransform.GetScale3D();
-	RelTransform.SetScale3D(FVector(scale.Y, scale.Z, scale.X));
-	//Out = FSteamVRHMD::ToHmdMatrix34(FTransform(OutRot, OutPos, OutScale).ToMatrixWithScale());
+	RelTransform.SetScale3D(FVector(scale.Y, scale.Z, scale.X) / WorldToMetersScale);
 
 	vr::HmdMatrix34_t NewTransform = FSteamVRHMD::ToHmdMatrix34(RelTransform.ToMatrixNoScale());
 	VROverlay->SetKeyboardTransformAbsolute(vr::ETrackingUniverseOrigin::TrackingUniverseStanding, &NewTransform);
-
 
 /*
 OutOrientation.X = -Orientation.Z;

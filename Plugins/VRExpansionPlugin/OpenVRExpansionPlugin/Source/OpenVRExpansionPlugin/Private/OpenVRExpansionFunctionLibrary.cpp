@@ -9,7 +9,7 @@
 //General Log
 DEFINE_LOG_CATEGORY(OpenVRExpansionFunctionLibraryLog);
 
-#if STEAMVR_SUPPORTED_PLATFORMS
+#if STEAMVR_SUPPORTED_PLATFORM
 
 pVRGetGenericInterface UOpenVRExpansionFunctionLibrary::VRGetGenericInterfaceFn = nullptr;
 FBPOpenVRCameraHandle UOpenVRExpansionFunctionLibrary::OpenCamera = FBPOpenVRCameraHandle();

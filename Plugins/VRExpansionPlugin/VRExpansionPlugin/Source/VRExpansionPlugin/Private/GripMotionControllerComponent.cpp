@@ -3,6 +3,7 @@
 #include "GripMotionControllerComponent.h"
 #include "IHeadMountedDisplay.h"
 #include "Components/DestructibleComponent.h"
+#include "Misc/ScopeLock.h"
 #include "Net/UnrealNetwork.h"
 #include "KismetMathLibrary.h"
 #include "PrimitiveSceneInfo.h"
@@ -109,6 +110,7 @@ void UGripMotionControllerComponent::OnUnregister()
 
 void UGripMotionControllerComponent::SendRenderTransform_Concurrent()
 {
+	RenderThreadParentToWorld = GetComponentToWorld();
 	RenderThreadRelativeTransform = GetRelativeTransform();
 	RenderThreadComponentScale = GetComponentScale();
 	Super::SendRenderTransform_Concurrent();
@@ -3179,9 +3181,17 @@ void UGripMotionControllerComponent::FViewExtension::PreRenderViewFamily_RenderT
 
 	if (LateUpdatePrimitives.Num())
 	{
+		// NEW LATE UPDATE METHOD - copying headset version, doesn't re-calculate the parent to world transform.
+		// Want to test this out to see how it handles high velocities, also don't really see the point of re-calcing parent to world?
+
+		// Also need to look into why the headset late transform ISceneView doesn't use the GetPriority() function.....
+		// That means it also applies camera late update before motion controllers and without latest possible update?
+		
+		// Should also experiment with setting the Priority to > 0 so the HMD comes first and see what happens then.
+
 		// Calculate the late update transform that will rebase all children proxies within the frame of reference
-		FTransform OldLocalToWorldTransform = MotionControllerComponent->CalcNewComponentToWorld(MotionControllerComponent->RenderThreadRelativeTransform/*MotionControllerComponent->GetRelativeTransform()*/);
-		FTransform NewLocalToWorldTransform = MotionControllerComponent->CalcNewComponentToWorld(FTransform(Orientation, Position, MotionControllerComponent->RenderThreadComponentScale));
+		FTransform OldLocalToWorldTransform = MotionControllerComponent->RenderThreadRelativeTransform * MotionControllerComponent->RenderThreadParentToWorld;//MotionControllerComponent->CalcNewComponentToWorld(MotionControllerComponent->RenderThreadRelativeTransform/*MotionControllerComponent->GetRelativeTransform()*/);
+		FTransform NewLocalToWorldTransform = FTransform(Orientation, Position, MotionControllerComponent->RenderThreadComponentScale) * MotionControllerComponent->RenderThreadParentToWorld;//MotionControllerComponent->CalcNewComponentToWorld(FTransform(Orientation, Position, MotionControllerComponent->RenderThreadComponentScale));
 		FMatrix LateUpdateTransform = (OldLocalToWorldTransform.Inverse() * NewLocalToWorldTransform).ToMatrixWithScale();
 
 		FPrimitiveSceneInfo* RetrievedSceneInfo;
