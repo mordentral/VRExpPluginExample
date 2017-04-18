@@ -72,7 +72,6 @@ protected:
 	virtual void SendRenderTransform_Concurrent() override;
 	//~ End UActorComponent Interface.
 
-	FTransform RenderThreadParentToWorld;
 	FTransform RenderThreadRelativeTransform;
 	FVector RenderThreadComponentScale;
 
