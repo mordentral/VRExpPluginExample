@@ -82,39 +82,13 @@ return;
 		}
 	}
 
-	/*
-	static void TransformToSteamSpace(const FTransform& In, vr::HmdMatrix34_t& Out, float WorldToMeterScale)
-{
-	const FRotator InRot = In.Rotator();
-	FRotator OutRot(InRot.Yaw, -InRot.Roll, -InRot.Pitch); // Think this is bugged right here, or at least different than non Overlay coords.
-
-	const FVector InPos = In.GetTranslation();
-	FVector OutPos(InPos.Y, InPos.Z, -InPos.X);
-	OutPos /= WorldToMeterScale;
-
-	const FVector InScale = In.GetScale3D();
-	FVector OutScale(InScale.Y, InScale.Z, -InScale.X);
-	OutScale /= WorldToMeterScale;
-
-	Out = FSteamVRHMD::ToHmdMatrix34(FTransform(OutRot, OutPos, OutScale).ToMatrixNoScale());
-}
-	
-	*/
-
 	float WorldToMetersScale = UHeadMountedDisplayFunctionLibrary::GetWorldToMetersScale(GetWorld());
 
 	// HMD Matrix
 	FTransform RelTransform = this->GetComponentTransform();
 	RelTransform = RelTransform.GetRelativeTransform(PlayerTransform);
 
-	//FRotator rot = RelTransform.Rotator();
-	// Think -Roll is wrong here, think this is for the overlay only?
-	//RelTransform.SetRotation(FRotator(rot.Yaw, -rot.Roll, -rot.Pitch).Quaternion());
 	FQuat Rot = RelTransform.GetRotation();
-	/*OutOrientation.Z = -Orientation.X; // Need to negate
-	OutOrientation.X = Orientation.Y;
-	OutOrientation.Y = Orientation.Z;
-	OutOrientation.W = -Orientation.W;*/
 	RelTransform.SetRotation(FQuat(Rot.Y, Rot.Z, -Rot.X, -Rot.W));
 
 	FVector pos = RelTransform.GetTranslation();
@@ -125,26 +99,6 @@ return;
 
 	vr::HmdMatrix34_t NewTransform = FSteamVRHMD::ToHmdMatrix34(RelTransform.ToMatrixNoScale());
 	VROverlay->SetKeyboardTransformAbsolute(vr::ETrackingUniverseOrigin::TrackingUniverseStanding, &NewTransform);
-
-/*
-OutOrientation.X = -Orientation.Z;
-OutOrientation.Y = Orientation.X;
-OutOrientation.Z = Orientation.Y;
-OutOrientation.W = -Orientation.W;
-
-
-	OutOrientation.X = -Orientation.Z;
-	OutOrientation.Y = Orientation.X;
-	OutOrientation.Z = Orientation.Y;
-	OutOrientation.W = -Orientation.W;
-
-	FVector Position = ((FVector(-Pose.M[3][2], Pose.M[3][0], Pose.M[3][1]) - BaseOffset) * WorldToMetersScale);
-	OutPosition = BaseOrientation.Inverse().RotateVector(Position);
-
-	OutOrientation = BaseOrientation.Inverse() * OutOrientation;
-	OutOrientation.Normalize();
-	*/
-
 
 	// Poll SteamVR events
 	vr::VREvent_t VREvent;
