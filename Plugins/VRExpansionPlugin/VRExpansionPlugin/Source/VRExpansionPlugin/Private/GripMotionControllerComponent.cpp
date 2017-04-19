@@ -520,6 +520,41 @@ void UGripMotionControllerComponent::SetGripAdditionTransform(
 	Result = EBPVRResultSwitch::OnFailed;
 }
 
+void UGripMotionControllerComponent::SetGripStiffnessAndDamping(
+	const FBPActorGripInformation &Grip,
+	EBPVRResultSwitch &Result,
+	float NewStiffness, float NewDamping
+	)
+{
+	
+	SetGripConstraintStiffnessAndDamping(&Grip, NewStiffness, NewDamping, false);
+
+	int fIndex = GrippedActors.Find(Grip);
+
+	if (fIndex != INDEX_NONE)
+	{
+		GrippedActors[fIndex].Stiffness = NewStiffness;
+		GrippedActors[fIndex].Damping = NewDamping;
+
+		Result = EBPVRResultSwitch::OnSucceeded;
+		return;
+	}
+	else
+	{
+		fIndex = LocallyGrippedActors.Find(Grip);
+
+		if (fIndex != INDEX_NONE)
+		{
+			LocallyGrippedActors[fIndex].Stiffness = NewStiffness;
+			LocallyGrippedActors[fIndex].Damping = NewDamping;
+
+			Result = EBPVRResultSwitch::OnSucceeded;
+			return;
+		}
+	}
+	Result = EBPVRResultSwitch::OnFailed;
+}
+
 FTransform UGripMotionControllerComponent::CreateGripRelativeAdditionTransform_BP(
 	const FBPActorGripInformation &GripToSample,
 	const FTransform & AdditionTransform,
@@ -1302,6 +1337,7 @@ void UGripMotionControllerComponent::NotifyGrip/*_Implementation*/(const FBPActo
 	switch (NewGrip.GripCollisionType)
 	{
 	case EGripCollisionType::InteractiveCollisionWithPhysics:
+	case EGripCollisionType::InteractiveHybridCollisionWithPhysics:
 	case EGripCollisionType::ManipulationGrip:
 	case EGripCollisionType::ManipulationGripWithWristTwist:
 	{
@@ -2378,6 +2414,38 @@ void UGripMotionControllerComponent::HandleGripArray(TArray<FBPActorGripInformat
 						}
 					}break;
 
+					case EGripCollisionType::InteractiveHybridCollisionWithPhysics:
+					{
+						UpdatePhysicsHandleTransform(*Grip, WorldTransform);
+
+						// Always Sweep current collision state with this, used for constraint strength
+						TArray<FOverlapResult> Hits;
+						FComponentQueryParams Params(NAME_None, this->GetOwner());
+						Params.bTraceAsyncScene = root->bCheckAsyncSceneOnMove;
+						Params.AddIgnoredActor(actor);
+						Params.AddIgnoredActors(root->MoveIgnoreActors);
+
+						if (GetWorld()->ComponentOverlapMultiByChannel(Hits, root, root->GetComponentLocation(), root->GetComponentQuat(), root->GetCollisionObjectType(), Params))
+						{
+							if (!Grip->bColliding)
+							{
+								SetGripConstraintStiffnessAndDamping(Grip, Grip->Stiffness, Grip->Damping, false);
+							}
+							Grip->bColliding = true;
+						}
+						else
+						{
+							if (Grip->bColliding)
+							{
+								SetGripConstraintStiffnessAndDamping(Grip, Grip->Stiffness, Grip->Damping, true);
+								//SetGripConstraintStiffnessAndDamping(Grip, 0.0f, 0.0f, true);
+							}
+
+							Grip->bColliding = false;
+						}
+
+					}break;
+
 					case EGripCollisionType::InteractiveHybridCollisionWithSweep:
 					{
 
@@ -2830,8 +2898,21 @@ bool UGripMotionControllerComponent::SetUpPhysicsHandle(const FBPActorGripInform
 				}
 				else
 				{
-					PxD6JointDrive drive = PxD6JointDrive(NewGrip.Stiffness, NewGrip.Damping, PX_MAX_F32, PxD6JointDriveFlag::eACCELERATION);
-					PxD6JointDrive Angledrive = PxD6JointDrive(NewGrip.Stiffness * 1.5f, NewGrip.Damping * 1.4f, PX_MAX_F32, PxD6JointDriveFlag::eACCELERATION);
+					float Stiffness = NewGrip.Stiffness;
+					float AngularStiffness = Stiffness * 1.5f;
+					float Damping = NewGrip.Damping;
+					float AngularDamping = Damping * 1.4f;
+
+					/*if (NewGrip.GripCollisionType == EGripCollisionType::InteractiveHybridCollisionWithPhysics)
+					{
+						Stiffness = PX_MAX_F32;
+						Damping = 0.0f;
+						AngularStiffness = PX_MAX_F32;
+						AngularDamping = 0.0f;
+					}*/
+
+					PxD6JointDrive drive = PxD6JointDrive(Stiffness, Damping, PX_MAX_F32, PxD6JointDriveFlag::eACCELERATION);
+					PxD6JointDrive Angledrive = PxD6JointDrive(AngularStiffness, AngularDamping, PX_MAX_F32, PxD6JointDriveFlag::eACCELERATION);
 
 					// Setting up the joint
 					NewJoint->setMotion(PxD6Axis::eX, PxD6Motion::eFREE);
@@ -2857,6 +2938,61 @@ bool UGripMotionControllerComponent::SetUpPhysicsHandle(const FBPActorGripInform
 #endif // WITH_PHYSX
 
 	return true;
+}
+
+bool UGripMotionControllerComponent::SetGripConstraintStiffnessAndDamping(const FBPActorGripInformation *Grip, float NewStiffness, float NewDamping, bool bMaxValues)
+{
+	if (!Grip)
+		return false;
+
+	FBPActorPhysicsHandleInformation * Handle = GetPhysicsGrip(*Grip);
+
+	if (Handle)
+	{
+#if WITH_PHYSX
+		if (Handle->HandleData != nullptr)
+		{
+
+			// Different settings for manip grip
+			if (Grip->GripCollisionType == EGripCollisionType::ManipulationGrip || Grip->GripCollisionType == EGripCollisionType::ManipulationGripWithWristTwist)
+			{
+				PxD6JointDrive drive = PxD6JointDrive(NewStiffness, NewDamping, PX_MAX_F32, PxD6JointDriveFlag::eACCELERATION);
+				Handle->HandleData->setDrive(PxD6Drive::eX, drive);
+				Handle->HandleData->setDrive(PxD6Drive::eY, drive);
+				Handle->HandleData->setDrive(PxD6Drive::eZ, drive);
+
+				if (Grip->GripCollisionType == EGripCollisionType::ManipulationGripWithWristTwist)
+					Handle->HandleData->setDrive(PxD6Drive::eTWIST, drive);
+			}
+			else
+			{
+				float Stiffness = NewStiffness;
+				float AngularStiffness = Stiffness * 1.5f;
+				float Damping = NewDamping;
+				float AngularDamping = Damping * 1.4f;
+
+				if (bMaxValues)
+				{
+					Stiffness *= 10;// PX_MAX_F32;
+					Damping *= 10;// 0.0f;
+					AngularStiffness *= 10;// PX_MAX_F32;
+					AngularDamping *= 10;// 0.0f;
+				}
+
+				PxD6JointDrive drive = PxD6JointDrive(Stiffness, Damping, PX_MAX_F32, PxD6JointDriveFlag::eACCELERATION);
+				PxD6JointDrive Angledrive = PxD6JointDrive(AngularStiffness, AngularDamping, PX_MAX_F32, PxD6JointDriveFlag::eACCELERATION);
+
+				Handle->HandleData->setDrive(PxD6Drive::eX, drive);
+				Handle->HandleData->setDrive(PxD6Drive::eY, drive);
+				Handle->HandleData->setDrive(PxD6Drive::eZ, drive);
+				Handle->HandleData->setDrive(PxD6Drive::eSLERP, Angledrive);
+			}
+		}
+#endif // WITH_PHYSX
+		return true;
+	}
+
+	return false;
 }
 
 bool UGripMotionControllerComponent::GetPhysicsJointLength(const FBPActorGripInformation &GrippedActor, UPrimitiveComponent * rootComp, FVector & LocOut)

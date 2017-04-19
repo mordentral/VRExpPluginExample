@@ -89,6 +89,7 @@ enum class EGripCollisionType : uint8
 	InteractiveCollisionWithPhysics,
 //	InteractiveCollisionWithVelocity,
 	InteractiveCollisionWithSweep,
+	InteractiveHybridCollisionWithPhysics,
 	InteractiveHybridCollisionWithSweep,
 	SweepWithPhysics,
 	PhysicsOnly,
