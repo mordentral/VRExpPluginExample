@@ -125,6 +125,14 @@ public:
 				{
 					ReCreateGrip(GrippedActors[i]);
 				}
+				else // If re-creating the grip anyway we don't need to do the below
+				{
+					// If the stiffness and damping got changed server side
+					if (OriginalArrayState[FoundIndex].Stiffness != GrippedActors[i].Stiffness || OriginalArrayState[FoundIndex].Damping != GrippedActors[i].Damping)
+					{
+						SetGripConstraintStiffnessAndDamping(&GrippedActors[i], GrippedActors[i].Stiffness, GrippedActors[i].Damping);
+					}
+				}
 			}
 		}
 
@@ -582,7 +590,7 @@ public:
 	bool DestroyPhysicsHandle(const FBPActorGripInformation &Grip);
 	void UpdatePhysicsHandleTransform(const FBPActorGripInformation &GrippedActor, const FTransform& NewTransform);
 	bool GetPhysicsJointLength(const FBPActorGripInformation &GrippedActor, UPrimitiveComponent * rootComp, FVector & LocOut);
-	bool SetGripConstraintStiffnessAndDamping(const FBPActorGripInformation *Grip, float NewStiffness, float NewDamping, bool bMaxValues = false);
+	bool SetGripConstraintStiffnessAndDamping(const FBPActorGripInformation *Grip, float NewStiffness, float NewDamping, bool bIncreaseStiffness = false);
 
 	TArray<FBPActorPhysicsHandleInformation> PhysicsGrips;
 	FBPActorPhysicsHandleInformation * GetPhysicsGrip(const FBPActorGripInformation & GripInfo);

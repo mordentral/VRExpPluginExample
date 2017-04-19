@@ -24,6 +24,14 @@ DEFINE_LOG_CATEGORY(LogVRMotionController);
 //For UE4 Profiler ~ Stat
 DECLARE_CYCLE_STAT(TEXT("TickGrip ~ TickingGrip"), STAT_TickGrip, STATGROUP_TickGrip);
 
+// MAGIC NUMBERS
+// Constraint multipliers for angular, to avoid having to have two sets of stiffness/damping variables
+const float ANGULAR_STIFFNESS_MULTIPLIER = 1.5f;
+const float ANGULAR_DAMPING_MULTIPLIER = 1.4f;
+
+// Multiplier for the Interactive Hybrid With Physics grip - When not colliding increases stiffness by this value
+const float HYBRID_PHYSICS_GRIP_MULTIPLIER = 10.0f;
+
 namespace {
 	/** This is to prevent destruction of motion controller components while they are
 	in the middle of being accessed by the render thread */
@@ -2425,7 +2433,10 @@ void UGripMotionControllerComponent::HandleGripArray(TArray<FBPActorGripInformat
 						Params.AddIgnoredActor(actor);
 						Params.AddIgnoredActors(root->MoveIgnoreActors);
 
-						if (GetWorld()->ComponentOverlapMultiByChannel(Hits, root, root->GetComponentLocation(), root->GetComponentQuat(), root->GetCollisionObjectType(), Params))
+						// Checking both current and next position for overlap using this grip type #TODO: Do this for normal interactive physics as well?
+						if (GetWorld()->ComponentOverlapMultiByChannel(Hits, root, root->GetComponentLocation(), root->GetComponentQuat(), root->GetCollisionObjectType(), Params) ||
+							GetWorld()->ComponentOverlapMultiByChannel(Hits, root, WorldTransform.GetLocation(), WorldTransform.GetRotation(), root->GetCollisionObjectType(), Params)
+							)
 						{
 							if (!Grip->bColliding)
 							{
@@ -2899,17 +2910,19 @@ bool UGripMotionControllerComponent::SetUpPhysicsHandle(const FBPActorGripInform
 				else
 				{
 					float Stiffness = NewGrip.Stiffness;
-					float AngularStiffness = Stiffness * 1.5f;
+					float AngularStiffness = Stiffness * ANGULAR_STIFFNESS_MULTIPLIER; // Default multiplier - magic number #TODO: Either define or expose to blueprint
 					float Damping = NewGrip.Damping;
-					float AngularDamping = Damping * 1.4f;
+					float AngularDamping = Damping * ANGULAR_DAMPING_MULTIPLIER; // Default multiplier - magic number #TODO: Either define or expose to blueprint
 
-					/*if (NewGrip.GripCollisionType == EGripCollisionType::InteractiveHybridCollisionWithPhysics)
+					if (NewGrip.GripCollisionType == EGripCollisionType::InteractiveHybridCollisionWithPhysics)
 					{
-						Stiffness = PX_MAX_F32;
-						Damping = 0.0f;
-						AngularStiffness = PX_MAX_F32;
-						AngularDamping = 0.0f;
-					}*/
+						// Do not effect damping, just increase stiffness so that it is stronger
+						// Default multiplier - magic number #TODO: Either define or expose to blueprint
+						Stiffness *= HYBRID_PHYSICS_GRIP_MULTIPLIER;//PX_MAX_F32 / 2;
+						//Damping = 100.0f;// 0.0f;
+						AngularStiffness *= HYBRID_PHYSICS_GRIP_MULTIPLIER;// PX_MAX_F32;
+						//AngularDamping = 100.0f;// 0.0f;
+					}
 
 					PxD6JointDrive drive = PxD6JointDrive(Stiffness, Damping, PX_MAX_F32, PxD6JointDriveFlag::eACCELERATION);
 					PxD6JointDrive Angledrive = PxD6JointDrive(AngularStiffness, AngularDamping, PX_MAX_F32, PxD6JointDriveFlag::eACCELERATION);
@@ -2940,7 +2953,7 @@ bool UGripMotionControllerComponent::SetUpPhysicsHandle(const FBPActorGripInform
 	return true;
 }
 
-bool UGripMotionControllerComponent::SetGripConstraintStiffnessAndDamping(const FBPActorGripInformation *Grip, float NewStiffness, float NewDamping, bool bMaxValues)
+bool UGripMotionControllerComponent::SetGripConstraintStiffnessAndDamping(const FBPActorGripInformation *Grip, float NewStiffness, float NewDamping, bool bIncreaseStiffness)
 {
 	if (!Grip)
 		return false;
@@ -2952,7 +2965,6 @@ bool UGripMotionControllerComponent::SetGripConstraintStiffnessAndDamping(const 
 #if WITH_PHYSX
 		if (Handle->HandleData != nullptr)
 		{
-
 			// Different settings for manip grip
 			if (Grip->GripCollisionType == EGripCollisionType::ManipulationGrip || Grip->GripCollisionType == EGripCollisionType::ManipulationGripWithWristTwist)
 			{
@@ -2967,16 +2979,19 @@ bool UGripMotionControllerComponent::SetGripConstraintStiffnessAndDamping(const 
 			else
 			{
 				float Stiffness = NewStiffness;
-				float AngularStiffness = Stiffness * 1.5f;
+				float AngularStiffness = Stiffness * ANGULAR_STIFFNESS_MULTIPLIER; // Default multiplier - magic number #TODO: Either define or expose to blueprint
 				float Damping = NewDamping;
-				float AngularDamping = Damping * 1.4f;
+				float AngularDamping = Damping * ANGULAR_DAMPING_MULTIPLIER; // Default multiplier - magic number #TODO: Either define or expose to blueprint
 
-				if (bMaxValues)
+				// Used for interactive hybrid with physics grip when not colliding
+				if (bIncreaseStiffness)
 				{
-					Stiffness *= 10;// PX_MAX_F32;
-					Damping *= 10;// 0.0f;
-					AngularStiffness *= 10;// PX_MAX_F32;
-					AngularDamping *= 10;// 0.0f;
+					// Do not effect damping, just increase stiffness so that it is stronger
+					// Default multiplier - magic number #TODO: Either define or expose to blueprint
+					Stiffness *= HYBRID_PHYSICS_GRIP_MULTIPLIER;//PX_MAX_F32 / 2;
+					//Damping = 100.0f;// 0.0f;
+					AngularStiffness *= HYBRID_PHYSICS_GRIP_MULTIPLIER;// PX_MAX_F32;
+					//AngularDamping = 100.0f;// 0.0f;
 				}
 
 				PxD6JointDrive drive = PxD6JointDrive(Stiffness, Damping, PX_MAX_F32, PxD6JointDriveFlag::eACCELERATION);
@@ -3069,8 +3084,6 @@ void UGripMotionControllerComponent::UpdatePhysicsHandleTransform(const FBPActor
 	if (bChangedPosition || bChangedRotation)
 	{
 		FTransform terns = NewTransform;
-
-
 
 		if (GrippedActor.GripCollisionType == EGripCollisionType::ManipulationGrip || GrippedActor.GripCollisionType == EGripCollisionType::ManipulationGripWithWristTwist)
 		{
@@ -3261,8 +3274,7 @@ bool UGripMotionControllerComponent::PollControllerState(FVector& Position, FRot
 
 					Position -= LastLocationForLateUpdate;
 				}
-				
-				
+							
 				return true;
 			}
 		}
