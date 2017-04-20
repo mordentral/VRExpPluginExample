@@ -1216,13 +1216,15 @@ void UGripMotionControllerComponent::NotifyGrip/*_Implementation*/(const FBPActo
 {
 
 	UPrimitiveComponent *root = NULL;
+	AActor *pActor = NULL;
 
 	switch (NewGrip.GripTargetType)
 	{
 	case EGripTargetType::ActorGrip:
 	//case EGripTargetType::InteractibleActorGrip:
 	{
-		AActor * pActor = NewGrip.GetGrippedActor();
+		pActor = NewGrip.GetGrippedActor();
+
 		if (pActor)
 		{
 			root = Cast<UPrimitiveComponent>(pActor->GetRootComponent());
@@ -1254,28 +1256,29 @@ void UGripMotionControllerComponent::NotifyGrip/*_Implementation*/(const FBPActo
 	case EGripTargetType::ComponentGrip:
 	//case EGripTargetType::InteractibleComponentGrip:
 	{
-		UPrimitiveComponent * primComp = NewGrip.GetGrippedComponent();
-		if (primComp)
-		{
-			root = primComp;
+		root = NewGrip.GetGrippedComponent();
 
-			if (AActor* owner = root->GetOwner())
+		if (root)
+		{
+			pActor = root->GetOwner();
+
+			if (pActor)
 			{
-				if (APawn* OwningPawn = Cast<APawn>(owner))
+				if (APawn* OwningPawn = Cast<APawn>(GetOwner()))
 				{
 					OwningPawn->MoveIgnoreActorAdd(root->GetOwner());
 				}
 
-				if (owner->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
+				if (pActor->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
 				{
-					IVRGripInterface::Execute_OnChildGrip(owner, this, NewGrip);
+					IVRGripInterface::Execute_OnChildGrip(pActor, this, NewGrip);
 				}
 			}
 
-			if (primComp->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
+			if (root->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
 			{
-				IVRGripInterface::Execute_OnGrip(primComp, this, NewGrip);
-				IVRGripInterface::Execute_SetHeld(primComp, this, true);
+				IVRGripInterface::Execute_OnGrip(root, this, NewGrip);
+				IVRGripInterface::Execute_SetHeld(root, this, true);
 			}
 
 			// Have to turn off gravity locally
@@ -1297,13 +1300,15 @@ void UGripMotionControllerComponent::NotifyGrip/*_Implementation*/(const FBPActo
 			{
 			case EGripTargetType::ComponentGrip:
 			{
-				UPrimitiveComponent * primComp = NewGrip.GetGrippedComponent();
-				if (primComp && primComp->GetOwner())
-					primComp->GetOwner()->SetReplicateMovement(false);
+				//UPrimitiveComponent * primComp = NewGrip.GetGrippedComponent();
+				if (pActor)
+					pActor->SetReplicateMovement(false);
+				//if (root && root->GetOwner())
+					//root->GetOwner()->SetReplicateMovement(false);
 			}break;
 			case EGripTargetType::ActorGrip:
 			{
-				AActor * pActor = NewGrip.GetGrippedActor();
+				//AActor * pActor = NewGrip.GetGrippedActor();
 				if(pActor)
 					pActor->SetReplicateMovement(false);
 			} break;
@@ -1315,18 +1320,15 @@ void UGripMotionControllerComponent::NotifyGrip/*_Implementation*/(const FBPActo
 	{
 		if (IsServer())
 		{
-
 			switch (NewGrip.GripTargetType)
 			{
 			case EGripTargetType::ComponentGrip:
-			{
-				UPrimitiveComponent * primComp = NewGrip.GetGrippedComponent();
-				if (primComp && primComp->GetOwner())
-					primComp->GetOwner()->SetReplicateMovement(true);
+			{	
+				if (pActor)
+					pActor->SetReplicateMovement(true);
 			}break;
 			case EGripTargetType::ActorGrip:
 			{
-				AActor * pActor = NewGrip.GetGrippedActor();
 				if (pActor)
 					pActor->SetReplicateMovement(true);
 			} break;
@@ -1367,15 +1369,16 @@ void UGripMotionControllerComponent::NotifyGrip/*_Implementation*/(const FBPActo
 		{
 		case EGripTargetType::ComponentGrip:
 		{
-			UPrimitiveComponent * primComp = NewGrip.GetGrippedComponent();
-			if (primComp)
-				primComp->SetSimulatePhysics(false);
+			if (root)
+				root->SetSimulatePhysics(false);
 		}break;
 		case EGripTargetType::ActorGrip:
 		{
-			AActor * pActor = NewGrip.GetGrippedActor();
+			if (root)
+				root->SetSimulatePhysics(false);
+			/*AActor * pActor = NewGrip.GetGrippedActor();
 			if (pActor)
-				pActor->DisableComponentsSimulatePhysics();
+				pActor->DisableComponentsSimulatePhysics();*/
 		} break;
 		}
 
@@ -1400,13 +1403,14 @@ void UGripMotionControllerComponent::NotifyDrop_Implementation(const FBPActorGri
 	DestroyPhysicsHandle(NewDrop);
 
 	UPrimitiveComponent *root = NULL;
+	AActor * pActor = NULL;
 
 	switch (NewDrop.GripTargetType)
 	{
 	case EGripTargetType::ActorGrip:
 	//case EGripTargetType::InteractibleActorGrip:
 	{
-		AActor * pActor = NewDrop.GetGrippedActor();
+		pActor = NewDrop.GetGrippedActor();
 
 		if (pActor)
 		{
@@ -1451,15 +1455,16 @@ void UGripMotionControllerComponent::NotifyDrop_Implementation(const FBPActorGri
 	case EGripTargetType::ComponentGrip:
 	//case EGripTargetType::InteractibleComponentGrip:
 	{
-		UPrimitiveComponent * primComp = NewDrop.GetGrippedComponent();
-		if (primComp)
+		root = NewDrop.GetGrippedComponent();
+		if (root)
 		{
-			root = primComp;
-			primComp->RemoveTickPrerequisiteComponent(this);
+			pActor = root->GetOwner();
+
+			root->RemoveTickPrerequisiteComponent(this);
 
 			if (APawn* OwningPawn = Cast<APawn>(GetOwner()))
 			{
-				OwningPawn->MoveIgnoreActorRemove(primComp->GetOwner());
+				OwningPawn->MoveIgnoreActorRemove(pActor);
 			}
 
 			if (root)
@@ -1474,25 +1479,25 @@ void UGripMotionControllerComponent::NotifyDrop_Implementation(const FBPActorGri
 					root->SetEnableGravity(true);
 			}
 
-			if (AActor * owner = primComp->GetOwner())
+			if (pActor)
 			{
 				if (IsServer())
-					owner->SetReplicateMovement(NewDrop.bOriginalReplicatesMovement);
+					pActor->SetReplicateMovement(NewDrop.bOriginalReplicatesMovement);
 
-				if (owner->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
+				if (pActor->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
 				{
-					IVRGripInterface::Execute_OnChildGripRelease(owner, this, NewDrop);
+					IVRGripInterface::Execute_OnChildGripRelease(pActor, this, NewDrop);
 				}
 
 			}
 
-			if (primComp->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
+			if (root->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
 			{
 				if (NewDrop.bHasSecondaryAttachment)
-					IVRGripInterface::Execute_OnSecondaryGripRelease(primComp, NewDrop.SecondaryAttachment, NewDrop);
+					IVRGripInterface::Execute_OnSecondaryGripRelease(root, NewDrop.SecondaryAttachment, NewDrop);
 
-				IVRGripInterface::Execute_OnGripRelease(primComp, this, NewDrop);
-				IVRGripInterface::Execute_SetHeld(primComp, nullptr, false);
+				IVRGripInterface::Execute_OnGripRelease(root, this, NewDrop);
+				IVRGripInterface::Execute_SetHeld(root, nullptr, false);
 			}
 		}
 	}break;

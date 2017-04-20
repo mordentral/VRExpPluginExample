@@ -2251,9 +2251,9 @@ void UVRCharacterMovementComponent::FindFloor(const FVector& CapsuleLocation, FF
 			
 			ECollisionChannel CollisionChannel;
 			
-			if (VRRootCapsule)
-				CollisionChannel = VRRootCapsule->GetVRCollisionObjectType();
-			else
+			//if (VRRootCapsule)
+			//	CollisionChannel = VRRootCapsule->GetVRCollisionObjectType();
+			//else
 				CollisionChannel = UpdatedComponent->GetCollisionObjectType();
 
 			if (MovementBase != NULL)
