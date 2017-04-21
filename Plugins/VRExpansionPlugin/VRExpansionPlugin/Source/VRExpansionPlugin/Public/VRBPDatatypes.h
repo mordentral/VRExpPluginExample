@@ -31,6 +31,53 @@ enum class EBPVRResultSwitch : uint8
 	OnFailed
 };
 
+// Tracked device waist location
+UENUM(Blueprintable)
+enum class EBPVRWaistTrackingMode : uint8
+{
+	// Waist is tracked from the front
+	VRWaist_Tracked_Front,
+	// Waist is tracked from the rear
+	VRWaist_Tracked_Rear,
+	// Waist is tracked from the left (self perspective)
+	VRWaist_Tracked_Left,
+	// Waist is tracked from the right (self perspective)
+	VRWaist_Tracked_Right
+};
+
+USTRUCT(BlueprintType, Category = "VRExpansionLibrary")
+struct VREXPANSIONPLUGIN_API FBPVRWaistTracking_Info
+{
+	GENERATED_BODY()
+public:
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+		EBPVRWaistTrackingMode TrackingMode;
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+		FRotator RestingRotation;
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+		float WaistRadius;
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+		UPrimitiveComponent * TrackedDevice;
+
+	bool IsValid()
+	{
+		return TrackedDevice != nullptr;
+	}
+
+	void Clear()
+	{
+		TrackedDevice = nullptr;
+	}
+
+	FBPVRWaistTracking_Info()
+	{
+		WaistRadius = 0.0f;
+		TrackedDevice = nullptr;
+	}
+
+};
+
 
 USTRUCT()
 struct VREXPANSIONPLUGIN_API FBPVRComponentPosRep
