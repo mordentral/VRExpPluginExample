@@ -48,9 +48,7 @@ class VREXPANSIONPLUGIN_API UReplicatedVRCameraComponent : public UCameraCompone
 	UFUNCTION()
 	virtual void OnRep_ReplicatedTransform()
 	{
-		ReplicatedTransform.Unpack();
-
-		SetRelativeLocationAndRotation(ReplicatedTransform.UnpackedLocation, ReplicatedTransform.UnpackedRotation);
+		SetRelativeLocationAndRotation(ReplicatedTransform.Position, ReplicatedTransform.Rotation);
 	}
 
 	// Rate to update the position to the server, 100htz is default (same as replication rate, should also hit every tick).

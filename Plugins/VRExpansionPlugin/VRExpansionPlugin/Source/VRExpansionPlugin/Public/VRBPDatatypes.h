@@ -84,41 +84,38 @@ struct VREXPANSIONPLUGIN_API FBPVRComponentPosRep
 {
 	GENERATED_BODY()
 public:
-	UPROPERTY()
+	// #TODO: Should make this Quantize10? It just takes it down to 24 bits per element maximum instead of 30
+	// 100 saves min of 2 bits per float, so 6 bits, 10 saves min of 8 bits per float, so 24, 3 bytes per rep is a decent amount
+	UPROPERTY(Transient)
 		FVector_NetQuantize100 Position;
-	UPROPERTY()
-		uint32 YawPitchINT;
-	UPROPERTY()
-		uint16 RollSHORT;
+	UPROPERTY(Transient)
+		FRotator Rotation;
 
-	// Removed roll BYTE, it was too inaccurate, using a short now
-	//FRotator Orientation;
+	/** Allows tuning the compression level for the replicated vectors. You should only need to change this from the default if you see visual artifacts. */
+	UPROPERTY(EditDefaultsOnly, Category = Replication, AdvancedDisplay)
+		EVectorQuantization VelocityQuantizationLevel;
 
-	// This removes processing time from lerping
-	FRotator UnpackedRotation;
-	FVector UnpackedLocation;
-
-	FORCEINLINE void Unpack()
+	/** Network serialization */
+	bool NetSerialize(FArchive& Ar, class UPackageMap* Map, bool& bOutSuccess)
 	{
-		UnpackedLocation = (FVector)Position;
-		UnpackedRotation = GetRotation();
+		Ar << Position;
+
+		Rotation.SerializeCompressedShort(Ar);
+		//	Ar.SerializeBits(&Flags, 2);
+
+		bOutSuccess = true;
+		return true;
 	}
 
-	FORCEINLINE void SetRotation(FRotator NewRot)
-	{
-		//Orientation = NewRot;
-		YawPitchINT = (FRotator::CompressAxisToShort(NewRot.Yaw) << 16) | FRotator::CompressAxisToShort(NewRot.Pitch);
-		RollSHORT = FRotator::CompressAxisToShort(NewRot.Roll);
-	}
+};
 
-	FORCEINLINE FRotator GetRotation()
+template<>
+struct TStructOpsTypeTraits< FBPVRComponentPosRep > : public TStructOpsTypeTraitsBase
+{
+	enum
 	{
-		//return Orientation;
-		const uint16 nPitch = (YawPitchINT & 65535);
-		const uint16 nYaw = (YawPitchINT >> 16);
-
-		return FRotator(FRotator::DecompressAxisFromShort(nPitch), FRotator::DecompressAxisFromShort(nYaw), FRotator::DecompressAxisFromShort(RollSHORT)/*DecompressAxisFromByte(RollBYTE)*/);
-	}
+		WithNetSerializer = true
+	};
 };
 
 /*

@@ -29,9 +29,9 @@ class VREXPANSIONPLUGIN_API UParentRelativeAttachmentComponent : public USceneCo
 
 	// Set a tracked parent
 	UFUNCTION(BlueprintCallable, Category = "VRExpansionLibrary")
-	void SetTrackedParent(FBPVRWaistTracking_Info & WaistTrackingInfo)
+	void SetTrackedParent(UPrimitiveComponent * NewParentComponent, EBPVRWaistTrackingMode WaistTrackingMode, float WaistRadius)
 	{
-		if (!WaistTrackingInfo.IsValid())
+		if (!NewParentComponent)
 		{
 			OptionalWaistTrackingParent.Clear();
 			return;
@@ -45,14 +45,18 @@ class VREXPANSIONPLUGIN_API UParentRelativeAttachmentComponent : public USceneCo
 		}
 
 		// Make other component tick first if possible
-		if (WaistTrackingInfo.TrackedDevice->PrimaryComponentTick.TickGroup == this->PrimaryComponentTick.TickGroup)
+		if (NewParentComponent->PrimaryComponentTick.TickGroup == this->PrimaryComponentTick.TickGroup)
 		{
-			this->AddTickPrerequisiteComponent(WaistTrackingInfo.TrackedDevice);
+			this->AddTickPrerequisiteComponent(NewParentComponent);
 		}
 
-		OptionalWaistTrackingParent = WaistTrackingInfo;
+		OptionalWaistTrackingParent.TrackedDevice = NewParentComponent;
+		OptionalWaistTrackingParent.RestingRotation = NewParentComponent->RelativeRotation;
+		OptionalWaistTrackingParent.TrackingMode = WaistTrackingMode;
+		OptionalWaistTrackingParent.WaistRadius = WaistRadius;
 	}
 
+	// Returns local transform of the parent relative attachment
 	FTransform GetWaistOrientationAndPosition(FBPVRWaistTracking_Info & WaistTrackingInfo)
 	{
 		if (!WaistTrackingInfo.IsValid())
@@ -60,19 +64,28 @@ class VREXPANSIONPLUGIN_API UParentRelativeAttachmentComponent : public USceneCo
 
 		FTransform DeviceTransform = WaistTrackingInfo.TrackedDevice->GetRelativeTransform();
 
+		// Rewind by the initial rotation when the new parent was set, this should be where the tracker rests on the person
 		DeviceTransform.ConcatenateRotation(WaistTrackingInfo.RestingRotation.Quaternion().Inverse());
+		DeviceTransform.SetScale3D(FVector(1,1,1));
 
-		switch (WaistTrackingInfo.TrackingMode)
+		// Don't bother if not set
+		if (WaistTrackingInfo.WaistRadius > 0.0f)
 		{
-		case EBPVRWaistTrackingMode::VRWaist_Tracked_Front:
-			DeviceTransform.AddToTranslation(FVector(-WaistTrackingInfo.WaistRadius, 0, 0)); break;
-		case EBPVRWaistTrackingMode::VRWaist_Tracked_Rear:
-			DeviceTransform.AddToTranslation(FVector(WaistTrackingInfo.WaistRadius, 0, 0)); break;
-		case EBPVRWaistTrackingMode::VRWaist_Tracked_Left:
-			DeviceTransform.AddToTranslation(FVector(0,-WaistTrackingInfo.WaistRadius, 0)); break;
-		case EBPVRWaistTrackingMode::VRWaist_Tracked_Right:
-			DeviceTransform.AddToTranslation(FVector(0, WaistTrackingInfo.WaistRadius, 0)); break;
-		default:break;
+			// Get rotation
+			FQuat rot = DeviceTransform.GetRotation();
+
+			switch (WaistTrackingInfo.TrackingMode)
+			{
+			case EBPVRWaistTrackingMode::VRWaist_Tracked_Front:
+				DeviceTransform.AddToTranslation(rot.RotateVector(FVector(-WaistTrackingInfo.WaistRadius, 0, 0))); break;
+			case EBPVRWaistTrackingMode::VRWaist_Tracked_Rear:
+				DeviceTransform.AddToTranslation(rot.RotateVector(FVector(WaistTrackingInfo.WaistRadius, 0, 0))); break;
+			case EBPVRWaistTrackingMode::VRWaist_Tracked_Left:
+				DeviceTransform.AddToTranslation(rot.RotateVector(FVector(0, -WaistTrackingInfo.WaistRadius, 0))); break;
+			case EBPVRWaistTrackingMode::VRWaist_Tracked_Right:
+				DeviceTransform.AddToTranslation(rot.RotateVector(FVector(0, WaistTrackingInfo.WaistRadius, 0))); break;
+			default:break;
+			}
 		}
 
 		return DeviceTransform;
