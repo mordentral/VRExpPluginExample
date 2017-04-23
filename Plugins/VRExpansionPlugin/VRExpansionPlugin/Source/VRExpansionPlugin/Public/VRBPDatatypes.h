@@ -52,9 +52,6 @@ struct VREXPANSIONPLUGIN_API FBPVRWaistTracking_Info
 	GENERATED_BODY()
 public:
 
-	//UPROPERTY(BlueprintReadWrite, EditAnywhere)
-	//	EBPVRWaistTrackingMode TrackingMode;
-
 	// Initial "Resting" location of the tracker parent, assumed to be the calibration zero
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 		FRotator RestingRotation;
@@ -72,8 +69,6 @@ public:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 		UPrimitiveComponent * TrackedDevice;
 
-	float OriginalYaw;
-
 	bool IsValid()
 	{
 		return TrackedDevice != nullptr;
@@ -89,7 +84,6 @@ public:
 		WaistRadius = 0.0f;
 		TrackedDevice = nullptr;
 		TrackingMode = EBPVRWaistTrackingMode::VRWaist_Tracked_Rear;
-		OriginalYaw = 0.0f;
 	}
 
 };

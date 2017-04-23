@@ -28,20 +28,21 @@ public:
 
 	static void Default_SetTrackedParent_Impl(UPrimitiveComponent * NewParentComponent, float WaistRadius, EBPVRWaistTrackingMode WaistTrackingMode, FBPVRWaistTracking_Info & OptionalWaistTrackingParent, USceneComponent * Self)
 	{
-		if (!NewParentComponent || !Self)
-		{
-			OptionalWaistTrackingParent.Clear();
-			return;
-		}
-
 		// If had a different original tracked parent
+		// Moved this to first thing so the pre-res is removed prior to erroring out and clearing this
 		if (OptionalWaistTrackingParent.IsValid())
 		{
 			// Remove the tick Prerequisite
 			Self->RemoveTickPrerequisiteComponent(OptionalWaistTrackingParent.TrackedDevice);
 		}
 
-		// Make other component tick first if possible
+		if (!NewParentComponent || !Self)
+		{
+			OptionalWaistTrackingParent.Clear();
+			return;
+		}
+
+		// Make other component tick first if possible, waste of time if in wrong tick group
 		if (NewParentComponent->PrimaryComponentTick.TickGroup == Self->PrimaryComponentTick.TickGroup)
 		{
 			// Make sure the other component isn't depending on this one
@@ -76,10 +77,15 @@ public:
 		{
 			DeviceTransform.AddToTranslation(DeviceTransform.GetRotation().RotateVector(FVector(-WaistTrackingInfo.WaistRadius, 0, 0)));
 		}
-		
+
 
 		// This changes the forward vector to be correct
-		// I could pre do it by changed the yaw in resting mode to these values
+		// I could pre do it by changed the yaw in resting mode to these values, but that had its own problems
+		// If given an initial forward vector that it should align to I wouldn't have to do this and could auto calculate it.
+		// But without that I am limited to this.
+
+		// #TODO: add optional ForwardVector to initial setup function that auto calculates offset so that the user can pass in HMD forward or something for calibration X+
+		// Also would be better overall because slightly offset from right angles in yaw wouldn't matter anymore, it would adjust for it.
 		switch (WaistTrackingInfo.TrackingMode)
 		{
 		case EBPVRWaistTrackingMode::VRWaist_Tracked_Front: DeviceTransform.ConcatenateRotation(FRotator(0, 0, 0).Quaternion()); break;
@@ -87,6 +93,7 @@ public:
 		case EBPVRWaistTrackingMode::VRWaist_Tracked_Left: DeviceTransform.ConcatenateRotation(FRotator(0, 90, 0).Quaternion()); break;
 		case EBPVRWaistTrackingMode::VRWaist_Tracked_Right:	DeviceTransform.ConcatenateRotation(FRotator(0, -90, 0).Quaternion()); break;
 		}
+		
 		
 
 		return DeviceTransform;
