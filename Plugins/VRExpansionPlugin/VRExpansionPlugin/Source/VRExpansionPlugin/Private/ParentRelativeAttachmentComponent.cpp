@@ -23,7 +23,7 @@ void UParentRelativeAttachmentComponent::TickComponent(float DeltaTime, enum ELe
 {
 	if (OptionalWaistTrackingParent.IsValid())
 	{
-		SetRelativeTransform(GetWaistOrientationAndPosition(OptionalWaistTrackingParent));
+		SetRelativeTransform(IVRTrackedParentInterface::Default_GetWaistOrientationAndPosition(OptionalWaistTrackingParent));
 	}
 	else if (IsLocallyControlled() && GEngine->HMDDevice.IsValid() && GEngine->HMDDevice->IsHeadTrackingAllowed() && GEngine->HMDDevice->HasValidTrackingPosition())
 	{

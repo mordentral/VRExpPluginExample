@@ -31,6 +31,7 @@ enum class EBPVRResultSwitch : uint8
 	OnFailed
 };
 
+// Wasn't needed when final setup was realized
 // Tracked device waist location
 UENUM(Blueprintable)
 enum class EBPVRWaistTrackingMode : uint8
@@ -51,14 +52,27 @@ struct VREXPANSIONPLUGIN_API FBPVRWaistTracking_Info
 	GENERATED_BODY()
 public:
 
-	UPROPERTY(BlueprintReadWrite, EditAnywhere)
-		EBPVRWaistTrackingMode TrackingMode;
+	//UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	//	EBPVRWaistTrackingMode TrackingMode;
+
+	// Initial "Resting" location of the tracker parent, assumed to be the calibration zero
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 		FRotator RestingRotation;
+
+
+	// Distance to offset to get center of waist from tracked parent location
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 		float WaistRadius;
+
+	// Controls forward vector
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	EBPVRWaistTrackingMode TrackingMode;
+
+	// Tracked parent reference
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 		UPrimitiveComponent * TrackedDevice;
+
+	float OriginalYaw;
 
 	bool IsValid()
 	{
@@ -74,34 +88,35 @@ public:
 	{
 		WaistRadius = 0.0f;
 		TrackedDevice = nullptr;
+		TrackingMode = EBPVRWaistTrackingMode::VRWaist_Tracked_Rear;
+		OriginalYaw = 0.0f;
 	}
 
 };
-
 
 USTRUCT()
 struct VREXPANSIONPLUGIN_API FBPVRComponentPosRep
 {
 	GENERATED_BODY()
 public:
+
 	// #TODO: Should make this Quantize10? It just takes it down to 24 bits per element maximum instead of 30
 	// 100 saves min of 2 bits per float, so 6 bits, 10 saves min of 8 bits per float, so 24, 3 bytes per rep is a decent amount
+	// Maybe make it configurable instead.
 	UPROPERTY(Transient)
 		FVector_NetQuantize100 Position;
 	UPROPERTY(Transient)
 		FRotator Rotation;
-
-	/** Allows tuning the compression level for the replicated vectors. You should only need to change this from the default if you see visual artifacts. */
-	UPROPERTY(EditDefaultsOnly, Category = Replication, AdvancedDisplay)
-		EVectorQuantization VelocityQuantizationLevel;
 
 	/** Network serialization */
 	bool NetSerialize(FArchive& Ar, class UPackageMap* Map, bool& bOutSuccess)
 	{
 		Ar << Position;
 
+		// Rolling my own may be slightly faster (No extra function call, less checks, was using int + short instead)
+		// However it is cleaner to use built in engine methods, and CPU overhead isn't my concern here.
+		// Also if a segment is zero they don't write more than one bit with their implementation
 		Rotation.SerializeCompressedShort(Ar);
-		//	Ar.SerializeBits(&Flags, 2);
 
 		bOutSuccess = true;
 		return true;
@@ -354,7 +369,7 @@ struct VREXPANSIONPLUGIN_API FBPActorGripInformation
 {
 	GENERATED_BODY()
 public:
-
+	// #TODO serialize this more efficiently over the network
 	UPROPERTY(BlueprintReadOnly)
 		EGripTargetType GripTargetType;
 	UPROPERTY(BlueprintReadOnly)
@@ -387,7 +402,6 @@ public:
 		float SecondarySmoothingScaler;
 	UPROPERTY()
 		FVector SecondaryRelativeLocation;
-
 	// Lerp transitions
 	UPROPERTY()
 		float LerpToRate;
