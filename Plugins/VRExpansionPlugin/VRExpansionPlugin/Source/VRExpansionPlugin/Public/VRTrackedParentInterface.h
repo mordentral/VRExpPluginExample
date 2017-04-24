@@ -88,6 +88,10 @@ public:
 		// Also would be better overall because slightly offset from right angles in yaw wouldn't matter anymore, it would adjust for it.
 
 		// This overall implementation is kind of bad...I'll re-think it later.
+		
+		//*Edit* #TODO: Just convert everything to a relative transform with an offset, calculate the relative position off of initial vs
+		// the parents resting transform. IE: Capsule will retain position but switch drivers, pass in optional offset as well
+		// that should clean this mess up
 		switch (WaistTrackingInfo.TrackingMode)
 		{
 		case EBPVRWaistTrackingMode::VRWaist_Tracked_Front: DeviceTransform.ConcatenateRotation(FRotator(0, 0, 0).Quaternion()); break;
