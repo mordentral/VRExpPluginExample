@@ -91,29 +91,77 @@ public:
 USTRUCT()
 struct VREXPANSIONPLUGIN_API FBPVRComponentPosRep
 {
-	GENERATED_BODY()
+	GENERATED_USTRUCT_BODY()
 public:
 
-	// #TODO: Should make this Quantize10? It just takes it down to 24 bits per element maximum instead of 30
-	// 100 saves min of 2 bits per float, so 6 bits, 10 saves min of 8 bits per float, so 24, 3 bytes per rep is a decent amount
-	// Maybe make it configurable instead.
 	UPROPERTY(Transient)
-		FVector_NetQuantize100 Position;
+		FVector Position;
 	UPROPERTY(Transient)
 		FRotator Rotation;
+
+	UPROPERTY(EditDefaultsOnly, Category = Replication, AdvancedDisplay)
+		EVectorQuantization QuantizationLevel;
+
+	FBPVRComponentPosRep()
+	{
+		QuantizationLevel = EVectorQuantization::RoundTwoDecimals;
+	}
 
 	/** Network serialization */
 	bool NetSerialize(FArchive& Ar, class UPackageMap* Map, bool& bOutSuccess)
 	{
-		Ar << Position;
-
-		// Rolling my own may be slightly faster (No extra function call, less checks, was using int + short instead)
-		// However it is cleaner to use built in engine methods, and CPU overhead isn't my concern here.
-		// Also if a segment is zero they don't write more than one bit with their implementation
-		Rotation.SerializeCompressedShort(Ar);
-
 		bOutSuccess = true;
-		return true;
+
+		// Defines the level of Quantization
+		uint8 Flags = (uint8)QuantizationLevel;
+		Ar.SerializeBits(&Flags, 2);
+		
+		// No longer using their built in rotation rep, as controllers will rarely if ever be at 0 rot on an axis and 
+		// so the 1 bit overhead per axis is just that, overhead
+		//Rotation.SerializeCompressedShort(Ar);
+
+		uint16 ShortPitch = 0;
+		uint16 ShortYaw = 0;
+		uint16 ShortRoll = 0;
+		
+		if (Ar.IsSaving())
+		{		
+			switch (QuantizationLevel)
+			{
+			case EVectorQuantization::RoundTwoDecimals: bOutSuccess &= SerializePackedVector<100, 30>(Position, Ar); break;
+			case EVectorQuantization::RoundOneDecimal: bOutSuccess &= SerializePackedVector<10, 24>(Position, Ar); break;
+			case EVectorQuantization::RoundWholeNumber: bOutSuccess &= SerializePackedVector<1, 20>(Position, Ar); break;
+			}
+
+			ShortPitch = FRotator::CompressAxisToShort(Rotation.Pitch);
+			ShortYaw = FRotator::CompressAxisToShort(Rotation.Yaw);
+			ShortRoll = FRotator::CompressAxisToShort(Rotation.Roll);
+
+			Ar << ShortPitch;
+			Ar << ShortYaw;
+			Ar << ShortRoll;
+		}
+		else // If loading
+		{
+			QuantizationLevel = (EVectorQuantization)Flags;
+
+			switch (QuantizationLevel)
+			{
+			case EVectorQuantization::RoundTwoDecimals: bOutSuccess &= SerializePackedVector<100, 30>(Position, Ar); break;
+			case EVectorQuantization::RoundOneDecimal: bOutSuccess &= SerializePackedVector<10, 24>(Position, Ar); break;
+			case EVectorQuantization::RoundWholeNumber: bOutSuccess &= SerializePackedVector<1, 20>(Position, Ar); break;
+			}
+
+			Ar << ShortPitch;
+			Ar << ShortYaw;
+			Ar << ShortRoll;
+			
+			Rotation.Pitch = FRotator::DecompressAxisFromShort(ShortPitch);
+			Rotation.Yaw = FRotator::DecompressAxisFromShort(ShortYaw);
+			Rotation.Roll = FRotator::DecompressAxisFromShort(ShortRoll);
+		}
+
+		return bOutSuccess;
 	}
 
 };
