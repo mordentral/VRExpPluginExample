@@ -68,7 +68,8 @@ void UFindFriendSessionCallbackProxy::Activate()
 	OnFailure.Broadcast(EmptyResult);
 }
 
-void UFindFriendSessionCallbackProxy::OnFindFriendSessionCompleted(int32 LocalPlayer, bool bWasSuccessful, const FOnlineSessionSearchResult& SessionInfo)
+
+void UFindFriendSessionCallbackProxy::OnFindFriendSessionCompleted(int32 LocalPlayer, bool bWasSuccessful, const TArray<FOnlineSessionSearchResult>& SessionInfo)
 {
 	IOnlineSessionPtr Sessions = Online::GetSessionInterface();
 
@@ -78,7 +79,11 @@ void UFindFriendSessionCallbackProxy::OnFindFriendSessionCompleted(int32 LocalPl
 	if ( bWasSuccessful )
 	{ 
 		FBlueprintSessionResult Result;
-		Result.OnlineResult = SessionInfo;
+		
+		// 4.16 TODO, pass the entire array out
+		if(SessionInfo.Num() > 0)
+			Result.OnlineResult = SessionInfo[0];
+
 		if(Result.OnlineResult.IsValid())
 			OnSuccess.Broadcast(Result);
 		else

@@ -30,7 +30,7 @@ class UFindFriendSessionCallbackProxy : public UOnlineBlueprintCallProxyBase
 
 private:
 	// Internal callback when the friends list is retrieved
-	void OnFindFriendSessionCompleted(int32 LocalPlayer, bool bWasSuccessful, const FOnlineSessionSearchResult& SessionInfo);
+	void OnFindFriendSessionCompleted(int32 LocalPlayer, bool bWasSuccessful, const TArray<FOnlineSessionSearchResult>& SessionInfo);
 
 	// The player controller triggering things
 	TWeakObjectPtr<APlayerController> PlayerControllerWeakPtr;

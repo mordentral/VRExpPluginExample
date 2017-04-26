@@ -174,7 +174,7 @@ public:
 };
 
 template<>
-struct TStructOpsTypeTraits< FBPVRComponentPosRep > : public TStructOpsTypeTraitsBase
+struct TStructOpsTypeTraits< FBPVRComponentPosRep > : public TStructOpsTypeTraitsBase2<FBPVRComponentPosRep>
 {
 	enum
 	{
@@ -408,7 +408,7 @@ public:
 };
 
 template<>
-struct TStructOpsTypeTraits< FBPInteractionSettings > : public TStructOpsTypeTraitsBase
+struct TStructOpsTypeTraits< FBPInteractionSettings > : public TStructOpsTypeTraitsBase2<FBPInteractionSettings>
 {
 	enum
 	{
@@ -603,7 +603,7 @@ public:
 };
 
 template<>
-struct TStructOpsTypeTraits< FBPActorGripInformation > : public TStructOpsTypeTraitsBase
+struct TStructOpsTypeTraits< FBPActorGripInformation > : public TStructOpsTypeTraitsBase2<FBPActorGripInformation>
 {
 	enum
 	{

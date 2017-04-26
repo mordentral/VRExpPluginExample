@@ -4,8 +4,8 @@ using UnrealBuildTool;
 
 public class VRExpPluginExample : ModuleRules
 {
-	public VRExpPluginExample(TargetInfo Target)
-	{
+	public VRExpPluginExample(ReadOnlyTargetRules Target) : base(Target)
+    {
         PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "AdvancedSessions", "VRExpansionPlugin" });
 
 		PrivateDependencyModuleNames.AddRange(new string[] {  });

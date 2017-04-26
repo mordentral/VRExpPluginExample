@@ -5,21 +5,22 @@ using System.Collections.Generic;
 
 public class VRExpPluginExampleEditorTarget : TargetRules
 {
-	public VRExpPluginExampleEditorTarget(TargetInfo Target)
+	public VRExpPluginExampleEditorTarget(TargetInfo Target) : base(Target)
 	{
 		Type = TargetType.Editor;
-	}
+        ExtraModuleNames.AddRange(new string[] { "VRExpPluginExample" });
+    }
 
 	//
 	// TargetRules interface.
 	//
 
-	public override void SetupBinaries(
+/*	public override void SetupBinaries(
 		TargetInfo Target,
 		ref List<UEBuildBinaryConfiguration> OutBuildBinaryConfigurations,
 		ref List<string> OutExtraModuleNames
 		)
 	{
 		OutExtraModuleNames.AddRange( new string[] { "VRExpPluginExample" } );
-	}
+	}*/
 }

@@ -633,9 +633,9 @@ void UVRCharacterMovementComponent::ServerMoveVR_Implementation(
 
 	// Perform actual movement
 	//Comment out 4.16
-	if ((CharacterOwner->GetWorldSettings()->Pauser == NULL) && (DeltaTime > 0.f))
+	//if ((CharacterOwner->GetWorldSettings()->Pauser == NULL) && (DeltaTime > 0.f))
 	// Add 4.16
-	//if ((GetWorld()->GetWorldSettings()->Pauser == NULL) && (DeltaTime > 0.f))
+	if ((GetWorld()->GetWorldSettings()->Pauser == NULL) && (DeltaTime > 0.f))
 	{
 		if (PC)
 		{
@@ -1235,7 +1235,8 @@ void UVRCharacterMovementComponent::ReplicateMoveToServer(float DeltaTime, const
 	if (CharacterOwner->bReplicateMovement)
 	{
 		ClientData->SavedMoves.Push(NewMove);
-		
+		const UWorld* MyWorld = GetWorld();
+
 		static const auto CVarNetEnableMoveCombining = IConsoleManager::Get().FindConsoleVariable(TEXT("p.NetEnableMoveCombining"));
 		const bool bCanDelayMove = (CVarNetEnableMoveCombining->GetInt() != 0) && CanDelaySendingMove(NewMove);
 
@@ -1245,7 +1246,7 @@ void UVRCharacterMovementComponent::ReplicateMoveToServer(float DeltaTime, const
 
 			//COMMENT HERE
 			// send moves more frequently in small games where server isn't likely to be saturated
-			float NetMoveDelta;
+			/*float NetMoveDelta;
 			UPlayer* Player = (PC ? PC->Player : NULL);
 
 			if (Player && (Player->CurrentNetSpeed > 10000) && (GetWorld()->GetGameState() != NULL) && (GetWorld()->GetGameState()->PlayerArray.Num() <= 10))
@@ -1262,11 +1263,12 @@ void UVRCharacterMovementComponent::ReplicateMoveToServer(float DeltaTime, const
 			}
 
 			if ((GetWorld()->TimeSeconds - ClientData->ClientUpdateTime) * CharacterOwner->GetWorldSettings()->GetEffectiveTimeDilation() < NetMoveDelta)
+			*/
 			// TO HERE for 4.16
 		
-			/*const float NetMoveDelta = FMath::Clamp(GetClientNetSendDeltaTime(PC, ClientData, NewMove), 1.f / 120.f, 1.f / 15.f);
+			const float NetMoveDelta = FMath::Clamp(GetClientNetSendDeltaTime(PC, ClientData, NewMove), 1.f / 120.f, 1.f / 15.f);
 			
-			if ((MyWorld->TimeSeconds - ClientData->ClientUpdateTime) * MyWorld->GetWorldSettings()->GetEffectiveTimeDilation() < NetMoveDelta)*/
+			if ((MyWorld->TimeSeconds - ClientData->ClientUpdateTime) * MyWorld->GetWorldSettings()->GetEffectiveTimeDilation() < NetMoveDelta)
 			{
 				// Delay sending this move.
 				ClientData->PendingMove = NewMove;
@@ -1275,10 +1277,10 @@ void UVRCharacterMovementComponent::ReplicateMoveToServer(float DeltaTime, const
 		}
 
 		// Remove 4.16
-		ClientData->ClientUpdateTime = GetWorld()->TimeSeconds;
+		//ClientData->ClientUpdateTime = GetWorld()->TimeSeconds;
 		
 		// Uncomment 4.16
-		//ClientData->ClientUpdateTime = MyWorld->TimeSeconds;
+		ClientData->ClientUpdateTime = MyWorld->TimeSeconds;
 
 		UE_LOG(LogNetPlayerMovement, Verbose, TEXT("Client ReplicateMove Time %f Acceleration %s Position %s DeltaTime %f"),
 			NewMove->TimeStamp, *NewMove->Acceleration.ToString(), *UpdatedComponent->GetComponentLocation().ToString(), DeltaTime);
@@ -3010,14 +3012,14 @@ void UVRCharacterMovementComponent::PhysNavWalking(float deltaTime, int32 Iterat
 
 		if (!AdjustedDelta.IsNearlyZero())
 		{
-			/* 4.16 UNCOMMENT
+			// 4.16 UNCOMMENT
 			FHitResult HitResult;
 			SafeMoveUpdatedComponent(AdjustedDelta, UpdatedComponent->GetComponentQuat(), bSweepWhileNavWalking, HitResult);
-			*/
+			
 			/* 4.16 Delete*/
-			const bool bSweep = UpdatedPrimitive ? UpdatedPrimitive->bGenerateOverlapEvents : false;
-			FHitResult HitResult;
-			SafeMoveUpdatedComponent(AdjustedDelta, UpdatedComponent->GetComponentQuat(), bSweep, HitResult);
+			//const bool bSweep = UpdatedPrimitive ? UpdatedPrimitive->bGenerateOverlapEvents : false;
+			//FHitResult HitResult;
+			//SafeMoveUpdatedComponent(AdjustedDelta, UpdatedComponent->GetComponentQuat(), bSweep, HitResult);
 			// End 4.16 delete
 		}
 
