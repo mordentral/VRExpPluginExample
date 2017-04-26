@@ -1001,7 +1001,6 @@ void UVRCharacterMovementComponent::PhysWalking(float deltaTime, int32 Iteration
 			{
 				// The floor check failed because it started in penetration
 				// We do not want to try to move downward because the downward sweep failed, rather we'd like to try to pop out of the floor.
-				
 				/// This skips this if we are free walking and there was no HMD collision or controller input
 				if (bZeroDelta && VRRootCapsule && !VRRootCapsule->bHadRelativeMovement)
 				{
@@ -1582,7 +1581,6 @@ void UVRCharacterMovementComponent::MoveAlongFloor(const FVector& InVelocity, fl
 
 bool UVRCharacterMovementComponent::StepUp(const FVector& GravDir, const FVector& Delta, const FHitResult &InHit, FStepDownResult* OutStepDownResult)
 {
-
 	SCOPE_CYCLE_COUNTER(STAT_CharStepUp);
 
 	if (!CanStepUp(InHit) || MaxStepHeight <= 0.f)
@@ -2221,12 +2219,11 @@ void UVRCharacterMovementComponent::FindFloor(const FVector& CapsuleLocation, FF
 		return;
 	}
 
-	FVector UseCapsuleLocation = CapsuleLocation;
+	check(CharacterOwner->GetCapsuleComponent());
 
+	FVector UseCapsuleLocation = CapsuleLocation;
 	if (VRRootCapsule)
 		UseCapsuleLocation = VRRootCapsule->OffsetComponentToWorld.GetLocation();
-
-	check(CharacterOwner->GetCapsuleComponent());
 
 	// Increase height check slightly if walking, to prevent floor height adjustment from later invalidating the floor result.
 	const float HeightCheckAdjust = (IsMovingOnGround() ? MAX_FLOOR_DIST + KINDA_SMALL_NUMBER : -MAX_FLOOR_DIST);
@@ -2234,6 +2231,9 @@ void UVRCharacterMovementComponent::FindFloor(const FVector& CapsuleLocation, FF
 	float FloorSweepTraceDist = FMath::Max(MAX_FLOOR_DIST, MaxStepHeight + HeightCheckAdjust);
 	float FloorLineTraceDist = FloorSweepTraceDist;
 	bool bNeedToValidateFloor = true;
+
+	// For reverting
+	//FFindFloorResult LastFloor = CurrentFloor;
 
 	// Sweep floor
 	if (FloorLineTraceDist > 0.f || FloorSweepTraceDist > 0.f)
@@ -2253,9 +2253,11 @@ void UVRCharacterMovementComponent::FindFloor(const FVector& CapsuleLocation, FF
 			
 			ECollisionChannel CollisionChannel;
 			
-			//if (VRRootCapsule)
-			//	CollisionChannel = VRRootCapsule->GetVRCollisionObjectType();
-			//else
+			//if (VRRootCapsule && VRRootCapsule->bUseWalkingCollisionOverride)
+			//{
+			//	CollisionChannel = VRRootCapsule->WalkingCollisionOverride;
+		//	}
+		//	else
 				CollisionChannel = UpdatedComponent->GetCollisionObjectType();
 
 			if (MovementBase != NULL)
@@ -2281,6 +2283,17 @@ void UVRCharacterMovementComponent::FindFloor(const FVector& CapsuleLocation, FF
 		}
 	}
 
+	// #TODO: Modify the floor compute floor distance instead?
+	// #VR Specific - ignore floor traces that are negative, this can be caused by capsule offset values and rotating in place
+	/*if (OutFloorResult.bBlockingHit && OutFloorResult.FloorDist < 0.0f)
+	{ 
+		OutFloorResult = LastFloor;
+		if (VRRootCapsule && VRRootCapsule->bUseWalkingCollisionOverride)
+			OutFloorResult = LastFloor; // Move back to the last floor value
+		else
+			OutFloorResult.bBlockingHit = false; // Consider it a bad floor trace
+	}*/
+
 	// OutFloorResult.HitResult is now the result of the vertical floor check.
 	// See if we should try to "perch" at this location.
 	if (bNeedToValidateFloor && OutFloorResult.bBlockingHit && !OutFloorResult.bLineTrace)
@@ -2293,7 +2306,7 @@ void UVRCharacterMovementComponent::FindFloor(const FVector& CapsuleLocation, FF
 			{
 				MaxPerchFloorDist += FMath::Max(0.f, PerchAdditionalHeight);
 			}
-
+			
 			FFindFloorResult PerchFloorResult;
 			if (ComputePerchResult(GetValidPerchRadius(), OutFloorResult.HitResult, MaxPerchFloorDist, PerchFloorResult))
 			{

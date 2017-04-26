@@ -27,7 +27,7 @@ void UFindFriendSessionCallbackProxy::Activate()
 	{
 		// Fail immediately
 		UE_LOG(AdvancedFindFriendSessionLog, Warning, TEXT("FindFriendSession Failed received a bad UniqueNetId!"));
-		FBlueprintSessionResult EmptyResult;
+		TArray<FBlueprintSessionResult> EmptyResult;
 		OnFailure.Broadcast(EmptyResult);
 		return;
 	}
@@ -36,7 +36,7 @@ void UFindFriendSessionCallbackProxy::Activate()
 	{
 		// Fail immediately
 		UE_LOG(AdvancedFindFriendSessionLog, Warning, TEXT("FindFriendSession Failed received a bad playercontroller!"));
-		FBlueprintSessionResult EmptyResult;
+		TArray<FBlueprintSessionResult> EmptyResult;
 		OnFailure.Broadcast(EmptyResult);
 		return;
 	}
@@ -51,7 +51,7 @@ void UFindFriendSessionCallbackProxy::Activate()
 		{
 			// Fail immediately
 			UE_LOG(AdvancedFindFriendSessionLog, Warning, TEXT("FindFriendSession Failed couldn't cast to ULocalPlayer!"));
-			FBlueprintSessionResult EmptyResult;
+			TArray<FBlueprintSessionResult> EmptyResult;
 			OnFailure.Broadcast(EmptyResult);
 			return;
 		}
@@ -64,7 +64,7 @@ void UFindFriendSessionCallbackProxy::Activate()
 	}
 
 	// Fail immediately
-	FBlueprintSessionResult EmptyResult;
+	TArray<FBlueprintSessionResult> EmptyResult;
 	OnFailure.Broadcast(EmptyResult);
 }
 
@@ -78,13 +78,19 @@ void UFindFriendSessionCallbackProxy::OnFindFriendSessionCompleted(int32 LocalPl
 
 	if ( bWasSuccessful )
 	{ 
-		FBlueprintSessionResult Result;
-		
-		// 4.16 TODO, pass the entire array out
-		if(SessionInfo.Num() > 0)
-			Result.OnlineResult = SessionInfo[0];
+		TArray<FBlueprintSessionResult> Result;
 
-		if(Result.OnlineResult.IsValid())
+		for (auto& Sesh : SessionInfo)
+		{
+			if (Sesh.IsValid())
+			{
+				FBlueprintSessionResult BSesh;
+				BSesh.OnlineResult = Sesh;
+				Result.Add(BSesh);
+			}
+		}
+
+		if(Result.Num() > 0)
 			OnSuccess.Broadcast(Result);
 		else
 		{
@@ -95,7 +101,7 @@ void UFindFriendSessionCallbackProxy::OnFindFriendSessionCompleted(int32 LocalPl
 	else
 	{
 		UE_LOG(AdvancedFindFriendSessionLog, Warning, TEXT("FindFriendSession Failed"));
-		FBlueprintSessionResult EmptyResult;
+		TArray<FBlueprintSessionResult> EmptyResult;
 		OnFailure.Broadcast(EmptyResult);
 	}
 }

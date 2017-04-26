@@ -474,6 +474,8 @@ public:
 	/** Network serialization */
 	bool NetSerialize(FArchive& Ar, class UPackageMap* Map, bool& bOutSuccess)
 	{
+		//#TODO Start compressing Transforms / Vectors / Floats?
+
 		Ar << GripTargetType;
 		Ar << GrippedObject;
 		Ar << GripCollisionType;

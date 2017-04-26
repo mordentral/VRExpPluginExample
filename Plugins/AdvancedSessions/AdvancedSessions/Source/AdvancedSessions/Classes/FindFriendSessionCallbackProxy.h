@@ -3,11 +3,12 @@
 
 #include "CoreMinimal.h"
 #include "BlueprintDataDefinitions.h"
+#include "Engine/LocalPlayer.h"
 #include "FindFriendSessionCallbackProxy.generated.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(AdvancedFindFriendSessionLog, Log, All);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FBlueprintFindFriendSessionDelegate, const FBlueprintSessionResult&, SessionInfo);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FBlueprintFindFriendSessionDelegate, const TArray<FBlueprintSessionResult>, SessionInfo);
 
 UCLASS(MinimalAPI)
 class UFindFriendSessionCallbackProxy : public UOnlineBlueprintCallProxyBase
