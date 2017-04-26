@@ -88,6 +88,15 @@ public:
 
 };
 
+UENUM()
+enum class EVRVectorQuantization : uint8
+{
+	/** Each vector component will be rounded, preserving one decimal place. */
+	RoundOneDecimal = 0,
+	/** Each vector component will be rounded, preserving two decimal places. */
+	RoundTwoDecimals = 1
+};
+
 USTRUCT()
 struct VREXPANSIONPLUGIN_API FBPVRComponentPosRep
 {
@@ -100,11 +109,11 @@ public:
 		FRotator Rotation;
 
 	UPROPERTY(EditDefaultsOnly, Category = Replication, AdvancedDisplay)
-		EVectorQuantization QuantizationLevel;
+		EVRVectorQuantization QuantizationLevel;
 
 	FBPVRComponentPosRep()
 	{
-		QuantizationLevel = EVectorQuantization::RoundTwoDecimals;
+		QuantizationLevel = EVRVectorQuantization::RoundTwoDecimals;
 	}
 
 	/** Network serialization */
@@ -114,7 +123,7 @@ public:
 
 		// Defines the level of Quantization
 		uint8 Flags = (uint8)QuantizationLevel;
-		Ar.SerializeBits(&Flags, 2);
+		Ar.SerializeBits(&Flags, 1);
 		
 		// No longer using their built in rotation rep, as controllers will rarely if ever be at 0 rot on an axis and 
 		// so the 1 bit overhead per axis is just that, overhead
@@ -128,9 +137,8 @@ public:
 		{		
 			switch (QuantizationLevel)
 			{
-			case EVectorQuantization::RoundTwoDecimals: bOutSuccess &= SerializePackedVector<100, 30>(Position, Ar); break;
-			case EVectorQuantization::RoundOneDecimal: bOutSuccess &= SerializePackedVector<10, 24>(Position, Ar); break;
-			case EVectorQuantization::RoundWholeNumber: bOutSuccess &= SerializePackedVector<1, 20>(Position, Ar); break;
+			case EVRVectorQuantization::RoundTwoDecimals: bOutSuccess &= SerializePackedVector<100, 30>(Position, Ar); break;
+			case EVRVectorQuantization::RoundOneDecimal: bOutSuccess &= SerializePackedVector<10, 24>(Position, Ar); break;
 			}
 
 			ShortPitch = FRotator::CompressAxisToShort(Rotation.Pitch);
@@ -143,13 +151,12 @@ public:
 		}
 		else // If loading
 		{
-			QuantizationLevel = (EVectorQuantization)Flags;
+			QuantizationLevel = (EVRVectorQuantization)Flags;
 
 			switch (QuantizationLevel)
 			{
-			case EVectorQuantization::RoundTwoDecimals: bOutSuccess &= SerializePackedVector<100, 30>(Position, Ar); break;
-			case EVectorQuantization::RoundOneDecimal: bOutSuccess &= SerializePackedVector<10, 24>(Position, Ar); break;
-			case EVectorQuantization::RoundWholeNumber: bOutSuccess &= SerializePackedVector<1, 20>(Position, Ar); break;
+			case EVRVectorQuantization::RoundTwoDecimals: bOutSuccess &= SerializePackedVector<100, 30>(Position, Ar); break;
+			case EVRVectorQuantization::RoundOneDecimal: bOutSuccess &= SerializePackedVector<10, 24>(Position, Ar); break;
 			}
 
 			Ar << ShortPitch;
@@ -223,7 +230,7 @@ enum class EGripLerpState : uint8
 	NotLerping
 };
 
-// Grip Late Update informaiton
+// Grip Late Update information
 UENUM(Blueprintable)
 enum class EGripLateUpdateSettings : uint8
 {
@@ -343,6 +350,8 @@ public:
 	/** Network serialization */
 	bool NetSerialize(FArchive& Ar, class UPackageMap* Map, bool& bOutSuccess)
 	{
+		bOutSuccess = true;
+
 		// pack bitfield with flags
 		uint8 Flags;
 		if (Ar.IsSaving())
@@ -377,21 +386,23 @@ public:
 			bLimitRoll = (Flags >> 6) & 0x01;	
 			bIgnoreHandRotation = (Flags >> 7) & 0x01;
 		}
+		
+		//Ar << InitialLinearTranslation;
+		//Ar << MinLinearTranslation;
+		//Ar << MaxLinearTranslation;
+		bOutSuccess &= SerializePackedVector<100, 30>(InitialLinearTranslation, Ar);
+		bOutSuccess &= SerializePackedVector<100, 30>(MinLinearTranslation, Ar);
+		bOutSuccess &= SerializePackedVector<100, 30>(MaxLinearTranslation, Ar);
 
-		// Shouldn't need full precision for these, but letting them rep as it anyway to not cause issues if someone ever wants it
-		//bOutSuccess &= SerializeQuantizedVector(Ar, InitialLinearTranslation, EVectorQuantization::RoundTwoDecimals);
-		//bOutSuccess &= SerializeQuantizedVector(Ar, MinLinearTranslation, EVectorQuantization::RoundTwoDecimals);
-		//bOutSuccess &= SerializeQuantizedVector(Ar, MaxLinearTranslation, EVectorQuantization::RoundTwoDecimals);
-
-		Ar << InitialLinearTranslation;
-		Ar << MinLinearTranslation;
-		Ar << MaxLinearTranslation;
+		//InitialAngularTranslation.SerializeCompressedShort(Ar);
+		//MinAngularTranslation.SerializeCompressedShort(Ar);
+		//MaxAngularTranslation.SerializeCompressedShort(Ar);
 		Ar << InitialAngularTranslation;
 		Ar << MinAngularTranslation;
 		Ar << MaxAngularTranslation;
 
-		bOutSuccess = true;
-		return true;
+
+		return bOutSuccess;
 	}
 
 };
