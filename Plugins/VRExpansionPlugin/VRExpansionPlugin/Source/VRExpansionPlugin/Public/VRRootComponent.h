@@ -11,7 +11,6 @@
 
 class AVRBaseCharacter;
 
-// EXPERIMENTAL, don't use
 UCLASS(Blueprintable, meta = (BlueprintSpawnableComponent), ClassGroup = VRExpansionLibrary)
 class VREXPANSIONPLUGIN_API UVRRootComponent : public UCapsuleComponent, public IVRTrackedParentInterface
 {
@@ -20,7 +19,7 @@ class VREXPANSIONPLUGIN_API UVRRootComponent : public UCapsuleComponent, public 
 public:
 	friend class FDrawCylinderSceneProxy;
 
-	FORCEINLINE void GenerateOffsetToWorld(bool bUpdateBounds = true);
+	FORCEINLINE void GenerateOffsetToWorld(FVector CapsuleOffset, bool bUpdateBounds = true);
 
 	// If valid will use this as the tracked parent instead of the HMD / Parent
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRTrackedParentInterface")
@@ -28,7 +27,9 @@ public:
 
 	virtual void SetTrackedParent(UPrimitiveComponent * NewParentComponent, float WaistRadius, EBPVRWaistTrackingMode WaistTrackingMode) override
 	{
-		IVRTrackedParentInterface::Default_SetTrackedParent_Impl(NewParentComponent, WaistRadius, WaistTrackingMode, OptionalWaistTrackingParent, this);
+		// Generate the location without the capsule offset
+		GenerateOffsetToWorld(FVector::ZeroVector, false);
+		IVRTrackedParentInterface::Default_SetTrackedParent_Impl(NewParentComponent, WaistRadius, WaistTrackingMode, OptionalWaistTrackingParent,OffsetComponentToWorld.GetRelativeTransform(this->GetComponentTransform()), this, true);
 	}
 
 	/**

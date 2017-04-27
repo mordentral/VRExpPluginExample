@@ -48,7 +48,7 @@ void AVRCharacter::NotifyOfTeleport_Implementation()
 {
 	// Regenerate the capsule offset location - Should be done anyway in the move_impl function, but playing it safe
 	if (VRRootReference)
-		VRRootReference->GenerateOffsetToWorld();
+		VRRootReference->GenerateOffsetToWorld(VRRootReference->VRCapsuleOffset);
 
 	if (LeftMotionController)
 		LeftMotionController->PostTeleportMoveGrippedActors();

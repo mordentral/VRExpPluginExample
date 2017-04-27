@@ -342,7 +342,7 @@ void UVRRootComponent::TickComponent(float DeltaTime, enum ELevelTick TickType, 
 			// Also calculate vector of movement for the movement component
 			FVector LastPosition = OffsetComponentToWorld.GetLocation();
 
-			GenerateOffsetToWorld(false);
+			GenerateOffsetToWorld(VRCapsuleOffset, false);
 
 			FHitResult OutHit;
 			FCollisionQueryParams Params("RelativeMovementSweep", false, GetOwner());
@@ -417,7 +417,7 @@ void UVRRootComponent::SetCapsuleSizeVR(float NewRadius, float NewHalfHeight, bo
 	UpdateBounds();
 	UpdateBodySetup();
 	MarkRenderStateDirty();
-	GenerateOffsetToWorld();
+	GenerateOffsetToWorld(VRCapsuleOffset);
 
 	// do this if already created
 	// otherwise, it hasn't been really created yet
@@ -433,11 +433,11 @@ void UVRRootComponent::SetCapsuleSizeVR(float NewRadius, float NewHalfHeight, bo
 	}
 }
 
-void UVRRootComponent::GenerateOffsetToWorld(bool bUpdateBounds)
+void UVRRootComponent::GenerateOffsetToWorld(FVector CapsuleOffset, bool bUpdateBounds)
 {
 	FRotator CamRotOffset = UVRExpansionFunctionLibrary::GetHMDPureYaw_I(curCameraRot);
 
-	OffsetComponentToWorld = FTransform(CamRotOffset.Quaternion(), FVector(curCameraLoc.X, curCameraLoc.Y, CapsuleHalfHeight) + CamRotOffset.RotateVector(VRCapsuleOffset), FVector(1.0f)) * ComponentToWorld;
+	OffsetComponentToWorld = FTransform(CamRotOffset.Quaternion(), FVector(curCameraLoc.X, curCameraLoc.Y, CapsuleHalfHeight) + CamRotOffset.RotateVector(/*VR*/CapsuleOffset), FVector(1.0f)) * ComponentToWorld;
 
 	if (owningVRChar)
 	{
@@ -457,7 +457,7 @@ void UVRRootComponent::SendPhysicsTransform(ETeleportType Teleport)
 // Override this so that the physics representation is in the correct location
 void UVRRootComponent::OnUpdateTransform(EUpdateTransformFlags UpdateTransformFlags, ETeleportType Teleport)
 {
-	GenerateOffsetToWorld();
+	GenerateOffsetToWorld(VRCapsuleOffset);
 
 	if (this->ShouldRender() && this->SceneProxy)
 	{
@@ -596,7 +596,7 @@ bool UVRRootComponent::MoveComponentImpl(const FVector& Delta, const FQuat& NewR
 	{
 		// not sweeping, just go directly to the new transform
 		bMoved = InternalSetWorldLocationAndRotation(/*TraceEnd*/GetComponentLocation() + Delta, NewRotationQuat, bSkipPhysicsMove, Teleport);
-		GenerateOffsetToWorld();
+		GenerateOffsetToWorld(VRCapsuleOffset);
 		bRotationOnly = (DeltaSizeSq == 0);
 		bIncludesOverlapsAtEnd = bRotationOnly && (AreSymmetricRotations(InitialRotationQuat, NewRotationQuat, GetComponentScale())) && IsCollisionEnabled();
 	}
@@ -777,7 +777,7 @@ bool UVRRootComponent::MoveComponentImpl(const FVector& Delta, const FQuat& NewR
 
 		// Update the location.  This will teleport any child components as well (not sweep).
 		bMoved = InternalSetWorldLocationAndRotation(NewLocation, NewRotationQuat, bSkipPhysicsMove, Teleport);
-		GenerateOffsetToWorld();
+		GenerateOffsetToWorld(VRCapsuleOffset);
 	}
 
 	// Handle overlap notifications.

@@ -656,7 +656,7 @@ void UVRCharacterMovementComponent::ServerMoveVR_Implementation(
 		{
 			VRRootCapsule->curCameraLoc = CapsuleLoc;
 			VRRootCapsule->curCameraRot = FRotator(0.0f, FRotator::DecompressAxisFromByte(CapsuleYaw), 0.0f);
-			VRRootCapsule->GenerateOffsetToWorld(false);
+			VRRootCapsule->GenerateOffsetToWorld(VRRootCapsule->VRCapsuleOffset, false);
 			VRRootCapsule->DifferenceFromLastFrame = LFDiff;
 		}
 
