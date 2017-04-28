@@ -56,15 +56,10 @@ public:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 		FRotator RestingRotation;
 
-	// Initial "Resting" location of the tracker parent, assumed to be the calibration zero
-	UPROPERTY(BlueprintReadWrite, EditAnywhere)
-		FTransform RelativeTrans;
 
 	// Distance to offset to get center of waist from tracked parent location
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 		float WaistRadius;
-
-	bool bYawOnly;
 
 	// Controls forward vector
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
@@ -86,7 +81,6 @@ public:
 
 	FBPVRWaistTracking_Info()
 	{
-		bYawOnly = false;
 		WaistRadius = 0.0f;
 		TrackedDevice = nullptr;
 		TrackingMode = EBPVRWaistTrackingMode::VRWaist_Tracked_Rear;

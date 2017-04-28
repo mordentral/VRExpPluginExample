@@ -26,9 +26,8 @@ public:
 	virtual void SetTrackedParent(UPrimitiveComponent * NewParentComponent, float WaistRadius, EBPVRWaistTrackingMode WaistTrackingMode)
 	{}
 
-	static void Default_SetTrackedParent_Impl(UPrimitiveComponent * NewParentComponent, float WaistRadius, EBPVRWaistTrackingMode WaistTrackingMode, FBPVRWaistTracking_Info & OptionalWaistTrackingParent, FTransform SelfTransform, USceneComponent * Self, bool bYawOnly = false)
+	static void Default_SetTrackedParent_Impl(UPrimitiveComponent * NewParentComponent, float WaistRadius, EBPVRWaistTrackingMode WaistTrackingMode, FBPVRWaistTracking_Info & OptionalWaistTrackingParent, USceneComponent * Self)
 	{
-
 		// If had a different original tracked parent
 		// Moved this to first thing so the pre-res is removed prior to erroring out and clearing this
 		if (OptionalWaistTrackingParent.IsValid())
@@ -59,10 +58,6 @@ public:
 		
 		OptionalWaistTrackingParent.TrackingMode = WaistTrackingMode;
 		OptionalWaistTrackingParent.WaistRadius = WaistRadius;
-		OptionalWaistTrackingParent.bYawOnly = bYawOnly;
-
-		FTransform Origin = NewParentComponent->GetRelativeTransform();
-		OptionalWaistTrackingParent.RelativeTrans = SelfTransform.GetRelativeTransform(Origin);//Origin.GetRelativeTransform(SelfTransform);
 	}
 
 	// Returns local transform of the parent relative attachment
@@ -72,18 +67,11 @@ public:
 			return FTransform::Identity;
 
 		FTransform DeviceTransform = WaistTrackingInfo.TrackedDevice->GetRelativeTransform();
-		
-		if (WaistTrackingInfo.bYawOnly)
-		{
-			// Rewind by the initial rotation when the new parent was set, this should be where the tracker rests on the person
-			DeviceTransform.SetRotation(FRotator(WaistTrackingInfo.RestingRotation.Pitch, DeviceTransform.Rotator().Yaw, WaistTrackingInfo.RestingRotation.Roll).Quaternion());
-			//DeviceTransform.SetScale3D(FVector(1, 1, 1));
-		}
 
 		// Rewind by the initial rotation when the new parent was set, this should be where the tracker rests on the person
-		/*DeviceTransform.ConcatenateRotation(WaistTrackingInfo.RestingRotation.Quaternion().Inverse());
+		DeviceTransform.ConcatenateRotation(WaistTrackingInfo.RestingRotation.Quaternion().Inverse());
 		DeviceTransform.SetScale3D(FVector(1, 1, 1));
-		
+
 		// Don't bother if not set
 		if (WaistTrackingInfo.WaistRadius > 0.0f)
 		{
@@ -110,10 +98,7 @@ public:
 		case EBPVRWaistTrackingMode::VRWaist_Tracked_Rear: DeviceTransform.ConcatenateRotation(FRotator(0, -180, 0).Quaternion()); break;
 		case EBPVRWaistTrackingMode::VRWaist_Tracked_Left: DeviceTransform.ConcatenateRotation(FRotator(0, 90, 0).Quaternion()); break;
 		case EBPVRWaistTrackingMode::VRWaist_Tracked_Right:	DeviceTransform.ConcatenateRotation(FRotator(0, -90, 0).Quaternion()); break;
-		}*/
-
-		
-		DeviceTransform = WaistTrackingInfo.RelativeTrans * DeviceTransform;//WaistTrackingInfo.RelativeTrans * DeviceTransform;
+		}
 		
 		return DeviceTransform;
 	}
