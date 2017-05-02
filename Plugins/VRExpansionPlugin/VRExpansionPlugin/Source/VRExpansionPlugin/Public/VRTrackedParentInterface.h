@@ -3,6 +3,8 @@
 #pragma once
 #include "CoreMinimal.h"
 #include "VRBPDatatypes.h"
+#include "UObject/ObjectMacros.h"
+#include "UObject/ScriptMacros.h"
 #include "UObject/Interface.h"
 
 #include "VRTrackedParentInterface.generated.h"
