@@ -50,6 +50,10 @@ class VREXPANSIONPLUGIN_API UGrippableSphereComponent : public USphereComponent,
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "VRGripInterface")
 		bool CanHaveDoubleGrip();
 
+	// Double grip causes scaling
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "VRGripInterface")
+		bool DoubleGripCausesScaling();
+
 	// Define which grip target to use for gripping
 	//UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "VRGripInterface")
 	//	EGripTargetType GripTargetType();

@@ -2041,7 +2041,6 @@ void UGripMotionControllerComponent::GetGripWorldTransform(float DeltaTime, FTra
 	{
 		// Just simple transform setting
 		WorldTransform = Grip.RelativeTransform * Grip.AdditionTransform * ParentTransform;
-
 	}
 
 	// Check the grip lerp state, this it ouside of the secondary attach check below because it can change the result of it
@@ -2134,6 +2133,11 @@ void UGripMotionControllerComponent::GetGripWorldTransform(float DeltaTime, FTra
 
 		// Rebase the world transform to the pivot point, add the rotation, remove the pivot point rebase
 		WorldTransform = WorldTransform * WorldToPivot * RotationOffsetTransform * PivotToWorld;
+
+		if ((bRootHasInterface && IVRGripInterface::Execute_DoubleGripCausesScaling(root)) || (bActorHasInterface && IVRGripInterface::Execute_DoubleGripCausesScaling(actor)))
+		{
+			WorldTransform.SetScale3D(WorldTransform.GetScale3D() * frontLoc.Size() / frontLocOrig.Size());
+		}
 	}
 }
 

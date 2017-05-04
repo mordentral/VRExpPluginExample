@@ -13,6 +13,7 @@ AGrippableSkeletalMeshActor::AGrippableSkeletalMeshActor(const FObjectInitialize
 	VRGripInterfaceSettings.SlotDefaultGripType = EGripCollisionType::InteractiveCollisionWithPhysics;
 	VRGripInterfaceSettings.FreeDefaultGripType = EGripCollisionType::InteractiveCollisionWithPhysics;
 	VRGripInterfaceSettings.bCanHaveDoubleGrip = false;
+	VRGripInterfaceSettings.bDoubleGripCausesScaling = false;
 	//VRGripInterfaceSettings.GripTarget = EGripTargetType::ActorGrip;
 	VRGripInterfaceSettings.MovementReplicationType = EGripMovementReplicationSettings::ForceClientSideMovement;
 	VRGripInterfaceSettings.LateUpdateSetting = EGripLateUpdateSettings::NotWhenCollidingOrDoubleGripping;
@@ -78,6 +79,12 @@ bool AGrippableSkeletalMeshActor::CanHaveDoubleGrip_Implementation()
 {
 	return VRGripInterfaceSettings.bCanHaveDoubleGrip;
 }
+
+bool AGrippableSkeletalMeshActor::DoubleGripCausesScaling_Implementation()
+{
+	return VRGripInterfaceSettings.bDoubleGripCausesScaling;
+}
+
 
 /*EGripTargetType AGrippableSkeletalMeshActor::GripTargetType_Implementation()
 {

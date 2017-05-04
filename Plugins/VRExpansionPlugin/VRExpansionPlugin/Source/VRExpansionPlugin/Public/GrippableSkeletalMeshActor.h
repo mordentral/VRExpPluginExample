@@ -51,6 +51,10 @@ class VREXPANSIONPLUGIN_API AGrippableSkeletalMeshActor : public ASkeletalMeshAc
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "VRGripInterface")
 		bool CanHaveDoubleGrip();
 
+	// Double grip causes scaling
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "VRGripInterface")
+		bool DoubleGripCausesScaling();
+
 	// Define which movement repliation setting to use
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "VRGripInterface")
 		EGripMovementReplicationSettings GripMovementReplicationType();

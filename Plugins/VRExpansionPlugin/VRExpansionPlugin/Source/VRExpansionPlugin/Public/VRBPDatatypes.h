@@ -668,6 +668,9 @@ public:
 		bool bCanHaveDoubleGrip;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRGripInterface")
+		bool bDoubleGripCausesScaling;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRGripInterface")
 		EGripMovementReplicationSettings MovementReplicationType;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRGripInterface")
@@ -709,6 +712,7 @@ public:
 		SlotDefaultGripType = EGripCollisionType::ManipulationGrip;
 		FreeDefaultGripType = EGripCollisionType::ManipulationGrip;
 		bCanHaveDoubleGrip = false;
+		bDoubleGripCausesScaling = false;
 		//GripTarget = EGripTargetType::ComponentGrip;
 		MovementReplicationType = EGripMovementReplicationSettings::ForceClientSideMovement;
 		LateUpdateSetting = EGripLateUpdateSettings::LateUpdatesAlwaysOff;
