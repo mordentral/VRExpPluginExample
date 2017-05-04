@@ -4,6 +4,10 @@
 #include "CoreMinimal.h"
 #include "IMotionController.h"
 
+#include "Engine/Canvas.h"
+#include "Engine/TextureRenderTarget2D.h"
+#include "Engine/Console.h"
+
 // Or procedural mesh component throws an error....
 //#include "PhysicsEngine/ConvexElem.h" // Fixed in 4.13.1?
 
@@ -96,6 +100,21 @@ public:
 		}
 	}
 
+	// Sets the console input text, can be used to clear the console or enter full or partial commands
+	UFUNCTION(BlueprintCallable, Category = "VRExpansionFunctions|Console", meta = (bIgnoreSelf = "true"))
+		static void SetConsoleText(FString Text);
+
+	// Sends a key to the console - Console considers Released as final, flashes the cursor
+	UFUNCTION(BlueprintCallable, Category = "VRExpansionFunctions|Console", meta = (bIgnoreSelf = "true"))
+		static void SendKeyEventToConsole(FKey Key, EInputEvent KeyEvent);
+
+	// Sends text to the console - Optionally returns at the end to "enter" the text, end flashes the cursor
+	UFUNCTION(BlueprintCallable, Category = "VRExpansionFunctions|Console", meta = (bIgnoreSelf = "true"))
+		static void AppendTextToConsole(FString Text, bool bReturnAtEnd = false);
+
+	// Draw the console to a render target 2D
+	UFUNCTION(BlueprintCallable, Category = "VRExpansionFunctions|Console", meta = (bIgnoreSelf = "true", DisplayName = "DrawConsoleToCanvasRenderTarget2D", WorldContext = "WorldContextObject"))
+		static bool DrawConsoleToRenderTarget2D(UObject* WorldContextObject, UTextureRenderTarget2D * Texture);
 
 	// Gets whether an HMD device is connected
 	UFUNCTION(BlueprintPure, Category = "VRExpansionFunctions", meta = (bIgnoreSelf = "true", DisplayName = "GetIsHMDConnected"))
