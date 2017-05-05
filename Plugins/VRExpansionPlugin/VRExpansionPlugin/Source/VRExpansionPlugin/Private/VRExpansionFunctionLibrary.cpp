@@ -9,7 +9,6 @@
 //General Log
 DEFINE_LOG_CATEGORY(VRExpansionFunctionLibraryLog);
 
-
 void UVRExpansionFunctionLibrary::LowPassFilter_RollingAverage(FVector lastAverage, FVector newSample, FVector & newAverage, int32 numSamples)
 {
 	newAverage = lastAverage;
@@ -20,120 +19,6 @@ void UVRExpansionFunctionLibrary::LowPassFilter_RollingAverage(FVector lastAvera
 void UVRExpansionFunctionLibrary::LowPassFilter_Exponential(FVector lastAverage, FVector newSample, FVector & newAverage, float sampleFactor)
 {
 	newAverage = (newSample * sampleFactor) + ((1 - sampleFactor) * lastAverage);
-}
-
-void UVRExpansionFunctionLibrary::SetConsoleText(FString Text)
-{
-	UConsole* ViewportConsole = (GEngine->GameViewport != nullptr) ? GEngine->GameViewport->ViewportConsole : nullptr;
-
-	if (!ViewportConsole)
-		return;
-
-	// Using append because UpdatePrecompletedInputLine is private and append calls it
-	ViewportConsole->SetInputText("");
-	ViewportConsole->AppendInputText(Text); 
-}
-
-void UVRExpansionFunctionLibrary::SendKeyEventToConsole(FKey Key, EInputEvent KeyEvent)
-{
-	UConsole* ViewportConsole = (GEngine->GameViewport != nullptr) ? GEngine->GameViewport->ViewportConsole : nullptr;
-
-	if (!ViewportConsole)
-		return;
-
-	ViewportConsole->FakeGotoState(FName(TEXT("Typing")));
-	ViewportConsole->InputKey(0, Key, KeyEvent);
-	ViewportConsole->FakeGotoState(NAME_None);
-}
-
-void UVRExpansionFunctionLibrary::AppendTextToConsole(FString Text, bool bReturnAtEnd)
-{
-	UConsole* ViewportConsole = (GEngine->GameViewport != nullptr) ? GEngine->GameViewport->ViewportConsole : nullptr;
-
-	if (!ViewportConsole)
-		return;
-
-	ViewportConsole->AppendInputText(Text);
-
-	if (bReturnAtEnd)
-	{
-		ViewportConsole->FakeGotoState(FName(TEXT("Typing")));
-		ViewportConsole->InputKey(0, EKeys::Enter, EInputEvent::IE_Released);
-		ViewportConsole->FakeGotoState(NAME_None);
-	}
-
-}
-
-bool UVRExpansionFunctionLibrary::DrawConsoleToRenderTarget2D(UObject* WorldContextObject, UTextureRenderTarget2D * Texture)
-{
-	check(WorldContextObject);
-	UWorld* World = GEngine->GetWorldFromContextObject(WorldContextObject, false);
-
-	UConsole* ViewportConsole = (GEngine->GameViewport != nullptr) ? GEngine->GameViewport->ViewportConsole : nullptr;
-
-	if (!World || !ViewportConsole)
-		return false;
-
-	// Create or find the canvas object to use to render onto the texture.  Multiple canvas render target textures can share the same canvas.
-	UCanvas* Canvas = World->GetCanvasForRenderingToTarget();
-
-	if (!Canvas)
-		return false;
-
-	Canvas->Init(Texture->GetSurfaceWidth(), Texture->GetSurfaceHeight(), nullptr);
-	Canvas->Update();
-
-	// Create the FCanvas which does the actual rendering.
-	//const ERHIFeatureLevel::Type FeatureLevel = World != nullptr ? World->FeatureLevel : GMaxRHIFeatureLevel;
-
-	FCanvas * RenderCanvas = new FCanvas(
-		Texture->GameThread_GetRenderTargetResource(),
-		nullptr,
-		World,
-		World->FeatureLevel,
-		// Draw immediately so that interleaved SetVectorParameter (etc) function calls work as expected
-		FCanvas::CDM_ImmediateDrawing);
-
-	Canvas->Canvas = RenderCanvas;
-
-	/*
-	if (GEngine->IsConsoleBuild())
-	{
-	ClipX	-= 80;
-	TopPos	 = 30;
-	LeftPos	 = 40;
-	}
-		if (GEngine->IsStereoscopic3D())
-	{
-		LeftPos = ClipX / 3;
-		ClipX -= LeftPos;
-		Height = Canvas->ClipY * 0.60;
-	}
-	*/
-
-	ViewportConsole->PostRender_Console_Open(Canvas);
-
-	// Clean up and flush the rendering canvas.
-	Canvas->Canvas = nullptr;
-	RenderCanvas->Flush_GameThread();
-	delete RenderCanvas;
-	RenderCanvas = nullptr;
-
-	// It renders without this, is it actually required?
-	// Enqueue the rendering command to copy the freshly rendering texture resource back to the render target RHI 
-	// so that the texture is updated and available for rendering.
-	ENQUEUE_UNIQUE_RENDER_COMMAND_ONEPARAMETER
-	(
-		CanvasRenderTargetResolveCommand,
-		FTextureRenderTargetResource*,
-		RenderTargetResource,
-		Texture->GameThread_GetRenderTargetResource(),
-		{
-			RHICmdList.CopyToResolveTarget(RenderTargetResource->GetRenderTargetTexture(), RenderTargetResource->TextureRHI, true, FResolveParams());
-		}
-	);
-
-	return true;
 }
 
 bool UVRExpansionFunctionLibrary::GetIsActorMovable(AActor * ActorToCheck)
