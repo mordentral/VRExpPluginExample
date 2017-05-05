@@ -96,6 +96,21 @@ bool UVRExpansionFunctionLibrary::DrawConsoleToRenderTarget2D(UObject* WorldCont
 
 	Canvas->Canvas = RenderCanvas;
 
+	/*
+	if (GEngine->IsConsoleBuild())
+	{
+	ClipX	-= 80;
+	TopPos	 = 30;
+	LeftPos	 = 40;
+	}
+		if (GEngine->IsStereoscopic3D())
+	{
+		LeftPos = ClipX / 3;
+		ClipX -= LeftPos;
+		Height = Canvas->ClipY * 0.60;
+	}
+	*/
+
 	ViewportConsole->PostRender_Console_Open(Canvas);
 
 	// Clean up and flush the rendering canvas.
@@ -168,7 +183,9 @@ void UVRExpansionFunctionLibrary::GetGripSlotInRangeByTypeName(FName SlotType, A
 		}
 
 		if (bHadSlotInRange)
+		{
 			SlotWorldTransform = rootComp->GetSocketTransform(SocketNames[foundIndex]);
+		}
 	}
 }
 
@@ -204,7 +221,9 @@ void UVRExpansionFunctionLibrary::GetGripSlotInRangeByTypeName_Component(FName S
 	}
 
 	if (bHadSlotInRange)
+	{
 		SlotWorldTransform = Component->GetSocketTransform(SocketNames[foundIndex]);
+	}
 }
 
 FRotator UVRExpansionFunctionLibrary::GetHMDPureYaw(FRotator HMDRotation)

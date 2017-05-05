@@ -12,8 +12,8 @@ UGrippableSkeletalMeshComponent::UGrippableSkeletalMeshComponent(const FObjectIn
 	VRGripInterfaceSettings.EnumObjectType = 0;
 	VRGripInterfaceSettings.SlotDefaultGripType = EGripCollisionType::ManipulationGrip;
 	VRGripInterfaceSettings.FreeDefaultGripType = EGripCollisionType::ManipulationGrip;
-	VRGripInterfaceSettings.bCanHaveDoubleGrip = false;
-	VRGripInterfaceSettings.bDoubleGripCausesScaling = false;
+	//VRGripInterfaceSettings.bCanHaveDoubleGrip = false;
+	VRGripInterfaceSettings.SecondaryGripType = ESecondaryGripType::SG_None;
 	//VRGripInterfaceSettings.GripTarget = EGripTargetType::ComponentGrip;
 	VRGripInterfaceSettings.MovementReplicationType = EGripMovementReplicationSettings::ForceClientSideMovement;
 	VRGripInterfaceSettings.LateUpdateSetting = EGripLateUpdateSettings::LateUpdatesAlwaysOff;
@@ -36,6 +36,17 @@ UGrippableSkeletalMeshComponent::~UGrippableSkeletalMeshComponent()
 {
 }
 
+void UGrippableSkeletalMeshComponent::TickGrip_Implementation(UGripMotionControllerComponent * GrippingController, const FBPActorGripInformation & GripInformation, FVector MControllerLocDelta, float DeltaTime) {}
+void UGrippableSkeletalMeshComponent::OnGrip_Implementation(UGripMotionControllerComponent * GrippingController, const FBPActorGripInformation & GripInformation) {}
+void UGrippableSkeletalMeshComponent::OnGripRelease_Implementation(UGripMotionControllerComponent * ReleasingController, const FBPActorGripInformation & GripInformation) {}
+void UGrippableSkeletalMeshComponent::OnChildGrip_Implementation(UGripMotionControllerComponent * GrippingController, const FBPActorGripInformation & GripInformation) {}
+void UGrippableSkeletalMeshComponent::OnChildGripRelease_Implementation(UGripMotionControllerComponent * ReleasingController, const FBPActorGripInformation & GripInformation) {}
+void UGrippableSkeletalMeshComponent::OnSecondaryGrip_Implementation(USceneComponent * SecondaryGripComponent, const FBPActorGripInformation & GripInformation) {}
+void UGrippableSkeletalMeshComponent::OnSecondaryGripRelease_Implementation(USceneComponent * ReleasingSecondaryGripComponent, const FBPActorGripInformation & GripInformation) {}
+void UGrippableSkeletalMeshComponent::OnUsed_Implementation() {}
+void UGrippableSkeletalMeshComponent::OnEndUsed_Implementation() {}
+void UGrippableSkeletalMeshComponent::OnSecondaryUsed_Implementation() {}
+void UGrippableSkeletalMeshComponent::OnEndSecondaryUsed_Implementation() {}
 
 bool UGrippableSkeletalMeshComponent::DenyGripping_Implementation()
 {
@@ -67,16 +78,15 @@ EGripCollisionType UGrippableSkeletalMeshComponent::FreeGripType_Implementation(
 	return VRGripInterfaceSettings.FreeDefaultGripType;
 }
 
-bool UGrippableSkeletalMeshComponent::CanHaveDoubleGrip_Implementation()
+/*bool UGrippableSkeletalMeshComponent::CanHaveDoubleGrip_Implementation()
 {
 	return VRGripInterfaceSettings.bCanHaveDoubleGrip;
-}
+}*/
 
-bool UGrippableSkeletalMeshComponent::DoubleGripCausesScaling_Implementation()
+ESecondaryGripType UGrippableSkeletalMeshComponent::SecondaryGripType_Implementation()
 {
-	return VRGripInterfaceSettings.bDoubleGripCausesScaling;
+	return VRGripInterfaceSettings.SecondaryGripType;
 }
-
 
 /*EGripTargetType UGrippableSkeletalMeshComponent::GripTargetType_Implementation()
 {
