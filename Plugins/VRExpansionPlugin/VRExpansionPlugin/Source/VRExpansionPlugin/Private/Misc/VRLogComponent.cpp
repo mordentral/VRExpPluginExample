@@ -10,6 +10,7 @@ UVRLogComponent::UVRLogComponent(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {
 	MaxLineLength = 130;
+	MaxStoredMessages = 10000;
 }
 
 //=============================================================================
@@ -61,7 +62,7 @@ void UVRLogComponent::AppendTextToConsole(FString Text, bool bReturnAtEnd)
 
 }
 
-bool UVRLogComponent::DrawConsoleToRenderTarget2D(EBPVRConsoleDrawType DrawType, UTextureRenderTarget2D * Texture, int32 ScrollOffset, bool bForceDraw)
+bool UVRLogComponent::DrawConsoleToRenderTarget2D(EBPVRConsoleDrawType DrawType, UTextureRenderTarget2D * Texture, float ScrollOffset, bool bForceDraw)
 {
 	if (!bForceDraw && DrawType == EBPVRConsoleDrawType::VRConsole_Draw_OutputLogOnly && !OutputLogHistory.bIsDirty)
 	{
@@ -114,7 +115,7 @@ bool UVRLogComponent::DrawConsoleToRenderTarget2D(EBPVRConsoleDrawType DrawType,
 	// It renders without this, is it actually required?
 	// Enqueue the rendering command to copy the freshly rendering texture resource back to the render target RHI 
 	// so that the texture is updated and available for rendering.
-	ENQUEUE_UNIQUE_RENDER_COMMAND_ONEPARAMETER
+	/*ENQUEUE_UNIQUE_RENDER_COMMAND_ONEPARAMETER
 	(
 		CanvasRenderTargetResolveCommand,
 		FTextureRenderTargetResource*,
@@ -123,7 +124,7 @@ bool UVRLogComponent::DrawConsoleToRenderTarget2D(EBPVRConsoleDrawType DrawType,
 		{
 			RHICmdList.CopyToResolveTarget(RenderTargetResource->GetRenderTargetTexture(), RenderTargetResource->TextureRHI, true, FResolveParams());
 		}
-	);
+	);*/
 
 	return true;
 }
@@ -140,9 +141,9 @@ void UVRLogComponent::DrawConsole(bool bLowerHalf, UCanvas* Canvas)
 
 }
 
-void UVRLogComponent::DrawOutputLog(bool bUpperHalf, UCanvas* Canvas, int32 ScrollOffset)
+void UVRLogComponent::DrawOutputLog(bool bUpperHalf, UCanvas* Canvas, float ScrollOffset)
 {
-	UFont* Font = GEngine->GetTinyFont();//GEngine->GetSmallFont();
+	UFont* Font = GEngine->GetSmallFont();// GEngine->GetTinyFont();//GEngine->GetSmallFont();
 
 	// determine the height of the text
 	float xl, yl;
@@ -167,7 +168,7 @@ void UVRLogComponent::DrawOutputLog(bool bUpperHalf, UCanvas* Canvas, int32 Scro
 	int32 ScrollPos = 0;
 
 	if(ScrollOffset > 0 && LoggedMessages.Num() > 1)
-		ScrollPos = FMath::Clamp(FMath::RoundToInt(LoggedMessages.Num() * (ScrollOffset / 100.0f)) , 0, LoggedMessages.Num() - 1);
+		ScrollPos = FMath::Clamp(FMath::RoundToInt(LoggedMessages.Num() * ScrollOffset ) , 0, LoggedMessages.Num() - 1);
 
 	float Xpos = 0.0f;
 	float Ypos = 0.0f;
@@ -175,11 +176,13 @@ void UVRLogComponent::DrawOutputLog(bool bUpperHalf, UCanvas* Canvas, int32 Scro
 	{
 		switch (LoggedMessages[i]->Verbosity)
 		{
-		case ELogVerbosity::Error:
-		case ELogVerbosity::Fatal: ConsoleText.SetColor(FLinearColor::Red); break;
-		case ELogVerbosity::Warning: ConsoleText.SetColor(FLinearColor(1.0f,1.0f,0,0.5f)); break;
 
-		default: ConsoleText.SetColor(FLinearColor::White);
+		case ELogVerbosity::Error:
+		case ELogVerbosity::Fatal: ConsoleText.SetColor(FLinearColor(0.7f,0.1f,0.1f)); break;
+		case ELogVerbosity::Warning: ConsoleText.SetColor(FLinearColor(0.5f,0.5f,0.0f)); break;
+
+		case ELogVerbosity::Log:
+		default: ConsoleText.SetColor(FLinearColor(0.8f,0.8f,0.8f));
 		}
 
 		Ypos += yl;

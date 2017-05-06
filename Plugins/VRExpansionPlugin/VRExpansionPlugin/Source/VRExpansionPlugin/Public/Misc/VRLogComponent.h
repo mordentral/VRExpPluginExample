@@ -200,11 +200,15 @@ class VREXPANSIONPLUGIN_API UVRLogComponent : public UActorComponent
 	virtual void PostInitProperties() override
 	{
 		Super::PostInitProperties();
+		OutputLogHistory.MaxStoredMessages = FMath::Clamp(MaxStoredMessages, 100, 100000);
 		OutputLogHistory.MaxLineLength = FMath::Clamp(MaxLineLength, 50, 1000);
 	}
 
 	UPROPERTY(BlueprintReadWrite,EditAnywhere, Category = "VRLogComponent|Console")
 		int32 MaxLineLength;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRLogComponent|Console")
+		int32 MaxStoredMessages;
 
 	// Sets the console input text, can be used to clear the console or enter full or partial commands
 	UFUNCTION(BlueprintCallable, Category = "VRLogComponent|Console", meta = (bIgnoreSelf = "true"))
@@ -220,10 +224,10 @@ class VREXPANSIONPLUGIN_API UVRLogComponent : public UActorComponent
 
 	// Draw the console to a render target 2D
 	UFUNCTION(BlueprintCallable, Category = "VRLogComponent|Console", meta = (bIgnoreSelf = "true", DisplayName = "DrawConsoleToCanvasRenderTarget2D"))
-		bool DrawConsoleToRenderTarget2D(EBPVRConsoleDrawType DrawType, UTextureRenderTarget2D * Texture, int32 ScrollOffset, bool bForceDraw);
+		bool DrawConsoleToRenderTarget2D(EBPVRConsoleDrawType DrawType, UTextureRenderTarget2D * Texture, float ScrollOffset, bool bForceDraw);
 
 
 	void DrawConsole(bool bLowerHalfOnly, UCanvas* Canvas);
-	void DrawOutputLog(bool bUpperHalfOnly, UCanvas* Canvas, int32 ScrollOffset);
+	void DrawOutputLog(bool bUpperHalfOnly, UCanvas* Canvas, float ScrollOffset);
 
 };
