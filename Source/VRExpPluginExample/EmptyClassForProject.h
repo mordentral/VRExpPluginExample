@@ -11,6 +11,11 @@
 #include "GrippableBoxComponent.h"
 #include "VRStereoWidgetComponent.h"
 #include "VRCharacterMovementComponent.h"
+#include "Misc/VRLogComponent.h"
+#include "VRSimpleCharacter.h"
+#include "VRAIController.h"
+#include "VRPathFollowingComponent.h"
+#include "VRRootComponent.h"
 
 /**
  * 
