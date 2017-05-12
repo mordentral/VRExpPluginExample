@@ -484,7 +484,7 @@ public:
 	FTransform AdditionTransform;
 
 	// Specifically for secondary grip retaining size / scale after grip
-	float SecondaryScaler;
+	//float SecondaryScaler;
 
 	// Locked transitions
 	bool bIsLocked;
@@ -642,7 +642,7 @@ public:
 
 		RelativeTransform = FTransform::Identity;
 		AdditionTransform = FTransform::Identity;
-		SecondaryScaler = 1.0f;
+		//SecondaryScaler = 1.0f;
 	}
 };
 
