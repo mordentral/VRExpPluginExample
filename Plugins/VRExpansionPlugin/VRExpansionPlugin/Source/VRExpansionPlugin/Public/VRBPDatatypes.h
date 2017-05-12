@@ -321,13 +321,13 @@ public:
 		uint32 bIgnoreHandRotation:1;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "LinearSettings")
-		FVector InitialLinearTranslation;
+		FVector_NetQuantize100 InitialLinearTranslation;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "LinearSettings")
-		FVector MinLinearTranslation;
+		FVector_NetQuantize100 MinLinearTranslation;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "LinearSettings")
-		FVector MaxLinearTranslation;
+		FVector_NetQuantize100 MaxLinearTranslation;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "AngularSettings")
 		FRotator InitialAngularTranslation;
@@ -564,11 +564,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRGripInterface")
 		float ConstraintBreakDistance;
 
-	// 10k max / min now so I save bits on serialize
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRGripInterface")
 		float SecondarySlotRange;
 
-	// 10k max / min now so I save bits on serialize
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRGripInterface")
 		float PrimarySlotRange;
 
