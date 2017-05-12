@@ -1510,7 +1510,7 @@ bool UGripMotionControllerComponent::AddSecondaryAttachmentPoint(UObject * Gripp
 		{
 		case ESecondaryGripType::SG_None:return false; break;
 
-		case ESecondaryGripType::SG_FreeWithScaling_Retain:
+		//case ESecondaryGripType::SG_FreeWithScaling_Retain:
 		//case ESecondaryGripType::SG_SlotOnly_Retain:
 		//case ESecondaryGripType::SG_SlotOnlyWithScaling_Retain:
 		//case ESecondaryGripType::SG_Free_Retain:
