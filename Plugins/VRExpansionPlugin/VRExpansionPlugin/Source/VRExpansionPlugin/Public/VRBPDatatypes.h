@@ -88,7 +88,10 @@ public:
 
 };
 
-USTRUCT()
+
+//USTRUCT(BlueprintType, Category = "VRExpansionLibrary|Transform")
+
+USTRUCT(/*noexport, */BlueprintType, Category = "VRExpansionLibrary|Transform", meta = (HasNativeMake = "VRExpansionPlugin.VRExpansionPluginFunctionLibrary.MakeTransform_NetQuantize", HasNativeBreak = "VRExpansionPlugin.VRExpansionPluginFunctionLibrary.BreakTransform_NetQuantize"))
 struct FTransform_NetQuantize : public FTransform
 {
 	GENERATED_USTRUCT_BODY()
@@ -629,7 +632,80 @@ public:
 		AdditionTransform = FTransform::Identity;
 		//SecondaryScaler = 1.0f;
 	}	
+
+	/** Network serialization */
+	/*bool NetSerialize(FArchive& Ar, class UPackageMap* Map, bool& bOutSuccess)
+	{
+		Ar << GripTargetType;
+		Ar << GrippedObject;
+		Ar << GripCollisionType;
+		Ar << GripLateUpdateSetting;
+
+		Ar << RelativeTransform;
+
+		Ar << GripMovementReplicationSetting;
+
+		// If on colliding server, otherwise doesn't matter to client
+		//	Ar << bColliding;
+
+		// This doesn't matter to clients
+		//Ar << bOriginalReplicatesMovement;
+
+		bool bHadAttachment = bHasSecondaryAttachment;
+
+		Ar << bHasSecondaryAttachment;
+		Ar << LerpToRate;
+
+		// If this grip has a secondary attachment
+		if (bHasSecondaryAttachment)
+		{
+			Ar << SecondaryAttachment;
+			Ar << SecondaryRelativeLocation;
+			Ar << SecondarySmoothingScaler;
+		}
+
+		// Manage lerp states
+		if (Ar.IsLoading())
+		{
+			if (bHadAttachment != bHasSecondaryAttachment)
+			{
+				if (LerpToRate < 0.01f)
+					GripLerpState = EGripLerpState::NotLerping;
+				else
+				{
+					// New lerp
+					if (bHasSecondaryAttachment)
+					{
+						curLerp = LerpToRate;
+						GripLerpState = EGripLerpState::StartLerp;
+					}
+					else // Post Lerp
+					{
+						curLerp = LerpToRate;
+						GripLerpState = EGripLerpState::EndLerp;
+					}
+				}
+			}
+		}
+
+		// Now always replicating these two, in case people want to pass in custom values using it
+		Ar << Damping;
+		Ar << Stiffness;
+
+		bOutSuccess = true;
+		return true;
+	}*/
 };
+
+/*template<>
+struct TStructOpsTypeTraits< FBPActorGripInformation > : public TStructOpsTypeTraitsBase2<FBPActorGripInformation>
+{
+	enum
+	{
+		WithNetSerializer = true
+	};
+};*/
+
 
 USTRUCT(BlueprintType, Category = "VRExpansionLibrary")
 struct VREXPANSIONPLUGIN_API FBPInterfaceProperties

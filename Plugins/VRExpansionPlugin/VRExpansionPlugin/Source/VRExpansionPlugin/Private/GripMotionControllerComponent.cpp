@@ -183,6 +183,8 @@ void UGripMotionControllerComponent::GetLifetimeReplicatedProps(TArray< class FL
 	DOREPLIFETIME_CONDITION(UGripMotionControllerComponent, ReplicatedControllerTransform, COND_SkipOwner);
 	DOREPLIFETIME(UGripMotionControllerComponent, GrippedActors);
 	DOREPLIFETIME(UGripMotionControllerComponent, ControllerNetUpdateRate);
+
+	//DOREPLIFETIME_CONDITION(UGripMotionControllerComponent, LocallyGrippedActors, COND_SkipOwner);
 //	DOREPLIFETIME(UGripMotionControllerComponent, bReplicateControllerTransform);
 }
 
@@ -931,7 +933,10 @@ bool UGripMotionControllerComponent::GripActor(
 	if (!bIsLocalGrip)
 		GrippedActors.Add(newActorGrip);
 	else
+	{
 		LocallyGrippedActors.Add(newActorGrip);
+		//Server_NotifyLocalGripAddedOrChanged(newActorGrip);
+	}
 
 	NotifyGrip(newActorGrip);
 
@@ -1109,7 +1114,10 @@ bool UGripMotionControllerComponent::GripComponent(
 	if (!bIsLocalGrip)
 		GrippedActors.Add(newActorGrip);
 	else
+	{
 		LocallyGrippedActors.Add(newActorGrip);
+		//Server_NotifyLocalGripAddedOrChanged(newActorGrip);
+	}
 
 	NotifyGrip(newActorGrip);
 
@@ -1204,8 +1212,11 @@ bool UGripMotionControllerComponent::DropGrip(const FBPActorGripInformation &Gri
 		PrimComp->SetPhysicsAngularVelocity(OptionalAngularVelocity);
 	}
 
-	if(bWasLocalGrip)
+	if (bWasLocalGrip)
+	{
+		//Server_NotifyLocalGripRemoved(LocallyGrippedActors[FoundIndex]);
 		NotifyDrop_Implementation(LocallyGrippedActors[FoundIndex], bSimulate);
+	}
 	else
 		NotifyDrop(GrippedActors[FoundIndex], bSimulate);
 
@@ -2118,7 +2129,7 @@ void UGripMotionControllerComponent::GetGripWorldTransform(float DeltaTime, FTra
 			frontLocOrig = (WorldTransform.TransformPosition(Grip.SecondaryRelativeLocation)) - BasePoint;
 			frontLoc = Grip.LastRelativeLocation;
 
-			frontLocOrig = FMath::Lerp(frontLoc, frontLocOrig, Grip.curLerp / Grip.LerpToRate);
+			frontLocOrig = FMath::Lerp(frontLoc, frontLocOrig, FMath::Clamp(Grip.curLerp / Grip.LerpToRate, 0.0f, 1.0f));
 		}
 		else // Is in a multi grip, might be lerping into it as well.
 		{
@@ -2143,19 +2154,18 @@ void UGripMotionControllerComponent::GetGripWorldTransform(float DeltaTime, FTra
 			if (!bPulledControllerLoc)
 				curLocation = Grip.SecondaryAttachment->GetComponentLocation() - BasePoint;
 
-
 			frontLocOrig = (WorldTransform.TransformPosition(Grip.SecondaryRelativeLocation)) - BasePoint;
 			frontLoc = curLocation;// -BasePoint;
 
 			if (Grip.GripLerpState == EGripLerpState::StartLerp) // Lerp into the new grip to smooth the transtion
 			{
-				frontLocOrig = FMath::Lerp(frontLocOrig, frontLoc, Grip.curLerp / Grip.LerpToRate);
+				frontLocOrig = FMath::Lerp(frontLocOrig, frontLoc, FMath::Clamp(Grip.curLerp / Grip.LerpToRate, 0.0f, 1.0f));
 			}
 			else if (Grip.GripLerpState == EGripLerpState::ConstantLerp) // If there is a frame by frame lerp
 			{
 				frontLoc = FMath::Lerp(Grip.LastRelativeLocation, frontLoc, Grip.SecondarySmoothingScaler);
 			}
-			Grip.LastRelativeLocation = frontLoc;//curLocation;// -BasePoint;
+			Grip.LastRelativeLocation = frontLoc;
 		}
 
 		float Scaler = 1.0f;
@@ -3394,6 +3404,22 @@ void UGripMotionControllerComponent::FViewExtension::GatherLateUpdatePrimitives(
 	}
 }
 
+void UGripMotionControllerComponent::GetGrippedObjects(TArray<UObject*> &GrippedObjectsArray)
+{
+	for (int i = 0; i < GrippedActors.Num(); ++i)
+	{
+		if (GrippedActors[i].GrippedObject)
+			GrippedObjectsArray.Add(GrippedActors[i].GrippedObject);
+	}
+
+	for (int i = 0; i < LocallyGrippedActors.Num(); ++i)
+	{
+		if (LocallyGrippedActors[i].GrippedObject)
+			GrippedObjectsArray.Add(LocallyGrippedActors[i].GrippedObject);
+	}
+
+}
+
 void UGripMotionControllerComponent::GetGrippedActors(TArray<AActor*> &GrippedActorsArray)
 {
 	for (int i = 0; i < GrippedActors.Num(); ++i)
@@ -3425,3 +3451,78 @@ void UGripMotionControllerComponent::GetGrippedComponents(TArray<UPrimitiveCompo
 	}
 }
 
+// Locally gripped functions
+/*
+bool UGripMotionControllerComponent::Client_NotifyInvalidLocalGrip_Validate(UObject * LocallyGrippedObject)
+{
+	return true;
+}
+
+void UGripMotionControllerComponent::Client_NotifyInvalidLocalGrip_Implementation(UObject * LocallyGrippedObject)
+{
+	FBPActorGripInformation FoundGrip;
+	EBPVRResultSwitch Result;
+	GetGripByObject(FoundGrip, LocallyGrippedObject, Result);
+
+	if (Result == EBPVRResultSwitch::OnFailed)
+		return;
+
+	// Drop it, server told us that it was a bad grip
+	DropGrip(FoundGrip, false);
+}
+
+bool UGripMotionControllerComponent::Server_NotifyLocalGripAddedOrChanged_Validate(FBPActorGripInformation newGrip)
+{
+	return true;
+}
+
+void UGripMotionControllerComponent::Server_NotifyLocalGripAddedOrChanged_Implementation(FBPActorGripInformation newGrip)
+{
+	if (!LocallyGrippedActors.Contains(newGrip))
+	{
+		LocallyGrippedActors.Add(newGrip);
+	}
+	else
+	{
+		FBPActorGripInformation FoundGrip;
+		EBPVRResultSwitch Result;
+		GetGripByObject(FoundGrip, newGrip.GrippedObject, Result);
+
+		if (Result == EBPVRResultSwitch::OnFailed)
+			return;
+
+		FoundGrip = newGrip;
+	}
+
+	// Server has to call this themselves
+	OnRep_LocallyGrippedActors();
+}
+
+
+bool UGripMotionControllerComponent::Server_NotifyLocalGripRemoved_Validate(FBPActorGripInformation removeGrip)
+{
+	return true;
+}
+
+void UGripMotionControllerComponent::Server_NotifyLocalGripRemoved_Implementation(FBPActorGripInformation removeGrip)
+{
+	FBPActorGripInformation FoundGrip;
+	EBPVRResultSwitch Result;
+	GetGripByObject(FoundGrip, removeGrip.GrippedObject, Result);
+
+	if (Result == EBPVRResultSwitch::OnFailed)
+		return;
+
+	FVector AngularVelocity;
+	FVector LinearVelocity;
+	GetPhysicsVelocities(removeGrip, AngularVelocity, LinearVelocity);
+
+	if (removeGrip.GrippedObject->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
+	{
+		DropGrip(FoundGrip, IVRGripInterface::Execute_SimulateOnDrop(removeGrip.GrippedObject), AngularVelocity, LinearVelocity);
+	}
+	else
+	{
+		DropGrip(FoundGrip, false, AngularVelocity, LinearVelocity);
+	}
+}*/
