@@ -130,11 +130,11 @@ public:
 		HandleGripReplication(GrippedActors);
 	}
 
-	UFUNCTION()
+	/*UFUNCTION()
 	virtual void OnRep_LocallyGrippedActors()
 	{
 		HandleGripReplication(LocallyGrippedActors);
-	}
+	}*/
 
 	FORCEINLINE void HandleGripReplication(TArray<FBPActorGripInformation> & GripArray)
 	{
