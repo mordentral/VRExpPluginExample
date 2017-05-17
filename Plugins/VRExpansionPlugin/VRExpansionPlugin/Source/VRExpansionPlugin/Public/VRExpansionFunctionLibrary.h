@@ -4,11 +4,11 @@
 #include "CoreMinimal.h"
 #include "IMotionController.h"
 
-// Or procedural mesh component throws an error....
-//#include "PhysicsEngine/ConvexElem.h" // Fixed in 4.13.1?
-
 #include "HeadMountedDisplay.h" 
 #include "HeadMountedDisplayFunctionLibrary.h"
+
+#include "VRBPDatatypes.h"
+
 #include "VRExpansionFunctionLibrary.generated.h"
 
 //General Advanced Sessions Log
@@ -151,7 +151,7 @@ public:
 
 	/** Make a transform net quantize from location, rotation and scale */
 	UFUNCTION(BlueprintPure, meta = (Scale = "1,1,1", Keywords = "construct build", NativeMakeFunc), Category = "VRExpansionLibrary|TransformNetQuantize")
-	static FTransform_NetQuantize MakeTransform_NetQuantize(FVector Location, FRotator Rotation, FVector Scale);
+		static FTransform_NetQuantize MakeTransform_NetQuantize(FVector Location, FRotator Rotation, FVector Scale);
 
 	/** Breaks apart a transform net quantize into location, rotation and scale */
 	UFUNCTION(BlueprintPure, Category = "VRExpansionLibrary|TransformNetQuantize", meta = (NativeBreakFunc))

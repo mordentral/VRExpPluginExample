@@ -184,7 +184,7 @@ void UGripMotionControllerComponent::GetLifetimeReplicatedProps(TArray< class FL
 	DOREPLIFETIME(UGripMotionControllerComponent, GrippedActors);
 	DOREPLIFETIME(UGripMotionControllerComponent, ControllerNetUpdateRate);
 
-	//DOREPLIFETIME_CONDITION(UGripMotionControllerComponent, LocallyGrippedActors, COND_SkipOwner);
+	DOREPLIFETIME_CONDITION(UGripMotionControllerComponent, LocallyGrippedActors, COND_SkipOwner);
 //	DOREPLIFETIME(UGripMotionControllerComponent, bReplicateControllerTransform);
 }
 
@@ -799,7 +799,7 @@ bool UGripMotionControllerComponent::GripActor(
 	float GripDamping
 	)
 {
-	bool bIsLocalGrip = GripMovementReplicationSetting == EGripMovementReplicationSettings::LocalOnly_Not_Replicated;
+	bool bIsLocalGrip = GripMovementReplicationSetting == EGripMovementReplicationSettings::ClientSide_Authoritive;
 
 	if (!IsServer() && !bIsLocalGrip)
 	{
@@ -935,7 +935,8 @@ bool UGripMotionControllerComponent::GripActor(
 	else
 	{
 		LocallyGrippedActors.Add(newActorGrip);
-		//Server_NotifyLocalGripAddedOrChanged(newActorGrip);
+		if(GetNetMode() == ENetMode::NM_Client && newActorGrip.GripMovementReplicationSetting == EGripMovementReplicationSettings::ClientSide_Authoritive)
+			Server_NotifyLocalGripAddedOrChanged(newActorGrip);
 	}
 
 	NotifyGrip(newActorGrip);
@@ -990,7 +991,7 @@ bool UGripMotionControllerComponent::GripComponent(
 	)
 {
 
-	bool bIsLocalGrip = GripMovementReplicationSetting == EGripMovementReplicationSettings::LocalOnly_Not_Replicated;
+	bool bIsLocalGrip = GripMovementReplicationSetting == EGripMovementReplicationSettings::ClientSide_Authoritive;
 
 	if (!IsServer() && !bIsLocalGrip)
 	{
@@ -1116,7 +1117,9 @@ bool UGripMotionControllerComponent::GripComponent(
 	else
 	{
 		LocallyGrippedActors.Add(newActorGrip);
-		//Server_NotifyLocalGripAddedOrChanged(newActorGrip);
+
+		if (GetNetMode() == ENetMode::NM_Client && newActorGrip.GripMovementReplicationSetting == EGripMovementReplicationSettings::ClientSide_Authoritive)
+			Server_NotifyLocalGripAddedOrChanged(newActorGrip);
 	}
 
 	NotifyGrip(newActorGrip);
@@ -1214,8 +1217,17 @@ bool UGripMotionControllerComponent::DropGrip(const FBPActorGripInformation &Gri
 
 	if (bWasLocalGrip)
 	{
-		//Server_NotifyLocalGripRemoved(LocallyGrippedActors[FoundIndex]);
-		NotifyDrop_Implementation(LocallyGrippedActors[FoundIndex], bSimulate);
+		if (GetNetMode() == ENetMode::NM_Client)
+		{
+			Server_NotifyLocalGripRemoved(LocallyGrippedActors[FoundIndex]);
+				
+			// Have to call this ourselves
+			Drop_Implementation(LocallyGrippedActors[FoundIndex], bSimulate);
+		}
+		else // Server notifyDrop it
+		{
+			NotifyDrop(LocallyGrippedActors[FoundIndex], bSimulate);
+		}
 	}
 	else
 		NotifyDrop(GrippedActors[FoundIndex], bSimulate);
@@ -1306,6 +1318,7 @@ void UGripMotionControllerComponent::NotifyGrip/*_Implementation*/(const FBPActo
 	switch (NewGrip.GripMovementReplicationSetting)
 	{
 	case EGripMovementReplicationSettings::ForceClientSideMovement:
+	case EGripMovementReplicationSettings::ClientSide_Authoritive:
 	{
 		if (IsServer())
 		{
@@ -1324,7 +1337,6 @@ void UGripMotionControllerComponent::NotifyGrip/*_Implementation*/(const FBPActo
 	}break;
 
 	case EGripMovementReplicationSettings::KeepOriginalMovement:
-	case EGripMovementReplicationSettings::LocalOnly_Not_Replicated:
 	default:
 	{}break;
 	}
@@ -1364,6 +1376,17 @@ void UGripMotionControllerComponent::NotifyGrip/*_Implementation*/(const FBPActo
 
 void UGripMotionControllerComponent::NotifyDrop_Implementation(const FBPActorGripInformation &NewDrop, bool bSimulate)
 {
+	// Don't do this if we are the owning player on a local grip, there is no filter for multicast to not send to owner
+	if (NewDrop.GripMovementReplicationSetting == EGripMovementReplicationSettings::ClientSide_Authoritive && IsLocallyControlled() && GetNetMode() == ENetMode::NM_Client)
+	{
+		return;
+	}
+
+	Drop_Implementation(NewDrop, bSimulate);
+}
+
+void UGripMotionControllerComponent::Drop_Implementation(const FBPActorGripInformation &NewDrop, bool bSimulate)
+{
 	DestroyPhysicsHandle(NewDrop);
 
 	UPrimitiveComponent *root = NULL;
@@ -1372,7 +1395,7 @@ void UGripMotionControllerComponent::NotifyDrop_Implementation(const FBPActorGri
 	switch (NewDrop.GripTargetType)
 	{
 	case EGripTargetType::ActorGrip:
-	//case EGripTargetType::InteractibleActorGrip:
+		//case EGripTargetType::InteractibleActorGrip:
 	{
 		pActor = NewDrop.GetGrippedActor();
 
@@ -1391,7 +1414,7 @@ void UGripMotionControllerComponent::NotifyDrop_Implementation(const FBPActorGri
 			if (root)
 			{
 				root->IgnoreActorWhenMoving(this->GetOwner(), false);
-				
+
 				root->SetSimulatePhysics(bSimulate);
 				if (bSimulate)
 					root->WakeAllRigidBodies();
@@ -1417,7 +1440,7 @@ void UGripMotionControllerComponent::NotifyDrop_Implementation(const FBPActorGri
 	}break;
 
 	case EGripTargetType::ComponentGrip:
-	//case EGripTargetType::InteractibleComponentGrip:
+		//case EGripTargetType::InteractibleComponentGrip:
 	{
 		root = NewDrop.GetGrippedComponent();
 		if (root)
@@ -1434,7 +1457,7 @@ void UGripMotionControllerComponent::NotifyDrop_Implementation(const FBPActorGri
 			if (root)
 			{
 				root->IgnoreActorWhenMoving(this->GetOwner(), false);
-			
+
 				root->SetSimulatePhysics(bSimulate);
 				if (bSimulate)
 					root->WakeAllRigidBodies();
@@ -1491,7 +1514,7 @@ bool UGripMotionControllerComponent::HasGripMovementAuthority(const FBPActorGrip
 	}
 	else
 	{
-		if (Grip.GripMovementReplicationSetting == EGripMovementReplicationSettings::ForceClientSideMovement || Grip.GripMovementReplicationSetting == EGripMovementReplicationSettings::LocalOnly_Not_Replicated)
+		if (Grip.GripMovementReplicationSetting == EGripMovementReplicationSettings::ForceClientSideMovement || Grip.GripMovementReplicationSetting == EGripMovementReplicationSettings::ClientSide_Authoritive)
 		{
 			return true;
 		}
@@ -1876,7 +1899,7 @@ bool UGripMotionControllerComponent::TeleportMoveGrip(const FBPActorGripInformat
 		}
 		else if (TeleportBehavior == EGripInterfaceTeleportBehavior::DropOnTeleport)
 		{
-			if (IsServer() || Grip.GripMovementReplicationSetting == EGripMovementReplicationSettings::LocalOnly_Not_Replicated)
+			if (IsServer() || Grip.GripMovementReplicationSetting == EGripMovementReplicationSettings::ClientSide_Authoritive)
 				DropGrip(Grip, bSimulateOnDrop);
 
 			return false; // Didn't teleport
@@ -3452,7 +3475,7 @@ void UGripMotionControllerComponent::GetGrippedComponents(TArray<UPrimitiveCompo
 }
 
 // Locally gripped functions
-/*
+
 bool UGripMotionControllerComponent::Client_NotifyInvalidLocalGrip_Validate(UObject * LocallyGrippedObject)
 {
 	return true;
@@ -3525,4 +3548,4 @@ void UGripMotionControllerComponent::Server_NotifyLocalGripRemoved_Implementatio
 	{
 		DropGrip(FoundGrip, false, AngularVelocity, LinearVelocity);
 	}
-}*/
+}

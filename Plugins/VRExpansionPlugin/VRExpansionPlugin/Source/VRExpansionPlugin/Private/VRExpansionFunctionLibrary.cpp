@@ -283,13 +283,11 @@ bool UVRExpansionFunctionLibrary::EqualEqual_FBPActorGripInformation(const FBPAc
 }
 
 
-FORCEINLINE
 FTransform_NetQuantize UVRExpansionFunctionLibrary::MakeTransform_NetQuantize(FVector Translation, FRotator Rotation, FVector Scale)
 {
 	return FTransform_NetQuantize(Rotation, Translation, Scale);
 }
 
-FORCEINLINE
 void UVRExpansionFunctionLibrary::BreakTransform_NetQuantize(const FTransform_NetQuantize& InTransform, FVector& Translation, FRotator& Rotation, FVector& Scale)
 {
 	Translation = InTransform.GetLocation();

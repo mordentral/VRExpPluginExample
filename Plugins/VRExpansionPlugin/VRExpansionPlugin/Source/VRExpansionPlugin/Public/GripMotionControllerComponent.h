@@ -80,23 +80,25 @@ public:
 	UPROPERTY(BlueprintReadOnly, Replicated, Category = "VRGrip", ReplicatedUsing = OnRep_GrippedActors)
 	TArray<FBPActorGripInformation> GrippedActors;
 
-	UPROPERTY(BlueprintReadOnly, /*Replicated,*/ Category = "VRGrip"/*, ReplicatedUsing = OnRep_LocallyGrippedActors*/)
+	UPROPERTY(BlueprintReadOnly, Replicated, Category = "VRGrip", ReplicatedUsing = OnRep_LocallyGrippedActors)
 	TArray<FBPActorGripInformation> LocallyGrippedActors;
 
 	// Locally Gripped Array functions
 
 	// Notify a client that their local grip was bad
-	/*UFUNCTION(Reliable, Client, WithValidation)
+	UFUNCTION(Reliable, Client, WithValidation)
 	void Client_NotifyInvalidLocalGrip(UObject * LocallyGrippedObject);
 
 	// Notify the server that we locally gripped something
 	UFUNCTION(Reliable, Server, WithValidation)
 	void Server_NotifyLocalGripAddedOrChanged(FBPActorGripInformation newGrip);
 
+	// Server_NotifySecondaryAttachmentChanged
+
 	// Notify the server that we locally gripped something
 	UFUNCTION(Reliable, Server, WithValidation)
 	void Server_NotifyLocalGripRemoved(FBPActorGripInformation removeGrip);
-	*/
+	
 
 	// Enable this to send the TickGrip event every tick even for non custom grip types - has a slight performance hit
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRGrip")
@@ -130,11 +132,11 @@ public:
 		HandleGripReplication(GrippedActors);
 	}
 
-	/*UFUNCTION()
+	UFUNCTION()
 	virtual void OnRep_LocallyGrippedActors()
 	{
 		HandleGripReplication(LocallyGrippedActors);
-	}*/
+	}
 
 	FORCEINLINE void HandleGripReplication(TArray<FBPActorGripInformation> & GripArray)
 	{
@@ -378,6 +380,9 @@ public:
 
 	UFUNCTION(Reliable, NetMulticast)
 	void NotifyDrop(const FBPActorGripInformation &NewDrop, bool bSimulate);
+
+	// Used so drop logic can be filtered
+	void Drop_Implementation(const FBPActorGripInformation &NewDrop, bool bSimulate);
 
 	// Get a grip by actor
 	UFUNCTION(BlueprintCallable, Category = "VRGrip", meta = (ExpandEnumAsExecs = "Result"))

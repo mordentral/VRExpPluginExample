@@ -367,13 +367,15 @@ enum class EGripLateUpdateSettings : uint8
 // that can be sent to the server and everyone locally grips it (IE: inventories that don't ever leave a player)
 // Objects that need to be handled possibly by multiple players should be ran
 // non locally gripped instead so that the server can validate grips instead.
+// ClientSide_Authoritive will grip on the client instantly without server intervention and then send a notice to the server
+// that the grip was made
 UENUM(Blueprintable)
 enum class EGripMovementReplicationSettings : uint8
 {
 	KeepOriginalMovement,
 	ForceServerSideMovement,
 	ForceClientSideMovement,
-	LocalOnly_Not_Replicated
+	ClientSide_Authoritive
 };
 
 // Grip Target Type
@@ -722,8 +724,8 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRGripInterface")
 		bool bSimulateOnDrop;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRGripInterface")
-		uint8 EnumObjectType;
+	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRGripInterface")
+	//	uint8 EnumObjectType;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRGripInterface")
 		EGripCollisionType SlotDefaultGripType;
@@ -775,7 +777,6 @@ public:
 		bDenyGripping = false;
 		OnTeleportBehavior = EGripInterfaceTeleportBehavior::DropOnTeleport;
 		bSimulateOnDrop = true;
-		EnumObjectType = 0;
 		SlotDefaultGripType = EGripCollisionType::ManipulationGrip;
 		FreeDefaultGripType = EGripCollisionType::ManipulationGrip;
 		//bCanHaveDoubleGrip = false;
