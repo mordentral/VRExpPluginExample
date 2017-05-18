@@ -31,8 +31,8 @@ class VREXPANSIONPLUGIN_API UGrippableStaticMeshComponent : public UStaticMeshCo
 		TagContainer = GameplayTags;
 	}
 
-	/** Tags that I inherited and tags that I added minus tags that I removed*/
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GameplayTags")
+	/** Tags that are set on this object */
+	UPROPERTY(EditAnywhere, Replicated, BlueprintReadWrite, Category = "GameplayTags")
 		FGameplayTagContainer GameplayTags;
 
 	// End Gameplay Tag Interface
@@ -41,7 +41,7 @@ class VREXPANSIONPLUGIN_API UGrippableStaticMeshComponent : public UStaticMeshCo
 
 	// Requires bReplicates to be true for the component
 	UPROPERTY(EditAnywhere, Replicated, BlueprintReadWrite, Category = "VRGripInterface")
-		bool bReplicateGripInterfaceSettings;
+		bool bRepGripSettingsAndGameplayTags;
 
 	UPROPERTY(EditAnywhere, Replicated, BlueprintReadWrite, Category = "VRGripInterface")
 		FBPInterfaceProperties VRGripInterfaceSettings;

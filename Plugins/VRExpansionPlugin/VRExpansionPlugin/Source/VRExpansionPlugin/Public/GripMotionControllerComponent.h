@@ -93,9 +93,17 @@ public:
 	UFUNCTION(BlueprintCallable, Reliable, Server, WithValidation)
 	void Server_NotifyLocalGripAddedOrChanged(FBPActorGripInformation newGrip);
 
-	// Server_NotifySecondaryAttachmentChanged
-	// Notify change on relative position editing as well, make RPCS callable in blueprint
+	// Notify the server that we changed some secondary attachment information
+	UFUNCTION(Reliable, Server, WithValidation)
+		void Server_NotifySecondaryAttachmentChanged(
+			UObject * GrippedObject,
+			bool bHasSecondaryAttachment,
+			USceneComponent* SecondaryAttachment,
+			float SecondarySmoothingScaler,
+			FVector_NetQuantize100 SecondaryRelativeLocation,
+			float LerpToRate);
 
+	// Notify change on relative position editing as well, make RPCS callable in blueprint
 	// Notify the server that we locally gripped something
 	UFUNCTION(Reliable, Server, WithValidation)
 	void Server_NotifyLocalGripRemoved(FBPActorGripInformation removeGrip);
@@ -130,70 +138,88 @@ public:
 		// Check for removed gripped actors
 		// This might actually be better left as an RPC multicast
 
-		HandleGripReplication(GrippedActors);
+		for (FBPActorGripInformation & Grip : GrippedActors)
+		{
+			HandleGripReplication(Grip);
+		}
 	}
 
 	UFUNCTION()
 	virtual void OnRep_LocallyGrippedActors()
 	{
-		HandleGripReplication(LocallyGrippedActors);
+		for (FBPActorGripInformation & Grip : LocallyGrippedActors)
+		{
+			HandleGripReplication(Grip);
+		}
 	}
 
-	FORCEINLINE void HandleGripReplication(TArray<FBPActorGripInformation> & GripArray)
+	FORCEINLINE void HandleGripReplication(FBPActorGripInformation & Grip)
 	{
-		// Check for new gripped actors
-		for (FBPActorGripInformation & Grip : GripArray)
+		if (!Grip.ValueCache.bWasInitiallyRepped) // Hasn't already been initialized
 		{
-			if (!Grip.ValueCache.bWasInitiallyRepped) // Hasn't already been initialized
-			{
-				NotifyGrip(Grip); // Grip it
-				Grip.ValueCache.bWasInitiallyRepped = true; // Set has been initialized
-			}
-			else // Check for changes from cached information
-			{
-				// Manage lerp states
-				if (Grip.ValueCache.bCachedHasSecondaryAttachment != Grip.bHasSecondaryAttachment)
-				{
-					if (FMath::IsNearlyZero(Grip.LerpToRate)) // Zero, could use IsNearlyZero instead
-						Grip.GripLerpState = EGripLerpState::NotLerping;
-					else
-					{
-						// New lerp
-						if (Grip.bHasSecondaryAttachment)
-						{
-							Grip.curLerp = Grip.LerpToRate;
-							Grip.GripLerpState = EGripLerpState::StartLerp;
-						}
-						else // Post Lerp
-						{
-							Grip.curLerp = Grip.LerpToRate;
-							Grip.GripLerpState = EGripLerpState::EndLerp;
-						}
-					}
-				}
-
-				if (Grip.ValueCache.CachedGripCollisionType != Grip.GripCollisionType ||
-					Grip.ValueCache.CachedGripMovementReplicationSetting != Grip.GripMovementReplicationSetting)
-				{
-					ReCreateGrip(Grip);
-				}
-				else // If re-creating the grip anyway we don't need to do the below
-				{
-					// If the stiffness and damping got changed server side
-					if (Grip.ValueCache.CachedStiffness != Grip.Stiffness || Grip.ValueCache.CachedDamping != Grip.Damping)
-					{
-						SetGripConstraintStiffnessAndDamping(&Grip, Grip.Stiffness, Grip.Damping);
-					}
-				}
-			}
-
-			// Set caches now for next rep
-			Grip.ValueCache.bCachedHasSecondaryAttachment = Grip.bHasSecondaryAttachment;
-			Grip.ValueCache.CachedGripCollisionType = Grip.GripCollisionType;
-			Grip.ValueCache.CachedGripMovementReplicationSetting = Grip.GripMovementReplicationSetting;
-			Grip.ValueCache.CachedStiffness = Grip.Stiffness;
-			Grip.ValueCache.CachedDamping = Grip.Damping;
+			NotifyGrip(Grip); // Grip it
+			Grip.ValueCache.bWasInitiallyRepped = true; // Set has been initialized
 		}
+		else // Check for changes from cached information
+		{
+			// Manage lerp states
+			if (Grip.ValueCache.bCachedHasSecondaryAttachment != Grip.bHasSecondaryAttachment)
+			{
+				if (FMath::IsNearlyZero(Grip.LerpToRate)) // Zero, could use IsNearlyZero instead
+					Grip.GripLerpState = EGripLerpState::NotLerping;
+				else
+				{
+					// New lerp
+					if (Grip.bHasSecondaryAttachment)
+					{
+						Grip.curLerp = Grip.LerpToRate;
+						Grip.GripLerpState = EGripLerpState::StartLerp;
+					}
+					else // Post Lerp
+					{
+						Grip.curLerp = Grip.LerpToRate;
+						Grip.GripLerpState = EGripLerpState::EndLerp;
+					}
+				}
+
+				// Now calling the on secondary grip interface function client side as well
+				if (Grip.bHasSecondaryAttachment)
+				{
+					if (Grip.GrippedObject->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
+					{
+						IVRGripInterface::Execute_OnSecondaryGrip(Grip.GrippedObject, Grip.SecondaryAttachment, Grip);
+					}
+				}
+				else
+				{
+					if (Grip.GrippedObject->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
+					{
+						IVRGripInterface::Execute_OnSecondaryGripRelease(Grip.GrippedObject, Grip.SecondaryAttachment, Grip);
+					}
+				}
+			}
+
+			if (Grip.ValueCache.CachedGripCollisionType != Grip.GripCollisionType ||
+				Grip.ValueCache.CachedGripMovementReplicationSetting != Grip.GripMovementReplicationSetting)
+			{
+				ReCreateGrip(Grip);
+			}
+			else // If re-creating the grip anyway we don't need to do the below
+			{
+				// If the stiffness and damping got changed server side
+				if (Grip.ValueCache.CachedStiffness != Grip.Stiffness || Grip.ValueCache.CachedDamping != Grip.Damping)
+				{
+					SetGripConstraintStiffnessAndDamping(&Grip, Grip.Stiffness, Grip.Damping);
+				}
+			}
+		}
+
+		// Set caches now for next rep
+		Grip.ValueCache.bCachedHasSecondaryAttachment = Grip.bHasSecondaryAttachment;
+		Grip.ValueCache.CachedGripCollisionType = Grip.GripCollisionType;
+		Grip.ValueCache.CachedGripMovementReplicationSetting = Grip.GripMovementReplicationSetting;
+		Grip.ValueCache.CachedStiffness = Grip.Stiffness;
+		Grip.ValueCache.CachedDamping = Grip.Damping;
 	}
 
 	UPROPERTY(BlueprintReadWrite, Category = "VRGrip")

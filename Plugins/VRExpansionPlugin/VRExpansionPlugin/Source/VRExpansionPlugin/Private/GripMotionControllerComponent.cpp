@@ -97,15 +97,16 @@ void UGripMotionControllerComponent::OnUnregister()
 	{
 		DestroyPhysicsHandle(GrippedActors[i]);
 
-		DropObject(GrippedActors[i].GrippedObject, false);	
+		DropObjectByInterface(GrippedActors[i].GrippedObject);
+		//DropObject(GrippedActors[i].GrippedObject, false);	
 	}
 	GrippedActors.Empty();
 
 	for (int i = 0; i < LocallyGrippedActors.Num(); i++)
 	{
 		DestroyPhysicsHandle(LocallyGrippedActors[i]);
-
-		DropObject(LocallyGrippedActors[i].GrippedObject, false);
+		DropObjectByInterface(LocallyGrippedActors[i].GrippedObject);
+		//DropObject(LocallyGrippedActors[i].GrippedObject, false);
 	}
 	LocallyGrippedActors.Empty();
 
@@ -1236,10 +1237,10 @@ bool UGripMotionControllerComponent::DropGrip(const FBPActorGripInformation &Gri
 	return true;
 }
 
-// No longer an RPC, now is called from RepNotify so that joining clients also correctly set up grips
-void UGripMotionControllerComponent::NotifyGrip/*_Implementation*/(const FBPActorGripInformation &NewGrip)
-{
 
+// No longer an RPC, now is called from RepNotify so that joining clients also correctly set up grips
+void UGripMotionControllerComponent::NotifyGrip(const FBPActorGripInformation &NewGrip)
+{
 	UPrimitiveComponent *root = NULL;
 	AActor *pActor = NULL;
 
@@ -1640,6 +1641,12 @@ bool UGripMotionControllerComponent::AddSecondaryAttachmentPoint(UObject * Gripp
 			IVRGripInterface::Execute_OnSecondaryGrip(GrippedObjectToAddAttachment, SecondaryPointComponent, *GripToUse);
 		}
 
+		if (GripToUse->GripMovementReplicationSetting == EGripMovementReplicationSettings::ClientSide_Authoritive && GetNetMode() == ENetMode::NM_Client)
+		{
+			Server_NotifySecondaryAttachmentChanged(GripToUse->GrippedObject, GripToUse->bHasSecondaryAttachment, 
+				GripToUse->SecondaryAttachment, GripToUse->SecondarySmoothingScaler, GripToUse->SecondaryRelativeLocation, GripToUse->LerpToRate);
+		}
+
 		GripToUse = nullptr;
 
 		return true;
@@ -1757,8 +1764,14 @@ bool UGripMotionControllerComponent::RemoveSecondaryAttachmentPoint(UObject * Gr
 
 		GripToUse->SecondaryAttachment = nullptr;
 		GripToUse->bHasSecondaryAttachment = false;
-		GripToUse = nullptr;
 
+		if (GripToUse->GripMovementReplicationSetting == EGripMovementReplicationSettings::ClientSide_Authoritive && GetNetMode() == ENetMode::NM_Client)
+		{
+			Server_NotifySecondaryAttachmentChanged(GripToUse->GrippedObject, GripToUse->bHasSecondaryAttachment, GripToUse->SecondaryAttachment, GripToUse->SecondarySmoothingScaler, 
+				GripToUse->SecondaryRelativeLocation, GripToUse->LerpToRate);
+		}
+
+		GripToUse = nullptr;
 		return true;
 	}
 
@@ -1900,8 +1913,8 @@ bool UGripMotionControllerComponent::TeleportMoveGrip(const FBPActorGripInformat
 		else if (TeleportBehavior == EGripInterfaceTeleportBehavior::DropOnTeleport)
 		{
 			if (IsServer() || Grip.GripMovementReplicationSetting == EGripMovementReplicationSettings::ClientSide_Authoritive)
-				DropGrip(Grip, bSimulateOnDrop);
-
+				DropObjectByInterface(Grip.GrippedObject);
+			
 			return false; // Didn't teleport
 		}
 		else if (TeleportBehavior == EGripInterfaceTeleportBehavior::DontTeleport)
@@ -3491,7 +3504,7 @@ void UGripMotionControllerComponent::Client_NotifyInvalidLocalGrip_Implementatio
 		return;
 
 	// Drop it, server told us that it was a bad grip
-	DropGrip(FoundGrip, false);
+	DropObjectByInterface(FoundGrip.GrippedObject);
 }
 
 bool UGripMotionControllerComponent::Server_NotifyLocalGripAddedOrChanged_Validate(FBPActorGripInformation newGrip)
@@ -3501,9 +3514,18 @@ bool UGripMotionControllerComponent::Server_NotifyLocalGripAddedOrChanged_Valida
 
 void UGripMotionControllerComponent::Server_NotifyLocalGripAddedOrChanged_Implementation(FBPActorGripInformation newGrip)
 {
+	if (!newGrip.GrippedObject || newGrip.GripMovementReplicationSetting != EGripMovementReplicationSettings::ClientSide_Authoritive)
+	{
+		Client_NotifyInvalidLocalGrip(newGrip.GrippedObject);
+		return;
+	}
+
 	if (!LocallyGrippedActors.Contains(newGrip))
 	{
 		LocallyGrippedActors.Add(newGrip);
+
+		// Initialize the differences, clients will do this themselves on the rep back, this sets up the cache
+		HandleGripReplication(LocallyGrippedActors[LocallyGrippedActors.Num() - 1]);
 	}
 	else
 	{
@@ -3540,12 +3562,47 @@ void UGripMotionControllerComponent::Server_NotifyLocalGripRemoved_Implementatio
 	FVector LinearVelocity;
 	GetPhysicsVelocities(removeGrip, AngularVelocity, LinearVelocity);
 
-	if (removeGrip.GrippedObject->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
+	DropObjectByInterface(FoundGrip.GrippedObject, AngularVelocity, LinearVelocity);
+}
+
+
+bool UGripMotionControllerComponent::Server_NotifySecondaryAttachmentChanged_Validate(
+	UObject * GrippedObject,
+	bool bHasSecondaryAttachment,
+	USceneComponent* SecondaryAttachment,
+	float SecondarySmoothingScaler,
+	FVector_NetQuantize100 SecondaryRelativeLocation,
+	float LerpToRate)
+{
+	return true;
+}
+
+void UGripMotionControllerComponent::Server_NotifySecondaryAttachmentChanged_Implementation(
+	UObject * GrippedObject,
+	bool bHasSecondaryAttachment,
+	USceneComponent* SecondaryAttachment,
+	float SecondarySmoothingScaler,
+	FVector_NetQuantize100 SecondaryRelativeLocation,
+	float LerpToRate)
+{
+
+	if (!GrippedObject)
+		return;
+
+	for (FBPActorGripInformation & Grip : LocallyGrippedActors)
 	{
-		DropGrip(FoundGrip, IVRGripInterface::Execute_SimulateOnDrop(removeGrip.GrippedObject), AngularVelocity, LinearVelocity);
+		if (Grip == GrippedObject)
+		{
+			Grip.bHasSecondaryAttachment = bHasSecondaryAttachment;
+			Grip.SecondaryAttachment = SecondaryAttachment;
+			Grip.SecondarySmoothingScaler = SecondarySmoothingScaler;
+			Grip.SecondaryRelativeLocation = SecondaryRelativeLocation;
+			Grip.LerpToRate = LerpToRate;
+
+			// Initialize the differences, clients will do this themselves on the rep back
+			HandleGripReplication(Grip);
+			break;
+		}
 	}
-	else
-	{
-		DropGrip(FoundGrip, false, AngularVelocity, LinearVelocity);
-	}
+
 }
