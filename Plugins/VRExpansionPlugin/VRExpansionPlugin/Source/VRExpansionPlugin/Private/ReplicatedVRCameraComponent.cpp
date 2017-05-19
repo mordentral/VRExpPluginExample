@@ -22,6 +22,8 @@ UReplicatedVRCameraComponent::UReplicatedVRCameraComponent(const FObjectInitiali
 	bAutoSetLockToHmd = true;
 	bOffsetByHMD = false;
 
+	bSetPositionDuringTick = false;
+
 	//bUseVRNeckOffset = true;
 	//VRNeckOffset = FTransform(FRotator::ZeroRotator, FVector(15.0f,0,0), FVector(1.0f));
 
@@ -67,6 +69,24 @@ void UReplicatedVRCameraComponent::TickComponent(float DeltaTime, enum ELevelTic
 	//bIsServer = IsServer();
 	
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+
+	// For non view target positional updates (third party and the like)
+	if (bSetPositionDuringTick && bLockToHmd && GEngine->HMDDevice.IsValid() && GEngine->HMDDevice->IsHeadTrackingAllowed() && GEngine->HMDDevice->HasValidTrackingPosition())
+	{
+		//ResetRelativeTransform();
+		FQuat Orientation;
+		FVector Position;
+		if (GEngine->HMDDevice->UpdatePlayerCamera(Orientation, Position))
+		{
+			if (bOffsetByHMD)
+			{
+				Position.X = 0;
+				Position.Y = 0;
+			}
+
+			SetRelativeTransform(FTransform(Orientation, Position));
+		}
+	}
 
 	if (bHasAuthority && bReplicates)
 	{
