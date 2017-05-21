@@ -161,6 +161,7 @@ bool UVRExpansionFunctionLibrary::IsInVREditorPreviewOrGame()
 #if WITH_EDITOR
 	if (GIsEditor)
 	{
+		
 		UEditorEngine* EdEngine = Cast<UEditorEngine>(GEngine);
 		return EdEngine->bUseVRPreviewForPlayWorld;
 	}
