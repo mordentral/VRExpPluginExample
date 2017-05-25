@@ -123,6 +123,8 @@ void UGripMotionControllerComponent::SendRenderTransform_Concurrent()
 {
 	RenderThreadRelativeTransform = GetRelativeTransform();
 	RenderThreadComponentScale = GetComponentScale();
+	RenderThreadParentToWorld = CalcNewComponentToWorld(FTransform::Identity);
+
 	Super::SendRenderTransform_Concurrent();
 }
 
@@ -2193,7 +2195,7 @@ void UGripMotionControllerComponent::GetGripWorldTransform(float DeltaTime, FTra
 			frontLocOrig = (WorldTransform.TransformPosition(Grip.SecondaryRelativeLocation)) - BasePoint;
 			//frontLoc = curLocation;// -BasePoint;
 
-			if (Grip.GripLerpState == EGripLerpState::StartLerp) // Lerp into the new grip to smooth the transtion
+			if (Grip.GripLerpState == EGripLerpState::StartLerp) // Lerp into the new grip to smooth the transition
 			{
 				frontLocOrig = FMath::Lerp(frontLocOrig, frontLoc, FMath::Clamp(Grip.curLerp / Grip.LerpToRate, 0.0f, 1.0f));
 			}
@@ -3341,6 +3343,7 @@ void UGripMotionControllerComponent::FViewExtension::PreRenderViewFamily_RenderT
 	{
 		return;
 	}
+
 	FScopeLock ScopeLock(&CritSect);
 
 	static const auto CVarEnableMotionControllerLateUpdate = IConsoleManager::Get().FindTConsoleVariableDataInt(TEXT("vr.EnableMotionControllerLateUpdate"));
@@ -3348,8 +3351,6 @@ void UGripMotionControllerComponent::FViewExtension::PreRenderViewFamily_RenderT
 	{
 		return;
 	}
-
-	// 4.16
 	
 	// Find a view that is associated with this player.
 	float WorldToMetersScale = -1.0f;
@@ -3380,8 +3381,10 @@ void UGripMotionControllerComponent::FViewExtension::PreRenderViewFamily_RenderT
 	if (LateUpdatePrimitives.Num())
 	{
 		// Calculate the late update transform that will rebase all children proxies within the frame of reference
-		FTransform OldLocalToWorldTransform = MotionControllerComponent->CalcNewComponentToWorld(MotionControllerComponent->RenderThreadRelativeTransform/*MotionControllerComponent->GetRelativeTransform()*/);
-		FTransform NewLocalToWorldTransform = MotionControllerComponent->CalcNewComponentToWorld(FTransform(Orientation, Position, MotionControllerComponent->RenderThreadComponentScale));
+		// Now using a pre-determined ParentToWorld that is passed in with relative params
+
+		FTransform OldLocalToWorldTransform = MotionControllerComponent->RenderThreadRelativeTransform * MotionControllerComponent->RenderThreadParentToWorld;//MotionControllerComponent->CalcNewComponentToWorld(MotionControllerComponent->RenderThreadRelativeTransform/*MotionControllerComponent->GetRelativeTransform()*/);
+		FTransform NewLocalToWorldTransform = FTransform(Orientation, Position, MotionControllerComponent->RenderThreadComponentScale) * MotionControllerComponent->RenderThreadParentToWorld;//MotionControllerComponent->CalcNewComponentToWorld(FTransform(Orientation, Position, MotionControllerComponent->RenderThreadComponentScale));
 		FMatrix LateUpdateTransform = (OldLocalToWorldTransform.Inverse() * NewLocalToWorldTransform).ToMatrixWithScale();
 
 		FPrimitiveSceneInfo* RetrievedSceneInfo;
@@ -3396,10 +3399,7 @@ void UGripMotionControllerComponent::FViewExtension::PreRenderViewFamily_RenderT
 			// If the retrieved scene info is different than our cached scene info then the primitive was removed from the scene
 			if (CachedSceneInfo == RetrievedSceneInfo && CachedSceneInfo->Proxy)
 			{
-				// Doesn't actually update the proxies ActorPosition, may be the cause of high velocity issues with late updates
-				// Tried to manually override this and set transform manually but all variables are private
 				CachedSceneInfo->Proxy->ApplyLateUpdateTransform(LateUpdateTransform);
-
 			}
 		}
 

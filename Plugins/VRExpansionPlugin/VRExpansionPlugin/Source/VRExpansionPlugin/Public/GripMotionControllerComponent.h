@@ -74,6 +74,7 @@ protected:
 
 	FTransform RenderThreadRelativeTransform;
 	FVector RenderThreadComponentScale;
+	FTransform RenderThreadParentToWorld;
 
 public:
 
