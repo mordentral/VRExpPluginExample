@@ -62,10 +62,15 @@ enum class EBPVRDeviceIndex : uint8
 
 	// On Success
 	HMD = 0,
-	FirstController = 1,
-	SecondController = 2,
-	FirstTracking_Reference = 3,
-	SecondTracking_Reference = 4,
+	FirstTracking_Reference = 1,
+	SecondTracking_Reference = 2,
+	FirstController = 3,
+	SecondController = 4,
+
+	//FirstController = 1,
+	//SecondController = 2,
+	//FirstTracking_Reference = 3,
+	//SecondTracking_Reference = 4,
 	TrackedDevice1 = 5,
 	TrackedDevice2 = 6,
 	TrackedDevice3 = 7,
