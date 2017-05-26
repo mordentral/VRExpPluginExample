@@ -123,7 +123,6 @@ void UGripMotionControllerComponent::SendRenderTransform_Concurrent()
 {
 	RenderThreadRelativeTransform = GetRelativeTransform();
 	RenderThreadComponentScale = GetComponentScale();
-	RenderThreadParentToWorld = CalcNewComponentToWorld(FTransform::Identity);
 
 	Super::SendRenderTransform_Concurrent();
 }
@@ -3381,10 +3380,9 @@ void UGripMotionControllerComponent::FViewExtension::PreRenderViewFamily_RenderT
 	if (LateUpdatePrimitives.Num())
 	{
 		// Calculate the late update transform that will rebase all children proxies within the frame of reference
-		// Now using a pre-determined ParentToWorld that is passed in with relative params
 
-		FTransform OldLocalToWorldTransform = MotionControllerComponent->RenderThreadRelativeTransform * MotionControllerComponent->RenderThreadParentToWorld;//MotionControllerComponent->CalcNewComponentToWorld(MotionControllerComponent->RenderThreadRelativeTransform/*MotionControllerComponent->GetRelativeTransform()*/);
-		FTransform NewLocalToWorldTransform = FTransform(Orientation, Position, MotionControllerComponent->RenderThreadComponentScale) * MotionControllerComponent->RenderThreadParentToWorld;//MotionControllerComponent->CalcNewComponentToWorld(FTransform(Orientation, Position, MotionControllerComponent->RenderThreadComponentScale));
+		FTransform OldLocalToWorldTransform =  MotionControllerComponent->CalcNewComponentToWorld(MotionControllerComponent->RenderThreadRelativeTransform/*MotionControllerComponent->GetRelativeTransform()*/);
+		FTransform NewLocalToWorldTransform =  MotionControllerComponent->CalcNewComponentToWorld(FTransform(Orientation, Position, MotionControllerComponent->RenderThreadComponentScale));
 		FMatrix LateUpdateTransform = (OldLocalToWorldTransform.Inverse() * NewLocalToWorldTransform).ToMatrixWithScale();
 
 		FPrimitiveSceneInfo* RetrievedSceneInfo;
