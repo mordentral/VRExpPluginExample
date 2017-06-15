@@ -18,7 +18,30 @@ class UGripMotionControllerComponent;
 UENUM(BlueprintType)
 enum class EVRCustomMovementMode : uint8
 {
-	VRMOVE_Climbing UMETA(DisplayName = "Climbing")
+	VRMOVE_Climbing UMETA(DisplayName = "Climbing"),
+	VRMOVE_LowGrav  UMETA(DisplayName = "LowGrav")
+};
+
+// We use 4 bits for this so a maximum of 16 elements
+UENUM(BlueprintType)
+enum class EVRConjoinedMovementModes : uint8
+{
+	C_MOVE_None	= 0x00	UMETA(DisplayName = "None"),
+	C_MOVE_Walking = 0x01	UMETA(DisplayName = "Walking"),
+	C_MOVE_NavWalking = 0x02	UMETA(DisplayName = "Navmesh Walking"),
+	C_MOVE_Falling = 0x03	UMETA(DisplayName = "Falling"),
+	C_MOVE_Swimming = 0x04	UMETA(DisplayName = "Swimming"),
+	C_MOVE_Flying = 0x05		UMETA(DisplayName = "Flying"),
+	//C_MOVE_Custom = 0x06	UMETA(DisplayName = "Custom"), // Skip this, could technically get a Custom7 out of using this slot but who needs 7?
+	C_MOVE_MAX = 0x07		UMETA(Hidden),
+	C_VRMOVE_Climbing = 0x08 UMETA(DisplayName = "Climbing"),
+	C_VRMOVE_LowGrav = 0x09 UMETA(DisplayName = "LowGrav"),
+	C_VRMOVE_Custom1 = 0x0A UMETA(DisplayName = "Custom1"),
+	C_VRMOVE_Custom2 = 0x0B UMETA(DisplayName = "Custom2"),
+	C_VRMOVE_Custom3 = 0x0C UMETA(DisplayName = "Custom3"),
+	C_VRMOVE_Custom4 = 0x0D UMETA(DisplayName = "Custom4"),
+	C_VRMOVE_Custom5 = 0x0E UMETA(DisplayName = "Custom5"),
+	C_VRMOVE_Custom6 = 0x0F UMETA(DisplayName = "Custom6")
 };
 
 // This makes a lot of the blueprint functions cleaner
