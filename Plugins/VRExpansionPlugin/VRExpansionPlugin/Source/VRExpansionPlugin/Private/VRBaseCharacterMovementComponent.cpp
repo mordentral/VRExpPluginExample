@@ -17,7 +17,7 @@ UVRBaseCharacterMovementComponent::UVRBaseCharacterMovementComponent(const FObje
 	AdditionalVRInputVector = FVector::ZeroVector;	
 	CustomVRInputVector = FVector::ZeroVector;
 	VRClimbingStepHeight = 96.0f;
-	VRClimbingStepUpMultiplier = 2.0f;
+	VRClimbingStepUpMultiplier = 1.0f;
 	VRClimbingMaxReleaseVelocitySize = 800.0f;
 	SetDefaultPostClimbMovementOnStepUp = true;
 	DefaultPostClimbMovement = EVRConjoinedMovementModes::C_MOVE_Falling;
@@ -363,24 +363,11 @@ void UVRBaseCharacterMovementComponent::PhysCustom_LowGrav(float deltaTime, int3
 		bool bSteppedUp = false;
 		if ((FMath::Abs(Hit.ImpactNormal.Z) < 0.2f) && (UpDown < 0.5f) && (UpDown > -0.2f) && CanStepUp(Hit))
 		{
-			AVRBaseCharacter * BaseChar = Cast<AVRBaseCharacter>(CharacterOwner);
-			if (BaseChar)
+			float stepZ = UpdatedComponent->GetComponentLocation().Z;
+			bSteppedUp = StepUp(GravDir, Adjusted * (1.f - Hit.Time), Hit);
+			if (bSteppedUp)
 			{
-				float stepZ = BaseChar->GetVRLocation().Z;// UpdatedComponent->GetComponentLocation().Z;
-				bSteppedUp = StepUp(GravDir, Adjusted * (1.f - Hit.Time), Hit);
-				if (bSteppedUp)
-				{
-					OldLocation.Z = BaseChar->GetVRLocation().Z + (OldLocation.Z - stepZ);
-				}
-			}
-			else
-			{
-				float stepZ = UpdatedComponent->GetComponentLocation().Z;
-				bSteppedUp = StepUp(GravDir, Adjusted * (1.f - Hit.Time), Hit);
-				if (bSteppedUp)
-				{
-					OldLocation.Z = UpdatedComponent->GetComponentLocation().Z + (OldLocation.Z - stepZ);
-				}
+				OldLocation.Z = UpdatedComponent->GetComponentLocation().Z + (OldLocation.Z - stepZ);
 			}
 		}
 
