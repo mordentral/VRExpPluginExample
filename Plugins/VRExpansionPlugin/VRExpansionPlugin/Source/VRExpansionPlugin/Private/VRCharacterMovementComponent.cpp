@@ -1033,21 +1033,11 @@ void UVRCharacterMovementComponent::PhysWalking(float deltaTime, int32 Iteration
 			}
 			else if (CurrentFloor.HitResult.bStartPenetrating && remainingTime <= 0.f)
 			{
-				// The floor check failed because it started in penetration
-				// We do not want to try to move downward because the downward sweep failed, rather we'd like to try to pop out of the floor.
-				/// This skips this if we are free walking and there was no HMD collision or controller input				
-				if (bZeroDelta && VRRootCapsule && !VRRootCapsule->bHadRelativeMovement)
-				{
-					bForceNextFloorCheck = true;
-				}
-				else
-				{
-					FHitResult Hit(CurrentFloor.HitResult);
-					Hit.TraceEnd = Hit.TraceStart + FVector(0.f, 0.f, MAX_FLOOR_DIST);
-					const FVector RequestedAdjustment = GetPenetrationAdjustment(Hit);
-					ResolvePenetration(RequestedAdjustment, Hit, UpdatedComponent->GetComponentQuat());
-					bForceNextFloorCheck = true;
-				}
+				FHitResult Hit(CurrentFloor.HitResult);
+				Hit.TraceEnd = Hit.TraceStart + FVector(0.f, 0.f, MAX_FLOOR_DIST);
+				const FVector RequestedAdjustment = GetPenetrationAdjustment(Hit);
+				ResolvePenetration(RequestedAdjustment, Hit, UpdatedComponent->GetComponentQuat());
+				bForceNextFloorCheck = true;
 			}
 
 			// check if just entered water
@@ -2328,10 +2318,19 @@ void UVRCharacterMovementComponent::FindFloor(const FVector& CapsuleLocation, FF
 	}
 
 	// #TODO: Modify the floor compute floor distance instead? Or just run movement logic differently for the bWalkingCollisionOverride setup.
-	// #VR Specific - ignore floor traces that are negative, this can be caused by capsule offset values and rotating in place
-	if (VRRootCapsule && VRRootCapsule->bUseWalkingCollisionOverride && bZeroDelta && OutFloorResult.bBlockingHit && OutFloorResult.FloorDist <  0.0f)
+	// #VR Specific - ignore floor traces that are negative, this can be caused by a failed floor check while starting in penetration
+	if (VRRootCapsule && VRRootCapsule->bUseWalkingCollisionOverride && OutFloorResult.bBlockingHit && OutFloorResult.FloorDist <  0.0f)
 	{ 
-		OutFloorResult = LastFloor; // Move back to the last floor value, we are in penetration
+		// This was a negative trace result, the game wants us to pull out of penetration
+		// But with walking collision override we don't want to do that, so check for the correct channel and throw away
+		// the new floor if it matches
+		ECollisionResponse FloorResponse;
+		if (OutFloorResult.HitResult.Component.IsValid())
+		{
+			FloorResponse = OutFloorResult.HitResult.Component->GetCollisionResponseToChannel(VRRootCapsule->WalkingCollisionOverride);
+			if(FloorResponse == ECR_Ignore || FloorResponse == ECR_Overlap)
+				OutFloorResult = LastFloor;	// Move back to the last floor value, we are in penetration with a walking override
+		}
 	}
 
 	// OutFloorResult.HitResult is now the result of the vertical floor check.
