@@ -34,8 +34,7 @@ void UVRButtonComponent::BeginPlay()
 	// Call the base class 
 	Super::BeginPlay();
 
-	// Get our initial relative transform to our parent (or not if un-parented).
-	InitialRelativeTransform = this->GetRelativeTransform();
+	ResetInitialButtonLocation();
 }
 
 void UVRButtonComponent::TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction)
