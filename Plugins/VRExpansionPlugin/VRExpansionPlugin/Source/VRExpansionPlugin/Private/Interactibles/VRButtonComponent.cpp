@@ -52,10 +52,17 @@ void UVRButtonComponent::TickComponent(float DeltaTime, enum ELevelTick TickType
 
 		if (CheckDepth > 0.0f)
 		{
-			float NewDepth = FMath::Clamp(GetAxisValue(InitialComponentLoc) + (-CheckDepth), -DepressDistance, 0.0f);
+
+			float ClampMinDepth = 0.0f;
+			
+			// If active and a toggled stay, then clamp min to the toggled stay location
+			if (ButtonType == EVRButtonType::Btn_Toggle_Stay && bButtonState)
+				ClampMinDepth = -(ButtonEngageDepth + (1.e-2f)); // + NOT_SO_KINDA_SMALL_NUMBER
+
+			float NewDepth = FMath::Clamp(GetAxisValue(InitialComponentLoc) + (-CheckDepth), -DepressDistance, ClampMinDepth);
 			this->SetRelativeLocation(InitialRelativeTransform.TransformPosition(SetAxisValue(NewDepth)), false);
 
-			if (ButtonType == EVRButtonType::Btn_Toggle_Return )//|| ButtonType == EVRButtonType::Btn_Toggle_Stay)
+			if (ButtonType == EVRButtonType::Btn_Toggle_Return || ButtonType == EVRButtonType::Btn_Toggle_Stay)
 			{
 				if (!bToggledThisTouch && NewDepth <= (-ButtonEngageDepth) + KINDA_SMALL_NUMBER && (WorldTime - LastToggleTime) >= MinTimeBetweenEngaging)
 				{

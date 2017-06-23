@@ -19,8 +19,8 @@ UENUM(Blueprintable)
 enum class EVRButtonType : uint8
 {
 	Btn_Press,
-	Btn_Toggle_Return
-	//Btn_Toggle_Stay
+	Btn_Toggle_Return,
+	Btn_Toggle_Stay
 };
 
 // VR Button Press Axis
@@ -136,14 +136,13 @@ class VREXPANSIONPLUGIN_API UVRButtonComponent : public UStaticMeshComponent
 
 	virtual FVector GetTargetRelativeLocation()
 	{
-
 		// If target is the half pressed
-		/*if (ButtonType == EVRButtonType::Btn_Toggle_Stay && bButtonState)
+		if (ButtonType == EVRButtonType::Btn_Toggle_Stay && bButtonState)
 		{
 			// 1.e-2f = MORE_KINDA_SMALL_NUMBER
 			return InitialRelativeTransform.GetTranslation() + SetAxisValue(-(ButtonEngageDepth + (1.e-2f)));
-		}*/
-
+		}
+		
 		// Else return going all the way back
 		return InitialRelativeTransform.GetTranslation();
 
