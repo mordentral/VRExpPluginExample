@@ -7,6 +7,7 @@
 #include "IMotionController.h"
 #include "SceneViewExtension.h"
 #include "VRBPDatatypes.h"
+#include "MotionControllerComponent.h"
 #include "VRGripInterface.h"
 
 #include "GripMotionControllerComponent.generated.h"
@@ -22,7 +23,7 @@ DECLARE_STATS_GROUP(TEXT("TICKGrip"), STATGROUP_TickGrip, STATCAT_Advanced);
 
 
 UCLASS(Blueprintable, meta = (BlueprintSpawnableComponent), ClassGroup = MotionController)
-class VREXPANSIONPLUGIN_API UGripMotionControllerComponent : public UPrimitiveComponent
+class VREXPANSIONPLUGIN_API UGripMotionControllerComponent : public UMotionControllerComponent//PrimitiveComponent
 {
 
 public:
@@ -38,27 +39,27 @@ private:
 	~UGripMotionControllerComponent();
 
 	/** Which player index this motion controller should automatically follow */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MotionController|Types")
-		int32 PlayerIndex;
+	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MotionController|Types")
+	//	int32 PlayerIndex;
 
 	/** Which hand this component should automatically follow */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MotionController|Types")
-		EControllerHand Hand;
+	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MotionController|Types")
+	//	EControllerHand Hand;
 
 	/** If false, render transforms within the motion controller hierarchy will be updated a second time immediately before rendering. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MotionController")
-		uint32 bDisableLowLatencyUpdate:1;
+	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MotionController")
+	//	uint32 bDisableLowLatencyUpdate:1;
 
 	/** The tracking status for the device (e.g. full tracking, inertial tracking only, no tracking) */
-	UPROPERTY(BlueprintReadOnly, Category = "MotionController")
-		ETrackingStatus CurrentTrackingStatus;
+	//UPROPERTY(BlueprintReadOnly, Category = "MotionController")
+	//	ETrackingStatus CurrentTrackingStatus;
 
 	/** Whether or not this component had a valid tracked device this frame */
-	UFUNCTION(BlueprintPure, Category = "MotionController")
-	bool IsTracked() const
-	{
-		return bTracked;
-	}
+	//UFUNCTION(BlueprintPure, Category = "MotionController")
+	//bool IsTracked() const
+	//{
+	//	return bTracked;
+	//}
 
 	// Used to set the difference since last tick for TickGrip()
 	FVector LastControllerLocation; 
@@ -72,8 +73,8 @@ protected:
 	virtual void SendRenderTransform_Concurrent() override;
 	//~ End UActorComponent Interface.
 
-	FTransform RenderThreadRelativeTransform;
-	FVector RenderThreadComponentScale;
+	FTransform GripRenderThreadRelativeTransform;
+	FVector GripRenderThreadComponentScale;
 
 public:
 
@@ -489,7 +490,7 @@ public:
 	// Running the gripping logic in its own function as the main tick was getting bloated
 	FORCEINLINE_DEBUGGABLE void TickGrip(float DeltaTime);
 
-	// Splitting logic into seperate function
+	// Splitting logic into separate function
 	void HandleGripArray(TArray<FBPActorGripInformation> &GrippedObjects, const FTransform & ParentTransform, const FVector &MotionControllerLocDelta, float DeltaTime, bool bReplicatedArray = false);
 
 	// Gets the world transform of a grip, modified by secondary grips and interaction settings
@@ -696,7 +697,7 @@ public:
 	bool DestroyPhysicsHandle(int32 SceneIndex, physx::PxD6Joint** HandleData, physx::PxRigidDynamic** KinActorData);
 
 	/** If true, the Position and Orientation args will contain the most recent controller state */
-	virtual bool PollControllerState(FVector& Position, FRotator& Orientation, float WorldToMetersScale);
+	virtual bool GripPollControllerState(FVector& Position, FRotator& Orientation, float WorldToMetersScale);
 
 	/** Whether or not this component had a valid tracked controller associated with it this frame*/
 	bool bTracked;
@@ -709,11 +710,11 @@ private:
 	//bool bIsServer;
 
 	/** View extension object that can persist on the render thread without the motion controller component */
-	class FViewExtension : public ISceneViewExtension, public TSharedFromThis<FViewExtension, ESPMode::ThreadSafe>
+	class FGripViewExtension : public ISceneViewExtension, public TSharedFromThis<FGripViewExtension, ESPMode::ThreadSafe>
 	{
 	public:
-		FViewExtension(UGripMotionControllerComponent* InMotionControllerComponent) { MotionControllerComponent = InMotionControllerComponent; }
-		virtual ~FViewExtension() {}
+		FGripViewExtension(UGripMotionControllerComponent* InMotionControllerComponent) { MotionControllerComponent = InMotionControllerComponent; }
+		virtual ~FGripViewExtension() {}
 
 		/** ISceneViewExtension interface */
 		virtual void SetupViewFamily(FSceneViewFamily& InViewFamily) override {}
@@ -751,6 +752,6 @@ private:
 		/** Primitives that need late update before rendering */
 		TArray<LateUpdatePrimitiveInfo> LateUpdatePrimitives;
 	};
-	TSharedPtr< FViewExtension, ESPMode::ThreadSafe > ViewExtension;
+	TSharedPtr< FGripViewExtension, ESPMode::ThreadSafe > GripViewExtension;
 
 };

@@ -74,21 +74,21 @@ UGripMotionControllerComponent::UGripMotionControllerComponent(const FObjectInit
 //=============================================================================
 UGripMotionControllerComponent::~UGripMotionControllerComponent()
 {
-	if (ViewExtension.IsValid())
+	if (GripViewExtension.IsValid())
 	{
 		{
 			// This component could be getting accessed from the render thread so it needs to wait
 			// before clearing MotionControllerComponent and allowing the destructor to continue
 			FScopeLock ScopeLock(&CritSect);
-			ViewExtension->MotionControllerComponent = NULL;
+			GripViewExtension->MotionControllerComponent = NULL;
 		}
 
 		if (GEngine)
 		{
-			GEngine->ViewExtensions.Remove(ViewExtension);
+			GEngine->ViewExtensions.Remove(GripViewExtension);
 		}
 	}
-	ViewExtension.Reset();
+	GripViewExtension.Reset();
 }
 
 void UGripMotionControllerComponent::OnUnregister()
@@ -121,8 +121,8 @@ void UGripMotionControllerComponent::OnUnregister()
 
 void UGripMotionControllerComponent::SendRenderTransform_Concurrent()
 {
-	RenderThreadRelativeTransform = GetRelativeTransform();
-	RenderThreadComponentScale = GetComponentScale();
+	GripRenderThreadRelativeTransform = GetRelativeTransform();
+	GripRenderThreadComponentScale = GetComponentScale();
 
 	Super::SendRenderTransform_Concurrent();
 }
@@ -206,7 +206,7 @@ bool UGripMotionControllerComponent::Server_SendControllerTransform_Validate(FBP
 	// Optionally check to make sure that player is inside of their bounds and deny it if they aren't?
 }
 
-void UGripMotionControllerComponent::FViewExtension::ProcessGripArrayLateUpdatePrimitives(TArray<FBPActorGripInformation> & GripArray)
+void UGripMotionControllerComponent::FGripViewExtension::ProcessGripArrayLateUpdatePrimitives(TArray<FBPActorGripInformation> & GripArray)
 {
 	for (FBPActorGripInformation actor : GripArray)
 	{
@@ -278,7 +278,7 @@ void UGripMotionControllerComponent::FViewExtension::ProcessGripArrayLateUpdateP
 	}
 }
 
-void UGripMotionControllerComponent::FViewExtension::BeginRenderViewFamily(FSceneViewFamily& InViewFamily)
+void UGripMotionControllerComponent::FGripViewExtension::BeginRenderViewFamily(FSceneViewFamily& InViewFamily)
 {
 	if (!MotionControllerComponent)
 	{
@@ -2019,7 +2019,8 @@ void UGripMotionControllerComponent::PostTeleportMoveGrippedActors()
 
 void UGripMotionControllerComponent::TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction)
 {
-	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+	// Skip motion controller tick, we override a lot of things that it does and we don't want it to perform the same functions
+	Super::Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
 	if (!bIsActive)
 		return;
@@ -2041,17 +2042,17 @@ void UGripMotionControllerComponent::TickComponent(float DeltaTime, enum ELevelT
 
 		if (!bUseWithoutTracking)
 		{
-			if (!ViewExtension.IsValid() && GEngine)
+			if (!GripViewExtension.IsValid() && GEngine)
 			{
-				TSharedPtr< FViewExtension, ESPMode::ThreadSafe > NewViewExtension(new FViewExtension(this));
-				ViewExtension = NewViewExtension;
-				GEngine->ViewExtensions.Add(ViewExtension);
+				TSharedPtr< FGripViewExtension, ESPMode::ThreadSafe > NewViewExtension(new FGripViewExtension(this));
+				GripViewExtension = NewViewExtension;
+				GEngine->ViewExtensions.Add(GripViewExtension);
 			}
 
 			float WorldToMeters = GetWorld() ? GetWorld()->GetWorldSettings()->WorldToMeters : 100.0f;
 
 			// This is the owning player, now you can get the controller's location and rotation from the correct source
-			bTracked = PollControllerState(Position, Orientation, WorldToMeters);
+			bTracked = GripPollControllerState(Position, Orientation, WorldToMeters);
 
 			if (bTracked)
 			{
@@ -2193,7 +2194,7 @@ void UGripMotionControllerComponent::GetGripWorldTransform(float DeltaTime, FTra
 					FVector Position;
 					FRotator Orientation;
 					float WorldToMeters = GetWorld() ? GetWorld()->GetWorldSettings()->WorldToMeters : 100.0f;
-					if (OtherController->PollControllerState(Position, Orientation, WorldToMeters))
+					if (OtherController->GripPollControllerState(Position, Orientation, WorldToMeters))
 					{
 						/*curLocation*/ frontLoc = OtherController->CalcNewComponentToWorld(FTransform(Orientation, Position)).GetLocation() - BasePoint;
 						bPulledControllerLoc = true;
@@ -3386,8 +3387,11 @@ bool UGripMotionControllerComponent::CheckComponentWithSweep(UPrimitiveComponent
 }
 
 //=============================================================================
-bool UGripMotionControllerComponent::PollControllerState(FVector& Position, FRotator& Orientation , float WorldToMetersScale)
+bool UGripMotionControllerComponent::GripPollControllerState(FVector& Position, FRotator& Orientation , float WorldToMetersScale)
 {
+	// Not calling PollControllerState from the parent because its private.......
+
+
 	if ((PlayerIndex != INDEX_NONE) && bHasAuthority)
 	{
 		// New iteration and retrieval for 4.12
@@ -3426,7 +3430,7 @@ bool UGripMotionControllerComponent::PollControllerState(FVector& Position, FRot
 }
 
 //=============================================================================
-void UGripMotionControllerComponent::FViewExtension::PreRenderViewFamily_RenderThread(FRHICommandListImmediate& RHICmdList, FSceneViewFamily& InViewFamily)
+void UGripMotionControllerComponent::FGripViewExtension::PreRenderViewFamily_RenderThread(FRHICommandListImmediate& RHICmdList, FSceneViewFamily& InViewFamily)
 {
 	if (!MotionControllerComponent)
 	{
@@ -3462,7 +3466,7 @@ void UGripMotionControllerComponent::FViewExtension::PreRenderViewFamily_RenderT
 	FVector Position;
 	FRotator Orientation;
 
-	if (!MotionControllerComponent->PollControllerState(Position, Orientation, WorldToMetersScale))
+	if (!MotionControllerComponent->GripPollControllerState(Position, Orientation, WorldToMetersScale))
 	{
 		return;
 	}
@@ -3471,8 +3475,8 @@ void UGripMotionControllerComponent::FViewExtension::PreRenderViewFamily_RenderT
 	{
 		// Calculate the late update transform that will rebase all children proxies within the frame of reference
 
-		FTransform OldLocalToWorldTransform =  MotionControllerComponent->CalcNewComponentToWorld(MotionControllerComponent->RenderThreadRelativeTransform/*MotionControllerComponent->GetRelativeTransform()*/);
-		FTransform NewLocalToWorldTransform =  MotionControllerComponent->CalcNewComponentToWorld(FTransform(Orientation, Position, MotionControllerComponent->RenderThreadComponentScale));
+		FTransform OldLocalToWorldTransform =  MotionControllerComponent->CalcNewComponentToWorld(MotionControllerComponent->GripRenderThreadRelativeTransform/*MotionControllerComponent->GetRelativeTransform()*/);
+		FTransform NewLocalToWorldTransform =  MotionControllerComponent->CalcNewComponentToWorld(FTransform(Orientation, Position, MotionControllerComponent->GripRenderThreadComponentScale));
 		FMatrix LateUpdateTransform = (OldLocalToWorldTransform.Inverse() * NewLocalToWorldTransform).ToMatrixWithScale();
 
 		FPrimitiveSceneInfo* RetrievedSceneInfo;
@@ -3495,7 +3499,7 @@ void UGripMotionControllerComponent::FViewExtension::PreRenderViewFamily_RenderT
 	}
 }
 
-void UGripMotionControllerComponent::FViewExtension::GatherLateUpdatePrimitives(USceneComponent* Component, TArray<LateUpdatePrimitiveInfo>& Primitives)
+void UGripMotionControllerComponent::FGripViewExtension::GatherLateUpdatePrimitives(USceneComponent* Component, TArray<LateUpdatePrimitiveInfo>& Primitives)
 {
 	if (!Component || Component->IsPendingKill())
 		return;
