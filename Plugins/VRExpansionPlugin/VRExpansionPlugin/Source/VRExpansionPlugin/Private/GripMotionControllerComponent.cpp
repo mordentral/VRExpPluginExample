@@ -1555,6 +1555,16 @@ bool UGripMotionControllerComponent::HasGripAuthority(const FBPActorGripInformat
 	return false;
 }
 
+bool UGripMotionControllerComponent::BP_HasGripAuthority(const FBPActorGripInformation &Grip)
+{
+	return HasGripAuthority(Grip);
+}
+
+bool UGripMotionControllerComponent::BP_HasGripMovementAuthority(const FBPActorGripInformation &Grip)
+{
+	return HasGripMovementAuthority(Grip);
+}
+
 bool UGripMotionControllerComponent::AddSecondaryAttachmentPoint(UObject * GrippedObjectToAddAttachment, USceneComponent * SecondaryPointComponent, const FTransform & OriginalTransform, bool bTransformIsAlreadyRelative, float LerpToTime, float SecondarySmoothingScaler)
 {
 	if (!GrippedObjectToAddAttachment || !SecondaryPointComponent || (!GrippedActors.Num() && !LocallyGrippedActors.Num()))
