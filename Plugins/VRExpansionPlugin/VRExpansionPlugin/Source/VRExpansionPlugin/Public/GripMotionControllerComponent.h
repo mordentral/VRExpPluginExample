@@ -38,29 +38,6 @@ private:
 	GENERATED_UCLASS_BODY()
 	~UGripMotionControllerComponent();
 
-	/** Which player index this motion controller should automatically follow */
-	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MotionController|Types")
-	//	int32 PlayerIndex;
-
-	/** Which hand this component should automatically follow */
-	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MotionController|Types")
-	//	EControllerHand Hand;
-
-	/** If false, render transforms within the motion controller hierarchy will be updated a second time immediately before rendering. */
-	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MotionController")
-	//	uint32 bDisableLowLatencyUpdate:1;
-
-	/** The tracking status for the device (e.g. full tracking, inertial tracking only, no tracking) */
-	//UPROPERTY(BlueprintReadOnly, Category = "MotionController")
-	//	ETrackingStatus CurrentTrackingStatus;
-
-	/** Whether or not this component had a valid tracked device this frame */
-	//UFUNCTION(BlueprintPure, Category = "MotionController")
-	//bool IsTracked() const
-	//{
-	//	return bTracked;
-	//}
-
 	// Used to set the difference since last tick for TickGrip()
 	FVector LastControllerLocation; 
 
@@ -484,8 +461,25 @@ public:
 		);
 
 
+	// Checks if we have grip authority
+	FORCEINLINE bool HasGripAuthority(const FBPActorGripInformation &Grip);
+
+	// Returns if we have grip authority (can call drop / grip on this grip)
+	UFUNCTION(BlueprintPure, Category = "VRGrip", meta = (DisplayName = "HasGripAuthority"))
+	bool BP_HasGripAuthority(const FBPActorGripInformation &Grip)
+	{
+		return HasGripAuthority(Grip);
+	}
+
 	// Checks if we should be handling the movement of a grip based on settings for it
 	FORCEINLINE bool HasGripMovementAuthority(const FBPActorGripInformation &Grip);
+
+	// Returns if we have grip movement authority (we handle movement of the grip)
+	UFUNCTION(BlueprintPure, Category = "VRGrip", meta = (DisplayName = "HasGripMovementAuthority"))
+	bool BP_HasGripMovementAuthority(const FBPActorGripInformation &Grip)
+	{
+		return HasGripMovementAuthority(Grip);
+	}
 
 	// Running the gripping logic in its own function as the main tick was getting bloated
 	FORCEINLINE_DEBUGGABLE void TickGrip(float DeltaTime);

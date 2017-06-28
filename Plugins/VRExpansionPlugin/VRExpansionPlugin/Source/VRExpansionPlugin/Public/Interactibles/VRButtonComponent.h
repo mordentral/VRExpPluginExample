@@ -121,8 +121,9 @@ class VREXPANSIONPLUGIN_API UVRButtonComponent : public UStaticMeshComponent
 			return true;
 
 		// Because epic motion controllers are not owned by characters have to check here too in case someone implements it like that
+		// Now since our grip controllers are a subclass to the std ones we only need to check for the base one instead of both.
 		USceneComponent * OurAttachParent = OverlapComponent->GetAttachParent();
-		if (OurAttachParent && (OurAttachParent->IsA(UGripMotionControllerComponent::StaticClass()) || OurAttachParent->IsA(UMotionControllerComponent::StaticClass())))
+		if (OurAttachParent && OurAttachParent->IsA(UMotionControllerComponent::StaticClass()))
 			return true;
 
 		// Now check for if it is a grippable object and if it is currently held

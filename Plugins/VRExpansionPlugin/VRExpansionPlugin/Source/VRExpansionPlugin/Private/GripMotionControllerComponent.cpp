@@ -1544,6 +1544,17 @@ bool UGripMotionControllerComponent::HasGripMovementAuthority(const FBPActorGrip
 	return false;
 }
 
+bool UGripMotionControllerComponent::HasGripAuthority(const FBPActorGripInformation &Grip)
+{
+	if ((Grip.GripMovementReplicationSetting != EGripMovementReplicationSettings::ClientSide_Authoritive && IsServer()) || 
+	   (Grip.GripMovementReplicationSetting == EGripMovementReplicationSettings::ClientSide_Authoritive && bHasAuthority))
+	{
+		return true;
+	}
+
+	return false;
+}
+
 bool UGripMotionControllerComponent::AddSecondaryAttachmentPoint(UObject * GrippedObjectToAddAttachment, USceneComponent * SecondaryPointComponent, const FTransform & OriginalTransform, bool bTransformIsAlreadyRelative, float LerpToTime, float SecondarySmoothingScaler)
 {
 	if (!GrippedObjectToAddAttachment || !SecondaryPointComponent || (!GrippedActors.Num() && !LocallyGrippedActors.Num()))
@@ -2368,7 +2379,8 @@ void UGripMotionControllerComponent::HandleGripArray(TArray<FBPActorGripInformat
 				// Not perfect, should be done post physics or in next frame prior to changing controller location
 				// However I don't want to recalculate world transform
 				// Maybe add a grip variable of "expected loc" and use that to check next frame, but for now this will do.
-				if (IsServer() && (bRootHasInterface || bActorHasInterface) &&
+				if (
+					(HasGripAuthority(*Grip)) && (bRootHasInterface || bActorHasInterface) &&
 					(
 						(
 							Grip->GripCollisionType != EGripCollisionType::PhysicsOnly &&
