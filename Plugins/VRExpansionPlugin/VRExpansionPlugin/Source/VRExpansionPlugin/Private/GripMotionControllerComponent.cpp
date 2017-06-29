@@ -2302,7 +2302,7 @@ void UGripMotionControllerComponent::HandleGripArray(TArray<FBPActorGripInformat
 
 			FBPActorGripInformation * Grip = &GrippedObjects[i];
 
-			if (!Grip)
+			if (!Grip) // Shouldn't be possible, but why not play it safe
 				continue;
 
 			if (Grip->GrippedObject && !Grip->GrippedObject->IsPendingKill())
@@ -2988,7 +2988,7 @@ bool UGripMotionControllerComponent::SetUpPhysicsHandle(const FBPActorGripInform
 
 				// Remember the scene index that the handle joint/actor are in.
 				FPhysScene* RBScene = FPhysxUserData::Get<FPhysScene>(Scene->userData);
-				const uint32 SceneType = root->BodyInstance.UseAsyncScene(RBScene) ? PST_Async : PST_Sync;
+				const uint32 SceneType = rBodyInstance->UseAsyncScene(RBScene) ? PST_Async : PST_Sync;
 				HandleInfo->SceneIndex = RBScene->PhysXSceneIndex[SceneType];
 
 				// Pretty Much Unbreakable

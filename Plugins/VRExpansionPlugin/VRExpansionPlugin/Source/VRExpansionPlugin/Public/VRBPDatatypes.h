@@ -632,6 +632,10 @@ public:
 	UPROPERTY()
 		FBPAdvGripPhysicsSettings AdvancedPhysicsSettings;
 
+	// When true the grips movement logic will not be performed until it is false again
+	//UPROPERTY(BlueprintReadWrite)
+		//bool bPauseGrip;
+
 	// For multi grip situations
 	UPROPERTY(BlueprintReadOnly)
 		bool bHasSecondaryAttachment;
