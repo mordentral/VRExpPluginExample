@@ -20,7 +20,7 @@ UVRLeverComponent::UVRLeverComponent(const FObjectInitializer& ObjectInitializer
 
 	bIsPhysicsLever = true;
 	ParentComponent = nullptr;
-	LeverRotationAxis = EVRLeverAxis::Lvr_Axis_X;
+	LeverRotationAxis = EVRInteractibleAxis::Axis_X;
 	LeverLimit = 90.0f;
 }
 

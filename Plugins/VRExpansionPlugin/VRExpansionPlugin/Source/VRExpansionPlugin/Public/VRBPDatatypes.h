@@ -14,6 +14,16 @@
 
 class UGripMotionControllerComponent;
 
+// VR lever axis
+UENUM(Blueprintable)
+enum class EVRInteractibleAxis : uint8
+{
+	Axis_X,
+	Axis_Y,
+	Axis_Z
+};
+
+
 // Custom movement modes for the characters
 UENUM(BlueprintType)
 enum class EVRCustomMovementMode : uint8

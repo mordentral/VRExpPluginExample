@@ -17,16 +17,6 @@
 
 #include "VRLeverComponent.generated.h"
 
-// VR lever axis
-UENUM(Blueprintable)
-enum class EVRLeverAxis : uint8
-{
-	Lvr_Axis_X,
-	Lvr_Axis_Y,
-	Lvr_Axis_Z
-};
-
-
 
 UCLASS(Blueprintable, meta = (BlueprintSpawnableComponent), ClassGroup = (VRExpansionPlugin))
 class VREXPANSIONPLUGIN_API UVRLeverComponent : public UStaticMeshComponent, public IVRGripInterface, public IGameplayTagAssetInterface
@@ -67,7 +57,7 @@ class VREXPANSIONPLUGIN_API UVRLeverComponent : public UStaticMeshComponent, pub
 		bool bIsPhysicsLever;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRLeverComponent")
-		EVRLeverAxis LeverRotationAxis;
+		EVRInteractibleAxis LeverRotationAxis;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRLeverComponent")
 		float LeverLimit;
@@ -197,20 +187,20 @@ class VREXPANSIONPLUGIN_API UVRLeverComponent : public UStaticMeshComponent, pub
 					// False flags
 					Flags |= PxConstraintFlag::ePROJECTION;
 					Flags |= PxConstraintFlag::eCOLLISION_ENABLED;
-
+					
 					// True flags
 					//Flags &= ~PxConstraintFlag::eCOLLISION_ENABLED;
 
 					NewJoint->setConstraintFlags(Flags);
-
+					
 					// Setting up the joint
 					NewJoint->setMotion(PxD6Axis::eX, PxD6Motion::eLOCKED);
 					NewJoint->setMotion(PxD6Axis::eY, PxD6Motion::eLOCKED);
 					NewJoint->setMotion(PxD6Axis::eZ, PxD6Motion::eLOCKED);
 
-					NewJoint->setMotion(PxD6Axis::eTWIST, LeverRotationAxis == EVRLeverAxis::Lvr_Axis_X ? PxD6Motion::eLIMITED : PxD6Motion::eLOCKED);
-					NewJoint->setMotion(PxD6Axis::eSWING1, LeverRotationAxis == EVRLeverAxis::Lvr_Axis_Y ? PxD6Motion::eLIMITED : PxD6Motion::eLOCKED);
-					NewJoint->setMotion(PxD6Axis::eSWING2, LeverRotationAxis == EVRLeverAxis::Lvr_Axis_Z ? PxD6Motion::eLIMITED : PxD6Motion::eLOCKED);
+					NewJoint->setMotion(PxD6Axis::eTWIST, LeverRotationAxis == EVRInteractibleAxis::Axis_X ? PxD6Motion::eLIMITED : PxD6Motion::eLOCKED);
+					NewJoint->setMotion(PxD6Axis::eSWING1, LeverRotationAxis == EVRInteractibleAxis::Axis_Y ? PxD6Motion::eLIMITED : PxD6Motion::eLOCKED);
+					NewJoint->setMotion(PxD6Axis::eSWING2, LeverRotationAxis == EVRInteractibleAxis::Axis_Z ? PxD6Motion::eLIMITED : PxD6Motion::eLOCKED);
 				
 
 					const float LeverLimitRad = LeverLimit * /*InTwistLimitScale **/ (PI / 180.0f);
