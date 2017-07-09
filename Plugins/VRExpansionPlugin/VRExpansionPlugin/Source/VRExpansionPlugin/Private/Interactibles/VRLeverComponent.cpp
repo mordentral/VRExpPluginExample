@@ -22,6 +22,9 @@ UVRLeverComponent::UVRLeverComponent(const FObjectInitializer& ObjectInitializer
 	ParentComponent = nullptr;
 	LeverRotationAxis = EVRInteractibleAxis::Axis_X;
 	LeverLimit = 90.0f;
+
+	// Set to only overlap with things so that its not ruined by touching over actors
+	this->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Overlap);
 }
 
 //=============================================================================
@@ -155,12 +158,12 @@ float UVRLeverComponent::GripBreakDistance_Implementation()
 	return BreakDistance;
 }
 
-void UVRLeverComponent::ClosestSecondarySlotInRange_Implementation(FVector WorldLocation, bool & bHadSlotInRange, FTransform & SlotWorldTransform)
+void UVRLeverComponent::ClosestSecondarySlotInRange_Implementation(FVector WorldLocation, bool & bHadSlotInRange, FTransform & SlotWorldTransform, FName OverridePrefix)
 {
 	bHadSlotInRange = false;
 }
 
-void UVRLeverComponent::ClosestPrimarySlotInRange_Implementation(FVector WorldLocation, bool & bHadSlotInRange, FTransform & SlotWorldTransform)
+void UVRLeverComponent::ClosestPrimarySlotInRange_Implementation(FVector WorldLocation, bool & bHadSlotInRange, FTransform & SlotWorldTransform, FName OverridePrefix)
 {
 	bHadSlotInRange = false;
 }
