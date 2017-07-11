@@ -21,7 +21,6 @@ public class OpenVRExpansionPlugin : ModuleRules
 			new string[] {
 				"OpenVRExpansionPlugin/Public",
                 "HeadMountedDisplay/Public",
-                //"Runtime/Engine/Classes/Kismet",
                 "Runtime/Engine/Private/PhysicsEngine"
 				
 				// ... add public include paths required here ...
