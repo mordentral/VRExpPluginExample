@@ -69,12 +69,15 @@ class USteamRequestGroupOfficersCallbackProxy : public UOnlineBlueprintCallProxy
 	virtual void Activate() override;
 	// End of UOnlineBlueprintCallProxyBase interface
 
-
 private:
 	
 #if PLATFORM_WINDOWS || PLATFORM_MAC || PLATFORM_LINUX
 	void OnRequestGroupOfficerDetails( ClanOfficerListResponse_t *pResult, bool bIOFailure);
+#pragma warning(push)
+#pragma warning(disable:4265) // there is no need for a virtual deconstructor here
 	CCallResult<USteamRequestGroupOfficersCallbackProxy, ClanOfficerListResponse_t> m_callResultGroupOfficerRequestDetails;
+#pragma warning(pop)
+
 #endif
 
 private:

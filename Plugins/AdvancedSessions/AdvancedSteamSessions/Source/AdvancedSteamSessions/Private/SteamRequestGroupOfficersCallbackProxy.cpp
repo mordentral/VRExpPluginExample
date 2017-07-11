@@ -11,7 +11,6 @@ USteamRequestGroupOfficersCallbackProxy::USteamRequestGroupOfficersCallbackProxy
 {
 }
 
-
 USteamRequestGroupOfficersCallbackProxy* USteamRequestGroupOfficersCallbackProxy::GetSteamGroupOfficerList(UObject* WorldContextObject, FBPUniqueNetId GroupUniqueNetID)
 {
 	USteamRequestGroupOfficersCallbackProxy* Proxy = NewObject<USteamRequestGroupOfficersCallbackProxy>();

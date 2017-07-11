@@ -30,6 +30,7 @@
 #pragma warning(pop)
 #endif
 
+
 #include "SteamWSRequestUGCDetailsCallbackProxy.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FBlueprintWorkshopDetailsDelegate, const FBPSteamWorkshopItemDetails&, WorkShopDetails);
@@ -55,15 +56,18 @@ class USteamWSRequestUGCDetailsCallbackProxy : public UOnlineBlueprintCallProxyB
 	virtual void Activate() override;
 	// End of UOnlineBlueprintCallProxyBase interface
 
-	virtual ~USteamWSRequestUGCDetailsCallbackProxy() {}
-
 private:
 	
 #if PLATFORM_WINDOWS || PLATFORM_MAC || PLATFORM_LINUX
 	// Internal callback when the operation completes, calls out to the public success/failure callbacks
 		
 	void OnUGCRequestUGCDetails(SteamUGCQueryCompleted_t *pResult, bool bIOFailure);
+#pragma warning(push)
+#pragma warning(disable:4265) // there is no need for a virtual deconstructor here
+
 	CCallResult<USteamWSRequestUGCDetailsCallbackProxy, SteamUGCQueryCompleted_t> m_callResultUGCRequestDetails;
+
+#pragma warning(pop)
 
 #endif
 
