@@ -55,6 +55,8 @@ class USteamWSRequestUGCDetailsCallbackProxy : public UOnlineBlueprintCallProxyB
 	virtual void Activate() override;
 	// End of UOnlineBlueprintCallProxyBase interface
 
+	virtual ~USteamWSRequestUGCDetailsCallbackProxy() {}
+
 private:
 	
 #if PLATFORM_WINDOWS || PLATFORM_MAC || PLATFORM_LINUX

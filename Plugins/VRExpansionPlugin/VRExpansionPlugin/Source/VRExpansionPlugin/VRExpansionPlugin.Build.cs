@@ -32,7 +32,7 @@ public class VRExpansionPlugin : ModuleRules
 				"VRExpansionPlugin/Public",
                 "VRExpansionPlugin/Public/SimpleChar",
                 "HeadMountedDisplay/Public",
-                "Runtime/Engine/Classes/Kismet",
+                //"Runtime/Engine/Classes/Kismet",
                 "Runtime/Engine/Private/PhysicsEngine"
 				
 				// ... add public include paths required here ...

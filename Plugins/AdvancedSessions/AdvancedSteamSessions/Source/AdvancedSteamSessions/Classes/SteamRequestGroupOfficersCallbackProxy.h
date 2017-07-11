@@ -69,6 +69,7 @@ class USteamRequestGroupOfficersCallbackProxy : public UOnlineBlueprintCallProxy
 	virtual void Activate() override;
 	// End of UOnlineBlueprintCallProxyBase interface
 
+
 private:
 	
 #if PLATFORM_WINDOWS || PLATFORM_MAC || PLATFORM_LINUX

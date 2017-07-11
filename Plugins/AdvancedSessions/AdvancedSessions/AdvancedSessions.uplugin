@@ -16,5 +16,15 @@
             "Type" : "RunTime",
 			"LoadingPhase" : "PreDefault"
         } 
-    ]
+    ],
+	"Plugins": [
+		{
+			"Name": "OnlineSubsystem",
+			"Enabled": true
+		},
+		{
+			"Name": "OnlineSubsystemUtils",
+			"Enabled": true
+		}
+	]
 }
