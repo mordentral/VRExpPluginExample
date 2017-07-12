@@ -3,7 +3,7 @@
 #pragma once
 #include "CoreMinimal.h"
 #include "IMotionController.h"
-#include "VRBPDataTypes.h"
+#include "VRBPDatatypes.h"
 
 // #Note: Can now access VRSystem from the SteamHMD directly, however still cannot use the static pVRGenericInterface point due to 
 // linking errors since can't attain .cpp reference. So useless to convert to blueprint library as the render models wouldn't work.

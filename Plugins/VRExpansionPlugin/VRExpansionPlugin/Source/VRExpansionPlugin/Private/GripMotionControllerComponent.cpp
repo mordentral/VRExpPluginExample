@@ -2404,14 +2404,10 @@ void UGripMotionControllerComponent::HandleGripArray(TArray<FBPActorGripInformat
 				// Not perfect, should be done post physics or in next frame prior to changing controller location
 				// However I don't want to recalculate world transform
 				// Maybe add a grip variable of "expected loc" and use that to check next frame, but for now this will do.
-				if (
-					(HasGripAuthority(*Grip)) && (bRootHasInterface || bActorHasInterface) &&
+				if ((HasGripAuthority(*Grip)) && (bRootHasInterface || bActorHasInterface) &&
 					(
-						(
-							Grip->GripCollisionType != EGripCollisionType::PhysicsOnly &&
-							Grip->GripCollisionType != EGripCollisionType::SweepWithPhysics) &&
-						(Grip->GripCollisionType != EGripCollisionType::InteractiveHybridCollisionWithSweep ||
-							Grip->GripCollisionType == EGripCollisionType::InteractiveHybridCollisionWithSweep && Grip->bColliding)
+							((Grip->GripCollisionType != EGripCollisionType::PhysicsOnly) && (Grip->GripCollisionType != EGripCollisionType::SweepWithPhysics)) &&
+							((Grip->GripCollisionType != EGripCollisionType::InteractiveHybridCollisionWithSweep) || ((Grip->GripCollisionType == EGripCollisionType::InteractiveHybridCollisionWithSweep) && Grip->bColliding))
 						)
 					)
 				{
