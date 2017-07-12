@@ -1,6 +1,6 @@
 {
 	"FileVersion": 3,
-	"Version": 417,
+	"Version": 4.17,
 	"VersionName": "4.17",
 	"FriendlyName": "OpenVRExpansionPlugin",
 	"Description": "Adds several new Steam/Open VR features & components to UE4",
