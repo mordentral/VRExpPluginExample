@@ -90,6 +90,11 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRExpansionLibrary")
 	FVector VRCapsuleOffset;
 
+	// #TODO: See if making this multiplayer compatible is viable
+	// Offsets capsule to be centered on HMD - currently NOT multiplayer compatible
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRExpansionLibrary")
+	bool bCenterCapsuleOnHMD;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRExpansionLibrary")
 	bool bUseWalkingCollisionOverride;
 
