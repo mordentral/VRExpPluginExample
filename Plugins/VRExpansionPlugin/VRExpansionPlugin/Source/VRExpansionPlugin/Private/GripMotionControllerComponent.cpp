@@ -1994,50 +1994,61 @@ bool UGripMotionControllerComponent::TeleportMoveGrip(const FBPActorGripInformat
 	
 	FBPActorPhysicsHandleInformation * Handle = GetPhysicsGrip(Grip);
 
+
+
+
 	if (!Handle)
 	{
 		PrimComp->SetWorldTransform(WorldTransform, false, NULL, ETeleportType::TeleportPhysics);
 	}
-	else if (Handle && Handle->KinActorData && bIsPostTeleport)
+	else if (Handle && Handle->KinActorData/* && bIsPostTeleport*/)
 	{
-		PrimComp->SetWorldTransform(WorldTransform, false, NULL, ETeleportType::TeleportPhysics);
 
+		FQuat RootRotation = FQuat::Identity;
 		USkeletalMeshComponent * skele = Cast<USkeletalMeshComponent>(PrimComp);
-	//	FTransform trans = P2UTransform(Handle->KinActorData->getGlobalPose());
 
 		// This corrects for root bone transforms not being handled with physics in the engine
 		if (skele)
 		{
-			WorldTransform.ConcatenateRotation(skele->GetBoneTransform(0, FTransform::Identity).GetRotation());
+			RootRotation = skele->GetBoneTransform(0, FTransform::Identity).GetRotation();
+			//WorldTransform.ConcatenateRotation(skele->GetBoneTransform(0, FTransform::Identity).GetRotation());
 		}
 
-	#if WITH_PHYSX
+		if (bIsPostTeleport || !RootRotation.IsIdentity())
 		{
-			PxScene* PScene = GetPhysXSceneFromIndex(Handle->SceneIndex);
-			if (PScene)
+
+			WorldTransform.ConcatenateRotation(RootRotation);
+
+			PrimComp->SetWorldTransform(WorldTransform, false, NULL, ETeleportType::TeleportPhysics);
+
+#if WITH_PHYSX
 			{
-				if (Grip.GripCollisionType == EGripCollisionType::ManipulationGrip || Grip.GripCollisionType == EGripCollisionType::ManipulationGripWithWristTwist)
+				PxScene* PScene = GetPhysXSceneFromIndex(Handle->SceneIndex);
+				if (PScene)
 				{
-					FTransform WTransform = WorldTransform;
-					WTransform.SetLocation(this->GetComponentLocation());
-					SCOPED_SCENE_WRITE_LOCK(PScene);
-					Handle->KinActorData->setKinematicTarget(U2PTransform(WTransform));
-					Handle->KinActorData->setGlobalPose(U2PTransform(WTransform));
-				}
-				else
-				{
-					SCOPED_SCENE_WRITE_LOCK(PScene);
-					Handle->KinActorData->setKinematicTarget(U2PTransform(WorldTransform) * Handle->COMPosition);
-					Handle->KinActorData->setGlobalPose(U2PTransform(WorldTransform) * Handle->COMPosition);
+					if (Grip.GripCollisionType == EGripCollisionType::ManipulationGrip || Grip.GripCollisionType == EGripCollisionType::ManipulationGripWithWristTwist)
+					{
+						FTransform WTransform = WorldTransform;
+						WTransform.SetLocation(this->GetComponentLocation());
+						SCOPED_SCENE_WRITE_LOCK(PScene);
+						Handle->KinActorData->setKinematicTarget(U2PTransform(WTransform));
+						Handle->KinActorData->setGlobalPose(U2PTransform(WTransform));
+					}
+					else
+					{
+						SCOPED_SCENE_WRITE_LOCK(PScene);
+						Handle->KinActorData->setKinematicTarget(U2PTransform(WorldTransform) * Handle->COMPosition);
+						Handle->KinActorData->setGlobalPose(U2PTransform(WorldTransform) * Handle->COMPosition);
+					}
 				}
 			}
-		}
-	#endif
+#endif
 
-		FBodyInstance * body = PrimComp->GetBodyInstance();
-		if (body)
-		{
-			body->SetBodyTransform(WorldTransform, ETeleportType::TeleportPhysics);
+			FBodyInstance * body = PrimComp->GetBodyInstance();
+			if (body)
+			{
+				body->SetBodyTransform(WorldTransform, ETeleportType::TeleportPhysics);
+			}
 		}
 
 	}
