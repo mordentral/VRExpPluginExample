@@ -73,12 +73,15 @@ class VREXPANSIONPLUGIN_API UVRLeverComponent : public UStaticMeshComponent, pub
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRLeverComponent")
 		EVRInteractibleAxis LeverRotationAxis;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRLeverComponent")
+	// The angle at which the lever will toggle states
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRLeverComponent", meta = (ClampMin = "0.0", ClampMax = "360.0", UIMin = "0.0", UIMax = "360.0"))
+		float LeverToggleAngle;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRLeverComponent", meta = (ClampMin = "0.0", ClampMax = "360.0", UIMin = "0.0", UIMax = "360.0"))
 		float LeverLimit;
 
-	// Only currently works correctly for Twist Limited / XAxis levers in the XMinus direction
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRLeverComponent")
-		bool bLeverIsOneWay;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRLeverComponent", meta = (ClampMin = "-180.0", ClampMax = "180.0", UIMin = "-180.0", UIMax = "180.0"))
+		float LeverLimitOffset;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRLeverComponent")
 		bool bLeverReturnsWhenReleased;
@@ -87,8 +90,8 @@ class VREXPANSIONPLUGIN_API UVRLeverComponent : public UStaticMeshComponent, pub
 		float LeverReturnSpeed;
 
 	bool bIsLerping;
-
 	FTransform InitialRelativeTransform;
+	bool bLeverState;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRGripInterface")
 		EGripMovementReplicationSettings MovementReplicationSetting;
@@ -160,6 +163,18 @@ class VREXPANSIONPLUGIN_API UVRLeverComponent : public UStaticMeshComponent, pub
 			return false;
 		}
 
+
+		FTransform A2Transform = GetComponentTransform();
+		if (ParentComponent.IsValid())
+		{
+			UPrimitiveComponent * PrimComp = Cast<UPrimitiveComponent>(ParentComponent.Get());
+
+			if (PrimComp)
+				A2Transform = PrimComp->GetComponentTransform();
+		}
+
+		FRotator AngularRotationOffset = SetAxisValue(LeverLimitOffset, FRotator::ZeroRotator);
+		FTransform RefFrame2 = FTransform(InitialRelativeTransform.GetRotation() * AngularRotationOffset.Quaternion(), A2Transform.InverseTransformPosition(GetComponentLocation()));
 		
 		ExecuteOnPxRigidDynamicReadWrite(rBodyInstance, [&](PxRigidDynamic* Actor)
 		{
@@ -176,22 +191,11 @@ class VREXPANSIONPLUGIN_API UVRLeverComponent : public UStaticMeshComponent, pub
 					UPrimitiveComponent * PrimComp = Cast<UPrimitiveComponent>(ParentComponent.Get());
 
 					if (PrimComp)
-						ParentBody = PrimComp->BodyInstance.GetPxRigidDynamic_AssumesLocked();
-				}
-				
-				PxTransform LocalParentTrans = PxTransform(PxIdentity);
-				if (ParentBody)
-				{
-					// Get local space location of the constraint end for our parent if we have one
-					LocalParentTrans = ParentBody->getGlobalPose().getInverse() * Actor->getGlobalPose();
-				}
-				else
-				{
-					// If no parent this will fall back to world space of self
-					LocalParentTrans = Actor->getGlobalPose();
+						ParentBody = PrimComp->BodyInstance.GetPxRigidDynamic();
 				}
 
-				NewJoint = PxD6JointCreate(Scene->getPhysics(), ParentBody, LocalParentTrans, Actor, PxTransform(PxIdentity));
+				NewJoint = PxD6JointCreate(Scene->getPhysics(), ParentBody, U2PTransform(RefFrame2)/*LocalParentTrans*/, Actor, PxTransform(PxIdentity));
+
 				if (!NewJoint)
 				{
 					HandleData = NULL;
@@ -232,22 +236,18 @@ class VREXPANSIONPLUGIN_API UVRLeverComponent : public UStaticMeshComponent, pub
 					NewJoint->setMotion(PxD6Axis::eTWIST, LeverRotationAxis == EVRInteractibleAxis::Axis_X ? PxD6Motion::eLIMITED : PxD6Motion::eLOCKED);
 					NewJoint->setMotion(PxD6Axis::eSWING1, LeverRotationAxis == EVRInteractibleAxis::Axis_Y ? PxD6Motion::eLIMITED : PxD6Motion::eLOCKED);
 					NewJoint->setMotion(PxD6Axis::eSWING2, LeverRotationAxis == EVRInteractibleAxis::Axis_Z ? PxD6Motion::eLIMITED : PxD6Motion::eLOCKED);
-				
+
 
 					const float LeverLimitRad = LeverLimit * /*InTwistLimitScale **/ (PI / 180.0f);
 					//PxReal LimitContactDistance = FMath::DegreesToRadians(FMath::Max(1.f, ProfileInstance.ConeLimit.ContactDistance /** InTwistLimitScale*/));
 
 					//The limit values need to be clamped so it will be valid in PhysX
-					PxReal ZLimitAngle = FMath::ClampAngle(LeverLimit /** InSwing1LimitScale*/, KINDA_SMALL_NUMBER, 179.9999f) * (PI / 180.0f);
+					PxReal ZLimitAngle = FMath::ClampAngle(LeverLimit/** InSwing1LimitScale*/, KINDA_SMALL_NUMBER, 179.9999f) * (PI / 180.0f);
 					PxReal YLimitAngle = FMath::ClampAngle(LeverLimit /** InSwing2LimitScale*/, KINDA_SMALL_NUMBER, 179.9999f) * (PI / 180.0f);
 					//PxReal LimitContactDistance = FMath::DegreesToRadians(FMath::Max(1.f, ProfileInstance.ConeLimit.ContactDistance * FMath::Min(InSwing1LimitScale, InSwing2LimitScale)));
 					
 					NewJoint->setSwingLimit(PxJointLimitCone(YLimitAngle, ZLimitAngle));
-
-					if(bLeverIsOneWay)
-						NewJoint->setTwistLimit(PxJointAngularLimitPair(-LeverLimitRad, 0.0f));
-					else
-						NewJoint->setTwistLimit(PxJointAngularLimitPair(-LeverLimitRad, LeverLimitRad));
+					NewJoint->setTwistLimit(PxJointAngularLimitPair(-LeverLimitRad, LeverLimitRad));
 
 					return true;
 				}

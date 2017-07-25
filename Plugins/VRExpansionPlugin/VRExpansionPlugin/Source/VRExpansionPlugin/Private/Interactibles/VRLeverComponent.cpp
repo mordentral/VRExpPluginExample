@@ -21,8 +21,12 @@ UVRLeverComponent::UVRLeverComponent(const FObjectInitializer& ObjectInitializer
 	bIsPhysicsLever = true;
 	ParentComponent = nullptr;
 	LeverRotationAxis = EVRInteractibleAxis::Axis_X;
-	LeverLimit = 90.0f;
-	bLeverIsOneWay = false;
+	
+	LeverLimit = 45.0f;
+	LeverLimitOffset = 45.0f;
+	bLeverState = false;
+	LeverToggleAngle = 80.0f;
+
 	LeverReturnSpeed = 50.0f;
 	InitialRelativeTransform = FTransform::Identity;
 	bIsLerping = false;
@@ -95,11 +99,14 @@ void UVRLeverComponent::TickComponent(float DeltaTime, enum ELevelTick TickType,
 	}
 	else
 	{
-		if (FMath::Abs(CurrentLeverAngle) >= LeverLimit)
+		bool bNewLeverState = FMath::Abs(CurrentLeverAngle) > LeverToggleAngle;//FMath::IsNearlyEqual(CurrentLeverAngle, -LeverLimit + LeverLimitOffset) || FMath::IsNearlyEqual(CurrentLeverAngle, LeverLimit + LeverLimitOffset);
+		//if (FMath::Abs(CurrentLeverAngle) >= LeverLimit  )
+		if (bNewLeverState != bLeverState)
 		{
-			OnLeverStateChanged.Broadcast(true);
+			bLeverState = bNewLeverState;
+			OnLeverStateChanged.Broadcast(bLeverState);
 
-			if (bUngripAtTargetRotation && HoldingController)
+			if (bUngripAtTargetRotation && bLeverState && HoldingController)
 			{
 				HoldingController->DropObjectByInterface(this);
 			}
