@@ -26,6 +26,7 @@ UVRLeverComponent::UVRLeverComponent(const FObjectInitializer& ObjectInitializer
 	LeverLimitPositive = 90.0f;
 	bLeverState = false;
 	LeverTogglePercentage = 0.8f;
+	lerpCounter = 0.0f;
 
 	LeverReturnSpeed = 50.0f;
 	InitialRelativeTransform = FTransform::Identity;
@@ -84,24 +85,41 @@ void UVRLeverComponent::TickComponent(float DeltaTime, enum ELevelTick TickType,
 		curTransformDifference = this->GetRelativeTransform().GetRelativeTransform(InitialRelativeTransform);
 	}
 
-	FRotator curRot = curTransformDifference.Rotator();
-	CurrentLeverAngle = GetAxisValue(curRot);
+	//FRotator curRot = this->RelativeRotation - InitialRelativeTransform.Rotator();//curTransformDifference.Rotator();
+	//CurrentLeverAngle = FRotator::ClampAxis(GetAxisValue(curRot));
+	//FMath::FindDeltaAngleDegrees()
 
+		FVector v1 = this->RelativeRotation.Vector();
+	FVector v2 = InitialRelativeTransform.Rotator().Vector();
+	v1.Normalize();
+	v2.Normalize();
+
+	float nAngle = FMath::FindDeltaAngleDegrees(GetAxisValue(InitialRelativeTransform.Rotator()), GetAxisValue(this->RelativeRotation)) * FMath::Sign(GetAxisValue(curTransformDifference.Rotator()));//FMath::RadiansToDegrees(FMath::Acos(FVector::DotProduct(v1, v2))) * FMath::Sign(GetAxisValue(curTransformDifference.Rotator()));
+
+
+	CurrentLeverAngle = nAngle;//GetAxisValue(this->RelativeRotation - InitialRelativeTransform.Rotator());//FMath::FindDeltaAngleDegrees(0.0f, GetAxisValue(curTransformDifference.Rotator()));
+	//curRot = SetAxisValue(CurrentLeverAngle, FRotator::ZeroRotator);
+	
 	if (bIsLerping)
 	{
+		//float curAxisValue = nAngle;//FRotator::ClampAxis(GetAxisValue(curRot));
 		// Lerp back to initial position
-		//FRotator newRot = FMath::RInterpConstantTo(curRot, FRotator::ZeroRotator, DeltaTime, LeverReturnSpeed);
-		//if (newRot.Equals(FRotator::ZeroRotator))
-		float LerpedVal = FMath::FInterpConstantTo(GetAxisValue(curRot), 0.0f, DeltaTime, LeverReturnSpeed);
-		if (FMath::IsNearlyEqual(GetAxisValue(this->RelativeRotation), 0.0f))
+		//FRotator newRot = FMath::RInterpConstantTo(this->RelativeRotation, InitialRelativeTransform.Rotator(), DeltaTime, LeverReturnSpeed);
+		//if (newRot.Equals(InitialRelativeTransform.Rotator()))
+		float LerpedVal = FMath::FInterpConstantTo(GetAxisValue(RelativeRotation), GetAxisValue(InitialRelativeTransform.Rotator()), DeltaTime, LeverReturnSpeed);
+		if (FMath::IsNearlyEqual(LerpedVal, GetAxisValue(InitialRelativeTransform.Rotator())))
 		{
 			this->SetComponentTickEnabled(false);
-			this->SetRelativeRotation(InitialRelativeTransform.GetRotation().Rotator());
+			this->SetRelativeRotation(InitialRelativeTransform.Rotator());
+			CurrentLeverAngle = 0.0f;
 		}
 		else
 		{
-			curTransformDifference.SetRotation(this->SetAxisValue(LerpedVal, curTransformDifference.Rotator()).Quaternion());//newRot.Quaternion());
-			this->SetRelativeRotation((curTransformDifference * InitialRelativeTransform).Rotator());
+			//curTransformDifference.SetRotation(newRot.Quaternion());
+			//this->SetRelativeRotation((curTransformDifference * InitialRelativeTransform).Rotator());
+			//curTransformDifference.SetRotation(this->SetAxisValue(LerpedVal, curTransformDifference.Rotator()).Quaternion());//newRot.Quaternion());
+			//this->SetRelativeRotation((curTransformDifference * InitialRelativeTransform).Rotator());
+			this->SetRelativeRotation(SetAxisValue(LerpedVal,this->RelativeRotation));
 		}
 	}
 	else
