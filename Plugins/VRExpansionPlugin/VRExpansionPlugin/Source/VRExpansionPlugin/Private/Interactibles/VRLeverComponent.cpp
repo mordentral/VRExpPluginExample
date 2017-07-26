@@ -22,10 +22,10 @@ UVRLeverComponent::UVRLeverComponent(const FObjectInitializer& ObjectInitializer
 	ParentComponent = nullptr;
 	LeverRotationAxis = EVRInteractibleAxis::Axis_X;
 	
-	LeverLimit = 45.0f;
-	LeverLimitOffset = 45.0f;
+	LeverLimitNegative = 0.0f;
+	LeverLimitPositive = 90.0f;
 	bLeverState = false;
-	LeverToggleAngle = 80.0f;
+	LeverTogglePercentage = 0.8f;
 
 	LeverReturnSpeed = 50.0f;
 	InitialRelativeTransform = FTransform::Identity;
@@ -72,34 +72,41 @@ void UVRLeverComponent::TickComponent(float DeltaTime, enum ELevelTick TickType,
 	// Call supers tick (though I don't think any of the base classes to this actually implement it)
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	float currentRot;
+
+	FTransform curTransformDifference;
 	if (ParentComponent.IsValid())
 	{
-		currentRot = GetAxisValue(this->GetComponentTransform().GetRelativeTransform(ParentComponent->GetComponentTransform()).GetRotation().Rotator());
+		// during grip there is no parent so we do this, might as well do it anyway for lerping as well
+		curTransformDifference = this->GetComponentTransform().GetRelativeTransform(ParentComponent->GetComponentTransform()).GetRelativeTransform(InitialRelativeTransform);
 	}
 	else
 	{
-		currentRot = GetAxisValue(this->RelativeRotation);
+		curTransformDifference = this->GetRelativeTransform().GetRelativeTransform(InitialRelativeTransform);
 	}
 
-	CurrentLeverAngle = currentRot - GetAxisValue(InitialRelativeTransform.GetRotation().Rotator());
+	FRotator curRot = curTransformDifference.Rotator();
+	CurrentLeverAngle = GetAxisValue(curRot);
 
 	if (bIsLerping)
 	{
 		// Lerp back to initial position
-		float lerpToRot = GetAxisValue(InitialRelativeTransform.GetRotation().Rotator());
-		float LerpedVal = FMath::FInterpConstantTo(GetAxisValue(this->RelativeRotation), lerpToRot, DeltaTime, LeverReturnSpeed);
-		if (FMath::IsNearlyEqual(GetAxisValue(this->RelativeRotation), lerpToRot))
+		//FRotator newRot = FMath::RInterpConstantTo(curRot, FRotator::ZeroRotator, DeltaTime, LeverReturnSpeed);
+		//if (newRot.Equals(FRotator::ZeroRotator))
+		float LerpedVal = FMath::FInterpConstantTo(GetAxisValue(curRot), 0.0f, DeltaTime, LeverReturnSpeed);
+		if (FMath::IsNearlyEqual(GetAxisValue(this->RelativeRotation), 0.0f))
 		{
 			this->SetComponentTickEnabled(false);
-			this->SetRelativeRotation(this->SetAxisValue(lerpToRot, this->RelativeRotation));
+			this->SetRelativeRotation(InitialRelativeTransform.GetRotation().Rotator());
 		}
 		else
-			this->SetRelativeRotation(this->SetAxisValue(LerpedVal, this->RelativeRotation));
+		{
+			curTransformDifference.SetRotation(this->SetAxisValue(LerpedVal, curTransformDifference.Rotator()).Quaternion());//newRot.Quaternion());
+			this->SetRelativeRotation((curTransformDifference * InitialRelativeTransform).Rotator());
+		}
 	}
 	else
 	{
-		bool bNewLeverState = FMath::Abs(CurrentLeverAngle) > LeverToggleAngle;//FMath::IsNearlyEqual(CurrentLeverAngle, -LeverLimit + LeverLimitOffset) || FMath::IsNearlyEqual(CurrentLeverAngle, LeverLimit + LeverLimitOffset);
+		bool bNewLeverState = CurrentLeverAngle <= -(LeverLimitNegative * LeverTogglePercentage) || CurrentLeverAngle >= (LeverLimitPositive * LeverTogglePercentage);
 		//if (FMath::Abs(CurrentLeverAngle) >= LeverLimit  )
 		if (bNewLeverState != bLeverState)
 		{
