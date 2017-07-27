@@ -20,7 +20,7 @@ UVRLeverComponent::UVRLeverComponent(const FObjectInitializer& ObjectInitializer
 
 	bIsPhysicsLever = true;
 	ParentComponent = nullptr;
-	LeverRotationAxis = EVRInteractibleAxis::Axis_X;
+	LeverRotationAxis = EVRInteractibleLeverAxis::Axis_X;
 	
 	LeverLimitNegative = 0.0f;
 	LeverLimitPositive = 90.0f;
@@ -73,41 +73,41 @@ void UVRLeverComponent::TickComponent(float DeltaTime, enum ELevelTick TickType,
 	// Call supers tick (though I don't think any of the base classes to this actually implement it)
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-
-	FTransform curTransformDifference;
+	FTransform CurrentRelativeTransform;
 	if (ParentComponent.IsValid())
 	{
 		// during grip there is no parent so we do this, might as well do it anyway for lerping as well
-		curTransformDifference = this->GetComponentTransform().GetRelativeTransform(ParentComponent->GetComponentTransform()).GetRelativeTransform(InitialRelativeTransform);
+		CurrentRelativeTransform = this->GetComponentTransform().GetRelativeTransform(ParentComponent->GetComponentTransform());
 	}
 	else
 	{
-		curTransformDifference = this->GetRelativeTransform().GetRelativeTransform(InitialRelativeTransform);
+		CurrentRelativeTransform = this->GetRelativeTransform();
 	}
 
-	//FRotator curRot = this->RelativeRotation - InitialRelativeTransform.Rotator();//curTransformDifference.Rotator();
-	//CurrentLeverAngle = FRotator::ClampAxis(GetAxisValue(curRot));
-	//FMath::FindDeltaAngleDegrees()
+	FQuat RotTransform = FQuat::Identity;
 
-		FVector v1 = this->RelativeRotation.Vector();
-	FVector v2 = InitialRelativeTransform.Rotator().Vector();
+	if (LeverRotationAxis == EVRInteractibleLeverAxis::Axis_X)
+		RotTransform = FRotator(FRotator(0.0, -90.0, 0.0)).Quaternion(); // Correct for roll and DotProduct
+
+	FQuat newInitRot = (InitialRelativeTransform.GetRotation() * RotTransform);
+
+
+	FVector v1 = (CurrentRelativeTransform.GetRotation() * RotTransform).Vector();
+	FVector v2 = (newInitRot).Vector();
 	v1.Normalize();
 	v2.Normalize();
 
-	float nAngle = FMath::FindDeltaAngleDegrees(GetAxisValue(InitialRelativeTransform.Rotator()), GetAxisValue(this->RelativeRotation)) * FMath::Sign(GetAxisValue(curTransformDifference.Rotator()));//FMath::RadiansToDegrees(FMath::Acos(FVector::DotProduct(v1, v2))) * FMath::Sign(GetAxisValue(curTransformDifference.Rotator()));
+	FVector CrossP = FVector::CrossProduct(v1, v2);
+	
+	float angle = FMath::RadiansToDegrees(FMath::Atan2(CrossP.Size(), FVector::DotProduct(v1, v2)));//FMath::Acos(FVector::DotProduct(v1, v2));
+	angle *= FMath::Sign(FVector::DotProduct(CrossP, newInitRot.GetRightVector()));
 
-
-	CurrentLeverAngle = nAngle;//GetAxisValue(this->RelativeRotation - InitialRelativeTransform.Rotator());//FMath::FindDeltaAngleDegrees(0.0f, GetAxisValue(curTransformDifference.Rotator()));
-	//curRot = SetAxisValue(CurrentLeverAngle, FRotator::ZeroRotator);
+	CurrentLeverAngle = FMath::RoundToFloat(angle);
 	
 	if (bIsLerping)
 	{
-		//float curAxisValue = nAngle;//FRotator::ClampAxis(GetAxisValue(curRot));
-		// Lerp back to initial position
-		//FRotator newRot = FMath::RInterpConstantTo(this->RelativeRotation, InitialRelativeTransform.Rotator(), DeltaTime, LeverReturnSpeed);
-		//if (newRot.Equals(InitialRelativeTransform.Rotator()))
-		float LerpedVal = FMath::FInterpConstantTo(GetAxisValue(RelativeRotation), GetAxisValue(InitialRelativeTransform.Rotator()), DeltaTime, LeverReturnSpeed);
-		if (FMath::IsNearlyEqual(LerpedVal, GetAxisValue(InitialRelativeTransform.Rotator())))
+		float LerpedVal = FMath::FInterpConstantTo(CurrentLeverAngle, 0.0f, DeltaTime, LeverReturnSpeed);
+		if (FMath::IsNearlyEqual(LerpedVal, 0.0f))
 		{
 			this->SetComponentTickEnabled(false);
 			this->SetRelativeRotation(InitialRelativeTransform.Rotator());
@@ -115,11 +115,7 @@ void UVRLeverComponent::TickComponent(float DeltaTime, enum ELevelTick TickType,
 		}
 		else
 		{
-			//curTransformDifference.SetRotation(newRot.Quaternion());
-			//this->SetRelativeRotation((curTransformDifference * InitialRelativeTransform).Rotator());
-			//curTransformDifference.SetRotation(this->SetAxisValue(LerpedVal, curTransformDifference.Rotator()).Quaternion());//newRot.Quaternion());
-			//this->SetRelativeRotation((curTransformDifference * InitialRelativeTransform).Rotator());
-			this->SetRelativeRotation(SetAxisValue(LerpedVal,this->RelativeRotation));
+			this->SetRelativeRotation((FTransform(SetAxisValue(LerpedVal, FRotator::ZeroRotator)) * InitialRelativeTransform).Rotator());
 		}
 	}
 	else

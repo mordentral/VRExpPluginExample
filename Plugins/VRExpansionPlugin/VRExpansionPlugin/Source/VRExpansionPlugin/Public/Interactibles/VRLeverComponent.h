@@ -19,9 +19,16 @@
 
 #include "VRLeverComponent.generated.h"
 
+
+UENUM(Blueprintable)
+enum class EVRInteractibleLeverAxis : uint8
+{
+	Axis_X,
+	Axis_Y
+};
+
 /** Delegate for notification when the lever state changes. */
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FVRLeverStateChangedSignature, bool, LeverState);
-
 
 UCLASS(Blueprintable, meta = (BlueprintSpawnableComponent), ClassGroup = (VRExpansionPlugin))
 class VREXPANSIONPLUGIN_API UVRLeverComponent : public UStaticMeshComponent, public IVRGripInterface, public IGameplayTagAssetInterface
@@ -71,18 +78,18 @@ class VREXPANSIONPLUGIN_API UVRLeverComponent : public UStaticMeshComponent, pub
 		bool bUngripAtTargetRotation;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRLeverComponent")
-		EVRInteractibleAxis LeverRotationAxis;
+		EVRInteractibleLeverAxis LeverRotationAxis;
 
 	// The percentage of the angle at witch the lever will toggle
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRLeverComponent", meta = (ClampMin = "0.01", ClampMax = "1.0", UIMin = "0.01", UIMax = "1.0"))
 		float LeverTogglePercentage;
 
 	// The max angle of the lever in the positive direction
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRLeverComponent", meta = (ClampMin = "0.0", ClampMax = "180.0", UIMin = "0.0", UIMax = "180.0"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRLeverComponent", meta = (ClampMin = "0.0", ClampMax = "179.9", UIMin = "0.0", UIMax = "179.9"))
 		float LeverLimitPositive;
 
 	// The max angle of the lever in the negative direction
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRLeverComponent", meta = (ClampMin = "0.0", ClampMax = "180.0", UIMin = "0.0", UIMax = "180.0"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRLeverComponent", meta = (ClampMin = "0.0", ClampMax = "179.9", UIMin = "0.0", UIMax = "179.9"))
 		float LeverLimitNegative;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRLeverComponent")
@@ -218,19 +225,22 @@ class VREXPANSIONPLUGIN_API UVRLeverComponent : public UStaticMeshComponent, pub
 
 					// Pretty Much Unbreakable
 					NewJoint->setBreakForce(PX_MAX_REAL, PX_MAX_REAL);
-					NewJoint->setConstraintFlag(PxConstraintFlag::ePROJECTION, false);
+				//	NewJoint->setConstraintFlag(PxConstraintFlag::ePROJECTION, true);
 					
-					NewJoint->setConstraintFlag(PxConstraintFlag::eCOLLISION_ENABLED, false);
+				//	NewJoint->setConstraintFlag(PxConstraintFlag::eCOLLISION_ENABLED, false);
 
 					PxConstraintFlags Flags = NewJoint->getConstraintFlags();
 
 					// False flags
-					Flags |= PxConstraintFlag::ePROJECTION;
+					//Flags |= PxConstraintFlag::ePROJECTION;
 					Flags |= PxConstraintFlag::eCOLLISION_ENABLED;
 					
 					// True flags
-					//Flags &= ~PxConstraintFlag::eCOLLISION_ENABLED;
+					Flags &= ~PxConstraintFlag::ePROJECTION;
 
+					NewJoint->setConstraintFlag(PxConstraintFlag::ePROJECTION, true);
+					NewJoint->setProjectionAngularTolerance(FMath::DegreesToRadians(0.1f));
+					NewJoint->setProjectionLinearTolerance(0.1f);
 					NewJoint->setConstraintFlags(Flags);
 					
 					// Setting up the joint
@@ -238,9 +248,9 @@ class VREXPANSIONPLUGIN_API UVRLeverComponent : public UStaticMeshComponent, pub
 					NewJoint->setMotion(PxD6Axis::eY, PxD6Motion::eLOCKED);
 					NewJoint->setMotion(PxD6Axis::eZ, PxD6Motion::eLOCKED);
 
-					NewJoint->setMotion(PxD6Axis::eTWIST, LeverRotationAxis == EVRInteractibleAxis::Axis_X ? PxD6Motion::eLIMITED : PxD6Motion::eLOCKED);
-					NewJoint->setMotion(PxD6Axis::eSWING1, LeverRotationAxis == EVRInteractibleAxis::Axis_Y ? PxD6Motion::eLIMITED : PxD6Motion::eLOCKED);
-					NewJoint->setMotion(PxD6Axis::eSWING2, LeverRotationAxis == EVRInteractibleAxis::Axis_Z ? PxD6Motion::eLIMITED : PxD6Motion::eLOCKED);
+					NewJoint->setMotion(PxD6Axis::eTWIST, LeverRotationAxis == EVRInteractibleLeverAxis::Axis_X ? PxD6Motion::eLIMITED : PxD6Motion::eLOCKED);
+					NewJoint->setMotion(PxD6Axis::eSWING1, LeverRotationAxis == EVRInteractibleLeverAxis::Axis_Y ? PxD6Motion::eLIMITED : PxD6Motion::eLOCKED);
+					NewJoint->setMotion(PxD6Axis::eSWING2, PxD6Motion::eLOCKED);
 
 					const float CorrectedLeverLimit = (LeverLimitPositive + LeverLimitNegative) / 2;
 					const float LeverLimitRad = CorrectedLeverLimit * /*InTwistLimitScale **/ (PI / 180.0f);
@@ -401,8 +411,6 @@ class VREXPANSIONPLUGIN_API UVRLeverComponent : public UStaticMeshComponent, pub
 				return CheckLocation.Roll; break;
 			case EVRInteractibleAxis::Axis_Y:
 				return CheckLocation.Pitch; break;
-			case EVRInteractibleAxis::Axis_Z:
-				return CheckLocation.Yaw; break;
 			default:return 0.0f; break;
 			}
 		}
@@ -417,8 +425,7 @@ class VREXPANSIONPLUGIN_API UVRLeverComponent : public UStaticMeshComponent, pub
 				vec.Roll = SetValue; break;
 			case EVRInteractibleAxis::Axis_Y:
 				vec.Pitch = SetValue; break;
-			case EVRInteractibleAxis::Axis_Z:
-				vec.Yaw = SetValue; break;
+			default:break;
 			}
 
 			return vec;
@@ -433,8 +440,7 @@ class VREXPANSIONPLUGIN_API UVRLeverComponent : public UStaticMeshComponent, pub
 				vec.Roll = SetValue; break;
 			case EVRInteractibleAxis::Axis_Y:
 				vec.Pitch = SetValue; break;
-			case EVRInteractibleAxis::Axis_Z:
-				vec.Yaw = SetValue; break;
+			default:break;
 			}
 
 			return vec;
