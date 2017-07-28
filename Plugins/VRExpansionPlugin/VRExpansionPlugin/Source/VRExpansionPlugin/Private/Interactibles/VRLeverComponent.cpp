@@ -13,7 +13,7 @@ UVRLeverComponent::UVRLeverComponent(const FObjectInitializer& ObjectInitializer
 	bRepGameplayTags = false;
 
 	MovementReplicationSetting = EGripMovementReplicationSettings::ForceClientSideMovement;
-	BreakDistance = 200.0f;
+	BreakDistance = 50.0f;
 
 	HandleData = nullptr;
 	SceneIndex = 0;
@@ -169,16 +169,13 @@ void UVRLeverComponent::TickGrip_Implementation(UGripMotionControllerComponent *
 
 	FVector RotVector;
 	if (LeverRotationAxis == EVRInteractibleLeverAxis::Axis_X)
-		RotVector = FRotator(0.0, 90.0, 0.0).UnrotateVector(CurInteractorLocation);
+		RotVector = FRotator(90.0, 0.0, 0.0).UnrotateVector(CurInteractorLocation);
 	else
-		RotVector = CurInteractorLocation;
-
-
+		RotVector = FRotator(0.0, 0.0, -90.0).UnrotateVector(CurInteractorLocation);
 
 	float DeltaAngle = FMath::RadiansToDegrees(FMath::Atan2(RotVector.Y, RotVector.X)) - InitialGripRot;
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Delta: %f, Atan: %f, Initial: %f"), DeltaAngle, FMath::RadiansToDegrees(FMath::Atan2(RotVector.Y, RotVector.X)), InitialGripRot));
 
-	this->SetRelativeRotation(SetAxisValue(RotAtGrab + DeltaAngle, this->RelativeRotation));
+	this->SetRelativeRotation(SetAxisValue(FMath::ClampAngle(RotAtGrab + DeltaAngle, GetAxisValue(InitialRelativeTransform.Rotator()) - LeverLimitNegative, GetAxisValue(InitialRelativeTransform.Rotator()) + LeverLimitPositive), this->RelativeRotation));
 	
 }
 
@@ -208,9 +205,9 @@ void UVRLeverComponent::OnGrip_Implementation(UGripMotionControllerComponent * G
 
 		FVector RotVector;
 		if (LeverRotationAxis == EVRInteractibleLeverAxis::Axis_X)
-			RotVector = FRotator(0.0, 90.0, 0.0).UnrotateVector(InitialInteractorLocation);
+			RotVector = FRotator(90.0, 0.0, 0.0).UnrotateVector(InitialInteractorLocation);
 		else
-			RotVector = InitialInteractorLocation;
+			RotVector = FRotator(0.0, 0.0, -90.0).UnrotateVector(InitialInteractorLocation);
 		
 		InitialGripRot = FMath::RadiansToDegrees(FMath::Atan2(RotVector.Y, RotVector.X));
 		RotAtGrab = GetAxisValue(this->RelativeRotation);
