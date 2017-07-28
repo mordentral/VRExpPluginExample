@@ -102,6 +102,9 @@ class VREXPANSIONPLUGIN_API UVRLeverComponent : public UStaticMeshComponent, pub
 
 	bool bIsLerping;
 	FTransform InitialRelativeTransform;
+	FVector InitialInteractorLocation;
+	float InitialGripRot;
+	float RotAtGrab;
 	bool bLeverState;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRGripInterface")
