@@ -406,7 +406,7 @@ class VREXPANSIONPLUGIN_API UVRLeverComponent : public UStaticMeshComponent, pub
 
 	protected:
 
-		FORCEINLINE float GetAxisValue(FRotator CheckLocation)
+		inline float GetAxisValue(FRotator CheckLocation)
 		{
 			switch (LeverRotationAxis)
 			{
@@ -418,7 +418,7 @@ class VREXPANSIONPLUGIN_API UVRLeverComponent : public UStaticMeshComponent, pub
 			}
 		}
 
-		FORCEINLINE FRotator SetAxisValue(float SetValue)
+		inline FRotator SetAxisValue(float SetValue)
 		{
 			FRotator vec = FRotator::ZeroRotator;
 
@@ -434,7 +434,7 @@ class VREXPANSIONPLUGIN_API UVRLeverComponent : public UStaticMeshComponent, pub
 			return vec;
 		}
 
-		FORCEINLINE FRotator SetAxisValue(float SetValue, FRotator Var)
+		inline FRotator SetAxisValue(float SetValue, FRotator Var)
 		{
 			FRotator vec = Var;
 			switch (LeverRotationAxis)
