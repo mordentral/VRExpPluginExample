@@ -27,8 +27,24 @@ enum class EVRInteractibleLeverAxis : uint8
 	Axis_Y
 };
 
+UENUM(Blueprintable)
+enum class EVRInteractibleLeverEventType : uint8
+{
+	LeverPositive,
+	LeverNegative
+};
+
+UENUM(Blueprintable)
+enum class EVRInteractibleLeverReturnType : uint8
+{
+	Stay,
+	ReturnToZero,
+	LerpToMax,
+	LerpToMaxIfOverThreshold
+};
+
 /** Delegate for notification when the lever state changes. */
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FVRLeverStateChangedSignature, bool, LeverState);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FVRLeverStateChangedSignature, bool, LeverStatus, EVRInteractibleLeverEventType, LeverStatusType, float, LeverAngleAtTime);
 
 UCLASS(Blueprintable, meta = (BlueprintSpawnableComponent), ClassGroup = (VRExpansionPlugin))
 class VREXPANSIONPLUGIN_API UVRLeverComponent : public UStaticMeshComponent, public IVRGripInterface, public IGameplayTagAssetInterface
@@ -85,15 +101,18 @@ class VREXPANSIONPLUGIN_API UVRLeverComponent : public UStaticMeshComponent, pub
 		float LeverTogglePercentage;
 
 	// The max angle of the lever in the positive direction
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRLeverComponent", meta = (ClampMin = "0.0", ClampMax = "179.9", UIMin = "0.0", UIMax = "179.9"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRLeverComponent", meta = (ClampMin = "0.0", ClampMax = "179.8", UIMin = "0.0", UIMax = "180.0"))
 		float LeverLimitPositive;
 
 	// The max angle of the lever in the negative direction
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRLeverComponent", meta = (ClampMin = "0.0", ClampMax = "179.9", UIMin = "0.0", UIMax = "179.9"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRLeverComponent", meta = (ClampMin = "0.0", ClampMax = "179.8", UIMin = "0.0", UIMax = "180.0"))
 		float LeverLimitNegative;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRLeverComponent")
-		bool bLeverReturnsWhenReleased;
+		EVRInteractibleLeverReturnType LeverReturnTypeWhenReleased;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRLeverComponent")
+		bool bSendLeverEventsDuringLerp;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRLeverComponent")
 		float LeverReturnSpeed;
