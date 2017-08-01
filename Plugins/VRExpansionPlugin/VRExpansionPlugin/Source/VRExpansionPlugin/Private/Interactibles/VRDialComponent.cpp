@@ -43,6 +43,7 @@ void UVRDialComponent::BeginPlay()
 	// Call the base class 
 	Super::BeginPlay();
 
+	ResetInitialDialLocation();
 }
 
 void UVRDialComponent::TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction)
@@ -52,14 +53,47 @@ void UVRDialComponent::TickComponent(float DeltaTime, enum ELevelTick TickType, 
 void UVRDialComponent::TickGrip_Implementation(UGripMotionControllerComponent * GrippingController, const FBPActorGripInformation & GripInformation, float DeltaTime) 
 {
 	// Handle manual tracking here
+
+	// #TODO: Implement auto drop
+	/*if (GrippingController->HasGripAuthority(GripInformation) && (CurInteractorLocation - InitialInteractorLocation).Size() >= BreakDistance)
+	{
+		GrippingController->DropObjectByInterface(this);
+		return;
+	}*/
+
+
+	FRotator DeltaRot = (GrippingController->RelativeRotation - LastRotation).GetNormalized();
+
+	CurRotBackEnd += GetAxisValue(DeltaRot);
+
+	if (bDialUsesAngleSnap)
+	{
+		this->SetRelativeRotation(SetAxisValue(FMath::GridSnap(CurRotBackEnd, SnapAngleIncrement), this->RelativeRotation));
+	}
+	else
+	{
+		this->SetRelativeRotation(SetAxisValue(CurRotBackEnd, this->RelativeRotation));
+	}
+
+	LastRotation = GrippingController->RelativeRotation;
+
+	// #TODO: should this be relative to original? or leave it as is and initial rotation offsets angle?
+	CurrentDialAngle = FRotator::ClampAxis(GetAxisValue(this->RelativeRotation));
 }
 
 void UVRDialComponent::OnGrip_Implementation(UGripMotionControllerComponent * GrippingController, const FBPActorGripInformation & GripInformation) 
 {
+	LastRotation = GrippingController->RelativeRotation;
+	CurRotBackEnd = GetAxisValue(this->RelativeRotation);
 }
 
 void UVRDialComponent::OnGripRelease_Implementation(UGripMotionControllerComponent * ReleasingController, const FBPActorGripInformation & GripInformation) 
 {
+	if (bDialUsesAngleSnap)
+	{
+		this->SetRelativeRotation(SetAxisValue(FMath::GridSnap(GetAxisValue(this->RelativeRotation), SnapAngleIncrement), this->RelativeRotation));
+		CurrentDialAngle = FRotator::ClampAxis(GetAxisValue(this->RelativeRotation));
+	}
 }
 
 void UVRDialComponent::OnChildGrip_Implementation(UGripMotionControllerComponent * GrippingController, const FBPActorGripInformation & GripInformation) {}

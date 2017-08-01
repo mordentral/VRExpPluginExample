@@ -14,7 +14,7 @@
 
 
 /** Delegate for notification when the lever state changes. */
-//DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FVRLeverStateChangedSignature, bool, LeverStatus, EVRInteractibleLeverEventType, LeverStatusType, float, LeverAngleAtTime);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FVRDialStateChangedSignature, float, DialMilestoneAngle);
 
 UCLASS(Blueprintable, meta = (BlueprintSpawnableComponent), ClassGroup = (VRExpansionPlugin))
 class VREXPANSIONPLUGIN_API UVRDialComponent : public UStaticMeshComponent, public IVRGripInterface, public IGameplayTagAssetInterface
@@ -24,14 +24,32 @@ class VREXPANSIONPLUGIN_API UVRDialComponent : public UStaticMeshComponent, publ
 	~UVRDialComponent();
 
 	// Call to use an object
-//	UPROPERTY(BlueprintAssignable, Category = "VRDialComponent")
-	//	FVRLeverStateChangedSignature OnLeverStateChanged;
+	UPROPERTY(BlueprintAssignable, Category = "VRDialComponent")
+		FVRDialStateChangedSignature OnDialStateChanged;
 
-
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "VRDialComponent")
+	float CurrentDialAngle;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRDialComponent")
-		EVRInteractibleAxis DialRotationAxis;
+	bool bDialUsesAngleSnap;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRDialComponent", meta = (ClampMin = "0.0", ClampMax = "180.0", UIMin = "0.0", UIMax = "180.0"))
+	float SnapAngleIncrement;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRDialComponent")
+	EVRInteractibleAxis DialRotationAxis;
+
+	FTransform InitialRelativeTransform;
+	float CurRotBackEnd;
+	FRotator LastRotation;
+
+	// Should be called after the moved is moved post begin play
+	UFUNCTION(BlueprintCallable, Category = "VRLeverComponent")
+	void ResetInitialDialLocation()
+	{
+		// Get our initial relative transform to our parent (or not if un-parented).
+		InitialRelativeTransform = this->GetRelativeTransform();
+	}
 
 	// ------------------------------------------------
 	// Gameplay tag interface

@@ -1274,9 +1274,12 @@ bool UGripMotionControllerComponent::NotifyGrip(const FBPActorGripInformation &N
 		{
 			root = Cast<UPrimitiveComponent>(pActor->GetRootComponent());
 
-			if (APawn* OwningPawn = Cast<APawn>(GetOwner()))
+			if (!NewGrip.AdvancedPhysicsSettings.bUseAdvancedPhysicsSettings || !NewGrip.AdvancedPhysicsSettings.bDoNotMoveIgnoreEntireHeldActor)
 			{
-				OwningPawn->MoveIgnoreActorAdd(pActor);
+				APawn* OwningPawn = Cast<APawn>(GetOwner());
+
+				if(OwningPawn)
+					OwningPawn->MoveIgnoreActorAdd(pActor);
 			}
 
 			if (!bIsReInit && pActor->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
@@ -1312,9 +1315,12 @@ bool UGripMotionControllerComponent::NotifyGrip(const FBPActorGripInformation &N
 
 			if (pActor)
 			{
-				if (APawn* OwningPawn = Cast<APawn>(GetOwner()))
+				if (!NewGrip.AdvancedPhysicsSettings.bUseAdvancedPhysicsSettings || !NewGrip.AdvancedPhysicsSettings.bDoNotMoveIgnoreEntireHeldActor)
 				{
-					OwningPawn->MoveIgnoreActorAdd(root->GetOwner());
+					APawn* OwningPawn = Cast<APawn>(GetOwner());
+
+					if(OwningPawn)
+						OwningPawn->MoveIgnoreActorAdd(root->GetOwner());
 				}
 
 				if (!bIsReInit && pActor->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
@@ -1439,9 +1445,12 @@ void UGripMotionControllerComponent::Drop_Implementation(const FBPActorGripInfor
 			pActor->RemoveTickPrerequisiteComponent(this);
 			//this->IgnoreActorWhenMoving(pActor, false);
 
-			if (APawn* OwningPawn = Cast<APawn>(GetOwner()))
+			if (!NewDrop.AdvancedPhysicsSettings.bUseAdvancedPhysicsSettings || !NewDrop.AdvancedPhysicsSettings.bDoNotMoveIgnoreEntireHeldActor)
 			{
-				OwningPawn->MoveIgnoreActorRemove(pActor);
+				APawn* OwningPawn = Cast<APawn>(GetOwner());
+
+				if(OwningPawn)
+					OwningPawn->MoveIgnoreActorRemove(pActor);
 			}
 
 			if (root)
@@ -1483,9 +1492,12 @@ void UGripMotionControllerComponent::Drop_Implementation(const FBPActorGripInfor
 
 			root->RemoveTickPrerequisiteComponent(this);
 
-			if (APawn* OwningPawn = Cast<APawn>(GetOwner()))
+			if (!NewDrop.AdvancedPhysicsSettings.bUseAdvancedPhysicsSettings || !NewDrop.AdvancedPhysicsSettings.bDoNotMoveIgnoreEntireHeldActor)
 			{
-				OwningPawn->MoveIgnoreActorRemove(pActor);
+				APawn* OwningPawn = Cast<APawn>(GetOwner());
+
+				if(OwningPawn)
+					OwningPawn->MoveIgnoreActorRemove(pActor);
 			}
 
 			if (root)
