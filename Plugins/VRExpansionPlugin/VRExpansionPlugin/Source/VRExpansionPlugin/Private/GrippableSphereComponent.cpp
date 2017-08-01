@@ -137,7 +137,7 @@ float UGrippableSphereComponent::GripBreakDistance_Implementation()
 	return VRGripInterfaceSettings.ConstraintBreakDistance;
 }
 
-void UGrippableSphereComponent::ClosestSecondarySlotInRange_Implementation(FVector WorldLocation, bool & bHadSlotInRange, FTransform & SlotWorldTransform, FName OverridePrefix)
+void UGrippableSphereComponent::ClosestSecondarySlotInRange_Implementation(FVector WorldLocation, bool & bHadSlotInRange, FTransform & SlotWorldTransform, UGripMotionControllerComponent * CallingController, FName OverridePrefix)
 {
 	if (OverridePrefix.IsNone())
 		OverridePrefix = "VRGripS";
@@ -145,7 +145,7 @@ void UGrippableSphereComponent::ClosestSecondarySlotInRange_Implementation(FVect
 	UVRExpansionFunctionLibrary::GetGripSlotInRangeByTypeName_Component(OverridePrefix, this, WorldLocation, VRGripInterfaceSettings.SecondarySlotRange, bHadSlotInRange, SlotWorldTransform);
 }
 
-void UGrippableSphereComponent::ClosestPrimarySlotInRange_Implementation(FVector WorldLocation, bool & bHadSlotInRange, FTransform & SlotWorldTransform, FName OverridePrefix)
+void UGrippableSphereComponent::ClosestPrimarySlotInRange_Implementation(FVector WorldLocation, bool & bHadSlotInRange, FTransform & SlotWorldTransform, UGripMotionControllerComponent * CallingController, FName OverridePrefix)
 {
 	if (OverridePrefix.IsNone())
 		OverridePrefix = "VRGripP";
