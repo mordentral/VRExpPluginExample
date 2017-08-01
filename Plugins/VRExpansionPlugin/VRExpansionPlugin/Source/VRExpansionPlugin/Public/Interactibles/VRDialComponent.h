@@ -8,57 +8,30 @@
 #include "VRGripInterface.h"
 #include "GameplayTagContainer.h"
 #include "GameplayTagAssetInterface.h"
-#include "PhysicsEngine/ConstraintInstance.h"
-
-#include "PhysicsPublic.h"
-
-#if WITH_PHYSX
-#include "PhysXSupport.h"
-#endif // WITH_PHYSX
 
 
-#include "VRLeverComponent.generated.h"
+#include "VRDialComponent.generated.h"
 
-
-UENUM(Blueprintable)
-enum class EVRInteractibleLeverAxis : uint8
-{
-	Axis_X,
-	Axis_Y
-};
-
-UENUM(Blueprintable)
-enum class EVRInteractibleLeverEventType : uint8
-{
-	LeverPositive,
-	LeverNegative
-};
-
-UENUM(Blueprintable)
-enum class EVRInteractibleLeverReturnType : uint8
-{
-	Stay,
-	ReturnToZero,
-	LerpToMax,
-	LerpToMaxIfOverThreshold
-};
 
 /** Delegate for notification when the lever state changes. */
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FVRLeverStateChangedSignature, bool, LeverStatus, EVRInteractibleLeverEventType, LeverStatusType, float, LeverAngleAtTime);
+//DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FVRLeverStateChangedSignature, bool, LeverStatus, EVRInteractibleLeverEventType, LeverStatusType, float, LeverAngleAtTime);
 
 UCLASS(Blueprintable, meta = (BlueprintSpawnableComponent), ClassGroup = (VRExpansionPlugin))
-class VREXPANSIONPLUGIN_API UVRLeverComponent : public UStaticMeshComponent, public IVRGripInterface, public IGameplayTagAssetInterface
+class VREXPANSIONPLUGIN_API UVRDialComponent : public UStaticMeshComponent, public IVRGripInterface, public IGameplayTagAssetInterface
 {
 	GENERATED_UCLASS_BODY()
 
-	~UVRLeverComponent();
+	~UVRDialComponent();
 
 	// Call to use an object
-	UPROPERTY(BlueprintAssignable, Category = "VRLeverComponent")
-		FVRLeverStateChangedSignature OnLeverStateChanged;
+//	UPROPERTY(BlueprintAssignable, Category = "VRDialComponent")
+	//	FVRLeverStateChangedSignature OnLeverStateChanged;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "VRLeverComponent")
-		float CurrentLeverAngle;
+
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRDialComponent")
+		EVRInteractibleAxis DialRotationAxis;
+
 
 	// ------------------------------------------------
 	// Gameplay tag interface
@@ -87,45 +60,6 @@ class VREXPANSIONPLUGIN_API UVRLeverComponent : public UStaticMeshComponent, pub
 	virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction) override;
 	virtual void BeginPlay() override;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRLeverComponent")
-		bool bIsPhysicsLever;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRLeverComponent")
-		bool bUngripAtTargetRotation;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRLeverComponent")
-		EVRInteractibleLeverAxis LeverRotationAxis;
-
-	// The percentage of the angle at witch the lever will toggle
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRLeverComponent", meta = (ClampMin = "0.01", ClampMax = "1.0", UIMin = "0.01", UIMax = "1.0"))
-		float LeverTogglePercentage;
-
-	// The max angle of the lever in the positive direction
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRLeverComponent", meta = (ClampMin = "0.0", ClampMax = "179.8", UIMin = "0.0", UIMax = "180.0"))
-		float LeverLimitPositive;
-
-	// The max angle of the lever in the negative direction
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRLeverComponent", meta = (ClampMin = "0.0", ClampMax = "179.8", UIMin = "0.0", UIMax = "180.0"))
-		float LeverLimitNegative;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRLeverComponent")
-		EVRInteractibleLeverReturnType LeverReturnTypeWhenReleased;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRLeverComponent")
-		bool bSendLeverEventsDuringLerp;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRLeverComponent")
-		float LeverReturnSpeed;
-
-	float lerpCounter;
-
-	bool bIsLerping;
-	FTransform InitialRelativeTransform;
-	FVector InitialInteractorLocation;
-	float InitialGripRot;
-	float RotAtGrab;
-	bool bLeverState;
-
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRGripInterface")
 		EGripMovementReplicationSettings MovementReplicationSetting;
 
@@ -137,168 +71,6 @@ class VREXPANSIONPLUGIN_API UVRLeverComponent : public UStaticMeshComponent, pub
 
 	UPROPERTY(BlueprintReadWrite, Category = "VRGripInterface")
 		UGripMotionControllerComponent * HoldingController; // Set on grip notify, not net serializing
-
-	TWeakObjectPtr<USceneComponent> ParentComponent;
-
-	// Should be called after the lever is moved post begin play
-	UFUNCTION(BlueprintCallable, Category = "VRLeverComponent")
-	void ResetInitialLeverLocation()
-	{
-		// Get our initial relative transform to our parent (or not if un-parented).
-		InitialRelativeTransform = this->GetRelativeTransform();
-	}
-
-	virtual void OnUnregister() override;;
-
-#if WITH_PHYSX
-	physx::PxD6Joint* HandleData;
-	int32 SceneIndex;
-#endif
-
-	bool DestroyConstraint()
-	{
-	#if WITH_PHYSX
-		if (HandleData)
-		{
-			// use correct scene
-			PxScene* PScene = GetPhysXSceneFromIndex(SceneIndex);
-			if (PScene)
-			{
-				SCOPED_SCENE_WRITE_LOCK(PScene);
-				// Destroy joint.
-				HandleData->release();
-			}
-
-			HandleData = NULL;
-			return true;
-		}
-		else
-		{
-			return false;
-		}
-	#endif // WITH_PHYSX
-
-		return true;
-	}
-
-	bool SetupConstraint()
-	{
-
-#if WITH_PHYSX
-
-		if (HandleData)
-			return true;
-
-		// Get the PxRigidDynamic that we want to grab.
-		FBodyInstance* rBodyInstance = this->GetBodyInstance(NAME_None);
-		if (!rBodyInstance)
-		{
-			return false;
-		}
-
-
-		FTransform A2Transform = FTransform::Identity;//GetComponentTransform().Inverse();
-		if (ParentComponent.IsValid())
-		{
-			UPrimitiveComponent * PrimComp = Cast<UPrimitiveComponent>(ParentComponent.Get());
-
-			if (PrimComp)
-				A2Transform = PrimComp->GetComponentTransform();
-		}
-
-		float rotationalOffset = (LeverLimitPositive - LeverLimitNegative) / 2;
-		FRotator AngularRotationOffset = SetAxisValue(/*LeverLimitOffset*/rotationalOffset, FRotator::ZeroRotator);
-		FTransform RefFrame2 = FTransform(InitialRelativeTransform.GetRotation() * AngularRotationOffset.Quaternion(), A2Transform.InverseTransformPosition(GetComponentLocation()));
-		
-		ExecuteOnPxRigidDynamicReadWrite(rBodyInstance, [&](PxRigidDynamic* Actor)
-		{
-			PxScene* Scene = Actor->getScene();
-
-			// If we don't already have a handle - make one now.
-			if (!HandleData)
-			{
-				PxD6Joint* NewJoint = NULL;
-				PxRigidDynamic * ParentBody = NULL;
-
-				if (ParentComponent.IsValid())
-				{
-					UPrimitiveComponent * PrimComp = Cast<UPrimitiveComponent>(ParentComponent.Get());
-
-					if (PrimComp)
-						ParentBody = PrimComp->BodyInstance.GetPxRigidDynamic_AssumesLocked();
-				}
-
-				NewJoint = PxD6JointCreate(Scene->getPhysics(), ParentBody, U2PTransform(RefFrame2)/*LocalParentTrans*/, Actor, PxTransform(PxIdentity));
-
-				if (!NewJoint)
-				{
-					HandleData = NULL;
-				}
-				else
-				{
-					// No constraint instance
-					NewJoint->userData = NULL; // don't need
-					HandleData = NewJoint;
-
-					// Remember the scene index that the handle joint/actor are in.
-					FPhysScene* RBScene = FPhysxUserData::Get<FPhysScene>(Scene->userData);
-					const uint32 SceneType = rBodyInstance->UseAsyncScene(RBScene) ? PST_Async : PST_Sync;
-					SceneIndex = RBScene->PhysXSceneIndex[SceneType];
-
-					// Pretty Much Unbreakable
-					NewJoint->setBreakForce(PX_MAX_REAL, PX_MAX_REAL);
-				//	NewJoint->setConstraintFlag(PxConstraintFlag::ePROJECTION, true);
-					
-				//	NewJoint->setConstraintFlag(PxConstraintFlag::eCOLLISION_ENABLED, false);
-
-					PxConstraintFlags Flags = NewJoint->getConstraintFlags();
-
-					// False flags
-					//Flags |= PxConstraintFlag::ePROJECTION;
-					Flags |= PxConstraintFlag::eCOLLISION_ENABLED;
-					
-					// True flags
-					Flags &= ~PxConstraintFlag::ePROJECTION;
-
-					NewJoint->setConstraintFlag(PxConstraintFlag::ePROJECTION, true);
-					NewJoint->setProjectionAngularTolerance(FMath::DegreesToRadians(0.1f));
-					NewJoint->setProjectionLinearTolerance(0.1f);
-					NewJoint->setConstraintFlags(Flags);
-					
-					// Setting up the joint
-					NewJoint->setMotion(PxD6Axis::eX, PxD6Motion::eLOCKED);
-					NewJoint->setMotion(PxD6Axis::eY, PxD6Motion::eLOCKED);
-					NewJoint->setMotion(PxD6Axis::eZ, PxD6Motion::eLOCKED);
-
-					NewJoint->setMotion(PxD6Axis::eTWIST, LeverRotationAxis == EVRInteractibleLeverAxis::Axis_X ? PxD6Motion::eLIMITED : PxD6Motion::eLOCKED);
-					NewJoint->setMotion(PxD6Axis::eSWING1, LeverRotationAxis == EVRInteractibleLeverAxis::Axis_Y ? PxD6Motion::eLIMITED : PxD6Motion::eLOCKED);
-					NewJoint->setMotion(PxD6Axis::eSWING2, PxD6Motion::eLOCKED);
-
-					const float CorrectedLeverLimit = (LeverLimitPositive + LeverLimitNegative) / 2;
-					const float LeverLimitRad = CorrectedLeverLimit * /*InTwistLimitScale **/ (PI / 180.0f);
-					//PxReal LimitContactDistance = FMath::DegreesToRadians(FMath::Max(1.f, ProfileInstance.ConeLimit.ContactDistance /** InTwistLimitScale*/));
-
-					//The limit values need to be clamped so it will be valid in PhysX
-					PxReal ZLimitAngle = FMath::ClampAngle(CorrectedLeverLimit/** InSwing1LimitScale*/, KINDA_SMALL_NUMBER, 179.9999f) * (PI / 180.0f);
-					PxReal YLimitAngle = FMath::ClampAngle(CorrectedLeverLimit /** InSwing2LimitScale*/, KINDA_SMALL_NUMBER, 179.9999f) * (PI / 180.0f);
-					//PxReal LimitContactDistance = FMath::DegreesToRadians(FMath::Max(1.f, ProfileInstance.ConeLimit.ContactDistance * FMath::Min(InSwing1LimitScale, InSwing2LimitScale)));
-					
-					NewJoint->setSwingLimit(PxJointLimitCone(YLimitAngle, ZLimitAngle));
-					NewJoint->setTwistLimit(PxJointAngularLimitPair(-LeverLimitRad, LeverLimitRad));
-
-					return true;
-				}
-			}
-
-			return false;
-		});
-#else
-		return false;
-#endif // WITH_PHYSX
-
-		return false;
-	}
-
 
 	// Grip interface setup
 
@@ -427,12 +199,14 @@ class VREXPANSIONPLUGIN_API UVRLeverComponent : public UStaticMeshComponent, pub
 
 		inline float GetAxisValue(FRotator CheckRotation)
 		{
-			switch (LeverRotationAxis)
+			switch (DialRotationAxis)
 			{
-			case EVRInteractibleLeverAxis::Axis_X:
+			case EVRInteractibleAxis::Axis_X:
 				return CheckRotation.Roll; break;
-			case EVRInteractibleLeverAxis::Axis_Y:
+			case EVRInteractibleAxis::Axis_Y:
 				return CheckRotation.Pitch; break;
+			case EVRInteractibleAxis::Axis_Z:
+				return CheckRotation.Yaw; break;
 			default:return 0.0f; break;
 			}
 		}
@@ -441,12 +215,14 @@ class VREXPANSIONPLUGIN_API UVRLeverComponent : public UStaticMeshComponent, pub
 		{
 			FRotator vec = FRotator::ZeroRotator;
 
-			switch (LeverRotationAxis)
+			switch (DialRotationAxis)
 			{
-			case EVRInteractibleLeverAxis::Axis_X:
+			case EVRInteractibleAxis::Axis_X:
 				vec.Roll = SetValue; break;
-			case EVRInteractibleLeverAxis::Axis_Y:
+			case EVRInteractibleAxis::Axis_Y:
 				vec.Pitch = SetValue; break;
+			case EVRInteractibleAxis::Axis_Z:
+				vec.Yaw = SetValue; break;
 			default:break;
 			}
 
@@ -456,16 +232,17 @@ class VREXPANSIONPLUGIN_API UVRLeverComponent : public UStaticMeshComponent, pub
 		inline FRotator SetAxisValue(float SetValue, FRotator Var)
 		{
 			FRotator vec = Var;
-			switch (LeverRotationAxis)
+			switch (DialRotationAxis)
 			{
-			case EVRInteractibleLeverAxis::Axis_X:
+			case EVRInteractibleAxis::Axis_X:
 				vec.Roll = SetValue; break;
-			case EVRInteractibleLeverAxis::Axis_Y:
+			case EVRInteractibleAxis::Axis_Y:
 				vec.Pitch = SetValue; break;
+			case EVRInteractibleAxis::Axis_Z:
+				vec.Yaw = SetValue; break;
 			default:break;
 			}
 
 			return vec;
 		}
-
 };
