@@ -2298,18 +2298,16 @@ void UGripMotionControllerComponent::TickGrip(float DeltaTime)
 
 	FTransform ParentTransform = this->GetComponentTransform();
 
-	FVector MotionControllerLocDelta = this->GetComponentLocation() - LastControllerLocation;
-
 	// Set the last controller world location for next frame
 	LastControllerLocation = this->GetComponentLocation();
 
 	// Split into separate functions so that I didn't have to combine arrays since I have some removal going on
-	HandleGripArray(GrippedActors, ParentTransform, MotionControllerLocDelta, DeltaTime, true);
-	HandleGripArray(LocallyGrippedActors, ParentTransform, MotionControllerLocDelta, DeltaTime);
+	HandleGripArray(GrippedActors, ParentTransform, DeltaTime, true);
+	HandleGripArray(LocallyGrippedActors, ParentTransform, DeltaTime);
 
 }
 
-void UGripMotionControllerComponent::HandleGripArray(TArray<FBPActorGripInformation> &GrippedObjects, const FTransform & ParentTransform, const FVector &MotionControllerLocDelta, float DeltaTime, bool bReplicatedArray)
+void UGripMotionControllerComponent::HandleGripArray(TArray<FBPActorGripInformation> &GrippedObjects, const FTransform & ParentTransform, float DeltaTime, bool bReplicatedArray)
 {
 	if (GrippedObjects.Num())
 	{
@@ -2394,12 +2392,12 @@ void UGripMotionControllerComponent::HandleGripArray(TArray<FBPActorGripInformat
 					// Don't perform logic on the movement for this object, just pass in the GripTick() event with the controller difference instead
 					if (bRootHasInterface)
 					{
-						IVRGripInterface::Execute_TickGrip(root, this, *Grip, MotionControllerLocDelta, DeltaTime);
+						IVRGripInterface::Execute_TickGrip(root, this, *Grip, DeltaTime);
 					}
 					
 					if (bActorHasInterface)
 					{
-						IVRGripInterface::Execute_TickGrip(actor, this, *Grip, MotionControllerLocDelta, DeltaTime);
+						IVRGripInterface::Execute_TickGrip(actor, this, *Grip, DeltaTime);
 					}
 
 					continue;
@@ -2758,12 +2756,12 @@ void UGripMotionControllerComponent::HandleGripArray(TArray<FBPActorGripInformat
 					// All non custom grips tick after translation, this is still pre physics so interactive grips location will be wrong, but others will be correct
 					if (bRootHasInterface)
 					{
-						IVRGripInterface::Execute_TickGrip(root, this, *Grip, MotionControllerLocDelta, DeltaTime);
+						IVRGripInterface::Execute_TickGrip(root, this, *Grip, DeltaTime);
 					}
 
 					if (bActorHasInterface)
 					{
-						IVRGripInterface::Execute_TickGrip(actor, this, *Grip, MotionControllerLocDelta, DeltaTime);
+						IVRGripInterface::Execute_TickGrip(actor, this, *Grip, DeltaTime);
 					}
 				}
 			}

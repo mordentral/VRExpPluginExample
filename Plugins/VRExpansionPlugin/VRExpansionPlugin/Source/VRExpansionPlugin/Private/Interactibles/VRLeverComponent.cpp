@@ -172,7 +172,7 @@ void UVRLeverComponent::OnUnregister()
 	Super::OnUnregister();
 }
 
-void UVRLeverComponent::TickGrip_Implementation(UGripMotionControllerComponent * GrippingController, const FBPActorGripInformation & GripInformation, FVector MControllerLocDelta, float DeltaTime) 
+void UVRLeverComponent::TickGrip_Implementation(UGripMotionControllerComponent * GrippingController, const FBPActorGripInformation & GripInformation, float DeltaTime) 
 {
 	// Handle manual tracking here
 

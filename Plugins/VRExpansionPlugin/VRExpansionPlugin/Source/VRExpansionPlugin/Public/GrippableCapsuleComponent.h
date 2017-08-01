@@ -130,7 +130,7 @@ class VREXPANSIONPLUGIN_API UGrippableCapsuleComponent : public UCapsuleComponen
 
 	// Event triggered each tick on the interfaced object when gripped, can be used for custom movement or grip based logic
 	UFUNCTION(BlueprintNativeEvent, Category = "VRGripInterface")
-		void TickGrip(UGripMotionControllerComponent * GrippingController, const FBPActorGripInformation & GripInformation, FVector MControllerLocDelta, float DeltaTime);
+		void TickGrip(UGripMotionControllerComponent * GrippingController, const FBPActorGripInformation & GripInformation, float DeltaTime);
 
 	// Event triggered on the interfaced object when gripped
 	UFUNCTION(BlueprintNativeEvent, Category = "VRGripInterface")
