@@ -5,6 +5,7 @@
 #include "WheeledVehicle.h"
 #include "UObject/ObjectMacros.h"
 #include "GameFramework/Pawn.h"
+#include "Engine/InputDelegateBinding.h"
 #include "VRWheeledVehicle.generated.h"
 
 
@@ -14,6 +15,22 @@ class VREXPANSIONPLUGIN_API AVRWheeledVehicle : public AWheeledVehicle
 	GENERATED_BODY()
 
 public:
+
+	/** Call this function to detach safely pawn from its controller, knowing that we will be destroyed soon.	 */
+	/*UFUNCTION(BlueprintCallable, Category = "Pawn", meta = (Keywords = "Delete"))
+		virtual void DetachFromControllerPendingDestroy() override
+	{
+		if (Controller != NULL && Controller->GetPawn() == this)
+		{
+			Controller->PawnPendingDestroy(this);
+			if (Controller != NULL)
+			{
+				Controller->UnPossess();
+				Controller = NULL;
+			}
+		}
+	}*/
+
 
 	UFUNCTION()
 		virtual void OnRep_Controller() override
@@ -34,18 +51,80 @@ public:
 				PC->AutoManageActiveCameraTarget(this);
 			}*/
 		}
+
+		/*if (IsLocallyControlled())
+		{
+			SetBindToInput(Controller, true);
+		}*/
+
 	}
 
+
+	UFUNCTION(BlueprintCallable, Category = "Pawn")
+		virtual bool SetBindToInput(AController * CController, bool bBindToInput)
+	{
+		APlayerController * playe = Cast<APlayerController>(CController);
+
+		if (playe != NULL)
+		{
+			if(InputComponent)
+				playe->PopInputComponent(InputComponent); // Make sure it is off the stack
+
+			if (!bBindToInput)
+			{			
+				// Unregister input component if we created one
+				DestroyPlayerInputComponent();
+				return true;
+			}
+			else
+			{
+				// Set up player input component, if there isn't one already.
+				if (InputComponent == NULL)
+				{
+					InputComponent = CreatePlayerInputComponent();
+					if (InputComponent)
+					{
+						SetupPlayerInputComponent(InputComponent);
+						InputComponent->RegisterComponent();
+
+						if (UInputDelegateBinding::SupportsInputDelegate(GetClass()))
+						{
+							InputComponent->bBlockInput = bBlockInput;
+							UInputDelegateBinding::BindInputDelegates(GetClass(), InputComponent);
+						}
+					}
+				}
+
+				if (InputComponent)
+				{
+					playe->PushInputComponent(InputComponent); // Enforce input as top of stack so it gets input first and can consume it
+					return true;
+				}
+			}
+		}
+		else
+		{
+			// Unregister input component if we created one
+			DestroyPlayerInputComponent();
+			return false;
+		}
+
+		return false;
+	}
 
 	UFUNCTION(BlueprintCallable, Category = "Pawn")
 		virtual bool ForceSecondaryPossession(AController * NewController)
 	{
 		if (NewController)
+		{
 			PossessedBy(NewController);
+		}
 		else
+		{
 			UnPossessed();
+		}
 
-		return true;
+		return false;
 		//INetworkPredictionInterface* NetworkPredictionInterface = GetPawn() ? Cast<INetworkPredictionInterface>(GetPawn()->GetMovementComponent()) : NULL;
 		//if (NetworkPredictionInterface)
 		//{
