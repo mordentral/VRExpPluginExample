@@ -9,6 +9,8 @@ public class VRExpPluginExampleTarget : TargetRules
 	{
 		Type = TargetType.Game;
         ExtraModuleNames.AddRange(new string[] { "VRExpPluginExample" });
+		//bUsePCHFiles = false;
+		//bUseUnityBuild = false;
     }
 
 	//
