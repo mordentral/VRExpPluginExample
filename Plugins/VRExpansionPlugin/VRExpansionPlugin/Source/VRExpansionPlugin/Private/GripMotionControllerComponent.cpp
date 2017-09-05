@@ -2132,7 +2132,7 @@ void UGripMotionControllerComponent::TickComponent(float DeltaTime, enum ELevelT
 		if (bReplicates && (bTracked || bReplicateWithoutTracking))
 		{
 			// Don't rep if no changes
-			if (this->RelativeLocation != ReplicatedControllerTransform.Position || this->RelativeRotation != ReplicatedControllerTransform.Rotation)
+			if (!this->RelativeLocation.Equals(ReplicatedControllerTransform.Position) || !this->RelativeRotation.Equals(ReplicatedControllerTransform.Rotation))
 			{
 				ControllerNetUpdateCount += DeltaTime;
 				if (ControllerNetUpdateCount >= (1.0f / ControllerNetUpdateRate))
