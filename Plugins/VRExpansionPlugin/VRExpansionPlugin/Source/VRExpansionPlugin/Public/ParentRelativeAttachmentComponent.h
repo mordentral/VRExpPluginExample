@@ -26,6 +26,10 @@ class VREXPANSIONPLUGIN_API UParentRelativeAttachmentComponent : public USceneCo
 	float LastLerpVal;
 	float LerpTarget;
 
+	// If true uses feet/bottom of the capsule as the base Z position for this component instead of the HMD/Camera Z position
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRExpansionLibrary")
+	bool bUseFeetLocation;
+	
 	// If true will subtract the HMD's location from the position, useful for if the actors base is set to the HMD location always (simple character).
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRExpansionLibrary")
 	bool bOffsetByHMD;

@@ -2,7 +2,8 @@
 
 #include "ParentRelativeAttachmentComponent.h"
 //#include "Runtime/Engine/Private/EnginePrivate.h"
-#include "VRSimpleCharacter.h"
+//#include "VRSimpleCharacter.h"
+//#include "VRCharacter.h"
 
 
 UParentRelativeAttachmentComponent::UParentRelativeAttachmentComponent(const FObjectInitializer& ObjectInitializer)
@@ -72,8 +73,15 @@ void UParentRelativeAttachmentComponent::TickComponent(float DeltaTime, enum ELe
 			curCameraLoc.X = 0;
 			curCameraLoc.Y = 0;
 		}
-
-		SetRelativeLocation(curCameraLoc);
+		
+		if(bUseFeetLocation)
+		{		
+			SetRelativeLocation(FVector(curCameraLoc.X, curCameraLoc.Y, 0.0f)); // Set the Z to the bottom of the capsule
+		}
+		else
+		{
+			SetRelativeLocation(curCameraLoc); // Use the HMD height instead
+		}
 	}
 	else if (this->GetOwner())
 	{
@@ -111,7 +119,14 @@ void UParentRelativeAttachmentComponent::TickComponent(float DeltaTime, enum ELe
 				LastRot = InverseRot;
 			}
 
-			SetRelativeLocation(CameraOwner->RelativeLocation);
+			if(bUseFeetLocation)
+			{			
+				SetRelativeLocation(FVector(CameraOwner->RelativeLocation.X, CameraOwner->RelativeLocation.Y, 0.0f)); // Set the Z to the bottom of the capsule
+			}
+			else
+			{
+				SetRelativeLocation(CameraOwner->RelativeLocation); // Use the HMD height instead
+			}
 		}
 	}
 
