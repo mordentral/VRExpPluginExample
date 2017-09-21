@@ -16,6 +16,8 @@ UVRLeverComponent::UVRLeverComponent(const FObjectInitializer& ObjectInitializer
 
 	MovementReplicationSetting = EGripMovementReplicationSettings::ForceClientSideMovement;
 	BreakDistance = 100.0f;
+	Stiffness = 1500.0f;
+	Damping = 200.0f;
 
 	HandleData = nullptr;
 	SceneIndex = 0;
@@ -341,12 +343,12 @@ EGripLateUpdateSettings UVRLeverComponent::GripLateUpdateSetting_Implementation(
 
 float UVRLeverComponent::GripStiffness_Implementation()
 {
-	return 1500.0f;
+	return Stiffness;
 }
 
 float UVRLeverComponent::GripDamping_Implementation()
 {
-	return 200.0f;
+	return Damping;
 }
 
 FBPAdvGripPhysicsSettings UVRLeverComponent::AdvancedPhysicsSettings_Implementation()
