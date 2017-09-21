@@ -5,19 +5,15 @@
 #include "IMotionController.h"
 #include "VRBPDatatypes.h"
 
-// #Note: Can now access VRSystem from the SteamHMD directly, however still cannot use the static pVRGenericInterface point due to 
-// linking errors since can't attain .cpp reference. So useless to convert to blueprint library as the render models wouldn't work.
-
 //Re-defined here as I can't load ISteamVRPlugin on non windows platforms
 // Make sure to update if it changes
 
-/*4.16 linux now support under steamvr supported platforms*/
-// 4.16 UNCOMMENT
+// #TODO: 4.18 check this
 #define STEAMVR_SUPPORTED_PLATFORM (PLATFORM_LINUX || (PLATFORM_WINDOWS && WINVER > 0x0502))
 
-// 4.16 COMMENT
-//#define STEAMVR_SUPPORTED_PLATFORM (PLATFORM_WINDOWS && WINVER > 0x0502)
-// #TODO: Check for #isdef and value instead?
+// #TODO: Check this over time for when they make it global
+// @TODO: hardcoded to match FSteamVRHMD::GetSystemName(), which we should turn into 
+static FName SteamVRSystemName(TEXT("SteamVR"));
 
 
 #if STEAMVR_SUPPORTED_PLATFORM

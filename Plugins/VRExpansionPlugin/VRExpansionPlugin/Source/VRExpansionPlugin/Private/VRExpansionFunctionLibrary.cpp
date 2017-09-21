@@ -129,9 +129,10 @@ FRotator UVRExpansionFunctionLibrary::GetHMDPureYaw(FRotator HMDRotation)
 
 EBPHMDWornState UVRExpansionFunctionLibrary::GetIsHMDWorn()
 {
-	if (GEngine && GEngine->HMDDevice.IsValid() /* #TODO: 4.18 - replace with OXR version*/)
+
+	if (GEngine->XRSystem.IsValid() && GEngine->XRSystem->GetHMDDevice())
 	{
-		return ((EBPHMDWornState)GEngine->HMDDevice->GetHMDWornState());
+		return (EBPHMDWornState)GEngine->XRSystem->GetHMDDevice()->GetHMDWornState();
 	}
 
 	return EBPHMDWornState::Unknown;
@@ -139,15 +140,13 @@ EBPHMDWornState UVRExpansionFunctionLibrary::GetIsHMDWorn()
 
 bool UVRExpansionFunctionLibrary::GetIsHMDConnected()
 {
-	if (GEngine && GEngine->HMDDevice.IsValid() /* #TODO: 4.18 - replace with OXR version*/ && GEngine->HMDDevice->IsHMDConnected())
-		return true;
-
-	return false;
+	return GEngine->XRSystem.IsValid() && GEngine->XRSystem->GetHMDDevice() && GEngine->XRSystem->GetHMDDevice()->IsHMDConnected();
 }
 
 EBPHMDDeviceType UVRExpansionFunctionLibrary::GetHMDType()
 {
-	if (GEngine && GEngine->HMDDevice.IsValid() /* #TODO: 4.18 - replace with OXR version*/)
+
+	/*if (GEngine && GEngine->HMDDevice.IsValid() )// #TODO: 4.18 - replace with OXR version)
 	{
 		switch (GEngine->HMDDevice->GetHMDDeviceType())
 		{
@@ -161,7 +160,7 @@ EBPHMDDeviceType UVRExpansionFunctionLibrary::GetHMDType()
 		// Return unknown if not a matching enum, may need to add new entries in the copied enum if the original adds new ones in this case
 		default: return EBPHMDDeviceType::DT_Unknown; break;
 		}
-	}
+	}*/
 
 	return EBPHMDDeviceType::DT_Unknown;
 }

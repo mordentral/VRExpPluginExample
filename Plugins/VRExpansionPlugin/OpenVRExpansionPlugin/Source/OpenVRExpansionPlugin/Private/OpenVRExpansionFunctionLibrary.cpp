@@ -2,6 +2,7 @@
 #include "OpenVRExpansionFunctionLibrary.h"
 #include "Engine/Texture2D.h"
 #include "Engine/Engine.h"
+#include "IXRTrackingSystem.h"
 #include "IHeadMountedDisplay.h"
 
 #if WITH_EDITOR
@@ -49,7 +50,7 @@ bool UOpenVRExpansionFunctionLibrary::HasVRCamera(EOpenVRCameraFrameType FrameTy
 	//	return false;
 
 	// Don't run anything if no HMD and if the HMD is not a steam type
-	if (!GEngine->HMDDevice.IsValid() /* #TODO: 4.18 - replace with OXR version*/ || (GEngine->HMDDevice->GetHMDDeviceType() != EHMDDeviceType::DT_SteamVR))
+	if (!GEngine->XRSystem.IsValid() || (GEngine->XRSystem->GetSystemName() != SteamVRSystemName))
 		return false;
 
 	vr::HmdError HmdErr;
@@ -92,7 +93,7 @@ void UOpenVRExpansionFunctionLibrary::AcquireVRCamera(FBPOpenVRCameraHandle & Ca
 	}*/
 
 	// Don't run anything if no HMD and if the HMD is not a steam type
-	if (!GEngine->HMDDevice.IsValid() /* #TODO: 4.18 - replace with OXR version*/ || (GEngine->HMDDevice->GetHMDDeviceType() != EHMDDeviceType::DT_SteamVR))
+	if (!GEngine->XRSystem.IsValid() || (GEngine->XRSystem->GetSystemName() != SteamVRSystemName))
 	{
 		Result = EBPVRResultSwitch::OnFailed;
 		return;
@@ -147,7 +148,7 @@ void UOpenVRExpansionFunctionLibrary::ReleaseVRCamera(UPARAM(ref) FBPOpenVRCamer
 	}*/
 
 	// Don't run anything if no HMD and if the HMD is not a steam type
-	if (!GEngine->HMDDevice.IsValid() /* #TODO: 4.18 - replace with OXR version*/ || (GEngine->HMDDevice->GetHMDDeviceType() != EHMDDeviceType::DT_SteamVR))
+	if (!GEngine->XRSystem.IsValid() || (GEngine->XRSystem->GetSystemName() != SteamVRSystemName))
 	{
 		Result = EBPVRResultSwitch::OnFailed;
 		return;
@@ -198,7 +199,7 @@ UTexture2D * UOpenVRExpansionFunctionLibrary::CreateCameraTexture2D(UPARAM(ref) 
 	}*/
 
 	// Don't run anything if no HMD and if the HMD is not a steam type
-	if (!GEngine->HMDDevice.IsValid() /* #TODO: 4.18 - replace with OXR version*/ || (GEngine->HMDDevice->GetHMDDeviceType() != EHMDDeviceType::DT_SteamVR))
+	if (!GEngine->XRSystem.IsValid() || (GEngine->XRSystem->GetSystemName() != SteamVRSystemName))
 	{
 		Result = EBPVRResultSwitch::OnFailed;
 		return nullptr;
@@ -251,14 +252,9 @@ void UOpenVRExpansionFunctionLibrary::GetVRCameraFrame(UPARAM(ref) FBPOpenVRCame
 	Result = EBPVRResultSwitch::OnFailed;
 	return;
 #else
-	/*if (!VRGetGenericInterfaceFn)
-	{
-		Result = EBPVRResultSwitch::OnFailed;
-		return;
-	}*/
 
 	// Don't run anything if no HMD and if the HMD is not a steam type
-	if (!GEngine->HMDDevice.IsValid() /* #TODO: 4.18 - replace with OXR version*/ || (GEngine->HMDDevice->GetHMDDeviceType() != EHMDDeviceType::DT_SteamVR))
+	if (!GEngine->XRSystem.IsValid() || (GEngine->XRSystem->GetSystemName() != SteamVRSystemName))
 	{
 		Result = EBPVRResultSwitch::OnFailed;
 		return;
@@ -359,7 +355,7 @@ void UOpenVRExpansionFunctionLibrary::GetVRDevicePropertyString(EVRDevicePropert
 	return;
 #else
 
-	if (!(GEngine->HMDDevice.IsValid() /* #TODO: 4.18 - replace with OXR version*/ && (GEngine->HMDDevice->GetHMDDeviceType() == EHMDDeviceType::DT_SteamVR)))
+	if (!GEngine->XRSystem.IsValid() || (GEngine->XRSystem->GetSystemName() != SteamVRSystemName))
 	{
 		Result = EBPVRResultSwitch::OnFailed;
 		return;
@@ -402,7 +398,7 @@ void UOpenVRExpansionFunctionLibrary::GetVRDevicePropertyBool(EVRDeviceProperty_
 	return;
 #else
 
-	if (!(GEngine->HMDDevice.IsValid() /* #TODO: 4.18 - replace with OXR version*/ && (GEngine->HMDDevice->GetHMDDeviceType() == EHMDDeviceType::DT_SteamVR)))
+	if (!GEngine->XRSystem.IsValid() || (GEngine->XRSystem->GetSystemName() != SteamVRSystemName))
 	{
 		Result = EBPVRResultSwitch::OnFailed;
 		return;
@@ -443,7 +439,7 @@ void UOpenVRExpansionFunctionLibrary::GetVRDevicePropertyFloat(EVRDeviceProperty
 	return;
 #else
 
-	if (!(GEngine->HMDDevice.IsValid() /* #TODO: 4.18 - replace with OXR version*/ && (GEngine->HMDDevice->GetHMDDeviceType() == EHMDDeviceType::DT_SteamVR)))
+	if (!GEngine->XRSystem.IsValid() || (GEngine->XRSystem->GetSystemName() != SteamVRSystemName))
 	{
 		Result = EBPVRResultSwitch::OnFailed;
 		return;
@@ -484,7 +480,7 @@ void UOpenVRExpansionFunctionLibrary::GetVRDevicePropertyInt32(EVRDeviceProperty
 	return;
 #else
 
-	if (!(GEngine->HMDDevice.IsValid() /* #TODO: 4.18 - replace with OXR version*/ && (GEngine->HMDDevice->GetHMDDeviceType() == EHMDDeviceType::DT_SteamVR)))
+	if (!GEngine->XRSystem.IsValid() || (GEngine->XRSystem->GetSystemName() != SteamVRSystemName))
 	{
 		Result = EBPVRResultSwitch::OnFailed;
 		return;
@@ -525,7 +521,7 @@ void UOpenVRExpansionFunctionLibrary::GetVRDevicePropertyUInt64(EVRDevicePropert
 	return;
 #else
 
-	if (!(GEngine->HMDDevice.IsValid() /* #TODO: 4.18 - replace with OXR version*/ && (GEngine->HMDDevice->GetHMDDeviceType() == EHMDDeviceType::DT_SteamVR)))
+	if (!GEngine->XRSystem.IsValid() || (GEngine->XRSystem->GetSystemName() != SteamVRSystemName))
 	{
 		Result = EBPVRResultSwitch::OnFailed;
 		return;
@@ -566,7 +562,7 @@ void UOpenVRExpansionFunctionLibrary::GetVRDevicePropertyMatrix34AsTransform(EVR
 	return;
 #else
 
-	if (!(GEngine->HMDDevice.IsValid() /* #TODO: 4.18 - replace with OXR version*/ && (GEngine->HMDDevice->GetHMDDeviceType() == EHMDDeviceType::DT_SteamVR)))
+	if (!GEngine->XRSystem.IsValid() || (GEngine->XRSystem->GetSystemName() != SteamVRSystemName))
 	{
 		Result = EBPVRResultSwitch::OnFailed;
 		return;

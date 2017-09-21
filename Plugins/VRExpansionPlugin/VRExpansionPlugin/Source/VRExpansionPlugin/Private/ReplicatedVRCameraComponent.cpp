@@ -111,13 +111,14 @@ void UReplicatedVRCameraComponent::TickComponent(float DeltaTime, enum ELevelTic
 	// Don't do any of the below if we aren't the host
 	if (bHasAuthority)
 	{
+
 		// For non view target positional updates (third party and the like)
-		if (bSetPositionDuringTick && bLockToHmd && GEngine->HMDDevice.IsValid() /* #TODO: 4.18 - replace with OXR version*/ && GEngine->HMDDevice->IsHeadTrackingAllowed() && GEngine->HMDDevice->HasValidTrackingPosition())
+		if (bSetPositionDuringTick && bLockToHmd && GEngine->XRSystem.IsValid() && GEngine->XRSystem->IsHeadTrackingAllowed() && GEngine->XRSystem->HasValidTrackingPosition())
 		{
 			//ResetRelativeTransform();
 			FQuat Orientation;
 			FVector Position;
-			if (GEngine->HMDDevice->UpdatePlayerCamera(Orientation, Position))
+			if (GEngine->XRSystem->GetCurrentPose(IXRTrackingSystem::HMDDeviceId, Orientation, Position))
 			{
 				if (bOffsetByHMD)
 				{
