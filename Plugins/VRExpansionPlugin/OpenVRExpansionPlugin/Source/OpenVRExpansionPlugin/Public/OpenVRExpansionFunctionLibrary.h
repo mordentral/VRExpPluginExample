@@ -309,7 +309,7 @@ UENUM(BlueprintType)
 enum class EVRDeviceProperty_Float : uint8
 {
 	// No Prefix = 1000 series
-	Prop_DeviceBatteryPercentage_Float_1012			UMETA(DisplayName = "Prop_DeviceBatteryPercentage_Float"),
+	Prop_DeviceBatteryPercentage_Float_1012						UMETA(DisplayName = "Prop_DeviceBatteryPercentage_Float"),
 
 	// 1 Prefix = 2000 series
 	HMDProp_SecondsFromVsyncToPhotons_Float_2001				UMETA(DisplayName = "HMDProp_SecondsFromVsyncToPhotons_Float"),
