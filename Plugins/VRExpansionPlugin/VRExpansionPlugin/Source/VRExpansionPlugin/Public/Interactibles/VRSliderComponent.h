@@ -19,12 +19,56 @@ class VREXPANSIONPLUGIN_API UVRSliderComponent : public UStaticMeshComponent, pu
 
 	~UVRSliderComponent();
 
-	// Call to use an object
-	UPROPERTY(BlueprintAssignable, Category = "VRSliderComponent")
-		FVRLeverStateChangedSignature OnLeverStateChanged;
 
-	UPROPERTY(BlueprintReadOnly, Category = "VRSliderComponent")
-		float CurrentLeverAngle;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRSliderComponent")
+	FVector MaxSlideDistance;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRSliderComponent")
+	FVector MinSlideDistance;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRSliderComponent")
+	bool bSlideDistanceIsInParentSpace;
+
+	// Set this to assign a spline component to the slider
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "VRSliderComponent")
+	UActorComponent * SplineComponentToFollow; 
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRSliderComponent")
+	bool bFollowSplineRotationAndScale;
+
+	FTransform InitialRelativeTransform;
+
+	// Should be called after the slider is moved post begin play
+	UFUNCTION(BlueprintCallable, Category = "VRSliderComponent")
+	void ResetInitialSliderLocation()
+	{
+		// Get our initial relative transform to our parent (or not if un-parented).
+		InitialRelativeTransform = this->GetRelativeTransform();
+	}
+
+	FVector InitialInteractorLocation;
+	FVector InitialGripLoc;
+
+	FVector ClampSlideVector(FVector ValueToClamp)
+	{
+		if (bSlideDistanceIsInParentSpace)
+		{
+			FVector fScaleFactor = FVector(1.0f) / InitialRelativeTransform.GetScale3D();
+			return FVector(
+				FMath::Clamp(ValueToClamp.X, MinSlideDistance.X * fScaleFactor.X, MaxSlideDistance.X * fScaleFactor.X),
+				FMath::Clamp(ValueToClamp.Y, MinSlideDistance.Y * fScaleFactor.Y, MaxSlideDistance.Y * fScaleFactor.Y),
+				FMath::Clamp(ValueToClamp.Z, MinSlideDistance.Z * fScaleFactor.Z, MaxSlideDistance.Z * fScaleFactor.Z)
+			);
+		}
+		else
+		{
+			return FVector(
+				FMath::Clamp(ValueToClamp.X, MinSlideDistance.X, MaxSlideDistance.X),
+				FMath::Clamp(ValueToClamp.Y, MinSlideDistance.Y, MaxSlideDistance.Y),
+				FMath::Clamp(ValueToClamp.Z, MinSlideDistance.Z, MaxSlideDistance.Z)
+			);
+		}
+	}
 
 	// ------------------------------------------------
 	// Gameplay tag interface
@@ -56,8 +100,6 @@ class VREXPANSIONPLUGIN_API UVRSliderComponent : public UStaticMeshComponent, pu
 	virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction) override;
 	virtual void BeginPlay() override;
 
-	FTransform InitialRelativeTransform;
-
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRGripInterface")
 		EGripMovementReplicationSettings MovementReplicationSetting;
 
@@ -74,14 +116,6 @@ class VREXPANSIONPLUGIN_API UVRSliderComponent : public UStaticMeshComponent, pu
 		UGripMotionControllerComponent * HoldingController; // Set on grip notify, not net serializing
 
 	TWeakObjectPtr<USceneComponent> ParentComponent;
-
-	// Should be called after the lever is moved post begin play
-	UFUNCTION(BlueprintCallable, Category = "VRSliderComponent")
-	void ResetInitialSliderLocation()
-	{
-		// Get our initial relative transform to our parent (or not if un-parented).
-		InitialRelativeTransform = this->GetRelativeTransform();
-	}
 
 	// Grip interface setup
 

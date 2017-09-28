@@ -22,6 +22,18 @@ UVRSliderComponent::UVRSliderComponent(const FObjectInitializer& ObjectInitializ
 	InitialRelativeTransform = FTransform::Identity;
 	bDenyGripping = false;
 
+	MinSlideDistance = FVector::ZeroVector;
+	MaxSlideDistance = FVector::ZeroVector;
+
+	InitialInteractorLocation = FVector::ZeroVector;
+	InitialGripLoc = FVector::ZeroVector;
+
+	bSlideDistanceIsInParentSpace = true;
+
+	SplineComponentToFollow = nullptr;
+
+	bFollowSplineRotationAndScale = false;
+
 
 	// Set to only overlap with things so that its not ruined by touching over actors
 	this->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Overlap);
@@ -66,17 +78,6 @@ void UVRSliderComponent::TickComponent(float DeltaTime, enum ELevelTick TickType
 {
 	// Call supers tick (though I don't think any of the base classes to this actually implement it)
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-
-	FTransform CurrentRelativeTransform;
-	if (ParentComponent.IsValid())
-	{
-		// during grip there is no parent so we do this, might as well do it anyway for lerping as well
-		CurrentRelativeTransform = this->GetComponentTransform().GetRelativeTransform(ParentComponent->GetComponentTransform());
-	}
-	else
-	{
-		CurrentRelativeTransform = this->GetRelativeTransform();
-	}
 }
 
 void UVRSliderComponent::TickGrip_Implementation(UGripMotionControllerComponent * GrippingController, const FBPActorGripInformation & GripInformation, float DeltaTime) 
@@ -84,9 +85,57 @@ void UVRSliderComponent::TickGrip_Implementation(UGripMotionControllerComponent 
 	// Handle manual tracking here
 
 	FTransform CurrentRelativeTransform;
+	FTransform ParentTransform = FTransform::Identity;
 	if (ParentComponent.IsValid())
 	{
+		ParentTransform = ParentComponent->GetComponentTransform();
 		// during grip there is no parent so we do this, might as well do it anyway for lerping as well
+		CurrentRelativeTransform = InitialRelativeTransform * ParentTransform;
+	}
+	else
+	{
+		CurrentRelativeTransform = InitialRelativeTransform;
+	}
+
+	FVector CurInteractorLocation = CurrentRelativeTransform.InverseTransformPosition(GrippingController->GetComponentLocation());
+
+	FVector CalculatedLocation = InitialGripLoc + (CurInteractorLocation - InitialInteractorLocation);
+
+	if (USplineComponent * uSplineComponentToFollow = Cast<USplineComponent>(SplineComponentToFollow))
+	{	
+		if (bFollowSplineRotationAndScale)
+		{
+			FTransform trans = uSplineComponentToFollow->FindTransformClosestToWorldLocation(CurrentRelativeTransform.TransformPosition(CalculatedLocation), ESplineCoordinateSpace::World);
+
+			trans = trans * ParentTransform.Inverse();
+			trans.MultiplyScale3D(InitialRelativeTransform.GetScale3D());
+			 
+			this->SetRelativeTransform(trans);
+		}
+		else
+		{
+			this->SetRelativeLocation(ParentTransform.InverseTransformPosition(uSplineComponentToFollow->FindLocationClosestToWorldLocation(CurrentRelativeTransform.TransformPosition(CalculatedLocation), ESplineCoordinateSpace::World)));
+		}
+	}
+	else
+	{
+		this->SetRelativeLocation(InitialRelativeTransform.TransformPosition(ClampSlideVector(CalculatedLocation)));
+	}
+
+	if ((InitialRelativeTransform.InverseTransformPosition(this->RelativeLocation) - CurInteractorLocation).Size() >= BreakDistance)
+	{
+		GrippingController->DropObjectByInterface(this);
+		return;
+	}
+}
+
+void UVRSliderComponent::OnGrip_Implementation(UGripMotionControllerComponent * GrippingController, const FBPActorGripInformation & GripInformation) 
+{
+	ParentComponent = this->GetAttachParent();
+
+	FTransform CurrentRelativeTransform;
+	if (ParentComponent.IsValid())
+	{
 		CurrentRelativeTransform = InitialRelativeTransform * ParentComponent->GetComponentTransform();
 	}
 	else
@@ -94,12 +143,8 @@ void UVRSliderComponent::TickGrip_Implementation(UGripMotionControllerComponent 
 		CurrentRelativeTransform = InitialRelativeTransform;
 	}
 
-	//FVector CurInteractorLocation = CurrentRelativeTransform.InverseTransformPosition(GrippingController->GetComponentLocation());
-}
-
-void UVRSliderComponent::OnGrip_Implementation(UGripMotionControllerComponent * GrippingController, const FBPActorGripInformation & GripInformation) 
-{
-	ParentComponent = this->GetAttachParent();
+	InitialInteractorLocation = CurrentRelativeTransform.InverseTransformPosition(GrippingController->GetComponentLocation());
+	InitialGripLoc = InitialRelativeTransform.InverseTransformPosition(this->RelativeLocation);
 }
 
 void UVRSliderComponent::OnGripRelease_Implementation(UGripMotionControllerComponent * ReleasingController, const FBPActorGripInformation & GripInformation) 
