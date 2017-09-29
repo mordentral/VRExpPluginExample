@@ -1,5 +1,7 @@
 // This class is intended to correctly offset a scene capture for stereo rendering
-
+// It is unfinished and I am leaving it out of the compiled base unless I go back to it
+// Leaving this commented out in here for reference
+/*
 #pragma once
 #include "Components/SceneCaptureComponent2D.h"
 #include "Camera/PlayerCameraManager.h"
@@ -47,7 +49,7 @@ public:
 
 				float WorldToMeters = GetWorld() ? GetWorld()->GetWorldSettings()->WorldToMeters : 100.0f;
 
-				GEngine->StereoRenderingDevice->CalculateStereoViewOffset(StereoPass, Orientation.Rotator(), WorldToMeters /*1.0f?*/, Position);
+				GEngine->StereoRenderingDevice->CalculateStereoViewOffset(StereoPass, Orientation.Rotator(), WorldToMeters , Position);
 
 				this->bUseCustomProjectionMatrix = true;
 
@@ -104,4 +106,4 @@ public:
 		Super::UpdateSceneCaptureContents(Scene);
 	}
 
-};
+};*/

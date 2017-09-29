@@ -14,7 +14,7 @@ class VREXPANSIONPLUGIN_API UParentRelativeAttachmentComponent : public USceneCo
 	GENERATED_UCLASS_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRExpansionLibrary", meta = (ClampMin = "0", UIMin = "0"))
-	float YawTolerance;
+		float YawTolerance;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRExpansionLibrary", meta = (ClampMin = "0", UIMin = "0"))
 		float LerpSpeed;
