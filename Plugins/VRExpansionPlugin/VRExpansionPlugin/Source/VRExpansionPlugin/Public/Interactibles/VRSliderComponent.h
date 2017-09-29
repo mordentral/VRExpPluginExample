@@ -53,7 +53,9 @@ class VREXPANSIONPLUGIN_API UVRSliderComponent : public UStaticMeshComponent, pu
 	{
 		if (bSlideDistanceIsInParentSpace)
 		{
+			// Scale distance by initial slider scale
 			FVector fScaleFactor = FVector(1.0f) / InitialRelativeTransform.GetScale3D();
+
 			return FVector(
 				FMath::Clamp(ValueToClamp.X, MinSlideDistance.X * fScaleFactor.X, MaxSlideDistance.X * fScaleFactor.X),
 				FMath::Clamp(ValueToClamp.Y, MinSlideDistance.Y * fScaleFactor.Y, MaxSlideDistance.Y * fScaleFactor.Y),
