@@ -32,7 +32,7 @@ UVRLeverComponent::UVRLeverComponent(const FObjectInitializer& ObjectInitializer
 	LeverTogglePercentage = 0.8f;
 	lerpCounter = 0.0f;
 
-	LastDeltaAngle = 0.0f;
+	LastDeltaAngle = FVector2D::ZeroVector;
 
 	LeverReturnTypeWhenReleased = EVRInteractibleLeverReturnType::ReturnToZero;
 	LeverReturnSpeed = 50.0f;
@@ -40,7 +40,7 @@ UVRLeverComponent::UVRLeverComponent(const FObjectInitializer& ObjectInitializer
 
 	InitialRelativeTransform = FTransform::Identity;
 	InitialInteractorLocation = FVector::ZeroVector;
-	InitialGripRot = 0.0f;
+	InitialGripRot = FVector2D::ZeroVector;
 	bIsLerping = false;
 	bUngripAtTargetRotation = false;
 	bDenyGripping = false;
@@ -100,46 +100,60 @@ void UVRLeverComponent::TickComponent(float DeltaTime, enum ELevelTick TickType,
 	{
 		CurrentRelativeTransform = this->GetRelativeTransform();
 	}
-
-	FQuat RotTransform = FQuat::Identity;
-
-	if (LeverRotationAxis == EVRInteractibleLeverAxis::Axis_X)
-		RotTransform = FRotator(FRotator(0.0, -90.0, 0.0)).Quaternion(); // Correct for roll and DotProduct
-
-	FQuat newInitRot = (InitialRelativeTransform.GetRotation() * RotTransform);
-
-	FVector v1 = (CurrentRelativeTransform.GetRotation() * RotTransform).Vector();
-	FVector v2 = (newInitRot).Vector();
-	v1.Normalize();
-	v2.Normalize();
-
-	FVector CrossP = FVector::CrossProduct(v1, v2);
-
-	float angle = FMath::RadiansToDegrees(FMath::Atan2(CrossP.Size(), FVector::DotProduct(v1, v2)));
-	angle *= FMath::Sign(FVector::DotProduct(CrossP, newInitRot.GetRightVector()));
 	
-//	float angle = FMath::RadiansToDegrees(CurrentRelativeTransform.GetRotation().AngularDistance(InitialRelativeTransform.GetRotation())) * ((GetAxisValue(CurrentRelativeTransform.Rotator()) - GetAxisValue(InitialRelativeTransform.Rotator())) < 0 ? -1.0f : 1.0f);
+	FVector2D Angle;
 
-	CurrentLeverAngle = FMath::RoundToFloat(angle);
+	// Get axis angles
+	Angle = GetAxisValue((CurrentRelativeTransform * InitialRelativeTransform.Inverse()).Rotator().GetNormalized());
+
+	if (LeverRotationAxis == EVRInteractibleLeverAxis::Axis_XY)
+	{
+		CurrentLeverAngle = FMath::RoundToFloat(Angle.X);
+		CurrentLeverAngleXY.X = CurrentLeverAngle;
+		CurrentLeverAngleXY.Y = FMath::RoundToFloat(Angle.Y);
+	}
+	else if (LeverRotationAxis == EVRInteractibleLeverAxis::Axis_X)
+	{
+		CurrentLeverAngle = FMath::RoundToFloat(Angle.X);
+		CurrentLeverAngleXY.X = CurrentLeverAngle;
+	}
+	else
+	{
+		CurrentLeverAngle = FMath::RoundToFloat(Angle.Y);
+	}
+
+
 
 	if (bIsLerping)
 	{
-		float TargetAngle = 0.0f;
+	/*	FVector2D TargetAngle = FVector2D::ZeroVector;
 		switch (LeverReturnTypeWhenReleased)
 		{
 		case EVRInteractibleLeverReturnType::LerpToMax:
 		{
 			if (CurrentLeverAngle >= 0)
-				TargetAngle = FMath::RoundToFloat(LeverLimitPositive);
+				TargetAngle.X = FMath::RoundToFloat(LeverLimitPositive);
 			else
-				TargetAngle = -FMath::RoundToFloat(LeverLimitNegative);
+				TargetAngle.X = -FMath::RoundToFloat(LeverLimitNegative);
+
+			if (CurrentLeverAngle2 >= 0)
+				TargetAngle.Y = FMath::RoundToFloat(LeverLimitPositive);
+			else
+				TargetAngle.Y = -FMath::RoundToFloat(LeverLimitNegative);
 		}break;
 		case EVRInteractibleLeverReturnType::LerpToMaxIfOverThreshold:
 		{
 			if ((!FMath::IsNearlyZero(LeverLimitPositive) && CurrentLeverAngle >= (LeverLimitPositive * LeverTogglePercentage)))
-				TargetAngle = FMath::RoundToFloat(LeverLimitPositive);
+				TargetAngle.X = FMath::RoundToFloat(LeverLimitPositive);
 			else if ((!FMath::IsNearlyZero(LeverLimitNegative) && CurrentLeverAngle <= -(LeverLimitNegative * LeverTogglePercentage)))
-				TargetAngle = -FMath::RoundToFloat(LeverLimitNegative);
+				TargetAngle.X = -FMath::RoundToFloat(LeverLimitNegative);
+			//else - Handled by the default value
+			//TargetAngle = 0.0f;
+
+			if ((!FMath::IsNearlyZero(LeverLimitPositive) && CurrentLeverAngle2 >= (LeverLimitPositive * LeverTogglePercentage)))
+				TargetAngle.Y = FMath::RoundToFloat(LeverLimitPositive);
+			else if ((!FMath::IsNearlyZero(LeverLimitNegative) && CurrentLeverAngle2 <= -(LeverLimitNegative * LeverTogglePercentage)))
+				TargetAngle.Y = -FMath::RoundToFloat(LeverLimitNegative);
 			//else - Handled by the default value
 			//TargetAngle = 0.0f;
 		}break;
@@ -148,19 +162,36 @@ void UVRLeverComponent::TickComponent(float DeltaTime, enum ELevelTick TickType,
 		{}break;
 		}
 
-		float LerpedVal = FMath::FixedTurn(angle, TargetAngle, LeverReturnSpeed * DeltaTime);
+		FVector LerpedVal;
+		LerpedVal.X = FMath::FixedTurn(Angle.X, TargetAngle.X, LeverReturnSpeed * DeltaTime);
+		LerpedVal.Y = FMath::FixedTurn(Angle.Y, TargetAngle.Y, LeverReturnSpeed * DeltaTime);
 		//float LerpedVal = FMath::FInterpConstantTo(angle, TargetAngle, DeltaTime, LeverReturnSpeed);
 		if (FMath::IsNearlyEqual(LerpedVal, TargetAngle))
 		{
 			this->SetComponentTickEnabled(false);
 
 			this->SetRelativeRotation((FTransform(SetAxisValue(TargetAngle, FRotator::ZeroRotator)) * InitialRelativeTransform).Rotator());
-			CurrentLeverAngle = TargetAngle;
+			
+			if (LeverRotationAxis == EVRInteractibleLeverAxis::Axis_XY)
+			{
+				CurrentLeverAngle = TargetAngle.X;
+				CurrentLeverAngleXY = TargetAngle;
+			}
+			else if (LeverRotationAxis == EVRInteractibleLeverAxis::Axis_X)
+			{
+				CurrentLeverAngle = TargetAngle.X;
+				CurrentLeverAngleXY = TargetAngle;
+			}
+			else
+			{
+				CurrentLeverAngle = TargetAngle.Y;
+				CurrentLeverAngleXY = TargetAngle;
+			}
 		}
 		else
 		{
 			this->SetRelativeRotation((FTransform(SetAxisValue(LerpedVal, FRotator::ZeroRotator)) * InitialRelativeTransform).Rotator());
-		}
+		}*/
 	}
 
 	bool bNewLeverState = (!FMath::IsNearlyZero(LeverLimitNegative) && CurrentLeverAngle <= -(LeverLimitNegative * LeverTogglePercentage)) || (!FMath::IsNearlyZero(LeverLimitPositive) && CurrentLeverAngle >= (LeverLimitPositive * LeverTogglePercentage));
@@ -202,33 +233,38 @@ void UVRLeverComponent::TickGrip_Implementation(UGripMotionControllerComponent *
 
 	FVector CurInteractorLocation = CurrentRelativeTransform.InverseTransformPosition(GrippingController->GetComponentLocation());
 
-	// #TODO: This drop code is incorrect, it is based off of the zero point and not the location at grip - revise it at some point
+
+	FVector2D DeltaAngle;
+
+	if (LeverRotationAxis == EVRInteractibleLeverAxis::Axis_XY)
+	{	
+		FRotator Rot;
+
+		FVector nAxis;
+		float nAngle = 0.0f;
+
+		FQuat::FindBetweenVectors(InitialInteractorLocation, CurInteractorLocation).ToAxisAndAngle(nAxis, nAngle);
+
+		nAngle = FMath::Clamp(nAngle, 0.0f, FMath::DegreesToRadians(LeverLimitPositive));// FMath::DegreesToRadians(FMath::ClampAngle(FMath::RadiansToDegrees(nAngle), 0.0f, LeverLimitPositive));
+		Rot = FQuat(nAxis, nAngle).Rotator();
+
+		this->SetRelativeRotation((FTransform(Rot) * InitialRelativeTransform).Rotator());
+	}
+	else
+	{
+		DeltaAngle = CalcAngle(LeverRotationAxis, CurInteractorLocation);
+
+
+		this->SetRelativeRotation((FTransform(SetAxisValue(DeltaAngle, FRotator::ZeroRotator)) * InitialRelativeTransform).Rotator());
+		LastDeltaAngle = DeltaAngle;
+	}
+
+	// #TODO: This drop code is incorrect, it is based off of the initial point and not the location at grip - revise it at some point
 	// Also set it to after rotation
-	if (GrippingController->HasGripAuthority(GripInformation) && (CurInteractorLocation - InitialInteractorLocation).Size() >= BreakDistance)
+	if (GrippingController->HasGripAuthority(GripInformation) && (this->GetComponentTransform().InverseTransformPosition(GrippingController->GetComponentLocation()) - InitialInteractorDropLocation).Size() >= BreakDistance)
 	{
 		GrippingController->DropObjectByInterface(this);
 		return;
-	}
-
-	float DeltaAngle;
-
-	FVector RotVector;
-	if (LeverRotationAxis == EVRInteractibleLeverAxis::Axis_X)
-		DeltaAngle = FMath::RadiansToDegrees(FMath::Atan2(CurInteractorLocation.Y, CurInteractorLocation.Z)) - InitialGripRot;
-	else
-		DeltaAngle = FMath::RadiansToDegrees(FMath::Atan2(CurInteractorLocation.Z, CurInteractorLocation.X)) - InitialGripRot;
-
-
-	float CheckAngle = FRotator::NormalizeAxis(RotAtGrab + DeltaAngle);
-
-	// Ignore rotations that would flip the angle of the lever to the other side, with a 90 degree allowance
-	if (!FMath::IsNearlyZero(LastDeltaAngle) && FMath::Sign(CheckAngle) != FMath::Sign(LastDeltaAngle) && FMath::Abs(LastDeltaAngle) > 90.0f)
-	{
-	}
-	else
-	{
-		this->SetRelativeRotation((FTransform(SetAxisValue(FMath::ClampAngle(RotAtGrab + DeltaAngle, -LeverLimitNegative, LeverLimitPositive), FRotator::ZeroRotator)) * InitialRelativeTransform).Rotator());
-		LastDeltaAngle = CheckAngle;
 	}
 }
 
@@ -254,15 +290,20 @@ void UVRLeverComponent::OnGrip_Implementation(UGripMotionControllerComponent * G
 		}
 
 		InitialInteractorLocation = CurrentRelativeTransform.InverseTransformPosition(GrippingController->GetComponentLocation());
-	
+		InitialInteractorDropLocation = this->GetComponentTransform().InverseTransformPosition(GrippingController->GetComponentLocation());
 
 		FVector RotVector;
-		if (LeverRotationAxis == EVRInteractibleLeverAxis::Axis_X)
-			InitialGripRot = FMath::RadiansToDegrees(FMath::Atan2(InitialInteractorLocation.Y, InitialInteractorLocation.Z));
+		if (LeverRotationAxis == EVRInteractibleLeverAxis::Axis_XY)
+		{
+			InitialGripRot.X = FMath::RadiansToDegrees(FMath::Atan2(InitialInteractorLocation.Y, InitialInteractorLocation.Z));
+			InitialGripRot.Y = FMath::RadiansToDegrees(FMath::Atan2(InitialInteractorLocation.Z, InitialInteractorLocation.X));
+		}
+		else if (LeverRotationAxis == EVRInteractibleLeverAxis::Axis_X)
+			InitialGripRot.X = FMath::RadiansToDegrees(FMath::Atan2(InitialInteractorLocation.Y, InitialInteractorLocation.Z));
 		else
-			InitialGripRot = FMath::RadiansToDegrees(FMath::Atan2(InitialInteractorLocation.Z, InitialInteractorLocation.X));
+			InitialGripRot.Y = FMath::RadiansToDegrees(FMath::Atan2(InitialInteractorLocation.Z, InitialInteractorLocation.X));
 
-		RotAtGrab = GetAxisValue(this->GetComponentTransform().GetRelativeTransform(CurrentRelativeTransform).Rotator());// GetAxisValue(CurrentRelativeTransform.GetRelativeTransform(InitialRelativeTransform.Inverse()).Rotator());// GetAxisValue(this->RelativeRotation);
+		RotAtGrab = GetAxisValue(this->GetComponentTransform().GetRelativeTransform(CurrentRelativeTransform).Rotator());
 	}
 
 	bIsLerping = false;

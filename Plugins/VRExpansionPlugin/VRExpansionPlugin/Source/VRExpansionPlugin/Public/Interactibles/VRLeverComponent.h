@@ -24,7 +24,8 @@ UENUM(Blueprintable)
 enum class EVRInteractibleLeverAxis : uint8
 {
 	Axis_X,
-	Axis_Y
+	Axis_Y,
+	Axis_XY
 };
 
 UENUM(Blueprintable)
@@ -57,8 +58,126 @@ class VREXPANSIONPLUGIN_API UVRLeverComponent : public UStaticMeshComponent, pub
 	UPROPERTY(BlueprintAssignable, Category = "VRLeverComponent")
 		FVRLeverStateChangedSignature OnLeverStateChanged;
 
+	// Primary axis angle only
 	UPROPERTY(BlueprintReadOnly, Category = "VRLeverComponent")
 		float CurrentLeverAngle;
+
+	// Both axis's
+	UPROPERTY(BlueprintReadOnly, Category = "VRLeverComponent")
+		FVector2D CurrentLeverAngleXY;
+
+	FVector2D CalcAngle(EVRInteractibleLeverAxis AxisToCalc, FVector CurInteractorLocation)
+	{
+		FVector2D ReturnAxis = FVector2D::ZeroVector;
+
+		if (AxisToCalc == EVRInteractibleLeverAxis::Axis_X)
+		{
+
+			ReturnAxis.X = FMath::RadiansToDegrees(FMath::Atan2(CurInteractorLocation.Y, CurInteractorLocation.Z)) - InitialGripRot.X;
+
+			// Ignore rotations that would flip the angle of the lever to the other side, with a 90 degree allowance
+			if (!FMath::IsNearlyZero(LastDeltaAngle.X) && FMath::Sign(FRotator::NormalizeAxis(RotAtGrab.X + ReturnAxis.X)) != FMath::Sign(LastDeltaAngle.X) && FMath::Abs(LastDeltaAngle.X) > 90.0f)
+			{
+				ReturnAxis.X = LastDeltaAngle.X;
+			}
+
+			ReturnAxis.X = FMath::ClampAngle(FRotator::NormalizeAxis(RotAtGrab.X + ReturnAxis.X), -LeverLimitNegative, LeverLimitPositive);
+		}
+		else
+		{
+			ReturnAxis.Y = FMath::RadiansToDegrees(FMath::Atan2(CurInteractorLocation.Z, CurInteractorLocation.X)) - InitialGripRot.Y;
+
+			// Ignore rotations that would flip the angle of the lever to the other side, with a 90 degree allowance
+			if (!FMath::IsNearlyZero(LastDeltaAngle.Y) && FMath::Sign(FRotator::NormalizeAxis(RotAtGrab.Y + ReturnAxis.Y)) != FMath::Sign(LastDeltaAngle.Y) && FMath::Abs(LastDeltaAngle.Y) > 90.0f)
+			{
+				ReturnAxis.Y = LastDeltaAngle.Y;
+			}
+
+			ReturnAxis.Y = FMath::ClampAngle(FRotator::NormalizeAxis(RotAtGrab.Y + ReturnAxis.Y), -LeverLimitNegative, LeverLimitPositive);
+		}
+		
+		return ReturnAxis;
+	}
+
+	float CalcAngleNumber(EVRInteractibleLeverAxis AxisToCalc, FTransform & CurrentRelativeTransform)
+	{
+		FQuat RotTransform = FQuat::Identity;
+
+		if (AxisToCalc == EVRInteractibleLeverAxis::Axis_X)
+			RotTransform = FRotator(FRotator(0.0, -90.0, 0.0)).Quaternion(); // Correct for roll and DotProduct
+
+		FQuat newInitRot = (InitialRelativeTransform.GetRotation() * RotTransform);
+
+		FVector v1 = (CurrentRelativeTransform.GetRotation() * RotTransform).Vector();
+		FVector v2 = (newInitRot).Vector();
+		v1.Normalize();
+		v2.Normalize();
+
+		FVector CrossP = FVector::CrossProduct(v1, v2);
+
+		float angle = FMath::RadiansToDegrees(FMath::Atan2(CrossP.Size(), FVector::DotProduct(v1, v2)));
+		angle *= FMath::Sign(FVector::DotProduct(CrossP, newInitRot.GetRightVector()));
+
+		return angle;
+		//	float angle = FMath::RadiansToDegrees(CurrentRelativeTransform.GetRotation().AngularDistance(InitialRelativeTransform.GetRotation())) * ((GetAxisValue(CurrentRelativeTransform.Rotator()) - GetAxisValue(InitialRelativeTransform.Rotator())) < 0 ? -1.0f : 1.0f);
+	}
+
+	float LerpAxis()
+	{
+		return 0.0f;
+	/*	float TargetAngle = 0.0f;
+		switch (LeverReturnTypeWhenReleased)
+		{
+		case EVRInteractibleLeverReturnType::LerpToMax:
+		{
+			if (CurrentLeverAngle >= 0)
+				TargetAngle = FMath::RoundToFloat(LeverLimitPositive);
+			else
+				TargetAngle = -FMath::RoundToFloat(LeverLimitNegative);
+		}break;
+		case EVRInteractibleLeverReturnType::LerpToMaxIfOverThreshold:
+		{
+			if ((!FMath::IsNearlyZero(LeverLimitPositive) && CurrentLeverAngle >= (LeverLimitPositive * LeverTogglePercentage)))
+				TargetAngle.X = FMath::RoundToFloat(LeverLimitPositive);
+			else if ((!FMath::IsNearlyZero(LeverLimitNegative) && CurrentLeverAngle <= -(LeverLimitNegative * LeverTogglePercentage)))
+				TargetAngle.X = -FMath::RoundToFloat(LeverLimitNegative);
+			//else - Handled by the default value
+			//TargetAngle = 0.0f;
+		}break;
+		case EVRInteractibleLeverReturnType::ReturnToZero:
+		default:
+		{}break;
+		}
+
+		float LerpedVal = FMath::FixedTurn(Angle.X, TargetAngle.X, LeverReturnSpeed * DeltaTime);
+		//float LerpedVal = FMath::FInterpConstantTo(angle, TargetAngle, DeltaTime, LeverReturnSpeed);
+		if (FMath::IsNearlyEqual(LerpedVal, TargetAngle))
+		{
+			this->SetComponentTickEnabled(false);
+
+			this->SetRelativeRotation((FTransform(SetAxisValue(TargetAngle, FRotator::ZeroRotator)) * InitialRelativeTransform).Rotator());
+
+			if (LeverRotationAxis == EVRInteractibleLeverAxis::Axis_XY)
+			{
+				CurrentLeverAngle = TargetAngle.X;
+				CurrentLeverAngleXY = TargetAngle;
+			}
+			else if (LeverRotationAxis == EVRInteractibleLeverAxis::Axis_X)
+			{
+				CurrentLeverAngle = TargetAngle.X;
+				CurrentLeverAngleXY = TargetAngle;
+			}
+			else
+			{
+				CurrentLeverAngle = TargetAngle.Y;
+				CurrentLeverAngleXY = TargetAngle;
+			}
+		}
+		else
+		{
+			this->SetRelativeRotation((FTransform(SetAxisValue(LerpedVal, FRotator::ZeroRotator)) * InitialRelativeTransform).Rotator());
+		}*/
+	}
 
 	// ------------------------------------------------
 	// Gameplay tag interface
@@ -121,12 +240,13 @@ class VREXPANSIONPLUGIN_API UVRLeverComponent : public UStaticMeshComponent, pub
 		float LeverReturnSpeed;
 
 	float lerpCounter;
-	float LastDeltaAngle;
+	FVector2D LastDeltaAngle;
 	bool bIsLerping;
 	FTransform InitialRelativeTransform;
 	FVector InitialInteractorLocation;
-	float InitialGripRot;
-	float RotAtGrab;
+	FVector InitialInteractorDropLocation;
+	FVector2D InitialGripRot;
+	FVector2D RotAtGrab;
 	bool bLeverState;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRGripInterface")
@@ -196,7 +316,7 @@ class VREXPANSIONPLUGIN_API UVRLeverComponent : public UStaticMeshComponent, pub
 	bool SetupConstraint()
 	{
 #if WITH_PHYSX
-
+		/*
 		if (HandleData)
 			return true;
 
@@ -218,7 +338,7 @@ class VREXPANSIONPLUGIN_API UVRLeverComponent : public UStaticMeshComponent, pub
 		}
 
 		float rotationalOffset = (LeverLimitPositive - LeverLimitNegative) / 2;
-		FRotator AngularRotationOffset = SetAxisValue(/*LeverLimitOffset*/rotationalOffset, FRotator::ZeroRotator);
+		FRotator AngularRotationOffset = SetAxisValue(rotationalOffset, FRotator::ZeroRotator);
 		FTransform RefFrame2 = FTransform(InitialRelativeTransform.GetRotation() * AngularRotationOffset.Quaternion(), A2Transform.InverseTransformPosition(GetComponentLocation()));
 		
 		ExecuteOnPxRigidDynamicReadWrite(rBodyInstance, [&](PxRigidDynamic* Actor)
@@ -239,7 +359,7 @@ class VREXPANSIONPLUGIN_API UVRLeverComponent : public UStaticMeshComponent, pub
 						ParentBody = PrimComp->BodyInstance.GetPxRigidDynamic_AssumesLocked();
 				}
 
-				NewJoint = PxD6JointCreate(Scene->getPhysics(), ParentBody, U2PTransform(RefFrame2)/*LocalParentTrans*/, Actor, PxTransform(PxIdentity));
+				NewJoint = PxD6JointCreate(Scene->getPhysics(), ParentBody, U2PTransform(RefFrame2), Actor, PxTransform(PxIdentity));
 
 				if (!NewJoint)
 				{
@@ -286,12 +406,12 @@ class VREXPANSIONPLUGIN_API UVRLeverComponent : public UStaticMeshComponent, pub
 					NewJoint->setMotion(PxD6Axis::eSWING2, PxD6Motion::eLOCKED);
 
 					const float CorrectedLeverLimit = (LeverLimitPositive + LeverLimitNegative) / 2;
-					const float LeverLimitRad = CorrectedLeverLimit * /*InTwistLimitScale **/ (PI / 180.0f);
-					//PxReal LimitContactDistance = FMath::DegreesToRadians(FMath::Max(1.f, ProfileInstance.ConeLimit.ContactDistance /** InTwistLimitScale*/));
+					const float LeverLimitRad = CorrectedLeverLimit * (PI / 180.0f);
+					//PxReal LimitContactDistance = FMath::DegreesToRadians(FMath::Max(1.f, ProfileInstance.ConeLimit.ContactDistance));
 
 					//The limit values need to be clamped so it will be valid in PhysX
-					PxReal ZLimitAngle = FMath::ClampAngle(CorrectedLeverLimit/** InSwing1LimitScale*/, KINDA_SMALL_NUMBER, 179.9999f) * (PI / 180.0f);
-					PxReal YLimitAngle = FMath::ClampAngle(CorrectedLeverLimit /** InSwing2LimitScale*/, KINDA_SMALL_NUMBER, 179.9999f) * (PI / 180.0f);
+					PxReal ZLimitAngle = FMath::ClampAngle(CorrectedLeverLimit, KINDA_SMALL_NUMBER, 179.9999f) * (PI / 180.0f);
+					PxReal YLimitAngle = FMath::ClampAngle(CorrectedLeverLimit, KINDA_SMALL_NUMBER, 179.9999f) * (PI / 180.0f);
 					//PxReal LimitContactDistance = FMath::DegreesToRadians(FMath::Max(1.f, ProfileInstance.ConeLimit.ContactDistance * FMath::Min(InSwing1LimitScale, InSwing2LimitScale)));
 					
 					NewJoint->setSwingLimit(PxJointLimitCone(YLimitAngle, ZLimitAngle));
@@ -303,6 +423,7 @@ class VREXPANSIONPLUGIN_API UVRLeverComponent : public UStaticMeshComponent, pub
 
 			return false;
 		});
+		*/
 #else
 		return false;
 #endif // WITH_PHYSX
@@ -436,43 +557,57 @@ class VREXPANSIONPLUGIN_API UVRLeverComponent : public UStaticMeshComponent, pub
 
 	protected:
 
-		inline float GetAxisValue(FRotator CheckRotation)
+		inline FVector2D GetAxisValue(FRotator CheckRotation)
 		{
 			switch (LeverRotationAxis)
 			{
 			case EVRInteractibleLeverAxis::Axis_X:
-				return CheckRotation.Roll; break;
+				return FVector2D(CheckRotation.Roll, 0.0f); break;
 			case EVRInteractibleLeverAxis::Axis_Y:
-				return CheckRotation.Pitch; break;
-			default:return 0.0f; break;
+				return FVector2D(0.0f,CheckRotation.Pitch); break;
+			case EVRInteractibleLeverAxis::Axis_XY:
+			{
+				return FVector2D(CheckRotation.Roll, CheckRotation.Pitch);
+			}break;
+			default:return FVector2D::ZeroVector; break;
 			}
 		}
 
-		inline FRotator SetAxisValue(float SetValue)
+		inline FRotator SetAxisValue(FVector2D SetValue)
 		{
 			FRotator vec = FRotator::ZeroRotator;
 
 			switch (LeverRotationAxis)
 			{
 			case EVRInteractibleLeverAxis::Axis_X:
-				vec.Roll = SetValue; break;
+				vec.Roll = SetValue.X; break;
 			case EVRInteractibleLeverAxis::Axis_Y:
-				vec.Pitch = SetValue; break;
+				vec.Pitch = SetValue.Y; break;
+			case EVRInteractibleLeverAxis::Axis_XY:
+			{
+				vec.Roll = SetValue.X;
+				vec.Pitch = SetValue.Y;
+			}break;
 			default:break;
 			}
 
 			return vec;
 		}
 
-		inline FRotator SetAxisValue(float SetValue, FRotator Var)
+		inline FRotator SetAxisValue(FVector2D SetValue, FRotator Var)
 		{
 			FRotator vec = Var;
 			switch (LeverRotationAxis)
 			{
 			case EVRInteractibleLeverAxis::Axis_X:
-				vec.Roll = SetValue; break;
+				vec.Roll = SetValue.X; break;
 			case EVRInteractibleLeverAxis::Axis_Y:
-				vec.Pitch = SetValue; break;
+				vec.Pitch = SetValue.Y; break;
+			case EVRInteractibleLeverAxis::Axis_XY:
+			{
+				vec.Roll = SetValue.X;
+				vec.Pitch = SetValue.Y;
+			}break;
 			default:break;
 			}
 
