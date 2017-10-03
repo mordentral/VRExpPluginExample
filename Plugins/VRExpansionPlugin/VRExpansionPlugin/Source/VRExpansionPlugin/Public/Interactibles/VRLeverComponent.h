@@ -71,6 +71,7 @@ class VREXPANSIONPLUGIN_API UVRLeverComponent : public UStaticMeshComponent, pub
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRLeverComponent")
 		bool bUngripAtTargetRotation;
+
 	// Rotation axis to use, XY is combined X and Y, only LerpToZero and PositiveLimits work with this mode
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRLeverComponent")
 		EVRInteractibleLeverAxis LeverRotationAxis;
