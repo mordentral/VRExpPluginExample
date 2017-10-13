@@ -5,7 +5,7 @@
 #include "IMotionController.h"
 
 #include "Components/SplineComponent.h"
-#include "components/SplineMeshComponent.h"
+#include "Components/SplineMeshComponent.h"
 
 //#include "HeadMountedDisplay.h" 
 #include "HeadMountedDisplayFunctionLibrary.h"
