@@ -240,7 +240,7 @@ public:
 			else // If re-creating the grip anyway we don't need to do the below
 			{
 				// If the stiffness and damping got changed server side
-				if ( !FMath::IsNearlyEqual(Grip.ValueCache.CachedStiffness, Grip.Stiffness) || !FMath::IsNearlyEqual(Grip.ValueCache.CachedDamping, Grip.Damping) || Grip.ValueCache.CachedAdvancedPhysicsSettings != Grip.AdvancedPhysicsSettings)
+				if ( !FMath::IsNearlyEqual(Grip.ValueCache.CachedStiffness, Grip.Stiffness) || !FMath::IsNearlyEqual(Grip.ValueCache.CachedDamping, Grip.Damping) || Grip.ValueCache.CachedPhysicsSettings != Grip.AdvancedGripSettings.PhysicsSettings)
 				{
 					SetGripConstraintStiffnessAndDamping(&Grip);
 				}
@@ -254,7 +254,7 @@ public:
 		Grip.ValueCache.CachedGripMovementReplicationSetting = Grip.GripMovementReplicationSetting;
 		Grip.ValueCache.CachedStiffness = Grip.Stiffness;
 		Grip.ValueCache.CachedDamping = Grip.Damping;
-		Grip.ValueCache.CachedAdvancedPhysicsSettings = Grip.AdvancedPhysicsSettings;
+		Grip.ValueCache.CachedPhysicsSettings = Grip.AdvancedGripSettings.PhysicsSettings;
 
 		return true;
 	}
@@ -726,7 +726,7 @@ public:
 	// Adds a secondary attachment point to the grip
 	// bUseLegacySecondaryLogic enables new singularity removal code, leave true to keep original behavior
 	UFUNCTION(BlueprintCallable, Category = "VRGrip")
-	bool AddSecondaryAttachmentPoint(UObject * GrippedObjectToAddAttachment, USceneComponent * SecondaryPointComponent, const FTransform &OriginalTransform, bool bTransformIsAlreadyRelative = false, float LerpToTime = 0.25f, float SecondarySmoothingScaler = 1.0f, bool bIsSlotGrip = false);
+	bool AddSecondaryAttachmentPoint(UObject * GrippedObjectToAddAttachment, USceneComponent * SecondaryPointComponent, const FTransform &OriginalTransform, bool bTransformIsAlreadyRelative = false, float LerpToTime = 0.25f,/* float SecondarySmoothingScaler = 1.0f,*/ bool bIsSlotGrip = false);
 
 	// Removes a secondary attachment point from a grip
 	UFUNCTION(BlueprintCallable, Category = "VRGrip")
