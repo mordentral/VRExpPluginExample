@@ -1692,6 +1692,7 @@ bool UGripMotionControllerComponent::AddSecondaryAttachmentPoint(UObject * Gripp
 
 		GripToUse->SecondaryGripInfo.SecondaryAttachment = SecondaryPointComponent;
 		GripToUse->SecondaryGripInfo.bHasSecondaryAttachment = true;
+		GripToUse->SecondaryGripInfo.SecondaryGripDistance = 0.0f;
 	//	GripToUse->SecondaryGripInfo.SecondarySmoothingScaler = FMath::Clamp(SecondarySmoothingScaler, 0.01f, 1.0f);
 		GripToUse->SecondaryGripInfo.bIsSlotGrip = bIsSlotGrip;
 
@@ -2232,8 +2233,12 @@ void UGripMotionControllerComponent::GetGripWorldTransform(float DeltaTime, FTra
 				Grip.SecondaryGripInfo.curLerp -= DeltaTime;
 			else
 			{
-				if (Grip.SecondaryGripInfo.bHasSecondaryAttachment && Grip.AdvancedGripSettings.SecondaryGripSettings.bUseSecondaryGripSettings && Grip.AdvancedGripSettings.SecondaryGripSettings.SecondaryGripScaler < 1.0f)
+				if (Grip.SecondaryGripInfo.bHasSecondaryAttachment && Grip.AdvancedGripSettings.SecondaryGripSettings.bUseSecondaryGripSettings &&
+					!Grip.AdvancedGripSettings.SecondaryGripSettings.bUseSecondaryGripDistanceInfluence &&
+					Grip.AdvancedGripSettings.SecondaryGripSettings.SecondaryGripScaler < 1.0f)
+				{
 					Grip.SecondaryGripInfo.GripLerpState = EGripLerpState::ConstantLerp;
+				}
 				else
 					Grip.SecondaryGripInfo.GripLerpState = EGripLerpState::NotLerping;
 			}
@@ -2338,11 +2343,11 @@ void UGripMotionControllerComponent::GetGripWorldTransform(float DeltaTime, FTra
 			}
 		}
 
-		Grip.SecondaryGripDistance = FMath::Abs(FVector::Dist(frontLocOrig, frontLoc));
+		Grip.SecondaryGripInfo.SecondaryGripDistance = FMath::Abs(FVector::Dist(frontLocOrig, frontLoc));
 
 		if (Grip.AdvancedGripSettings.SecondaryGripSettings.bUseSecondaryGripSettings && Grip.AdvancedGripSettings.SecondaryGripSettings.bUseSecondaryGripDistanceInfluence)
 		{
-			float rotScaler = 1.0f - FMath::Clamp(FMath::Max(Grip.SecondaryGripDistance, 1.0f) / Grip.AdvancedGripSettings.SecondaryGripSettings.SecondaryGripScaler, 0.0f, 1.0f);
+			float rotScaler = 1.0f - FMath::Clamp(FMath::Max(Grip.SecondaryGripInfo.SecondaryGripDistance, 1.0f) / Grip.AdvancedGripSettings.SecondaryGripSettings.SecondaryGripScaler, 0.0f, 1.0f);
 			frontLoc = FMath::Lerp(frontLocOrig, frontLoc, rotScaler);	
 		}
 

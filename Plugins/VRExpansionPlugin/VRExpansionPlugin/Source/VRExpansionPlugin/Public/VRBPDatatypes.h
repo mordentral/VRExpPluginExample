@@ -774,6 +774,10 @@ public:
 	UPROPERTY()
 		float LerpToRate;
 
+	// Filled in from the tick code so users can activate and deactivate grips based on this
+	UPROPERTY(BlueprintReadOnly, NotReplicated, Category = "SecondaryGripInfo")
+		float SecondaryGripDistance;
+
 	// These are not replicated, they don't need to be
 	EGripLerpState GripLerpState;
 	float curLerp;
@@ -788,6 +792,7 @@ public:
 		SecondaryRelativeLocation(FVector::ZeroVector),
 		bIsSlotGrip(false),
 		LerpToRate(0.0f),
+		SecondaryGripDistance(0.0f),
 		GripLerpState(EGripLerpState::NotLerping),
 		curLerp(0.0f),
 		LastRelativeLocation(FVector::ZeroVector)
@@ -950,10 +955,6 @@ public:
 	// Optional Additive Transform for programmatic animation
 	UPROPERTY(BlueprintReadWrite, NotReplicated, Category = "Settings")
 	FTransform AdditionTransform;
-
-	// Filled in from the tick code so users can activate and deactivate grips based on this
-	UPROPERTY(BlueprintReadOnly, NotReplicated, Category = "Settings")
-	float SecondaryGripDistance;
 
 	// Locked transitions for swept movement so they don't just rotate in place on contact
 	bool bIsLocked;
