@@ -166,7 +166,7 @@ public:
 
 	/** Default constructor */
 	FBPEuroLowPassFilter() :
-		MinCutoff(1.0f),
+		MinCutoff(0.9f),
 		CutoffSlope(0.007f),
 		DeltaCutoff(1.0f)
 	{}
@@ -668,13 +668,22 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SecondaryGripSettings")
 		bool bUseSecondaryGripSettings;
 
-	// Scaler from previous to current frame for the secondary grip, when Secondary Grip Distance Scaling is enabled it is instead used to define the distance to 0 influence
+	// Scaler used for handling the smoothing amount, 0.0f is full smoothing, 1.0f is smoothing off
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SecondaryGripSettings", meta = (editcondition = "bUseSecondaryGripSettings"))
 		float SecondaryGripScaler;
 
 	// Whether to scale the secondary hand influence off of distance from grip point
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SecondaryGripSettings", meta = (editcondition = "bUseSecondaryGripSettings"))
 		bool bUseSecondaryGripDistanceInfluence;
+
+	// Distance from grip point in local space where there is 100% influence
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SecondaryGripSettings", meta = (editcondition = "bUseSecondaryGripDistanceInfluence"))
+		float GripInfluenceDeadZone;
+
+	// Distance from grip point in local space before all influence is lost on the secondary grip (1.0f - 0.0f influence over this range)
+	// this comes into effect outside of the deadzone
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SecondaryGripSettings", meta = (editcondition = "bUseSecondaryGripDistanceInfluence"))
+		float GripInfluenceDistanceToZero;
 
 	// Whether clamp the grip scaling in scaling grips
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SecondaryGripSettings", meta = (editcondition = "bUseSecondaryGripSettings"))
@@ -688,10 +697,15 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SecondaryGripSettings", meta = (editcondition = "bLimitGripScaling"))
 		FVector MaximumGripScaling;
 
+	// Used to smooth filter the secondary influence
+	FBPEuroLowPassFilter EuroLowPassForSecondarySmoothing;
+
 	FBPAdvSecondaryGripSettings() :
 		bUseSecondaryGripSettings(false),
 		SecondaryGripScaler(1.0f),
 		bUseSecondaryGripDistanceInfluence(false),
+		GripInfluenceDeadZone(50.0f),
+		GripInfluenceDistanceToZero(100.0f),
 		bLimitGripScaling(false),
 		MinimumGripScaling(FVector(0.1f)),
 		MaximumGripScaling(FVector(10.0f))
@@ -707,6 +721,11 @@ public:
 			Ar << SecondaryGripScaler;
 			Ar << bUseSecondaryGripDistanceInfluence;
 			
+			if (bUseSecondaryGripDistanceInfluence)
+			{
+				Ar << GripInfluenceDistanceToZero;
+			}
+
 			Ar << bLimitGripScaling;
 			if (bLimitGripScaling)
 			{

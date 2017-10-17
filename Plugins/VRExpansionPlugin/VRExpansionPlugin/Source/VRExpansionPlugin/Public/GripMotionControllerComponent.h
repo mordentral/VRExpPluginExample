@@ -198,6 +198,10 @@ public:
 			// Manage lerp states
 			if (Grip.ValueCache.bCachedHasSecondaryAttachment != Grip.SecondaryGripInfo.bHasSecondaryAttachment || Grip.ValueCache.CachedSecondaryRelativeLocation != Grip.SecondaryGripInfo.SecondaryRelativeLocation)
 			{
+				// Reset the secondary grip distance
+				Grip.SecondaryGripInfo.SecondaryGripDistance = 0.0f;
+				Grip.AdvancedGripSettings.SecondaryGripSettings.EuroLowPassForSecondarySmoothing.ResetSmoothingFilter();
+
 				if (FMath::IsNearlyZero(Grip.SecondaryGripInfo.LerpToRate)) // Zero, could use IsNearlyZero instead
 					Grip.SecondaryGripInfo.GripLerpState = EGripLerpState::NotLerping;
 				else
