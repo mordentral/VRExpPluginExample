@@ -157,6 +157,10 @@ public:
 };
 
 
+/************************************************************************/
+/* 1 Euro filter smoothing algorithm									*/
+/* http://cristal.univ-lille.fr/~casiez/1euro/							*/
+/************************************************************************/
 // A re-implementation of the Euro Low Pass Filter that epic uses for the VR Editor, but for blueprints
 USTRUCT(BlueprintType, Category = "VRExpansionLibrary")
 struct VREXPANSIONPLUGIN_API FBPEuroLowPassFilter
@@ -645,7 +649,7 @@ public:
 		}
 
 		bOutSuccess = true;
-		return true;
+		return bOutSuccess;
 	}
 };
 
@@ -669,7 +673,7 @@ public:
 		bool bUseSecondaryGripSettings;
 
 	// Scaler used for handling the smoothing amount, 0.0f is full smoothing, 1.0f is smoothing off
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SecondaryGripSettings", meta = (editcondition = "bUseSecondaryGripSettings"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SecondaryGripSettings", meta = (editcondition = "bUseSecondaryGripSettings", ClampMin = "0.00", UIMin = "0.00", ClampMax = "1.00", UIMax = "1.00"))
 		float SecondaryGripScaler;
 
 	// Whether to scale the secondary hand influence off of distance from grip point
@@ -677,12 +681,12 @@ public:
 		bool bUseSecondaryGripDistanceInfluence;
 
 	// Distance from grip point in local space where there is 100% influence
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SecondaryGripSettings", meta = (editcondition = "bUseSecondaryGripDistanceInfluence"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SecondaryGripSettings", meta = (editcondition = "bUseSecondaryGripDistanceInfluence", ClampMin = "0.00", UIMin = "0.00", ClampMax = "256.00", UIMax = "256.00"))
 		float GripInfluenceDeadZone;
 
 	// Distance from grip point in local space before all influence is lost on the secondary grip (1.0f - 0.0f influence over this range)
 	// this comes into effect outside of the deadzone
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SecondaryGripSettings", meta = (editcondition = "bUseSecondaryGripDistanceInfluence"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SecondaryGripSettings", meta = (editcondition = "bUseSecondaryGripDistanceInfluence", ClampMin = "1.00", UIMin = "1.00", ClampMax = "256.00", UIMax = "256.00"))
 		float GripInfluenceDistanceToZero;
 
 	// Whether clamp the grip scaling in scaling grips
@@ -691,14 +695,14 @@ public:
 
 	// Minimum size to allow scaling in double grip to reach
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SecondaryGripSettings", meta = (editcondition = "bLimitGripScaling"))
-		FVector MinimumGripScaling;
+		FVector_NetQuantize100 MinimumGripScaling;
 
 	// Maximum size to allow scaling in double grip to reach
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SecondaryGripSettings", meta = (editcondition = "bLimitGripScaling"))
-		FVector MaximumGripScaling;
+		FVector_NetQuantize100 MaximumGripScaling;
 
 	// Used to smooth filter the secondary influence
-	FBPEuroLowPassFilter EuroLowPassForSecondarySmoothing;
+	FBPEuroLowPassFilter SmoothingOneEuro;
 
 	FBPAdvSecondaryGripSettings() :
 		bUseSecondaryGripSettings(false),
@@ -718,12 +722,35 @@ public:
 
 		if (bUseSecondaryGripSettings)
 		{
-			Ar << SecondaryGripScaler;
+			bOutSuccess = true;
+
+			//Ar << SecondaryGripScaler;
+
+			// This is 0.0-1.0, using normalized compression to get it smaller, 12 bits = 1 bit + 1 bit sign+value and 7 bits precision for 128 / full 2 digit precision
+			if (Ar.IsSaving())
+				bOutSuccess &= WriteFixedCompressedFloat<1, 9>(SecondaryGripScaler, Ar);
+			else
+				bOutSuccess &= ReadFixedCompressedFloat<1, 9>(SecondaryGripScaler, Ar);
+			
 			Ar << bUseSecondaryGripDistanceInfluence;
 			
 			if (bUseSecondaryGripDistanceInfluence)
 			{
-				Ar << GripInfluenceDistanceToZero;
+				//Ar << GripInfluenceDeadZone;
+				//Ar << GripInfluenceDistanceToZero;
+
+				// Forcing a maximum value here so that we can compress it by making assumptions
+				// 256 max value = 8 bits + 1 bit for sign + 7 bits for precision (up to 128 on precision, so full range 2 digit precision).
+				if (Ar.IsSaving())
+				{
+					bOutSuccess &= WriteFixedCompressedFloat<256, 16>(GripInfluenceDeadZone, Ar);
+					bOutSuccess &= WriteFixedCompressedFloat<256, 16>(GripInfluenceDistanceToZero, Ar);
+				}
+				else
+				{
+					bOutSuccess &= WriteFixedCompressedFloat<256, 16>(GripInfluenceDeadZone, Ar);
+					bOutSuccess &= ReadFixedCompressedFloat<256, 16>(GripInfluenceDistanceToZero, Ar);
+				}
 			}
 
 			Ar << bLimitGripScaling;
@@ -734,8 +761,7 @@ public:
 			}
 		}
 
-		bOutSuccess = true;
-		return true;
+		return bOutSuccess;
 	}
 };
 
@@ -779,9 +805,6 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = "SecondaryGripInfo")
 		USceneComponent * SecondaryAttachment;
 
-	//UPROPERTY(BlueprintReadWrite, Category = "SecondaryGripInfo")
-	//	float SecondarySmoothingScaler;
-
 	UPROPERTY()
 		FVector_NetQuantize100 SecondaryRelativeLocation;
 
@@ -807,7 +830,6 @@ public:
 	FBPSecondaryGripInfo():
 		bHasSecondaryAttachment(false),
 		SecondaryAttachment(nullptr),
-		//SecondarySmoothingScaler(1.0f),
 		SecondaryRelativeLocation(FVector::ZeroVector),
 		bIsSlotGrip(false),
 		LerpToRate(0.0f),
@@ -820,20 +842,25 @@ public:
 	/** Network serialization */
 	bool NetSerialize(FArchive& Ar, class UPackageMap* Map, bool& bOutSuccess)
 	{
+		bOutSuccess = true;
+
 		Ar << bHasSecondaryAttachment;
 		
 		if (bHasSecondaryAttachment)
 		{
 			Ar << SecondaryAttachment;
 			Ar << SecondaryRelativeLocation;
-			//Ar << SecondarySmoothingScaler;
-
 			Ar << bIsSlotGrip;
 		}
 
-		Ar << LerpToRate;
+		//Ar << LerpToRate;
 
-		bOutSuccess = true;
+		// This is 0.0 - 16.0, using compression to get it smaller, 4 bits = max 16 + 1 bit for sign and 7 bits precision for 128 / full 2 digit precision
+		if (Ar.IsSaving())
+			bOutSuccess &= WriteFixedCompressedFloat<16, 12>(LerpToRate, Ar);
+		else
+			bOutSuccess &= ReadFixedCompressedFloat<16, 12>(LerpToRate, Ar);
+
 		return true;
 	}
 };
@@ -975,6 +1002,10 @@ public:
 	UPROPERTY(BlueprintReadWrite, NotReplicated, Category = "Settings")
 	FTransform AdditionTransform;
 
+	// Distance from the target point for the grip
+	UPROPERTY(BlueprintReadOnly, NotReplicated, Category = "Settings")
+		float GripDistance;
+
 	// Locked transitions for swept movement so they don't just rotate in place on contact
 	bool bIsLocked;
 	FQuat LastLockedRotation;
@@ -1066,6 +1097,7 @@ public:
 		Damping(200.0f),
 		Stiffness(1500.0f),
 		AdditionTransform(FTransform::Identity),
+		GripDistance(0.0f),
 		bIsLocked(false),
 		LastLockedRotation(FRotator::ZeroRotator),
 		bSkipNextConstraintLengthCheck(false)

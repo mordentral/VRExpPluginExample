@@ -69,6 +69,11 @@ UGripMotionControllerComponent::UGripMotionControllerComponent(const FObjectInit
 	bSmoothReplicatedMotion = false;
 	bReppedOnce = false;
 	bOffsetByHMD = false;
+
+	// Defaulting to epics editor values for now
+	OneEuroDeltaCutoff = 1.0f;
+	OneEuroMinCutoff = 0.9;
+	OneEuroCutoffSlope = 0.007f;
 }
 
 //=============================================================================
@@ -1693,7 +1698,10 @@ bool UGripMotionControllerComponent::AddSecondaryAttachmentPoint(UObject * Gripp
 		GripToUse->SecondaryGripInfo.SecondaryAttachment = SecondaryPointComponent;
 		GripToUse->SecondaryGripInfo.bHasSecondaryAttachment = true;
 		GripToUse->SecondaryGripInfo.SecondaryGripDistance = 0.0f;
-		GripToUse->AdvancedGripSettings.SecondaryGripSettings.EuroLowPassForSecondarySmoothing.ResetSmoothingFilter();
+		GripToUse->AdvancedGripSettings.SecondaryGripSettings.SmoothingOneEuro.CutoffSlope = OneEuroCutoffSlope;
+		GripToUse->AdvancedGripSettings.SecondaryGripSettings.SmoothingOneEuro.DeltaCutoff = OneEuroDeltaCutoff;
+		GripToUse->AdvancedGripSettings.SecondaryGripSettings.SmoothingOneEuro.MinCutoff = OneEuroMinCutoff;
+		GripToUse->AdvancedGripSettings.SecondaryGripSettings.SmoothingOneEuro.ResetSmoothingFilter();
 	//	GripToUse->SecondaryGripInfo.SecondarySmoothingScaler = FMath::Clamp(SecondarySmoothingScaler, 0.01f, 1.0f);
 		GripToUse->SecondaryGripInfo.bIsSlotGrip = bIsSlotGrip;
 
@@ -2302,7 +2310,7 @@ void UGripMotionControllerComponent::GetGripWorldTransform(float DeltaTime, FTra
 			}
 			else if (Grip.SecondaryGripInfo.GripLerpState == EGripLerpState::ConstantLerp) // If there is a frame by frame lerp
 			{
-				FVector SmoothedValue = Grip.AdvancedGripSettings.SecondaryGripSettings.EuroLowPassForSecondarySmoothing.RunFilterSmoothing( frontLoc, DeltaTime);
+				FVector SmoothedValue = Grip.AdvancedGripSettings.SecondaryGripSettings.SmoothingOneEuro.RunFilterSmoothing( frontLoc, DeltaTime);
 
 				frontLoc = FMath::Lerp(SmoothedValue, frontLoc, Grip.AdvancedGripSettings.SecondaryGripSettings.SecondaryGripScaler);
 				//frontLoc = FMath::Lerp(Grip.SecondaryGripInfo.LastRelativeLocation, frontLoc, Grip.AdvancedGripSettings.SecondaryGripSettings.SecondaryGripScaler);
@@ -2434,23 +2442,6 @@ void UGripMotionControllerComponent::HandleGripArray(TArray<FBPActorGripInformat
 				if (!root || !actor)
 					continue;
 
-
-				// 4.17 moved apex to a plugin, no longer going to support auto dropping apex objects likely
-
-				// #TODO: Should this even be here? Or should I enforce destructible components being sub components and users doing proper cleanup?
-/*#if WITH_APEX
-				// Checking for a gripped destructible object, and if held and is fractured, auto drop it and continue
-				if (UDestructibleComponent * dest = Cast<UDestructibleComponent>(root))
-				{
-					if (!dest->ApexDestructibleActor->getChunkPhysXActor(0)) // Fractured - lost its scene actor
-					{
-						UE_LOG(LogVRMotionController, Warning, TEXT("Gripped Destructible Component has been fractured, auto dropping it"));
-						CleanUpBadGrip(GrippedObjects, i, bReplicatedArray);
-						continue;
-					}
-				}
-#endif // #if WITH_APEX*/
-
 				// Check if either implements the interface
 				bool bRootHasInterface = false;
 				bool bActorHasInterface = false;
@@ -2490,7 +2481,7 @@ void UGripMotionControllerComponent::HandleGripArray(TArray<FBPActorGripInformat
 				// Not perfect, should be done post physics or in next frame prior to changing controller location
 				// However I don't want to recalculate world transform
 				// Maybe add a grip variable of "expected loc" and use that to check next frame, but for now this will do.
-				if ((HasGripAuthority(*Grip)) && (bRootHasInterface || bActorHasInterface) &&
+				if ((bRootHasInterface || bActorHasInterface) &&
 					(
 							((Grip->GripCollisionType != EGripCollisionType::PhysicsOnly) && (Grip->GripCollisionType != EGripCollisionType::SweepWithPhysics)) &&
 							((Grip->GripCollisionType != EGripCollisionType::InteractiveHybridCollisionWithSweep) || ((Grip->GripCollisionType == EGripCollisionType::InteractiveHybridCollisionWithSweep) && Grip->bColliding))
@@ -2517,15 +2508,18 @@ void UGripMotionControllerComponent::HandleGripArray(TArray<FBPActorGripInformat
 							BreakDistance = IVRGripInterface::Execute_GripBreakDistance(actor);
 						}
 
-						if (BreakDistance > 0.0f)
+						FVector CheckDistance;
+						if (!GetPhysicsJointLength(*Grip, root, CheckDistance))
 						{
-							FVector CheckDistance;
-							if (!GetPhysicsJointLength(*Grip, root, CheckDistance))
-							{
-								CheckDistance = (WorldTransform.GetLocation() - root->GetComponentLocation());
-							}
+							CheckDistance = (WorldTransform.GetLocation() - root->GetComponentLocation());
+						}
 
-							if (CheckDistance.Size() >= BreakDistance)
+						// Set grip distance now for people to use
+						Grip->GripDistance = CheckDistance.Size();
+
+						if ((HasGripAuthority(*Grip)) && BreakDistance > 0.0f)
+						{
+							if (Grip->GripDistance >= BreakDistance)
 							{
 								switch (Grip->GripTargetType)
 								{
