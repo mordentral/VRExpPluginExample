@@ -72,7 +72,7 @@ UGripMotionControllerComponent::UGripMotionControllerComponent(const FObjectInit
 
 	// Defaulting to epics editor values for now
 	OneEuroDeltaCutoff = 1.0f;
-	OneEuroMinCutoff = 0.9;
+	OneEuroMinCutoff = 2.0f;
 	OneEuroCutoffSlope = 0.007f;
 }
 
@@ -2310,6 +2310,13 @@ void UGripMotionControllerComponent::GetGripWorldTransform(float DeltaTime, FTra
 
 			if (Grip.SecondaryGripInfo.GripLerpState == EGripLerpState::StartLerp) // Lerp into the new grip to smooth the transition
 			{
+				if (Grip.AdvancedGripSettings.SecondaryGripSettings.SecondaryGripScaler < 1.0f)
+				{
+					FVector SmoothedValue = Grip.AdvancedGripSettings.SecondaryGripSettings.SmoothingOneEuro.RunFilterSmoothing(frontLoc, DeltaTime);
+
+					frontLoc = FMath::Lerp(SmoothedValue, frontLoc, Grip.AdvancedGripSettings.SecondaryGripSettings.SecondaryGripScaler);
+				}
+				
 				frontLocOrig = FMath::Lerp(frontLocOrig, frontLoc, FMath::Clamp(Grip.SecondaryGripInfo.curLerp / Grip.SecondaryGripInfo.LerpToRate, 0.0f, 1.0f));
 			}
 			else if (Grip.SecondaryGripInfo.GripLerpState == EGripLerpState::ConstantLerp) // If there is a frame by frame lerp
