@@ -244,6 +244,7 @@ void UVRLeverComponent::OnUsed_Implementation() {}
 void UVRLeverComponent::OnEndUsed_Implementation() {}
 void UVRLeverComponent::OnSecondaryUsed_Implementation() {}
 void UVRLeverComponent::OnEndSecondaryUsed_Implementation() {}
+void UVRLeverComponent::OnInput_Implementation(FKey Key, EInputEvent KeyEvent) {}
 
 bool UVRLeverComponent::DenyGripping_Implementation()
 {
@@ -260,7 +261,7 @@ bool UVRLeverComponent::SimulateOnDrop_Implementation()
 	return false;
 }
 
-EGripCollisionType UVRLeverComponent::SlotGripType_Implementation()
+/*EGripCollisionType UVRLeverComponent::SlotGripType_Implementation()
 {
 	if (bIsPhysicsLever)
 		return EGripCollisionType::ManipulationGrip;
@@ -269,6 +270,14 @@ EGripCollisionType UVRLeverComponent::SlotGripType_Implementation()
 }
 
 EGripCollisionType UVRLeverComponent::FreeGripType_Implementation()
+{
+	if (bIsPhysicsLever)
+		return EGripCollisionType::ManipulationGrip;
+	else
+		return EGripCollisionType::CustomGrip;
+}*/
+
+EGripCollisionType UVRLeverComponent::GetPrimaryGripType_Implementation(bool bIsSlot)
 {
 	if (bIsPhysicsLever)
 		return EGripCollisionType::ManipulationGrip;
@@ -312,12 +321,17 @@ float UVRLeverComponent::GripBreakDistance_Implementation()
 	return BreakDistance;
 }
 
-void UVRLeverComponent::ClosestSecondarySlotInRange_Implementation(FVector WorldLocation, bool & bHadSlotInRange, FTransform & SlotWorldTransform, UGripMotionControllerComponent * CallingController, FName OverridePrefix)
+/*void UVRLeverComponent::ClosestSecondarySlotInRange_Implementation(FVector WorldLocation, bool & bHadSlotInRange, FTransform & SlotWorldTransform, UGripMotionControllerComponent * CallingController, FName OverridePrefix)
 {
 	bHadSlotInRange = false;
 }
 
 void UVRLeverComponent::ClosestPrimarySlotInRange_Implementation(FVector WorldLocation, bool & bHadSlotInRange, FTransform & SlotWorldTransform, UGripMotionControllerComponent * CallingController, FName OverridePrefix)
+{
+	bHadSlotInRange = false;
+}*/
+
+void UVRLeverComponent::ClosestGripSlotInRange_Implementation(FVector WorldLocation, bool bSecondarySlot, bool & bHadSlotInRange, FTransform & SlotWorldTransform, UGripMotionControllerComponent * CallingController, FName OverridePrefix)
 {
 	bHadSlotInRange = false;
 }

@@ -674,11 +674,7 @@ bool UGripMotionControllerComponent::GripObjectByInterface(UObject * ObjectToGri
 
 		if (PrimComp->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
 		{
-			EGripCollisionType CollisionType;
-			if (bIsSlotGrip)
-				CollisionType = IVRGripInterface::Execute_SlotGripType(PrimComp);
-			else
-				CollisionType = IVRGripInterface::Execute_FreeGripType(PrimComp);
+			EGripCollisionType CollisionType = IVRGripInterface::Execute_GetPrimaryGripType(PrimComp, bIsSlotGrip);
 
 			return GripComponent(PrimComp, WorldOffset, bWorldOffsetIsRelative, NAME_None,
 				CollisionType,
@@ -691,11 +687,7 @@ bool UGripMotionControllerComponent::GripObjectByInterface(UObject * ObjectToGri
 		}
 		else if (Owner->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
 		{
-			EGripCollisionType CollisionType;
-			if (bIsSlotGrip)
-				CollisionType = IVRGripInterface::Execute_SlotGripType(Owner);
-			else
-				CollisionType = IVRGripInterface::Execute_FreeGripType(Owner);
+			EGripCollisionType CollisionType = IVRGripInterface::Execute_GetPrimaryGripType(Owner, bIsSlotGrip);
 
 			return GripComponent(PrimComp, WorldOffset, bWorldOffsetIsRelative, NAME_None,
 				CollisionType,
@@ -721,11 +713,7 @@ bool UGripMotionControllerComponent::GripObjectByInterface(UObject * ObjectToGri
 
 		if (root->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
 		{
-			EGripCollisionType CollisionType;
-			if (bIsSlotGrip)
-				CollisionType = IVRGripInterface::Execute_SlotGripType(root);
-			else
-				CollisionType = IVRGripInterface::Execute_FreeGripType(root);
+			EGripCollisionType CollisionType = IVRGripInterface::Execute_GetPrimaryGripType(root, bIsSlotGrip);
 
 			return GripActor(Actor, WorldOffset, bWorldOffsetIsRelative, NAME_None,
 				CollisionType,
@@ -738,11 +726,7 @@ bool UGripMotionControllerComponent::GripObjectByInterface(UObject * ObjectToGri
 		}
 		else if (Actor->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
 		{
-			EGripCollisionType CollisionType;
-			if (bIsSlotGrip)
-				CollisionType = IVRGripInterface::Execute_SlotGripType(Actor);
-			else
-				CollisionType = IVRGripInterface::Execute_FreeGripType(Actor);
+			EGripCollisionType CollisionType = IVRGripInterface::Execute_GetPrimaryGripType(Actor, bIsSlotGrip);
 
 			return GripActor(Actor, WorldOffset, bWorldOffsetIsRelative, NAME_None,
 				CollisionType,
