@@ -35,15 +35,6 @@ public:
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "VRGripInterface")
 		bool SimulateOnDrop();
 
-	/*// Grip type to use when gripping a slot
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "VRGripInterface")
-		EGripCollisionType SlotGripType();
-
-	// Grip type to use when not gripping a slot
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "VRGripInterface")
-		EGripCollisionType FreeGripType();
-		*/
-
 	// Grip type to use
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "VRGripInterface")
 		EGripCollisionType GetPrimaryGripType(bool bIsSlot);
@@ -75,10 +66,6 @@ public:
 	// What distance to break a grip at (only relevent with physics enabled grips
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "VRGripInterface")
 		float GripBreakDistance();
-
-	// Get closest secondary slot in range
-	//UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "VRGripInterface")
-		//void ClosestSecondarySlotInRange(FVector WorldLocation, bool & bHadSlotInRange, FTransform & SlotWorldTransform, UGripMotionControllerComponent * CallingController = nullptr, FName OverridePrefix = NAME_None);
 
 	// Get closest slot in range
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "VRGripInterface")
