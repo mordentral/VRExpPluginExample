@@ -231,7 +231,8 @@ void UReplicatedVRCameraComponent::GetCameraView(float DeltaTime, FMinimalViewIn
 			}
 			else
 			{
-				ResetRelativeTransform();
+				//ResetRelativeTransform(); stop doing this, it is problematic
+				// Let the camera freeze in the last position instead
 			}
 		}
 	}
