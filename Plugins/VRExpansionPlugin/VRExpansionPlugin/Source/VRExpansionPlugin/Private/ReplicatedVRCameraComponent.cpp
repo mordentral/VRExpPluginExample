@@ -216,7 +216,7 @@ void UReplicatedVRCameraComponent::GetCameraView(float DeltaTime, FMinimalViewIn
 		{
 			const FTransform ParentWorld = GetComponentToWorld();
 			XRCamera->SetupLateUpdate(ParentWorld, this);
-
+			
 			FQuat Orientation;
 			FVector Position;
 			if (XRCamera->UpdatePlayerCamera(Orientation, Position))
@@ -231,6 +231,7 @@ void UReplicatedVRCameraComponent::GetCameraView(float DeltaTime, FMinimalViewIn
 			}
 			else
 			{
+				SetRelativeScale3D(FVector(1.0f));
 				//ResetRelativeTransform(); stop doing this, it is problematic
 				// Let the camera freeze in the last position instead
 			}
