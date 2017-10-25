@@ -234,6 +234,7 @@ void UReplicatedVRCameraComponent::GetCameraView(float DeltaTime, FMinimalViewIn
 				SetRelativeScale3D(FVector(1.0f));
 				//ResetRelativeTransform(); stop doing this, it is problematic
 				// Let the camera freeze in the last position instead
+				// Setting scale by itself makes sure we don't get camera scaling but keeps the last location and rotation alive
 			}
 		}
 	}
