@@ -263,6 +263,7 @@ bool UVRBaseCharacterMovementComponent::CheckForSnapTurn()
 			if(OwningCharacter->bUseControllerRotationYaw)
 				OwningController->SetControlRotation(NewRotation);
 
+			
 			OwningCharacter->SetActorLocationAndRotation(OrigLocation + CustomVRInputVector, NewRotation);
 
 			bWantsToSnapTurnLeft = false;
@@ -460,9 +461,11 @@ void UVRBaseCharacterMovementComponent::ReplicateMoveToServer(float DeltaTime, c
 {
 	Super::ReplicateMoveToServer(DeltaTime, NewAcceleration);
 
-	// Make sure these are cleaned out for the next frame
-	AdditionalVRInputVector = FVector::ZeroVector;
-	CustomVRInputVector = FVector::ZeroVector;
+	if (bHadSnapTurnThisFrame)
+	{
+		// Make sure these are cleaned out for the next frame
+		CustomVRInputVector = FVector::ZeroVector;
+	}
 }
 
 void UVRBaseCharacterMovementComponent::PerformMovement(float DeltaSeconds)
@@ -486,15 +489,18 @@ void UVRBaseCharacterMovementComponent::PerformMovement(float DeltaSeconds)
 	}
 
 	// Handle snap turns here
-	bool bHadSnapTurn = CheckForSnapTurn();
+	bHadSnapTurnThisFrame = CheckForSnapTurn();
 
 	Super::PerformMovement(DeltaSeconds);
 
-	if (CharacterOwner->Role == ROLE_Authority || !bHadSnapTurn)
+	// Make sure these are cleaned out for the next frame
+	AdditionalVRInputVector = FVector::ZeroVector;
+
+	if (CharacterOwner->Role == ROLE_Authority || (!bHadSnapTurnThisFrame))
 	{
-		// Make sure these are cleaned out for the next frame
-		AdditionalVRInputVector = FVector::ZeroVector;
 		CustomVRInputVector = FVector::ZeroVector;
+		bWantsToSnapTurnLeft = false;
+		bWantsToSnapTurnRight = false;
 	}
 }
 
@@ -509,8 +515,7 @@ void FSavedMove_VRBaseCharacter::SetInitialPosition(ACharacter* C)
 			bWantsToSnapTurnRight = moveComp->bWantsToSnapTurnRight;
 			VRReplicatedMovementMode = moveComp->VRReplicatedMovementMode;
 
-			if(!bWantsToSnapTurnLeft && !bWantsToSnapTurnRight)
-				ConditionalValues.CustomVRInputVector = moveComp->CustomVRInputVector;
+			ConditionalValues.CustomVRInputVector = moveComp->CustomVRInputVector;
 
 			if (moveComp->HasRequestedVelocity())
 				ConditionalValues.RequestedVelocity = moveComp->RequestedVelocity;
@@ -578,6 +583,8 @@ void FSavedMove_VRBaseCharacter::Clear()
 
 	ConditionalValues.CustomVRInputVector = FVector::ZeroVector;
 	ConditionalValues.RequestedVelocity = FVector::ZeroVector;
+	bWantsToSnapTurnLeft = false;
+	bWantsToSnapTurnRight = false;
 
 	FSavedMove_Character::Clear();
 }

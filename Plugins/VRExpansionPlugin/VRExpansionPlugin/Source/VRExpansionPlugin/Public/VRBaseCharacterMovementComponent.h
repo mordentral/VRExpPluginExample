@@ -258,6 +258,7 @@ public:
 		float VRSnapTurnDeltaAngle;
 
 	bool CheckForSnapTurn();
+	bool bHadSnapTurnThisFrame;
 
 	FVector CustomVRInputVector;
 	FVector AdditionalVRInputVector;
