@@ -8,7 +8,6 @@
 #include "VRBaseCharacterMovementComponent.h"
 #include "VRBPDatatypes.h"
 #include "VRBaseCharacter.h"
-#include "VRExpansionFunctionLibrary.h"
 #include "GameFramework/PhysicsVolume.h"
 
 
@@ -245,16 +244,15 @@ bool UVRBaseCharacterMovementComponent::CheckForSnapTurn()
 			FVector NewLocation;
 			FRotator NewRotation;
 			FVector OrigLocation = OwningCharacter->GetActorLocation();
+			FVector PivotPoint = OwningCharacter->GetActorTransform().InverseTransformPosition(OwningCharacter->GetVRLocation());
 
-			UVRExpansionFunctionLibrary::RotateAroundPivot(
-				FRotator(0.0f, bWantsToSnapTurnLeft ? -VRSnapTurnDeltaAngle : VRSnapTurnDeltaAngle, 0.0f),
-				OrigLocation,
-				OwningCharacter->bUseControllerRotationYaw ? OwningController->GetControlRotation() : OwningCharacter->GetActorRotation(),
-				OwningCharacter->GetActorTransform().InverseTransformPosition(OwningCharacter->GetVRLocation()),
-				NewLocation,
-				NewRotation,
-				true
-			);
+			NewRotation = OwningCharacter->bUseControllerRotationYaw ? OwningController->GetControlRotation() : OwningCharacter->GetActorRotation();
+			NewRotation.Pitch = 0.0f;
+			NewRotation.Roll = 0.0f;
+
+			NewLocation = OrigLocation + NewRotation.RotateVector(PivotPoint);
+			NewRotation = (NewRotation.Quaternion() * FRotator(0.0f, bWantsToSnapTurnLeft ? -VRSnapTurnDeltaAngle : VRSnapTurnDeltaAngle, 0.0f).Quaternion()).Rotator();
+			NewLocation -= NewRotation.RotateVector(PivotPoint);
 
 			// Zero this out
 			CustomVRInputVector = FVector::ZeroVector;
@@ -262,7 +260,6 @@ bool UVRBaseCharacterMovementComponent::CheckForSnapTurn()
 
 			if(OwningCharacter->bUseControllerRotationYaw)
 				OwningController->SetControlRotation(NewRotation);
-
 			
 			OwningCharacter->SetActorLocationAndRotation(OrigLocation + CustomVRInputVector, NewRotation);
 
