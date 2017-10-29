@@ -26,9 +26,21 @@
 UENUM(Blueprintable)
 enum class EVRMoveAction : uint8
 {
-	VRMOVEACTION_None = 0x00,
-	VRMOVEACTION_SnapTurn = 0x01,
-	VRMOVEACTION_Teleport = 0x02
+	VRMOVEACTION_None = 0x01,
+	VRMOVEACTION_SnapTurn = 0x02,
+	VRMOVEACTION_Teleport = 0x03,
+	VRMOVEACTION_Reserved1 = 0x04,
+	VRMOVEACTION_Reserved2 = 0x05,
+	VRMOVEACTION_CUSTOM1 = 0x06,
+	VRMOVEACTION_CUSTOM2 = 0x07,
+	VRMOVEACTION_CUSTOM3 = 0x08,
+	VRMOVEACTION_CUSTOM4 = 0x09,
+	VRMOVEACTION_CUSTOM5 = 0x0A,
+	VRMOVEACTION_CUSTOM6 = 0x0B,
+	VRMOVEACTION_CUSTOM7 = 0x0C,
+	VRMOVEACTION_CUSTOM8 = 0x0D,
+	VRMOVEACTION_CUSTOM9 = 0x0E,
+	VRMOVEACTION_CUSTOM10 = 0x0F,
 };
 
 //DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FAIMoveCompletedSignature, FAIRequestID, RequestID, EPathFollowingResult::Type, Result);
@@ -87,7 +99,7 @@ public:
 
 			if (bHasMoveAction)
 			{
-				Ar << MoveAction;
+				Ar.SerializeBits(&MoveAction, 4); // 16 elements, only allowing 1 per frame, they aren't flags
 
 				switch (MoveAction)
 				{
@@ -97,7 +109,15 @@ public:
 				{
 					bOutSuccess &= SerializePackedVector<100, 30>(MoveActionLoc, Ar);
 				}break;
-				default:break;
+				case EVRMoveAction::VRMOVEACTION_Reserved1:
+				case EVRMoveAction::VRMOVEACTION_Reserved2:
+				{}break;
+				default: // Everything else
+				{
+					// Customs could use both rot and loc, so rep both
+					bOutSuccess &= SerializePackedVector<100, 30>(MoveActionLoc, Ar);
+					MoveActionRot.SerializeCompressedShort(Ar);
+				}break;
 				}
 			}
 		}
