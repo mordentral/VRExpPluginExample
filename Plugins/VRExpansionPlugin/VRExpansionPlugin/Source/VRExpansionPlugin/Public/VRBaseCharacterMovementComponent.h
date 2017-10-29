@@ -23,6 +23,13 @@
  * @see ACharacter, UPawnMovementComponent
  * @see https://docs.unrealengine.com/latest/INT/Gameplay/Framework/Pawn/Character/
  */
+UENUM(Blueprintable)
+enum class EVRMoveAction : uint8
+{
+	VRMOVEACTION_None = 0x00,
+	VRMOVEACTION_SnapTurn = 0x01,
+	VRMOVEACTION_Teleport = 0x02
+};
 
 //DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FAIMoveCompletedSignature, FAIRequestID, RequestID, EPathFollowingResult::Type, Result);
 USTRUCT()
@@ -35,11 +42,20 @@ public:
 		FVector CustomVRInputVector;
 	UPROPERTY(Transient)
 		FVector RequestedVelocity;
+	UPROPERTY(Transient)
+		FVector MoveActionLoc;
+	UPROPERTY(Transient)
+		FRotator MoveActionRot;
+	UPROPERTY(Transient)
+		EVRMoveAction MoveAction;
 
 	FVRConditionalMoveRep()
 	{
 		CustomVRInputVector = FVector::ZeroVector;
 		RequestedVelocity = FVector::ZeroVector;
+		MoveActionLoc = FVector::ZeroVector;
+		MoveActionRot = FRotator::ZeroRotator;
+		MoveAction = EVRMoveAction::VRMOVEACTION_None;
 	}
 
 	/** Network serialization */
@@ -48,18 +64,43 @@ public:
 	{
 		bOutSuccess = true;
 
-		// Defines the level of Quantization
 		bool bHasVRinput = !CustomVRInputVector.IsZero();
-		Ar.SerializeBits(&bHasVRinput, 1);
-
 		bool bHasRequestedVelocity = !RequestedVelocity.IsZero();
-		Ar.SerializeBits(&bHasRequestedVelocity, 1);
+		bool bHasMoveAction = MoveAction != EVRMoveAction::VRMOVEACTION_None;
 
-		if (bHasVRinput)
-			bOutSuccess &= SerializePackedVector<100, 30>(CustomVRInputVector, Ar);
+		// Defines the level of Quantization
 
-		if (bHasRequestedVelocity)
-			bOutSuccess &= SerializePackedVector<100, 30>(RequestedVelocity, Ar);
+		bool bHasAnyProperties = bHasVRinput || bHasRequestedVelocity || bHasMoveAction;
+		Ar.SerializeBits(&bHasAnyProperties, 1);
+
+		if (bHasAnyProperties)
+		{
+			Ar.SerializeBits(&bHasVRinput, 1);
+			Ar.SerializeBits(&bHasRequestedVelocity, 1);
+			Ar.SerializeBits(&bHasMoveAction, 1);
+
+			if (bHasVRinput)
+				bOutSuccess &= SerializePackedVector<100, 30>(CustomVRInputVector, Ar);
+
+			if (bHasRequestedVelocity)
+				bOutSuccess &= SerializePackedVector<100, 30>(RequestedVelocity, Ar);
+
+			if (bHasMoveAction)
+			{
+				Ar << MoveAction;
+
+				switch (MoveAction)
+				{
+				case EVRMoveAction::VRMOVEACTION_None: break;
+				case EVRMoveAction::VRMOVEACTION_SnapTurn:
+				case EVRMoveAction::VRMOVEACTION_Teleport: // Not replicating rot as Control rot does that already
+				{
+					bOutSuccess &= SerializePackedVector<100, 30>(MoveActionLoc, Ar);
+				}break;
+				default:break;
+				}
+			}
+		}
 
 		return bOutSuccess;
 	}
@@ -81,7 +122,7 @@ class VREXPANSIONPLUGIN_API FSavedMove_VRBaseCharacter : public FSavedMove_Chara
 public:
 
 	// Bit masks used by GetCompressedFlags() to encode movement information.
-	enum CustomVRCompressedFlags
+	/*enum CustomVRCompressedFlags
 	{
 		//FLAG_JumpPressed = 0x01,	// Jump pressed
 		//FLAG_WantsToCrouch = 0x02,	// Wants to crouch
@@ -90,19 +131,18 @@ public:
 		// Remaining bit masks are available for custom flags.
 		//FLAG_Custom_0 = 0x10,
 		//FLAG_Custom_1 = 0x20,
-		FLAG_SnapTurnLeft = 0x40,//FLAG_Custom_2 = 0x40,
-		FLAG_SnapTurnRight = 0x80,
+		//FLAG_MoveAction = 0x40,//FLAG_Custom_2 = 0x40,
+		//FLAG_SnapTurnRight = 0x80,
 		//FLAG_Custom_3 = 0x80,
-	};
+	};*/
 
 	EVRConjoinedMovementModes VRReplicatedMovementMode;
 
 	FVector VRCapsuleLocation;
 	FVector LFDiff;
+	FVector SnapTurnOffset;
 	FRotator VRCapsuleRotation;
 	FVRConditionalMoveRep ConditionalValues;
-	uint32 bWantsToSnapTurnLeft : 1;
-	uint32 bWantsToSnapTurnRight : 1;
 
 	void Clear();
 	virtual void SetInitialPosition(ACharacter* C);
@@ -113,8 +153,6 @@ public:
 		LFDiff = FVector::ZeroVector;
 		VRCapsuleRotation = FRotator::ZeroRotator;
 		VRReplicatedMovementMode = EVRConjoinedMovementModes::C_MOVE_MAX;// _None;
-		bWantsToSnapTurnLeft = false;
-		bWantsToSnapTurnRight = false;
 	}
 
 	virtual uint8 GetCompressedFlags() const override
@@ -127,21 +165,17 @@ public:
 		Result |= (uint8)VRReplicatedMovementMode << 2;
 
 		// This takes up custom_2
-		if (bWantsToSnapTurnLeft)
+		/*if (bWantsToSnapTurn)
 		{
-			Result |= FLAG_SnapTurnLeft;
-		}
-
-		// This takes up custom_3
-		if (bWantsToSnapTurnRight)
-		{
-			Result |= FLAG_SnapTurnRight;
-		}
+			Result |= FLAG_SnapTurn;
+		}*/
 
 		// Reserved_1, and Reserved_2, Flag_Custom_0 and Flag_Custom_1 are used up
 		// By the VRReplicatedMovementMode packing
-		// custom_2 and custom_3 is taken up by bPerformedSnapTurn
+		// custom_2 is taken up by bPerformedSnapTurn
 
+
+		// only custom_3 is left currently, until new move system
 		return Result;
 	}
 
@@ -153,7 +187,7 @@ public:
 		if (!nMove || (VRReplicatedMovementMode != nMove->VRReplicatedMovementMode))
 			return false;
 
-		if (bWantsToSnapTurnLeft || bWantsToSnapTurnRight)
+		if (ConditionalValues.MoveAction != EVRMoveAction::VRMOVEACTION_None || nMove->ConditionalValues.MoveAction != EVRMoveAction::VRMOVEACTION_None)
 			return false;
 
 		if (!ConditionalValues.CustomVRInputVector.IsZero() || !nMove->ConditionalValues.CustomVRInputVector.IsZero())
@@ -185,7 +219,7 @@ public:
 		if (!ConditionalValues.RequestedVelocity.IsZero())
 			return true;
 
-		if (bWantsToSnapTurnLeft || bWantsToSnapTurnRight)
+		if (ConditionalValues.MoveAction != EVRMoveAction::VRMOVEACTION_None)
 			return true;
 
 		// #TODO: What to do here?
@@ -248,17 +282,19 @@ public:
 		void AddCustomReplicatedMovement(FVector Movement);
 
 	UFUNCTION(BlueprintCallable, Category = "VRMovement")
-		void PerformSnapTurn(bool bTurnLeft);
+		void PerformMoveAction_SnapTurn(float SnapTurnDeltaYaw);
+
+	UFUNCTION(BlueprintCallable, Category = "VRMovement")
+		void PerformMoveAction_Teleport(FVector TeleportLocation, FRotator TeleportRotation);
 	
-	bool bWantsToSnapTurnLeft;
-	bool bWantsToSnapTurnRight;
+	EVRMoveAction MoveAction;
+	FVector MoveActionLoc;
+	FRotator MoveActionRot;
 
-	// The Yaw Value to apply when performing a snap turn
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-		float VRSnapTurnDeltaAngle;
-
-	bool CheckForSnapTurn();
-	bool bHadSnapTurnThisFrame;
+	bool bHadMoveActionThisFrame;
+	bool CheckForMoveAction();
+	bool DoMASnapTurn();
+	bool DoMATeleport();
 
 	FVector CustomVRInputVector;
 	FVector AdditionalVRInputVector;
@@ -392,8 +428,7 @@ public:
 		int32 MovementFlags = (Flags >> 2) & 15;
 		VRReplicatedMovementMode = (EVRConjoinedMovementModes)MovementFlags;
 
-		bWantsToSnapTurnLeft = ((Flags & FSavedMove_VRBaseCharacter::FLAG_SnapTurnLeft) != 0);
-		bWantsToSnapTurnRight = ((Flags & FSavedMove_VRBaseCharacter::FLAG_SnapTurnRight) != 0);
+		//bWantsToSnapTurn = ((Flags & FSavedMove_VRBaseCharacter::FLAG_SnapTurn) != 0);
 
 		Super::UpdateFromCompressedFlags(Flags);
 	}
