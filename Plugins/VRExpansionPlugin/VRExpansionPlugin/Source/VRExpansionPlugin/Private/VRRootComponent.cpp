@@ -452,22 +452,23 @@ void UVRRootComponent::TickComponent(float DeltaTime, enum ELevelTick TickType, 
 
 				if (bAllowWalkingCollision)
 					bBlockingHit = GetWorld()->SweepSingleByChannel(OutHit, LastPosition, OffsetComponentToWorld.GetLocation(), FQuat::Identity, WalkingCollisionOverride, GetCollisionShape(), Params, ResponseParam);
-				else
-					bBlockingHit = GetWorld()->SweepSingleByChannel(OutHit, LastPosition, OffsetComponentToWorld.GetLocation(), FQuat::Identity, GetCollisionObjectType(), GetCollisionShape(), Params, ResponseParam);
+				//else
+				//	bBlockingHit = GetWorld()->SweepSingleByChannel(OutHit, LastPosition, OffsetComponentToWorld.GetLocation(), FQuat::Identity, GetCollisionObjectType(), GetCollisionShape(), Params, ResponseParam);
 				// If we had a valid blocking hit
-			}
-			else
-				bBlockingHit = GetWorld()->SweepSingleByChannel(OutHit, LastPosition, OffsetComponentToWorld.GetLocation(), FQuat::Identity, GetCollisionObjectType(), GetCollisionShape(), Params, ResponseParam);
 
-			if (bBlockingHit && OutHit.Component.IsValid())
-			{
-				if (CharMove != nullptr && CharMove->bIgnoreSimulatingComponentsInFloorCheck && OutHit.Component->IsSimulatingPhysics())
-					bHadRelativeMovement = false;
+				if (bBlockingHit && OutHit.Component.IsValid())
+				{
+					if (CharMove != nullptr && CharMove->bIgnoreSimulatingComponentsInFloorCheck && OutHit.Component->IsSimulatingPhysics())
+						bHadRelativeMovement = false;
+					else
+						bHadRelativeMovement = true;
+				}
 				else
-					bHadRelativeMovement = true;
+					bHadRelativeMovement = false;
 			}
 			else
-				bHadRelativeMovement = false;
+				bHadRelativeMovement = true;
+				//bBlockingHit = GetWorld()->SweepSingleByChannel(OutHit, LastPosition, OffsetComponentToWorld.GetLocation(), FQuat::Identity, GetCollisionObjectType(), GetCollisionShape(), Params, ResponseParam);
 
 			lastCameraLoc = curCameraLoc;
 			lastCameraRot = curCameraRot;

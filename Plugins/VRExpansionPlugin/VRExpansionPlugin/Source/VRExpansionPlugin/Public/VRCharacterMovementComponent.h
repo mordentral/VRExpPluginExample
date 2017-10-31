@@ -321,7 +321,6 @@ public:
 
 	// Multiple changes to support relative motion and ledge sweeps
 	virtual void PhysWalking(float deltaTime, int32 Iterations) override;
-	
 
 	// Supporting the direct move injection
 	virtual void PhysFlying(float deltaTime, int32 Iterations) override;

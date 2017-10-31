@@ -122,7 +122,7 @@ public:
 	FRotator lastCameraRot;
 
 	// While misnamed, is true if we collided with a wall/obstacle due to the HMDs movement in this frame (not movement components)
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "VRExpansionLibrary")
+	UPROPERTY(BlueprintReadOnly, Category = "VRExpansionLibrary")
 	bool bHadRelativeMovement;
 
 	FPrimitiveSceneProxy* CreateSceneProxy() override;

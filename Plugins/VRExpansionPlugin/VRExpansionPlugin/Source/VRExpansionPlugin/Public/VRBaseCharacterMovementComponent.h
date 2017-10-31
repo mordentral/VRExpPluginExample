@@ -324,6 +324,7 @@ public:
 	FVector CustomVRInputVector;
 	FVector AdditionalVRInputVector;
 	FVector LastPreAdditiveVRVelocity;
+	bool bApplyAdditionalVRInputVectorAsNegative;
 
 	inline void ApplyVRMotionToVelocity(float deltaTime)
 	{

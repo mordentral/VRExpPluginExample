@@ -441,14 +441,16 @@ FNetworkPredictionData_Server* UVRCharacterMovementComponent::GetPredictionData_
 
 void FSavedMove_VRCharacter::SetInitialPosition(ACharacter* C)
 {
+
 	// See if we can get the VR capsule location
 	if (AVRCharacter * VRC = Cast<AVRCharacter>(C))
 	{
+		UVRCharacterMovementComponent * CharMove = Cast<UVRCharacterMovementComponent>(VRC->GetCharacterMovement());
 		if (VRC->VRRootReference)
 		{
 			VRCapsuleLocation = VRC->VRRootReference->curCameraLoc;
 			VRCapsuleRotation = UVRExpansionFunctionLibrary::GetHMDPureYaw_I(VRC->VRRootReference->curCameraRot);
-			LFDiff = VRC->VRRootReference->DifferenceFromLastFrame;
+			LFDiff = CharMove->AdditionalVRInputVector;//VRC->VRRootReference->DifferenceFromLastFrame;
 		}
 		else
 		{
@@ -472,6 +474,7 @@ void FSavedMove_VRCharacter::PrepMoveFor(ACharacter* Character)
 		CharMove->VRRootCapsule->curCameraLoc = this->VRCapsuleLocation;
 		CharMove->VRRootCapsule->curCameraRot = this->VRCapsuleRotation;//FRotator(0.0f, FRotator::DecompressAxisFromByte(CapsuleYaw), 0.0f);
 		CharMove->VRRootCapsule->DifferenceFromLastFrame = FVector(LFDiff.X, LFDiff.Y, 0.0f);
+		CharMove->AdditionalVRInputVector = CharMove->VRRootCapsule->DifferenceFromLastFrame;
 
 		if (CharMove->VRReplicateCapsuleHeight && !FMath::IsNearlyEqual(this->LFDiff.Z,CharMove->VRRootCapsule->GetUnscaledCapsuleHalfHeight()))
 		{
@@ -695,6 +698,7 @@ void UVRCharacterMovementComponent::ServerMoveVR_Implementation(
 			VRRootCapsule->curCameraLoc = CapsuleLoc;
 			VRRootCapsule->curCameraRot = FRotator(0.0f, FRotator::DecompressAxisFromShort(CapsuleYaw), 0.0f);
 			VRRootCapsule->DifferenceFromLastFrame = FVector(LFDiff.X, LFDiff.Y, 0.0f);
+			AdditionalVRInputVector = VRRootCapsule->DifferenceFromLastFrame;
 		
 			if (VRReplicateCapsuleHeight && !FMath::IsNearlyEqual(LFDiff.Z,VRRootCapsule->GetUnscaledCapsuleHalfHeight()))
 				VRRootCapsule->SetCapsuleHalfHeight(LFDiff.Z, false);
@@ -947,6 +951,7 @@ void UVRCharacterMovementComponent::ServerMoveVR2_Implementation(
 			VRRootCapsule->curCameraLoc = CapsuleLoc;
 			VRRootCapsule->curCameraRot = FRotator(0.0f, FRotator::DecompressAxisFromShort(CapsuleYaw), 0.0f);
 			VRRootCapsule->DifferenceFromLastFrame = FVector(LFDiff.X, LFDiff.Y, 0.0f);
+			AdditionalVRInputVector = VRRootCapsule->DifferenceFromLastFrame;
 
 			if (VRReplicateCapsuleHeight && !FMath::IsNearlyEqual(LFDiff.Z, VRRootCapsule->GetUnscaledCapsuleHalfHeight()))
 				VRRootCapsule->SetCapsuleHalfHeight(LFDiff.Z, false);
@@ -1383,6 +1388,10 @@ void UVRCharacterMovementComponent::PhysWalking(float deltaTime, int32 Iteration
 	bool bTriedLedgeMove = false;
 	float remainingTime = deltaTime;
 
+	// Rewind the players position by the new capsule location
+	FHitResult AHit;
+	SafeMoveUpdatedComponent(-AdditionalVRInputVector, UpdatedComponent->GetComponentQuat(), true, AHit);
+
 	// Perform the move
 	while ((remainingTime >= MIN_TICK_TIME) && (Iterations < MaxSimulationIterations) && CharacterOwner && (CharacterOwner->Controller || bRunPhysicsWithNoController || HasAnimRootMotion() || CurrentRootMotion.HasOverrideVelocity() || (CharacterOwner->Role == ROLE_SimulatedProxy)))
 	{
@@ -1398,12 +1407,13 @@ void UVRCharacterMovementComponent::PhysWalking(float deltaTime, int32 Iteration
 
 		// Used for ledge check
 		FVector OldCapsuleLocation = OldLocation;
-		if(VRRootCapsule)
+		if (VRRootCapsule)
 			OldCapsuleLocation = VRRootCapsule->OffsetComponentToWorld.GetLocation();
 
 		const FFindFloorResult OldFloor = CurrentFloor;
 
 		RestorePreAdditiveRootMotionVelocity();
+		RestorePreAdditiveVRMotionVelocity();
 
 		// Ensure velocity is horizontal.
 		MaintainHorizontalGroundVelocity();
@@ -1418,6 +1428,7 @@ void UVRCharacterMovementComponent::PhysWalking(float deltaTime, int32 Iteration
 		}
 
 		ApplyRootMotionToVelocity(timeTick);
+		ApplyVRMotionToVelocity(deltaTime);
 
 		checkCode(ensureMsgf(!Velocity.ContainsNaN(), TEXT("PhysWalking: Velocity contains NaN after Root Motion application (%s)\n%s"), *GetPathNameSafe(this), *Velocity.ToString()));
 
@@ -1874,17 +1885,20 @@ void UVRCharacterMovementComponent::TickComponent(float DeltaTime, enum ELevelTi
 		return;
 	}
 
-	if (CharacterOwner && CharacterOwner->IsLocallyControlled() && VRRootCapsule && VRRootCapsule->bHadRelativeMovement)
+	if (CharacterOwner && CharacterOwner->IsLocallyControlled())
 	{
-		// Fake movement is sketchy, going to find a different solution eventually?
-		// Currently just adds a slight vector in the movement direction when we detect an obstacle, this forces us to impact the wall and not penetrate
-
-		if (VRRootCapsule->bHadRelativeMovement)
+		if (VRRootCapsule && VRRootCapsule->bHadRelativeMovement)
 		{
+			// Fake movement is sketchy, going to find a different solution eventually?
+			// Currently just adds a slight vector in the movement direction when we detect an obstacle, this forces us to impact the wall and not penetrate
 			//RequestDirectMove(VRRootCapsule->DifferenceFromLastFrame.GetSafeNormal2D(),false);
-			AddInputVector(VRRootCapsule->DifferenceFromLastFrame.GetSafeNormal2D() * WallRepulsionMultiplier);
+			AdditionalVRInputVector = VRRootCapsule->DifferenceFromLastFrame;
+			//AddInputVector(VRRootCapsule->DifferenceFromLastFrame.GetSafeNormal2D() * WallRepulsionMultiplier);
 		}
+		else
+			AdditionalVRInputVector = FVector::ZeroVector;
 	}
+
 
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 }
@@ -2111,7 +2125,7 @@ void UVRCharacterMovementComponent::MoveAlongFloor(const FVector& InVelocity, fl
 				const FVector GravDir(0.f, 0.f, -1.f);
 
 				// I add in the HMD difference from last frame to the step up check to enforce it stepping up
-				if (!StepUp(GravDir, (Delta * (1.f - PercentTimeApplied)) + VRRootCapsule->DifferenceFromLastFrame.GetSafeNormal2D(), Hit, OutStepDownResult))
+				if (!StepUp(GravDir, (Delta * (1.f - PercentTimeApplied)) + AdditionalVRInputVector.GetSafeNormal2D(), Hit, OutStepDownResult))
 				{
 					UE_LOG(LogCharacterMovement, Verbose, TEXT("- StepUp (ImpactNormal %s, Normal %s"), *Hit.ImpactNormal.ToString(), *Hit.Normal.ToString());
 					HandleImpact(Hit, LastMoveTimeSlice, RampVector);
@@ -3164,7 +3178,12 @@ void UVRCharacterMovementComponent::PhysFlying(float deltaTime, int32 Iterations
 		return;
 	}
 
+	// Rewind the players position by the new capsule location
+	FHitResult AHit;
+	SafeMoveUpdatedComponent(-AdditionalVRInputVector, UpdatedComponent->GetComponentQuat(), true, AHit);
+
 	RestorePreAdditiveRootMotionVelocity();
+	RestorePreAdditiveVRMotionVelocity();
 
 	if (!HasAnimRootMotion() && !CurrentRootMotion.HasOverrideVelocity())
 	{
@@ -3177,6 +3196,7 @@ void UVRCharacterMovementComponent::PhysFlying(float deltaTime, int32 Iterations
 	}
 
 	ApplyRootMotionToVelocity(deltaTime);
+	ApplyVRMotionToVelocity(deltaTime);
 
 	Iterations++;
 	bJustTeleported = false;
@@ -3196,7 +3216,7 @@ void UVRCharacterMovementComponent::PhysFlying(float deltaTime, int32 Iterations
 		if ((FMath::Abs(Hit.ImpactNormal.Z) < 0.2f) && (UpDown < 0.5f) && (UpDown > -0.2f) && CanStepUp(Hit))
 		{
 			float stepZ = UpdatedComponent->GetComponentLocation().Z;
-			bSteppedUp = StepUp(GravDir, Adjusted * (1.f - Hit.Time) + VRRootCapsule->DifferenceFromLastFrame.GetSafeNormal2D(), Hit, nullptr);
+			bSteppedUp = StepUp(GravDir, Adjusted * (1.f - Hit.Time) + AdditionalVRInputVector.GetSafeNormal2D(), Hit, nullptr);
 			if (bSteppedUp)
 			{
 				OldLocation.Z = UpdatedComponent->GetComponentLocation().Z + (OldLocation.Z - stepZ);
@@ -3230,6 +3250,10 @@ void UVRCharacterMovementComponent::PhysFalling(float deltaTime, int32 Iteration
 	FallAcceleration.Z = 0.f;
 	const bool bHasAirControl = (FallAcceleration.SizeSquared2D() > 0.f);
 
+	// Rewind the players position by the new capsule location
+	FHitResult AHit;
+	SafeMoveUpdatedComponent(-AdditionalVRInputVector, UpdatedComponent->GetComponentQuat(), true, AHit);
+
 	float remainingTime = deltaTime;
 	while ((remainingTime >= MIN_TICK_TIME) && (Iterations < MaxSimulationIterations))
 	{
@@ -3242,6 +3266,7 @@ void UVRCharacterMovementComponent::PhysFalling(float deltaTime, int32 Iteration
 		bJustTeleported = false;
 
 		RestorePreAdditiveRootMotionVelocity();
+		RestorePreAdditiveVRMotionVelocity();
 
 		FVector OldVelocity = Velocity;
 		FVector VelocityNoAirControl = Velocity;
@@ -3283,6 +3308,7 @@ void UVRCharacterMovementComponent::PhysFalling(float deltaTime, int32 Iteration
 		const FVector AirControlAccel = (Velocity - VelocityNoAirControl) / timeTick;
 
 		ApplyRootMotionToVelocity(timeTick);
+		ApplyVRMotionToVelocity(deltaTime);
 
 		if (bNotifyApex && CharacterOwner->Controller && (Velocity.Z <= 0.f))
 		{
@@ -3493,6 +3519,13 @@ void UVRCharacterMovementComponent::PhysNavWalking(float deltaTime, int32 Iterat
 		return;
 	}
 
+	// Rewind the players position by the new capsule location
+	FHitResult AHit;
+	SafeMoveUpdatedComponent(-AdditionalVRInputVector, UpdatedComponent->GetComponentQuat(), true, AHit);
+
+	RestorePreAdditiveRootMotionVelocity();
+	RestorePreAdditiveVRMotionVelocity();
+
 	// Ensure velocity is horizontal.
 	MaintainHorizontalGroundVelocity();
 	checkf(!Velocity.ContainsNaN(), TEXT("PhysNavWalking: Velocity contains NaN before CalcVelocity (%s: %s)\n%s"), *GetPathNameSafe(this), *GetPathNameSafe(GetOuter()), *Velocity.ToString());
@@ -3505,12 +3538,16 @@ void UVRCharacterMovementComponent::PhysNavWalking(float deltaTime, int32 Iterat
 		checkf(!Velocity.ContainsNaN(), TEXT("PhysNavWalking: Velocity contains NaN after CalcVelocity (%s: %s)\n%s"), *GetPathNameSafe(this), *GetPathNameSafe(GetOuter()), *Velocity.ToString());
 	//}
 
+	ApplyRootMotionToVelocity(deltaTime);
+	ApplyVRMotionToVelocity(deltaTime);
+
+
 	Iterations++;
 
 	FVector DesiredMove = Velocity;
 	DesiredMove.Z = 0.f;
 
-	const FVector OldPlayerLocation = GetActorFeetLocation();
+	//const FVector OldPlayerLocation = GetActorFeetLocation();
 	const FVector OldLocation = GetActorFeetLocation();
 	const FVector DeltaMove = DesiredMove * deltaTime;
 
