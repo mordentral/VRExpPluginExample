@@ -1389,8 +1389,7 @@ void UVRCharacterMovementComponent::PhysWalking(float deltaTime, int32 Iteration
 	float remainingTime = deltaTime;
 
 	// Rewind the players position by the new capsule location
-	FHitResult AHit;
-	SafeMoveUpdatedComponent(-AdditionalVRInputVector, UpdatedComponent->GetComponentQuat(), true, AHit);
+	RewindVRRelativeMovement();
 
 	// Perform the move
 	while ((remainingTime >= MIN_TICK_TIME) && (Iterations < MaxSimulationIterations) && CharacterOwner && (CharacterOwner->Controller || bRunPhysicsWithNoController || HasAnimRootMotion() || CurrentRootMotion.HasOverrideVelocity() || (CharacterOwner->Role == ROLE_SimulatedProxy)))
@@ -1428,7 +1427,7 @@ void UVRCharacterMovementComponent::PhysWalking(float deltaTime, int32 Iteration
 		}
 
 		ApplyRootMotionToVelocity(timeTick);
-		ApplyVRMotionToVelocity(deltaTime);
+		ApplyVRMotionToVelocity(timeTick);
 
 		checkCode(ensureMsgf(!Velocity.ContainsNaN(), TEXT("PhysWalking: Velocity contains NaN after Root Motion application (%s)\n%s"), *GetPathNameSafe(this), *Velocity.ToString()));
 
@@ -2130,6 +2129,7 @@ void UVRCharacterMovementComponent::MoveAlongFloor(const FVector& InVelocity, fl
 					UE_LOG(LogCharacterMovement, Verbose, TEXT("- StepUp (ImpactNormal %s, Normal %s"), *Hit.ImpactNormal.ToString(), *Hit.Normal.ToString());
 					HandleImpact(Hit, LastMoveTimeSlice, RampVector);
 					SlideAlongSurface(Delta, 1.f - PercentTimeApplied, Hit.Normal, Hit, true);
+
 				}
 				else
 				{
@@ -2142,6 +2142,7 @@ void UVRCharacterMovementComponent::MoveAlongFloor(const FVector& InVelocity, fl
 			{
 				HandleImpact(Hit, LastMoveTimeSlice, RampVector);
 				SlideAlongSurface(Delta, 1.f - PercentTimeApplied, Hit.Normal, Hit, true);
+
 			}
 		}
 	}
@@ -2231,16 +2232,7 @@ bool UVRCharacterMovementComponent::StepUp(const FVector& GravDir, const FVector
 
 	// step fwd
 	FHitResult Hit(1.f);
-	
-	// Adding in the directional difference of the last HMD movement to promote stepping up
-	// Probably entirely wrong as Delta is divided by movement ticks but I want the effect to be stronger anyway
-	// This won't effect control based movement unless stepping forward at the same time, but gives RW movement
-	// the extra boost to get up over a lip
-	// #TODO test this more, currently appears to be needed for walking, but is harmful for other modes
-	//if(VRRootCapsule && MovementMode == EMovementMode::MOVE_Walking)
-	//	MoveUpdatedComponent(Delta , PawnRotation, true, &Hit);
-	//else
-		MoveUpdatedComponent(Delta, PawnRotation, true, &Hit);
+	MoveUpdatedComponent(Delta, PawnRotation, true, &Hit);
 
 	// Check result of forward movement
 	if (Hit.bBlockingHit)
@@ -3179,8 +3171,7 @@ void UVRCharacterMovementComponent::PhysFlying(float deltaTime, int32 Iterations
 	}
 
 	// Rewind the players position by the new capsule location
-	FHitResult AHit;
-	SafeMoveUpdatedComponent(-AdditionalVRInputVector, UpdatedComponent->GetComponentQuat(), true, AHit);
+	RewindVRRelativeMovement();
 
 	RestorePreAdditiveRootMotionVelocity();
 	RestorePreAdditiveVRMotionVelocity();
@@ -3251,8 +3242,7 @@ void UVRCharacterMovementComponent::PhysFalling(float deltaTime, int32 Iteration
 	const bool bHasAirControl = (FallAcceleration.SizeSquared2D() > 0.f);
 
 	// Rewind the players position by the new capsule location
-	FHitResult AHit;
-	SafeMoveUpdatedComponent(-AdditionalVRInputVector, UpdatedComponent->GetComponentQuat(), true, AHit);
+	RewindVRRelativeMovement();
 
 	float remainingTime = deltaTime;
 	while ((remainingTime >= MIN_TICK_TIME) && (Iterations < MaxSimulationIterations))
@@ -3266,7 +3256,6 @@ void UVRCharacterMovementComponent::PhysFalling(float deltaTime, int32 Iteration
 		bJustTeleported = false;
 
 		RestorePreAdditiveRootMotionVelocity();
-		RestorePreAdditiveVRMotionVelocity();
 
 		FVector OldVelocity = Velocity;
 		FVector VelocityNoAirControl = Velocity;
@@ -3308,7 +3297,6 @@ void UVRCharacterMovementComponent::PhysFalling(float deltaTime, int32 Iteration
 		const FVector AirControlAccel = (Velocity - VelocityNoAirControl) / timeTick;
 
 		ApplyRootMotionToVelocity(timeTick);
-		ApplyVRMotionToVelocity(deltaTime);
 
 		if (bNotifyApex && CharacterOwner->Controller && (Velocity.Z <= 0.f))
 		{
@@ -3320,7 +3308,8 @@ void UVRCharacterMovementComponent::PhysFalling(float deltaTime, int32 Iteration
 
 		// Move
 		FHitResult Hit(1.f);
-		FVector Adjusted = 0.5f*(OldVelocity + Velocity) * timeTick;
+		// Adding in the vector here because velocity doesn't care
+		FVector Adjusted = (0.5f*(OldVelocity + Velocity) * timeTick) + (AdditionalVRInputVector * timeTick); 
 		SafeMoveUpdatedComponent(Adjusted, PawnRotation, true, Hit);
 
 		if (!HasValidData())
@@ -3520,8 +3509,7 @@ void UVRCharacterMovementComponent::PhysNavWalking(float deltaTime, int32 Iterat
 	}
 
 	// Rewind the players position by the new capsule location
-	FHitResult AHit;
-	SafeMoveUpdatedComponent(-AdditionalVRInputVector, UpdatedComponent->GetComponentQuat(), true, AHit);
+	RewindVRRelativeMovement();
 
 	RestorePreAdditiveRootMotionVelocity();
 	RestorePreAdditiveVRMotionVelocity();

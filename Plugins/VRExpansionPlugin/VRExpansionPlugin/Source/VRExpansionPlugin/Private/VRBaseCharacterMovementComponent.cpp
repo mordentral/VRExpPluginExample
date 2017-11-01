@@ -37,6 +37,45 @@ UVRBaseCharacterMovementComponent::UVRBaseCharacterMovementComponent(const FObje
 
 	NetworkSmoothingMode = ENetworkSmoothingMode::Disabled;
 	NetworkSimulatedSmoothRotationTime = 0.0f; // Don't smooth rotation, its not good
+
+	bWasInPushBack = false;
+	bIsInPushBack = false;
+}
+
+void UVRBaseCharacterMovementComponent::StartPushBackNotification(FHitResult HitResult)
+{
+	bIsInPushBack = true;
+
+	if (bWasInPushBack)
+		return;
+
+	bWasInPushBack = true;
+
+	if (AVRBaseCharacter * OwningCharacter = Cast<AVRBaseCharacter>(GetCharacterOwner()))
+	{
+		OwningCharacter->OnBeginWallPushback(HitResult, !Acceleration.Equals(FVector::ZeroVector));
+	}
+}
+
+void UVRBaseCharacterMovementComponent::EndPushBackNotification()
+{
+	if (bIsInPushBack || !bWasInPushBack)
+		return;
+
+	bIsInPushBack = false;
+	bWasInPushBack = false;
+
+	if (AVRBaseCharacter * OwningCharacter = Cast<AVRBaseCharacter>(GetCharacterOwner()))
+	{
+		OwningCharacter->OnEndWallPushback();
+	}
+}
+
+// Rewind the players position by the new capsule location
+void UVRBaseCharacterMovementComponent::RewindVRRelativeMovement()
+{
+	FHitResult AHit;
+	SafeMoveUpdatedComponent(-AdditionalVRInputVector, UpdatedComponent->GetComponentQuat(), false, AHit, ETeleportType::TeleportPhysics);
 }
 
 bool UVRBaseCharacterMovementComponent::FloorSweepTest(
@@ -173,6 +212,8 @@ float UVRBaseCharacterMovementComponent::SlideAlongSurface(const FVector& Delta,
 	{
 
 	}*/
+
+	StartPushBackNotification(Hit);
 
 	// If the movement mode is one where sliding is an issue in VR, scale the delta by the custom scaler now
 	// that we have already validated the floor normal.
@@ -357,8 +398,7 @@ void UVRBaseCharacterMovementComponent::PhysCustom_Climbing(float deltaTime, int
 	if (bApplyAdditionalVRInputVectorAsNegative)
 	{
 		// Rewind the players position by the new capsule location
-		FHitResult AHit;
-		SafeMoveUpdatedComponent(-AdditionalVRInputVector, UpdatedComponent->GetComponentQuat(), true, AHit);
+		RewindVRRelativeMovement();
 	}
 
 	Iterations++;
@@ -449,8 +489,7 @@ void UVRBaseCharacterMovementComponent::PhysCustom_LowGrav(float deltaTime, int3
 	if (bApplyAdditionalVRInputVectorAsNegative)
 	{
 		// Rewind the players position by the new capsule location
-		FHitResult AHit;
-		SafeMoveUpdatedComponent(-AdditionalVRInputVector, UpdatedComponent->GetComponentQuat(), true, AHit);
+		RewindVRRelativeMovement();
 	}
 
 	// Adding in custom VR input vector here, can be used for custom movement during it
@@ -555,7 +594,12 @@ void UVRBaseCharacterMovementComponent::PerformMovement(float DeltaSeconds)
 	// Handle move actions here
 	bHadMoveActionThisFrame = CheckForMoveAction();
 
+	// Clear out this flag prior to movement so we can see if it gets changed
+	bIsInPushBack = false;
+
 	Super::PerformMovement(DeltaSeconds);
+
+	EndPushBackNotification(); // Check if we need to notify of ending pushback
 
 	// Make sure these are cleaned out for the next frame
 	AdditionalVRInputVector = FVector::ZeroVector;

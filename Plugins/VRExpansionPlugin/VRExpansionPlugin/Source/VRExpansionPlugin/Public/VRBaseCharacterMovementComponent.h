@@ -325,6 +325,14 @@ public:
 	FVector AdditionalVRInputVector;
 	FVector LastPreAdditiveVRVelocity;
 	bool bApplyAdditionalVRInputVectorAsNegative;
+	
+	// Rewind the relative movement that we had with the HMD
+	inline void RewindVRRelativeMovement();
+
+	bool bWasInPushBack;
+	bool bIsInPushBack;
+	void StartPushBackNotification(FHitResult HitResult);
+	void EndPushBackNotification();
 
 	inline void ApplyVRMotionToVelocity(float deltaTime)
 	{
