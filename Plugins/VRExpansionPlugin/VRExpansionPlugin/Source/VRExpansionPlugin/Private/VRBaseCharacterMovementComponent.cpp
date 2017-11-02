@@ -75,7 +75,8 @@ void UVRBaseCharacterMovementComponent::EndPushBackNotification()
 void UVRBaseCharacterMovementComponent::RewindVRRelativeMovement()
 {
 	FHitResult AHit;
-	SafeMoveUpdatedComponent(-AdditionalVRInputVector, UpdatedComponent->GetComponentQuat(), false, AHit, ETeleportType::TeleportPhysics);
+	MoveUpdatedComponent(-AdditionalVRInputVector, UpdatedComponent->GetComponentQuat(), false);
+	//SafeMoveUpdatedComponent(-AdditionalVRInputVector, UpdatedComponent->GetComponentQuat(), false, AHit);
 }
 
 bool UVRBaseCharacterMovementComponent::FloorSweepTest(

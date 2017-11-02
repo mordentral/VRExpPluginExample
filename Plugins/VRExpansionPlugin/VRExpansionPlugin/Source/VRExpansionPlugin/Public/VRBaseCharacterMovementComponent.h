@@ -334,7 +334,7 @@ public:
 	void StartPushBackNotification(FHitResult HitResult);
 	void EndPushBackNotification();
 
-	virtual void SendClientAdjustment() override
+	/*virtual void SendClientAdjustment() override
 	{
 		if (!HasValidData())
 		{
@@ -429,7 +429,7 @@ public:
 		ServerData->PendingAdjustment.TimeStamp = 0;
 		ServerData->PendingAdjustment.bAckGoodMove = false;
 		ServerData->bForceClientUpdate = false;
-	}
+	}*/
 
 	inline void ApplyVRMotionToVelocity(float deltaTime)
 	{
