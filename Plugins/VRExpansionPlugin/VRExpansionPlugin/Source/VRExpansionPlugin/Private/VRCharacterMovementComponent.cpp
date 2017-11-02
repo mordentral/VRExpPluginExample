@@ -1389,7 +1389,8 @@ void UVRCharacterMovementComponent::PhysWalking(float deltaTime, int32 Iteration
 	float remainingTime = deltaTime;
 
 	// Rewind the players position by the new capsule location
-	RewindVRRelativeMovement();
+	//RewindVRRelativeMovement();
+	bool bRewound = false;
 
 	// Perform the move
 	while ((remainingTime >= MIN_TICK_TIME) && (Iterations < MaxSimulationIterations) && CharacterOwner && (CharacterOwner->Controller || bRunPhysicsWithNoController || HasAnimRootMotion() || CurrentRootMotion.HasOverrideVelocity() || (CharacterOwner->Role == ROLE_SimulatedProxy)))
@@ -1408,6 +1409,12 @@ void UVRCharacterMovementComponent::PhysWalking(float deltaTime, int32 Iteration
 		FVector OldCapsuleLocation = OldLocation;
 		if (VRRootCapsule)
 			OldCapsuleLocation = VRRootCapsule->OffsetComponentToWorld.GetLocation();
+
+		if (!bRewound)
+		{
+			RewindVRRelativeMovement();
+			bRewound = true;
+		}
 
 		const FFindFloorResult OldFloor = CurrentFloor;
 
