@@ -573,6 +573,113 @@ void UVRBaseCharacterMovementComponent::ReplicateMoveToServer(float DeltaTime, c
 	}
 }
 
+/*void UVRBaseCharacterMovementComponent::SendClientAdjustment()
+{
+	if (!HasValidData())
+	{
+		return;
+	}
+
+	FNetworkPredictionData_Server_Character* ServerData = GetPredictionData_Server_Character();
+	check(ServerData);
+
+	if (ServerData->PendingAdjustment.TimeStamp <= 0.f)
+	{
+		return;
+	}
+
+	if (ServerData->PendingAdjustment.bAckGoodMove == true)
+	{
+		// just notify client this move was received
+		ClientAckGoodMove(ServerData->PendingAdjustment.TimeStamp);
+	}
+	else
+	{
+		const bool bIsPlayingNetworkedRootMotionMontage = CharacterOwner->IsPlayingNetworkedRootMotionMontage();
+		if (HasRootMotionSources())
+		{
+			FRotator Rotation = ServerData->PendingAdjustment.NewRot.GetNormalized();
+			FVector_NetQuantizeNormal CompressedRotation(Rotation.Pitch / 180.f, Rotation.Yaw / 180.f, Rotation.Roll / 180.f);
+			ClientAdjustRootMotionSourcePosition
+			(
+				ServerData->PendingAdjustment.TimeStamp,
+				CurrentRootMotion,
+				bIsPlayingNetworkedRootMotionMontage,
+				bIsPlayingNetworkedRootMotionMontage ? CharacterOwner->GetRootMotionAnimMontageInstance()->GetPosition() : -1.f,
+				ServerData->PendingAdjustment.NewLoc,
+				CompressedRotation,
+				ServerData->PendingAdjustment.NewVel.Z,
+				ServerData->PendingAdjustment.NewBase,
+				ServerData->PendingAdjustment.NewBaseBoneName,
+				ServerData->PendingAdjustment.NewBase != NULL,
+				ServerData->PendingAdjustment.bBaseRelativePosition,
+				PackNetworkMovementMode()
+			);
+		}
+		else if (bIsPlayingNetworkedRootMotionMontage)
+		{
+			FRotator Rotation = ServerData->PendingAdjustment.NewRot.GetNormalized();
+			FVector_NetQuantizeNormal CompressedRotation(Rotation.Pitch / 180.f, Rotation.Yaw / 180.f, Rotation.Roll / 180.f);
+			ClientAdjustRootMotionPosition
+			(
+				ServerData->PendingAdjustment.TimeStamp,
+				CharacterOwner->GetRootMotionAnimMontageInstance()->GetPosition(),
+				ServerData->PendingAdjustment.NewLoc,
+				CompressedRotation,
+				ServerData->PendingAdjustment.NewVel.Z,
+				ServerData->PendingAdjustment.NewBase,
+				ServerData->PendingAdjustment.NewBaseBoneName,
+				ServerData->PendingAdjustment.NewBase != NULL,
+				ServerData->PendingAdjustment.bBaseRelativePosition,
+				PackNetworkMovementMode()
+			);
+		}
+		else if (ServerData->PendingAdjustment.NewVel.IsZero())
+		{
+			if (AVRBaseCharacter * VRC = Cast<AVRBaseCharacter>(GetOwner()))
+			{
+				FVector CusVec = VRC->GetVRLocation();
+				GEngine->AddOnScreenDebugMessage(-1, 5.f, IsLocallyControlled() ? FColor::Red : FColor::Blue, FString::Printf(TEXT("VrLoc: x: %f, y: %f, X: %f"), CusVec.X, CusVec.Y, CusVec.Z));
+			}
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Correcting Client Location!"));
+			ClientVeryShortAdjustPosition
+			(
+				ServerData->PendingAdjustment.TimeStamp,
+				ServerData->PendingAdjustment.NewLoc,
+				ServerData->PendingAdjustment.NewBase,
+				ServerData->PendingAdjustment.NewBaseBoneName,
+				ServerData->PendingAdjustment.NewBase != NULL,
+				ServerData->PendingAdjustment.bBaseRelativePosition,
+				PackNetworkMovementMode()
+			);
+		}
+		else
+		{
+			if (AVRBaseCharacter * VRC = Cast<AVRBaseCharacter>(GetOwner()))
+			{
+				FVector CusVec = VRC->GetVRLocation();
+				GEngine->AddOnScreenDebugMessage(-1, 5.f, IsLocallyControlled() ? FColor::Red : FColor::Blue, FString::Printf(TEXT("VrLoc: x: %f, y: %f, X: %f"), CusVec.X, CusVec.Y, CusVec.Z));
+			}
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Correcting Client Location!"));
+			ClientAdjustPosition
+			(
+				ServerData->PendingAdjustment.TimeStamp,
+				ServerData->PendingAdjustment.NewLoc,
+				ServerData->PendingAdjustment.NewVel,
+				ServerData->PendingAdjustment.NewBase,
+				ServerData->PendingAdjustment.NewBaseBoneName,
+				ServerData->PendingAdjustment.NewBase != NULL,
+				ServerData->PendingAdjustment.bBaseRelativePosition,
+				PackNetworkMovementMode()
+			);
+		}
+	}
+
+	ServerData->PendingAdjustment.TimeStamp = 0;
+	ServerData->PendingAdjustment.bAckGoodMove = false;
+	ServerData->bForceClientUpdate = false;
+}*/
+
 void UVRBaseCharacterMovementComponent::PerformMovement(float DeltaSeconds)
 {
 	if (VRReplicatedMovementMode != EVRConjoinedMovementModes::C_MOVE_MAX)//None)
@@ -598,6 +705,15 @@ void UVRBaseCharacterMovementComponent::PerformMovement(float DeltaSeconds)
 
 	// Clear out this flag prior to movement so we can see if it gets changed
 	bIsInPushBack = false;
+
+	/*if (AVRBaseCharacter * VRC = Cast<AVRBaseCharacter>(GetOwner()))
+	{
+		if ((IsLocallyControlled() && GetNetMode() == ENetMode::NM_Client))
+		{
+			FVector CusVec = VRC->GetVRLocation();
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, IsLocallyControlled() ? FColor::Red : FColor::Blue, FString::Printf(TEXT("VrLoc: x: %f, y: %f, X: %f"), CusVec.X, CusVec.Y, CusVec.Z));
+		}
+	}*/
 
 	Super::PerformMovement(DeltaSeconds);
 
