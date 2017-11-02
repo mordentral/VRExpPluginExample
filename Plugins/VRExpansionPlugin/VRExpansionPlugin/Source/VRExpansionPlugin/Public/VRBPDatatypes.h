@@ -121,6 +121,42 @@ public:
 
 };
 
+USTRUCT()
+struct FVector_NetQuantize100 : public FVector
+{
+	GENERATED_USTRUCT_BODY()
+
+		FORCEINLINE FVector_NetQuantize100()
+	{}
+
+	explicit FORCEINLINE FVector_NetQuantize100(EForceInit E)
+		: FVector(E)
+	{}
+
+	FORCEINLINE FVector_NetQuantize100(float InX, float InY, float InZ)
+		: FVector(InX, InY, InZ)
+	{}
+
+	FORCEINLINE FVector_NetQuantize100(const FVector &InVec)
+	{
+		FVector::operator=(InVec);
+	}
+
+	bool NetSerialize(FArchive& Ar, class UPackageMap* Map, bool& bOutSuccess)
+	{
+		bOutSuccess = SerializePackedVector<1000, 30>(*this, Ar);
+		return true;
+	}
+};
+
+template<>
+struct TStructOpsTypeTraits< FVector_NetQuantize100 > : public TStructOpsTypeTraitsBase2< FVector_NetQuantize100 >
+{
+	enum
+	{
+		WithNetSerializer = true
+	};
+};
 
 class FBasicLowPassFilter
 {

@@ -223,6 +223,7 @@ float UVRBaseCharacterMovementComponent::SlideAlongSurface(const FVector& Delta,
 	else
 		return Super::Super::SlideAlongSurface(Delta, Time, Normal, Hit, bHandleImpact);
 
+
 }
 
 void UVRBaseCharacterMovementComponent::SetCrouchedHalfHeight(float NewCrouchedHalfHeight)

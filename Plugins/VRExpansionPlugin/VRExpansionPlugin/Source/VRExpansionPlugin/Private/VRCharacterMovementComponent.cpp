@@ -2124,7 +2124,7 @@ void UVRCharacterMovementComponent::MoveAlongFloor(const FVector& InVelocity, fl
 				const FVector GravDir(0.f, 0.f, -1.f);
 
 				// I add in the HMD difference from last frame to the step up check to enforce it stepping up
-				if (!StepUp(GravDir, (Delta * (1.f - PercentTimeApplied)) + AdditionalVRInputVector.GetSafeNormal2D(), Hit, OutStepDownResult))
+				if (!StepUp(GravDir, (Delta * (1.f - PercentTimeApplied)) /*+ AdditionalVRInputVector.GetSafeNormal2D()*/, Hit, OutStepDownResult))
 				{
 					UE_LOG(LogCharacterMovement, Verbose, TEXT("- StepUp (ImpactNormal %s, Normal %s"), *Hit.ImpactNormal.ToString(), *Hit.Normal.ToString());
 					HandleImpact(Hit, LastMoveTimeSlice, RampVector);
@@ -2190,7 +2190,7 @@ bool UVRCharacterMovementComponent::StepUp(const FVector& GravDir, const FVector
 
 	float StepTravelUpHeight = MaxStepHeight;
 	float StepTravelDownHeight = StepTravelUpHeight;
-	const float StepSideZ = -1.f * (InHit.ImpactNormal | GravDir);
+	const float StepSideZ = -1.f * FVector::DotProduct(InHit.ImpactNormal, GravDir);//const float StepSideZ = -1.f * (InHit.ImpactNormal | GravDir);
 	float PawnInitialFloorBaseZ = OldLocation.Z -PawnHalfHeight;
 	float PawnFloorPointZ = PawnInitialFloorBaseZ;
 
@@ -3207,7 +3207,7 @@ void UVRCharacterMovementComponent::PhysFlying(float deltaTime, int32 Iterations
 		if ((FMath::Abs(Hit.ImpactNormal.Z) < 0.2f) && (UpDown < 0.5f) && (UpDown > -0.2f) && CanStepUp(Hit))
 		{
 			float stepZ = UpdatedComponent->GetComponentLocation().Z;
-			bSteppedUp = StepUp(GravDir, Adjusted * (1.f - Hit.Time) + AdditionalVRInputVector.GetSafeNormal2D(), Hit, nullptr);
+			bSteppedUp = StepUp(GravDir, Adjusted * (1.f - Hit.Time) /*+ AdditionalVRInputVector.GetSafeNormal2D()*/, Hit, nullptr);
 			if (bSteppedUp)
 			{
 				OldLocation.Z = UpdatedComponent->GetComponentLocation().Z + (OldLocation.Z - stepZ);
