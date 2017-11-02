@@ -1891,7 +1891,7 @@ void UVRCharacterMovementComponent::TickComponent(float DeltaTime, enum ELevelTi
 			// Fake movement is sketchy, going to find a different solution eventually?
 			// Currently just adds a slight vector in the movement direction when we detect an obstacle, this forces us to impact the wall and not penetrate
 			//RequestDirectMove(VRRootCapsule->DifferenceFromLastFrame.GetSafeNormal2D(),false);
-			AdditionalVRInputVector = VRRootCapsule->DifferenceFromLastFrame;
+			AdditionalVRInputVector = RoundDirectMovement(VRRootCapsule->DifferenceFromLastFrame);
 			//AddInputVector(VRRootCapsule->DifferenceFromLastFrame.GetSafeNormal2D() * WallRepulsionMultiplier);
 		}
 		else
@@ -3309,7 +3309,7 @@ void UVRCharacterMovementComponent::PhysFalling(float deltaTime, int32 Iteration
 		// Move
 		FHitResult Hit(1.f);
 		// Adding in the vector here because velocity doesn't care
-		FVector Adjusted = (0.5f*(OldVelocity + Velocity) * timeTick) + (AdditionalVRInputVector * timeTick); 
+		FVector Adjusted = (0.5f*(OldVelocity + Velocity) * timeTick) + (AdditionalVRInputVector/* * timeTick*/); 
 		SafeMoveUpdatedComponent(Adjusted, PawnRotation, true, Hit);
 
 		if (!HasValidData())

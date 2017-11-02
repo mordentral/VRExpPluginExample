@@ -122,22 +122,22 @@ public:
 };
 
 USTRUCT()
-struct FVector_NetQuantize100 : public FVector
+struct FVector_NetQuantize1000 : public FVector
 {
 	GENERATED_USTRUCT_BODY()
 
-		FORCEINLINE FVector_NetQuantize100()
+		FORCEINLINE FVector_NetQuantize1000()
 	{}
 
-	explicit FORCEINLINE FVector_NetQuantize100(EForceInit E)
+	explicit FORCEINLINE FVector_NetQuantize1000(EForceInit E)
 		: FVector(E)
 	{}
 
-	FORCEINLINE FVector_NetQuantize100(float InX, float InY, float InZ)
+	FORCEINLINE FVector_NetQuantize1000(float InX, float InY, float InZ)
 		: FVector(InX, InY, InZ)
 	{}
 
-	FORCEINLINE FVector_NetQuantize100(const FVector &InVec)
+	FORCEINLINE FVector_NetQuantize1000(const FVector &InVec)
 	{
 		FVector::operator=(InVec);
 	}
@@ -150,7 +150,7 @@ struct FVector_NetQuantize100 : public FVector
 };
 
 template<>
-struct TStructOpsTypeTraits< FVector_NetQuantize100 > : public TStructOpsTypeTraitsBase2< FVector_NetQuantize100 >
+struct TStructOpsTypeTraits< FVector_NetQuantize1000 > : public TStructOpsTypeTraitsBase2< FVector_NetQuantize1000 >
 {
 	enum
 	{
