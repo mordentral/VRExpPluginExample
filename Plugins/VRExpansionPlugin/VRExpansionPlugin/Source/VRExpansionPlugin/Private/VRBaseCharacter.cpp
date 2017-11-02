@@ -90,7 +90,7 @@ void AVRBaseCharacter::OnCustomMoveActionPerformed_Implementation(EVRMoveAction 
 
 }
 
-void AVRBaseCharacter::OnBeginWallPushback_Implementation(FHitResult HitResultOfImpact, bool bHadLocomotionInput)
+void AVRBaseCharacter::OnBeginWallPushback_Implementation(FHitResult HitResultOfImpact, bool bHadLocomotionInput, FVector HmdInput)
 {
 
 }
