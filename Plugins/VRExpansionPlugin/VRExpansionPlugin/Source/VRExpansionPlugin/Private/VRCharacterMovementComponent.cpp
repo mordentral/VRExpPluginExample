@@ -3927,6 +3927,41 @@ void UVRCharacterMovementComponent::MoveSmooth(const FVector& InVelocity, const 
 
 void UVRCharacterMovementComponent::PerformMovement(float DeltaSeconds)
 {
+	if (VRReplicatedMovementMode != EVRConjoinedMovementModes::C_MOVE_MAX)//None)
+	{
+		if (VRReplicatedMovementMode <= EVRConjoinedMovementModes::C_MOVE_MAX)
+		{
+			// Is a default movement mode, just directly set it
+			SetMovementMode((EMovementMode)VRReplicatedMovementMode);
+		}
+		else // Is Custom
+		{
+			// Auto calculates the difference for our VR movements, index is from 0 so using climbing should get me correct index's as it is the first custom mode
+			SetMovementMode(EMovementMode::MOVE_Custom, (((int8)VRReplicatedMovementMode - (uint8)EVRConjoinedMovementModes::C_VRMOVE_Climbing)));
+		}
+
+		// Clearing it here instead now, as this way the code can inject it during PerformMovement
+		// Specifically used by the Climbing Step up, so that server rollbacks are supported
+		VRReplicatedMovementMode = EVRConjoinedMovementModes::C_MOVE_MAX;//None;
+	}
+
+	// Handle move actions here
+	bHadMoveActionThisFrame = CheckForMoveAction();
+
+	// Clear out this flag prior to movement so we can see if it gets changed
+	bIsInPushBack = false;
+
+	if (AVRBaseCharacter * VRC = Cast<AVRBaseCharacter>(GetOwner()))
+	{
+		if ((IsLocallyControlled() && GetNetMode() == ENetMode::NM_Client))
+		{
+			FVector CusVec = VRC->GetVRLocation();
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, IsLocallyControlled() ? FColor::Red : FColor::Blue, FString::Printf(TEXT("VrLoc: x: %f, y: %f, X: %f"), CusVec.X, CusVec.Y, CusVec.Z));
+		}
+	}
+
+
+
 	SCOPE_CYCLE_COUNTER(STAT_CharacterMovementPerformMovement);
 
 	if (!HasValidData())
@@ -4268,4 +4303,12 @@ void UVRCharacterMovementComponent::PerformMovement(float DeltaSeconds)
 	LastUpdateLocation = NewLocation;
 	LastUpdateRotation = NewRotation;
 	LastUpdateVelocity = Velocity;
+
+
+	EndPushBackNotification(); // Check if we need to notify of ending pushback
+
+							   // Make sure these are cleaned out for the next frame
+	AdditionalVRInputVector = FVector::ZeroVector;
+	CustomVRInputVector = FVector::ZeroVector;
+	MoveAction = EVRMoveAction::VRMOVEACTION_None;
 }

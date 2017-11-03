@@ -334,7 +334,7 @@ public:
 	void StartPushBackNotification(FHitResult HitResult);
 	void EndPushBackNotification();
 
-	//virtual void SendClientAdjustment() override;
+	virtual void SendClientAdjustment() override;
 
 	inline void ApplyVRMotionToVelocity(float deltaTime)
 	{

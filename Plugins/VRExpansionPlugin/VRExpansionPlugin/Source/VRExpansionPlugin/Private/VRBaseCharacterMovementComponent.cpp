@@ -573,7 +573,7 @@ void UVRBaseCharacterMovementComponent::ReplicateMoveToServer(float DeltaTime, c
 	}
 }
 
-/*void UVRBaseCharacterMovementComponent::SendClientAdjustment()
+void UVRBaseCharacterMovementComponent::SendClientAdjustment()
 {
 	if (!HasValidData())
 	{
@@ -639,7 +639,7 @@ void UVRBaseCharacterMovementComponent::ReplicateMoveToServer(float DeltaTime, c
 			if (AVRBaseCharacter * VRC = Cast<AVRBaseCharacter>(GetOwner()))
 			{
 				FVector CusVec = VRC->GetVRLocation();
-				GEngine->AddOnScreenDebugMessage(-1, 5.f, IsLocallyControlled() ? FColor::Red : FColor::Blue, FString::Printf(TEXT("VrLoc: x: %f, y: %f, X: %f"), CusVec.X, CusVec.Y, CusVec.Z));
+				GEngine->AddOnScreenDebugMessage(-1, 5.f, IsLocallyControlled() ? FColor::Red : FColor::Green, FString::Printf(TEXT("VrLoc: x: %f, y: %f, X: %f"), CusVec.X, CusVec.Y, CusVec.Z));
 			}
 			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Correcting Client Location!"));
 			ClientVeryShortAdjustPosition
@@ -658,7 +658,7 @@ void UVRBaseCharacterMovementComponent::ReplicateMoveToServer(float DeltaTime, c
 			if (AVRBaseCharacter * VRC = Cast<AVRBaseCharacter>(GetOwner()))
 			{
 				FVector CusVec = VRC->GetVRLocation();
-				GEngine->AddOnScreenDebugMessage(-1, 5.f, IsLocallyControlled() ? FColor::Red : FColor::Blue, FString::Printf(TEXT("VrLoc: x: %f, y: %f, X: %f"), CusVec.X, CusVec.Y, CusVec.Z));
+				GEngine->AddOnScreenDebugMessage(-1, 5.f, IsLocallyControlled() ? FColor::Red : FColor::Green, FString::Printf(TEXT("VrLoc: x: %f, y: %f, X: %f"), CusVec.X, CusVec.Y, CusVec.Z));
 			}
 			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Correcting Client Location!"));
 			ClientAdjustPosition
@@ -678,7 +678,7 @@ void UVRBaseCharacterMovementComponent::ReplicateMoveToServer(float DeltaTime, c
 	ServerData->PendingAdjustment.TimeStamp = 0;
 	ServerData->PendingAdjustment.bAckGoodMove = false;
 	ServerData->bForceClientUpdate = false;
-}*/
+}
 
 void UVRBaseCharacterMovementComponent::PerformMovement(float DeltaSeconds)
 {
@@ -706,14 +706,14 @@ void UVRBaseCharacterMovementComponent::PerformMovement(float DeltaSeconds)
 	// Clear out this flag prior to movement so we can see if it gets changed
 	bIsInPushBack = false;
 
-	/*if (AVRBaseCharacter * VRC = Cast<AVRBaseCharacter>(GetOwner()))
+	if (AVRBaseCharacter * VRC = Cast<AVRBaseCharacter>(GetOwner()))
 	{
 		if ((IsLocallyControlled() && GetNetMode() == ENetMode::NM_Client))
 		{
 			FVector CusVec = VRC->GetVRLocation();
 			GEngine->AddOnScreenDebugMessage(-1, 5.f, IsLocallyControlled() ? FColor::Red : FColor::Blue, FString::Printf(TEXT("VrLoc: x: %f, y: %f, X: %f"), CusVec.X, CusVec.Y, CusVec.Z));
 		}
-	}*/
+	}
 
 	Super::PerformMovement(DeltaSeconds);
 
