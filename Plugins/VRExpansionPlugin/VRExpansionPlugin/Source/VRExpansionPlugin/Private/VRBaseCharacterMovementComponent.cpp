@@ -74,7 +74,7 @@ void UVRBaseCharacterMovementComponent::EndPushBackNotification()
 // Rewind the players position by the new capsule location
 void UVRBaseCharacterMovementComponent::RewindVRRelativeMovement()
 {
-	FHitResult AHit;
+	//FHitResult AHit;
 	MoveUpdatedComponent(-AdditionalVRInputVector, UpdatedComponent->GetComponentQuat(), false);
 	//SafeMoveUpdatedComponent(-AdditionalVRInputVector, UpdatedComponent->GetComponentQuat(), false, AHit);
 }
@@ -502,7 +502,7 @@ void UVRBaseCharacterMovementComponent::PhysCustom_LowGrav(float deltaTime, int3
 	bJustTeleported = false;
 
 	FVector OldLocation = UpdatedComponent->GetComponentLocation();
-	const FVector Adjusted = (Velocity * deltaTime) + AdditionalVRInputVector; 
+	const FVector Adjusted = (Velocity * deltaTime) + AdditionalVRInputVector;
 	FHitResult Hit(1.f);
 	SafeMoveUpdatedComponent(Adjusted, UpdatedComponent->GetComponentQuat(), true, Hit);
 
@@ -706,14 +706,14 @@ void UVRBaseCharacterMovementComponent::PerformMovement(float DeltaSeconds)
 	// Clear out this flag prior to movement so we can see if it gets changed
 	bIsInPushBack = false;
 
-	if (AVRBaseCharacter * VRC = Cast<AVRBaseCharacter>(GetOwner()))
+/*	if (AVRBaseCharacter * VRC = Cast<AVRBaseCharacter>(GetOwner()))
 	{
 		if ((IsLocallyControlled() && GetNetMode() == ENetMode::NM_Client))
 		{
 			FVector CusVec = VRC->GetVRLocation();
 			GEngine->AddOnScreenDebugMessage(-1, 5.f, IsLocallyControlled() ? FColor::Red : FColor::Blue, FString::Printf(TEXT("VrLoc: x: %f, y: %f, X: %f"), CusVec.X, CusVec.Y, CusVec.Z));
 		}
-	}
+	}*/
 
 	Super::PerformMovement(DeltaSeconds);
 

@@ -3338,7 +3338,7 @@ void UVRCharacterMovementComponent::PhysFalling(float deltaTime, int32 Iteration
 		// Move
 		FHitResult Hit(1.f);
 		// Adding in the vector here because velocity doesn't care
-		FVector Adjusted = (0.5f*(OldVelocity + Velocity) * timeTick) + (AdditionalVRInputVector/* * timeTick*/); 
+		FVector Adjusted = (0.5f*(OldVelocity + Velocity) * timeTick) + (AdditionalVRInputVector/* * timeTick*/);
 		SafeMoveUpdatedComponent(Adjusted, PawnRotation, true, Hit);
 
 		if (!HasValidData())
@@ -3951,16 +3951,14 @@ void UVRCharacterMovementComponent::PerformMovement(float DeltaSeconds)
 	// Clear out this flag prior to movement so we can see if it gets changed
 	bIsInPushBack = false;
 
-	if (AVRBaseCharacter * VRC = Cast<AVRBaseCharacter>(GetOwner()))
+	/*	if (AVRBaseCharacter * VRC = Cast<AVRBaseCharacter>(GetOwner()))
 	{
-		if ((IsLocallyControlled() && GetNetMode() == ENetMode::NM_Client))
-		{
-			FVector CusVec = VRC->GetVRLocation();
-			GEngine->AddOnScreenDebugMessage(-1, 5.f, IsLocallyControlled() ? FColor::Red : FColor::Blue, FString::Printf(TEXT("VrLoc: x: %f, y: %f, X: %f"), CusVec.X, CusVec.Y, CusVec.Z));
-		}
+	if ((IsLocallyControlled() && GetNetMode() == ENetMode::NM_Client))
+	{
+	FVector CusVec = VRC->GetVRLocation();
+	GEngine->AddOnScreenDebugMessage(-1, 5.f, IsLocallyControlled() ? FColor::Red : FColor::Blue, FString::Printf(TEXT("VrLoc: x: %f, y: %f, X: %f"), CusVec.X, CusVec.Y, CusVec.Z));
 	}
-
-
+	}*/
 
 	SCOPE_CYCLE_COUNTER(STAT_CharacterMovementPerformMovement);
 
