@@ -55,7 +55,6 @@ public:
 		void SetCapsuleHalfHeightVR(float HalfHeight, bool bUpdateOverlaps = true);
 
 protected:
-
 	virtual bool MoveComponentImpl(const FVector& Delta, const FQuat& NewRotation, bool bSweep, FHitResult* OutHit = NULL, EMoveComponentFlags MoveFlags = MOVECOMP_NoFlags, ETeleportType Teleport = ETeleportType::None) override;
 	virtual void OnUpdateTransform(EUpdateTransformFlags UpdateTransformFlags, ETeleportType Teleport = ETeleportType::None) override;
 
@@ -137,6 +136,9 @@ public:
 	// End UObject interface
 
 	virtual FBoxSphereBounds CalcBounds(const FTransform& LocalToWorld) const override;
+
+	private:
+		friend class FVRCharacterScopedMovementUpdate;
 };
 
 
