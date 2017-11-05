@@ -334,7 +334,7 @@ public:
 	void StartPushBackNotification(FHitResult HitResult);
 	void EndPushBackNotification();
 
-	virtual void SendClientAdjustment() override;
+	//virtual void SendClientAdjustment() override;
 
 	inline void ApplyVRMotionToVelocity(float deltaTime)
 	{
@@ -343,7 +343,6 @@ public:
 			LastPreAdditiveVRVelocity = FVector::ZeroVector;
 			return;
 		}
-
 		
 		LastPreAdditiveVRVelocity = (AdditionalVRInputVector) / deltaTime;// Velocity; // Save off pre-additive Velocity for restoration next tick	
 		Velocity += LastPreAdditiveVRVelocity;

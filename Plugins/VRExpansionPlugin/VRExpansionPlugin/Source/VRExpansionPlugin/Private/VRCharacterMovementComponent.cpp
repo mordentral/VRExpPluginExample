@@ -477,7 +477,7 @@ void FSavedMove_VRCharacter::SetInitialPosition(ACharacter* C)
 		{
 			VRCapsuleLocation = VRC->VRRootReference->curCameraLoc;
 			VRCapsuleRotation = UVRExpansionFunctionLibrary::GetHMDPureYaw_I(VRC->VRRootReference->curCameraRot);
-			LFDiff = CharMove->AdditionalVRInputVector;//VRC->VRRootReference->DifferenceFromLastFrame;
+			LFDiff = VRC->VRRootReference->DifferenceFromLastFrame;
 		}
 		else
 		{
@@ -1438,8 +1438,8 @@ void UVRCharacterMovementComponent::PhysWalking(float deltaTime, int32 Iteration
 
 		const FFindFloorResult OldFloor = CurrentFloor;
 
-		RestorePreAdditiveRootMotionVelocity();
-		RestorePreAdditiveVRMotionVelocity();
+		//RestorePreAdditiveRootMotionVelocity();
+		//RestorePreAdditiveVRMotionVelocity();
 
 		// Ensure velocity is horizontal.
 		MaintainHorizontalGroundVelocity();
@@ -1453,7 +1453,7 @@ void UVRCharacterMovementComponent::PhysWalking(float deltaTime, int32 Iteration
 			checkCode(ensureMsgf(!Velocity.ContainsNaN(), TEXT("PhysWalking: Velocity contains NaN after CalcVelocity (%s)\n%s"), *GetPathNameSafe(this), *Velocity.ToString()));
 		}
 
-		ApplyRootMotionToVelocity(timeTick);
+		//ApplyRootMotionToVelocity(timeTick);
 		ApplyVRMotionToVelocity(timeTick);
 
 		checkCode(ensureMsgf(!Velocity.ContainsNaN(), TEXT("PhysWalking: Velocity contains NaN after Root Motion application (%s)\n%s"), *GetPathNameSafe(this), *Velocity.ToString()));
@@ -1468,7 +1468,9 @@ void UVRCharacterMovementComponent::PhysWalking(float deltaTime, int32 Iteration
 
 		// Compute move parameters
 		const FVector MoveVelocity = Velocity;
+
 		const FVector Delta = timeTick * MoveVelocity;
+
 		const bool bZeroDelta = Delta.IsNearlyZero();
 		FStepDownResult StepDownResult;
 
@@ -1508,11 +1510,13 @@ void UVRCharacterMovementComponent::PhysWalking(float deltaTime, int32 Iteration
 					const float ActualDist = (UpdatedComponent->GetComponentLocation() - OldLocation).Size2D();
 					remainingTime += timeTick * (1.f - FMath::Min(1.f, ActualDist / DesiredDist));
 				}
+				RestorePreAdditiveVRMotionVelocity();
 				StartNewPhysics(remainingTime, Iterations);
 				return;
 			}
 			else if (IsSwimming()) //just entered water
 			{
+				RestorePreAdditiveVRMotionVelocity();
 				StartSwimming(OldLocation, OldVelocity, timeTick, remainingTime, Iterations);
 				return;
 			}
@@ -1547,6 +1551,7 @@ void UVRCharacterMovementComponent::PhysWalking(float deltaTime, int32 Iteration
 				// Try new movement direction
 				Velocity = NewDelta / timeTick;
 				remainingTime += timeTick;
+				RestorePreAdditiveVRMotionVelocity();
 				continue;
 			}
 			else
@@ -1556,6 +1561,7 @@ void UVRCharacterMovementComponent::PhysWalking(float deltaTime, int32 Iteration
 				bool bMustJump = bZeroDelta || (OldBase == NULL || (!OldBase->IsQueryCollisionEnabled() && MovementBaseUtility::IsDynamicBase(OldBase)));
 				if ((bMustJump || !bCheckedFall) && CheckFall(OldFloor, CurrentFloor.HitResult, Delta, OldLocation, remainingTime, timeTick, Iterations, bMustJump))
 				{
+					RestorePreAdditiveVRMotionVelocity();
 					return;
 				}
 				bCheckedFall = true;
@@ -1563,6 +1569,7 @@ void UVRCharacterMovementComponent::PhysWalking(float deltaTime, int32 Iteration
 				// revert this move
 				RevertMove(OldLocation, OldBase, PreviousBaseLocation, OldFloor, true);
 				remainingTime = 0.f;
+				RestorePreAdditiveVRMotionVelocity();
 				break;
 			}
 		}
@@ -1573,6 +1580,7 @@ void UVRCharacterMovementComponent::PhysWalking(float deltaTime, int32 Iteration
 			{
 				if (ShouldCatchAir(OldFloor, CurrentFloor))
 				{
+					RestorePreAdditiveVRMotionVelocity();
 					CharacterOwner->OnWalkingOffLedge(OldFloor.HitResult.ImpactNormal, OldFloor.HitResult.Normal, OldLocation, timeTick);
 					if (IsMovingOnGround())
 					{
@@ -1597,6 +1605,7 @@ void UVRCharacterMovementComponent::PhysWalking(float deltaTime, int32 Iteration
 			// check if just entered water
 			if (IsSwimming())
 			{
+				RestorePreAdditiveVRMotionVelocity();
 				StartSwimming(OldLocation, Velocity, timeTick, remainingTime, Iterations);
 				return;
 			}
@@ -1607,6 +1616,7 @@ void UVRCharacterMovementComponent::PhysWalking(float deltaTime, int32 Iteration
 				const bool bMustJump = bJustTeleported || bZeroDelta || (OldBase == NULL || (!OldBase->IsQueryCollisionEnabled() && MovementBaseUtility::IsDynamicBase(OldBase)));
 				if ((bMustJump || !bCheckedFall) && CheckFall(OldFloor, CurrentFloor.HitResult, Delta, OldLocation, remainingTime, timeTick, Iterations, bMustJump))
 				{
+					RestorePreAdditiveVRMotionVelocity();
 					return;
 				}
 				bCheckedFall = true;
@@ -1621,13 +1631,15 @@ void UVRCharacterMovementComponent::PhysWalking(float deltaTime, int32 Iteration
 			if (!bJustTeleported && !HasAnimRootMotion() && !CurrentRootMotion.HasOverrideVelocity() && timeTick >= MIN_TICK_TIME)
 			{
 				// TODO-RootMotionSource: Allow this to happen during partial override Velocity, but only set allowed axes?
-				Velocity = (UpdatedComponent->GetComponentLocation() - OldLocation) / timeTick;
+				Velocity =((UpdatedComponent->GetComponentLocation() - OldLocation ) / timeTick);
+				RestorePreAdditiveVRMotionVelocity();
 			}
 		}
 
 		// If we didn't move at all this iteration then abort (since future iterations will also be stuck).
 		if (UpdatedComponent->GetComponentLocation() == OldLocation)
 		{
+			RestorePreAdditiveVRMotionVelocity();
 			remainingTime = 0.f;
 			break;
 		}
@@ -1918,7 +1930,7 @@ void UVRCharacterMovementComponent::TickComponent(float DeltaTime, enum ELevelTi
 			// Fake movement is sketchy, going to find a different solution eventually?
 			// Currently just adds a slight vector in the movement direction when we detect an obstacle, this forces us to impact the wall and not penetrate
 			//RequestDirectMove(VRRootCapsule->DifferenceFromLastFrame.GetSafeNormal2D(),false);
-			VRRootCapsule->DifferenceFromLastFrame = RoundDirectMovement(VRRootCapsule->DifferenceFromLastFrame);
+			VRRootCapsule->DifferenceFromLastFrame = VRRootCapsule->DifferenceFromLastFrame;
 			AdditionalVRInputVector = VRRootCapsule->DifferenceFromLastFrame;
 			//AdditionalVRInputVector = RoundDirectMovement(VRRootCapsule->DifferenceFromLastFrame);
 			//AddInputVector(VRRootCapsule->DifferenceFromLastFrame.GetSafeNormal2D() * WallRepulsionMultiplier);
@@ -3284,7 +3296,7 @@ void UVRCharacterMovementComponent::PhysFalling(float deltaTime, int32 Iteration
 		const FQuat PawnRotation = UpdatedComponent->GetComponentQuat();
 		bJustTeleported = false;
 
-		RestorePreAdditiveRootMotionVelocity();
+		//RestorePreAdditiveRootMotionVelocity();
 
 		FVector OldVelocity = Velocity;
 		FVector VelocityNoAirControl = Velocity;
@@ -3325,7 +3337,7 @@ void UVRCharacterMovementComponent::PhysFalling(float deltaTime, int32 Iteration
 		VelocityNoAirControl = NewFallVelocity(VelocityNoAirControl, Gravity, timeTick);
 		const FVector AirControlAccel = (Velocity - VelocityNoAirControl) / timeTick;
 
-		ApplyRootMotionToVelocity(timeTick);
+		//ApplyRootMotionToVelocity(timeTick);
 
 		if (bNotifyApex && CharacterOwner->Controller && (Velocity.Z <= 0.f))
 		{
@@ -3338,7 +3350,7 @@ void UVRCharacterMovementComponent::PhysFalling(float deltaTime, int32 Iteration
 		// Move
 		FHitResult Hit(1.f);
 		// Adding in the vector here because velocity doesn't care
-		FVector Adjusted = (0.5f*(OldVelocity + Velocity) * timeTick) + (AdditionalVRInputVector/* * timeTick*/);
+		FVector Adjusted = (0.5f*(OldVelocity + Velocity) * timeTick) + ((AdditionalVRInputVector / deltaTime) * timeTick);
 		SafeMoveUpdatedComponent(Adjusted, PawnRotation, true, Hit);
 
 		if (!HasValidData())
@@ -3925,7 +3937,7 @@ void UVRCharacterMovementComponent::MoveSmooth(const FVector& InVelocity, const 
 	}
 }
 
-void UVRCharacterMovementComponent::PerformMovement(float DeltaSeconds)
+/*void UVRCharacterMovementComponent::PerformMovement(float DeltaSeconds)
 {
 	if (VRReplicatedMovementMode != EVRConjoinedMovementModes::C_MOVE_MAX)//None)
 	{
@@ -3950,15 +3962,6 @@ void UVRCharacterMovementComponent::PerformMovement(float DeltaSeconds)
 
 	// Clear out this flag prior to movement so we can see if it gets changed
 	bIsInPushBack = false;
-
-	/*	if (AVRBaseCharacter * VRC = Cast<AVRBaseCharacter>(GetOwner()))
-	{
-	if ((IsLocallyControlled() && GetNetMode() == ENetMode::NM_Client))
-	{
-	FVector CusVec = VRC->GetVRLocation();
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, IsLocallyControlled() ? FColor::Red : FColor::Blue, FString::Printf(TEXT("VrLoc: x: %f, y: %f, X: %f"), CusVec.X, CusVec.Y, CusVec.Z));
-	}
-	}*/
 
 	SCOPE_CYCLE_COUNTER(STAT_CharacterMovementPerformMovement);
 
@@ -4309,4 +4312,4 @@ void UVRCharacterMovementComponent::PerformMovement(float DeltaSeconds)
 	AdditionalVRInputVector = FVector::ZeroVector;
 	CustomVRInputVector = FVector::ZeroVector;
 	MoveAction = EVRMoveAction::VRMOVEACTION_None;
-}
+}*/

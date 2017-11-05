@@ -407,16 +407,16 @@ void UVRBaseCharacterMovementComponent::PhysCustom_Climbing(float deltaTime, int
 	bJustTeleported = false;
 
 	FVector OldLocation = UpdatedComponent->GetComponentLocation();
-	const FVector Adjusted = /*(Velocity * deltaTime) + */CustomVRInputVector + AdditionalVRInputVector;
+	const FVector Adjusted = /*(Velocity * deltaTime) + */CustomVRInputVector;
 
 	FHitResult Hit(1.f);
-	SafeMoveUpdatedComponent(Adjusted, UpdatedComponent->GetComponentQuat(), true, Hit);
+	SafeMoveUpdatedComponent(Adjusted + AdditionalVRInputVector, UpdatedComponent->GetComponentQuat(), true, Hit);
 	bool bSteppedUp = false;
 
 	if (Hit.Time < 1.f)
 	{
 		const FVector GravDir = FVector(0.f, 0.f, -1.f);
-		const FVector VelDir = Velocity.GetSafeNormal();
+		const FVector VelDir = (CustomVRInputVector).GetSafeNormal();//Velocity.GetSafeNormal();
 		const float UpDown = GravDir | VelDir;
 
 		//bool bSteppedUp = false;
@@ -430,7 +430,7 @@ void UVRBaseCharacterMovementComponent::PhysCustom_Climbing(float deltaTime, int
 			MaxStepHeight = VRClimbingStepHeight;
 
 			// Making it easier to step up here with the multiplier, helps avoid falling back off
-			bSteppedUp = VRClimbStepUp(GravDir, (Adjusted * VRClimbingStepUpMultiplier) * (1.f - Hit.Time), Hit);
+			bSteppedUp = VRClimbStepUp(GravDir, ((Adjusted * VRClimbingStepUpMultiplier) + AdditionalVRInputVector) * (1.f - Hit.Time), Hit);
 
 			MaxStepHeight = OldMaxStepHeight;
 
@@ -450,7 +450,7 @@ void UVRBaseCharacterMovementComponent::PhysCustom_Climbing(float deltaTime, int
 
 	if (!bJustTeleported && !HasAnimRootMotion() && !CurrentRootMotion.HasOverrideVelocity())
 	{
-		Velocity = ((UpdatedComponent->GetComponentLocation() - OldLocation) / deltaTime).GetClampedToMaxSize(VRClimbingMaxReleaseVelocitySize);
+		Velocity = (((UpdatedComponent->GetComponentLocation() - OldLocation) - AdditionalVRInputVector) / deltaTime).GetClampedToMaxSize(VRClimbingMaxReleaseVelocitySize);
 	}
 
 	if (bSteppedUp)
@@ -502,9 +502,9 @@ void UVRBaseCharacterMovementComponent::PhysCustom_LowGrav(float deltaTime, int3
 	bJustTeleported = false;
 
 	FVector OldLocation = UpdatedComponent->GetComponentLocation();
-	const FVector Adjusted = (Velocity * deltaTime) + AdditionalVRInputVector;
+	const FVector Adjusted = (Velocity * deltaTime);
 	FHitResult Hit(1.f);
-	SafeMoveUpdatedComponent(Adjusted, UpdatedComponent->GetComponentQuat(), true, Hit);
+	SafeMoveUpdatedComponent(Adjusted + AdditionalVRInputVector, UpdatedComponent->GetComponentQuat(), true, Hit);
 
 	if (Hit.Time < 1.f)
 	{
@@ -533,14 +533,14 @@ void UVRBaseCharacterMovementComponent::PhysCustom_LowGrav(float deltaTime, int3
 
 		if (!bJustTeleported && !HasAnimRootMotion() && !CurrentRootMotion.HasOverrideVelocity())
 		{
-			Velocity = ((UpdatedComponent->GetComponentLocation() - OldLocation) / deltaTime) * VRLowGravWallFrictionScaler;
+			Velocity = (((UpdatedComponent->GetComponentLocation() - OldLocation) - AdditionalVRInputVector) / deltaTime) * VRLowGravWallFrictionScaler;
 		}
 	}
 	else
 	{
 		if (!bJustTeleported && !HasAnimRootMotion() && !CurrentRootMotion.HasOverrideVelocity())
 		{
-			Velocity = ((UpdatedComponent->GetComponentLocation() - OldLocation) / deltaTime);
+			Velocity = (((UpdatedComponent->GetComponentLocation() - OldLocation) - AdditionalVRInputVector) / deltaTime);
 		}
 	}
 }
@@ -573,7 +573,7 @@ void UVRBaseCharacterMovementComponent::ReplicateMoveToServer(float DeltaTime, c
 	}
 }
 
-void UVRBaseCharacterMovementComponent::SendClientAdjustment()
+/*void UVRBaseCharacterMovementComponent::SendClientAdjustment()
 {
 	if (!HasValidData())
 	{
@@ -639,9 +639,9 @@ void UVRBaseCharacterMovementComponent::SendClientAdjustment()
 			if (AVRBaseCharacter * VRC = Cast<AVRBaseCharacter>(GetOwner()))
 			{
 				FVector CusVec = VRC->GetVRLocation();
-				GEngine->AddOnScreenDebugMessage(-1, 5.f, IsLocallyControlled() ? FColor::Red : FColor::Green, FString::Printf(TEXT("VrLoc: x: %f, y: %f, X: %f"), CusVec.X, CusVec.Y, CusVec.Z));
+				GEngine->AddOnScreenDebugMessage(-1, 125.f, IsLocallyControlled() ? FColor::Red : FColor::Green, FString::Printf(TEXT("VrLoc: x: %f, y: %f, X: %f"), CusVec.X, CusVec.Y, CusVec.Z));
 			}
-			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Correcting Client Location!"));
+			GEngine->AddOnScreenDebugMessage(-1, 125.f, FColor::Red, TEXT("Correcting Client Location!"));
 			ClientVeryShortAdjustPosition
 			(
 				ServerData->PendingAdjustment.TimeStamp,
@@ -658,9 +658,9 @@ void UVRBaseCharacterMovementComponent::SendClientAdjustment()
 			if (AVRBaseCharacter * VRC = Cast<AVRBaseCharacter>(GetOwner()))
 			{
 				FVector CusVec = VRC->GetVRLocation();
-				GEngine->AddOnScreenDebugMessage(-1, 5.f, IsLocallyControlled() ? FColor::Red : FColor::Green, FString::Printf(TEXT("VrLoc: x: %f, y: %f, X: %f"), CusVec.X, CusVec.Y, CusVec.Z));
+				GEngine->AddOnScreenDebugMessage(-1, 125.f, IsLocallyControlled() ? FColor::Red : FColor::Green, FString::Printf(TEXT("VrLoc: x: %f, y: %f, X: %f"), CusVec.X, CusVec.Y, CusVec.Z));
 			}
-			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Correcting Client Location!"));
+			GEngine->AddOnScreenDebugMessage(-1, 125.f, FColor::Red, TEXT("Correcting Client Location!"));
 			ClientAdjustPosition
 			(
 				ServerData->PendingAdjustment.TimeStamp,
@@ -679,7 +679,7 @@ void UVRBaseCharacterMovementComponent::SendClientAdjustment()
 	ServerData->PendingAdjustment.bAckGoodMove = false;
 	ServerData->bForceClientUpdate = false;
 }
-
+*/
 void UVRBaseCharacterMovementComponent::PerformMovement(float DeltaSeconds)
 {
 	if (VRReplicatedMovementMode != EVRConjoinedMovementModes::C_MOVE_MAX)//None)
@@ -705,15 +705,6 @@ void UVRBaseCharacterMovementComponent::PerformMovement(float DeltaSeconds)
 
 	// Clear out this flag prior to movement so we can see if it gets changed
 	bIsInPushBack = false;
-
-/*	if (AVRBaseCharacter * VRC = Cast<AVRBaseCharacter>(GetOwner()))
-	{
-		if ((IsLocallyControlled() && GetNetMode() == ENetMode::NM_Client))
-		{
-			FVector CusVec = VRC->GetVRLocation();
-			GEngine->AddOnScreenDebugMessage(-1, 5.f, IsLocallyControlled() ? FColor::Red : FColor::Blue, FString::Printf(TEXT("VrLoc: x: %f, y: %f, X: %f"), CusVec.X, CusVec.Y, CusVec.Z));
-		}
-	}*/
 
 	Super::PerformMovement(DeltaSeconds);
 
