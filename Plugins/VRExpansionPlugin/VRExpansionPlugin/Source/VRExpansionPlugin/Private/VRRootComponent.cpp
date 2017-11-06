@@ -425,7 +425,6 @@ void UVRRootComponent::TickComponent(float DeltaTime, enum ELevelTick TickType, 
 			FVector LastPosition = OffsetComponentToWorld.GetLocation();
 
 			OnUpdateTransform(EUpdateTransformFlags::None, ETeleportType::None);
-			//GenerateOffsetToWorld(false);
 
 			FHitResult OutHit;
 			FCollisionQueryParams Params("RelativeMovementSweep", false, GetOwner());
