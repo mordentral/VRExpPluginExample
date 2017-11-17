@@ -21,3 +21,11 @@ void UVRSeatComponent::BeginPlay()
 
 	ResetInitialRelativePosition();
 }
+
+void UVRSeatComponent::GetLifetimeReplicatedProps(TArray< class FLifetimeProperty > & OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	// Skipping the owner with this as the owner will use the controllers location directly
+	DOREPLIFETIME(UVRSeatComponent, SeatedCharacter);
+}

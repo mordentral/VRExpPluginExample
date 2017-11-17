@@ -10,7 +10,7 @@
 
 #include "VRSeatComponent.generated.h"
 
-USTRUCT()
+USTRUCT(Blueprintable)
 struct VREXPANSIONPLUGIN_API FVRSeatedCharacterInfo
 {
 	GENERATED_USTRUCT_BODY()
@@ -43,12 +43,12 @@ public:
 		if (Ar.IsSaving())
 		{
 			val = FRotator::CompressAxisToShort(OriginalRotationYaw);
-			Ar << FRotator::CompressAxisToShort(val);
+			Ar << val;
 		}
 		else
 		{
 			Ar << val;
-			OriginalRotationYaw = FRotator::DeCompressAxisFromShort(val);
+			OriginalRotationYaw = FRotator::DecompressAxisFromShort(val);
 		}
 
 		return bOutSuccess;
@@ -88,9 +88,15 @@ public:
 	UPROPERTY(BlueprintReadOnly, Replicated, EditAnywhere, Category = "VRSeatComponent", ReplicatedUsing = OnRep_SeatedCharInfo)
 		FVRSeatedCharacterInfo SeatedCharacter;
 
+	UFUNCTION()
+	virtual void OnRep_SeatedCharInfo()
+	{
+		// Handle setting up the player here
+	}
+
 	bool UnSeatPlayer(AVRBaseCharacter * CharacterToUnSeat, FVector NewWorldLocation)
 	{
-
+		return false;
 	}
 
 	bool SeatPlayer(AVRBaseCharacter * CharacterToSeat)
@@ -108,6 +114,9 @@ public:
 		}
 
 		CharacterToSeat->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+
+
+		return true;
 	}
 
 	FVector InitialRelativePosition;
@@ -127,7 +136,7 @@ public:
 
 		if (AVRBaseCharacter * BaseCharacterChild = Cast<AVRBaseCharacter>(ChildComponent->GetOwner()))
 		{
-			InitialCharacterCameraPosition = BaseCharacterChild->VRReplicatedCamera->RelativeLocation;
+			SeatedCharacter.OriginalRelativeLocation = BaseCharacterChild->VRReplicatedCamera->RelativeLocation;
 		}
 	}
 
