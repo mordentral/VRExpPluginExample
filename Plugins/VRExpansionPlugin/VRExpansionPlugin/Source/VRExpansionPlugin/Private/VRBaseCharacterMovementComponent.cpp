@@ -311,34 +311,7 @@ bool UVRBaseCharacterMovementComponent::DoMASnapTurn()
 		}
 		else
 		{
-			AController* OwningController = OwningCharacter->GetController();
-
-			if (!OwningController)
-			{
-				MoveAction.MoveAction = EVRMoveAction::VRMOVEACTION_None;
-				return false;
-			}
-
-			FVector NewLocation;
-			FRotator NewRotation;
-			FVector OrigLocation = OwningCharacter->GetActorLocation();
-			FVector PivotPoint = OwningCharacter->GetActorTransform().InverseTransformPosition(OwningCharacter->GetVRLocation());
-
-			NewRotation = OwningCharacter->bUseControllerRotationYaw ? OwningController->GetControlRotation() : OwningCharacter->GetActorRotation();
-			NewRotation.Pitch = 0.0f;
-			NewRotation.Roll = 0.0f;
-
-			NewLocation = OrigLocation + NewRotation.RotateVector(PivotPoint);
-			NewRotation = (NewRotation.Quaternion() * MoveAction.MoveActionRot.Quaternion()).Rotator();
-			NewLocation -= NewRotation.RotateVector(PivotPoint);
-
-			// Zero this out
-			MoveAction.MoveActionLoc = NewLocation - OrigLocation;
-
-			if (OwningCharacter->bUseControllerRotationYaw)
-				OwningController->SetControlRotation(NewRotation);
-
-			OwningCharacter->SetActorLocationAndRotation(OrigLocation + MoveAction.MoveActionLoc, NewRotation);
+			MoveAction.MoveActionLoc = OwningCharacter->AddActorWorldRotationVR(MoveAction.MoveActionRot, true);
 			return true;
 		}
 	}

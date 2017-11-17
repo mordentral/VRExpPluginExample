@@ -14,14 +14,6 @@ UVRSeatComponent::~UVRSeatComponent()
 {
 }
 
-void UVRSeatComponent::BeginPlay()
-{
-	// Call the base class 
-	Super::BeginPlay();
-
-	ResetInitialRelativePosition();
-}
-
 void UVRSeatComponent::GetLifetimeReplicatedProps(TArray< class FLifetimeProperty > & OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);

@@ -71,6 +71,99 @@ public:
 		return GetVRLocation();
 	}
 
+	// Adds a rotation delta taking into account the HMD as a pivot point (also moves the actor), returns final location difference
+	UFUNCTION(BlueprintCallable, Category = "BaseVRCharacter|VRLocations")
+	FVector AddActorWorldRotationVR(FRotator DeltaRot, bool bUseYawOnly)
+	{
+			AController* OwningController = GetController();
+
+			FVector NewLocation;
+			FRotator NewRotation;
+			FVector OrigLocation = GetActorLocation();
+			FVector PivotPoint = GetActorTransform().InverseTransformPosition(GetVRLocation());
+
+			NewRotation = bUseControllerRotationYaw && OwningController ? OwningController->GetControlRotation() : GetActorRotation();
+			
+			if (bUseYawOnly)
+			{
+				NewRotation.Pitch = 0.0f;
+				NewRotation.Roll = 0.0f;
+			}
+
+			NewLocation = OrigLocation + NewRotation.RotateVector(PivotPoint);
+			NewRotation = (NewRotation.Quaternion() * DeltaRot.Quaternion()).Rotator();
+			NewLocation -= NewRotation.RotateVector(PivotPoint);
+
+			if (bUseControllerRotationYaw && OwningController)
+				OwningController->SetControlRotation(NewRotation);
+
+			// Also setting actor rot because the control rot transfers to it anyway eventually
+			SetActorLocationAndRotation(NewLocation, NewRotation);
+			return NewLocation - OrigLocation;
+	}
+
+
+	// Sets the actors rotation taking into account the HMD as a pivot point (also moves the actor), returns the location difference
+	UFUNCTION(BlueprintCallable, Category = "BaseVRCharacter|VRLocations")
+	FVector SetActorRotationVR(FRotator NewRot, bool bUseYawOnly)
+	{
+		AController* OwningController = GetController();
+
+		FVector NewLocation;
+		FRotator NewRotation;
+		FVector OrigLocation = GetActorLocation();
+		FVector PivotPoint = GetActorTransform().InverseTransformPosition(GetVRLocation());
+
+		NewRotation = bUseControllerRotationYaw && OwningController ? OwningController->GetControlRotation() : GetActorRotation();
+		
+		if (bUseYawOnly)
+		{
+			NewRotation.Pitch = 0.0f;
+			NewRotation.Roll = 0.0f;
+		}
+
+		NewLocation = OrigLocation + NewRotation.RotateVector(PivotPoint);
+		NewRotation = NewRot;
+		NewLocation -= NewRotation.RotateVector(PivotPoint);
+
+		if (bUseControllerRotationYaw && OwningController)
+			OwningController->SetControlRotation(NewRotation);
+
+		// Also setting actor rot because the control rot transfers to it anyway eventually
+		SetActorLocationAndRotation(NewLocation, NewRotation);
+		return NewLocation - OrigLocation;
+	}	
+	
+	// Sets the actors rotation and location taking into account the HMD as a pivot point (also moves the actor), returns the location difference from the rotation
+	UFUNCTION(BlueprintCallable, Category = "BaseVRCharacter|VRLocations")
+	FVector SetActorLocationAndRotationVR(FVector NewLoc, FRotator NewRot, bool bUseYawOnly)
+	{
+		AController* OwningController = GetController();
+
+		FVector NewLocation;
+		FRotator NewRotation;
+		FVector PivotPoint = GetActorTransform().InverseTransformPosition(GetVRLocation());
+
+		NewRotation = bUseControllerRotationYaw && OwningController ? OwningController->GetControlRotation() : GetActorRotation();
+
+		if (bUseYawOnly)
+		{
+			NewRotation.Pitch = 0.0f;
+			NewRotation.Roll = 0.0f;
+		}
+
+		NewLocation = NewLoc + NewRotation.RotateVector(PivotPoint);
+		NewRotation = NewRot;
+		NewLocation -= NewRotation.RotateVector(PivotPoint);
+
+		if (bUseControllerRotationYaw && OwningController)
+			OwningController->SetControlRotation(NewRotation);
+
+		// Also setting actor rot because the control rot transfers to it anyway eventually
+		SetActorLocationAndRotation(NewLocation, NewRotation);
+		return NewLocation - NewLoc;
+	}
+
 	// Regenerates the base offsetcomponenttoworld that VR uses
 	UFUNCTION(BlueprintCallable, Category = "BaseVRCharacter|VRLocations")
 	virtual void RegenerateOffsetComponentToWorld(bool bUpdateBounds, bool bCalculatePureYaw)

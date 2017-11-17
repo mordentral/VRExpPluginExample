@@ -17,15 +17,15 @@ struct VREXPANSIONPLUGIN_API FVRSeatedCharacterInfo
 public:
 	UPROPERTY()
 		AVRBaseCharacter * SeatedCharacter;
-	UPROPERTY()
-		FVector_NetQuantize100 OriginalRelativeLocation;
+	//UPROPERTY()
+	//	FVector_NetQuantize100 OriginalRelativeLocation;
 	UPROPERTY()
 		float OriginalRotationYaw;
 
 	void Clear()
 	{
 		SeatedCharacter = nullptr;
-		OriginalRelativeLocation = FVector::ZeroVector;
+	//	OriginalRelativeLocation = FVector::ZeroVector;
 		OriginalRotationYaw = 0;
 	}
 
@@ -37,7 +37,7 @@ public:
 		bOutSuccess = true;
 
 		Ar << SeatedCharacter;
-		OriginalRelativeLocation.NetSerialize(Ar, Map, bOutSuccess);
+		//OriginalRelativeLocation.NetSerialize(Ar, Map, bOutSuccess);
 
 		uint16 val;
 		if (Ar.IsSaving())
@@ -82,9 +82,6 @@ public:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRSeatComponent")
 		float HeadRadiusThreshold;
 
-	// Allow for initial position recording
-	virtual void BeginPlay() override;
-
 	UPROPERTY(BlueprintReadOnly, Replicated, EditAnywhere, Category = "VRSeatComponent", ReplicatedUsing = OnRep_SeatedCharInfo)
 		FVRSeatedCharacterInfo SeatedCharacter;
 
@@ -92,61 +89,50 @@ public:
 	virtual void OnRep_SeatedCharInfo()
 	{
 		// Handle setting up the player here
+
+		SeatedCharacter.SeatedCharacter->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+		ZeroSeatedPlayer();
 	}
 
-	bool UnSeatPlayer(AVRBaseCharacter * CharacterToUnSeat, FVector NewWorldLocation)
+	void ZeroSeatedPlayer()
 	{
-		return false;
+		if (SeatedCharacter.SeatedCharacter != nullptr)
+		{
+			SeatedCharacter.SeatedCharacter->SetActorLocationAndRotationVR(SeatedCharacter.SeatedCharacter->GetVRLocation() - this->GetComponentLocation(), FRotator(0.0f, -SeatedCharacter.OriginalRotationYaw, 0.0f), true);
+		}
 	}
 
+	void CheckCurrentOffset()
+	{
+		// Darken the camera if locally controlled, otherwise just move back into range
+	}
+
+	UFUNCTION(BlueprintCallable, Category = "VRSeatComponent")
 	bool SeatPlayer(AVRBaseCharacter * CharacterToSeat)
 	{
-		if(SeatedCharacter.SeatedCharacter != nullptr)
-		{ 
-			if (SeatedCharacter.SeatedCharacter == CharacterToSeat)
-			{
-				// Reinit here?
-			}
-			else
-			{
-				return false; // Already have a seated player
-			}
-		}
+		if (CharacterToSeat == nullptr)
+			return false;
 
-		CharacterToSeat->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+		AController* OwningController = CharacterToSeat->GetController();
 
+		SeatedCharacter.SeatedCharacter = CharacterToSeat;
+		SeatedCharacter.OriginalRotationYaw = UVRExpansionFunctionLibrary::GetHMDPureYaw_I(CharacterToSeat->bUseControllerRotationYaw && OwningController ? OwningController->GetControlRotation() : CharacterToSeat->GetActorRotation()).Yaw;
+		OnRep_SeatedCharInfo(); // Call this on server side because it won't call itself
 
+		SeatedCharacter.SeatedCharacter->SetReplicateMovement(false);
 		return true;
 	}
 
-	FVector InitialRelativePosition;
-	FRotator InitialRelativeRotation;
-
-	// Should be called if the seat is moved post begin play
+	// Need to call this on local client to set the rotation....
 	UFUNCTION(BlueprintCallable, Category = "VRSeatComponent")
-	void ResetInitialRelativePosition()
+	bool UnSeatPlayer(FVector NewWorldLocation, FRotator NewWorldRotation)
 	{
-		InitialRelativePosition = this->RelativeLocation;
-		InitialRelativeRotation = this->RelativeRotation;
+		if (SeatedCharacter.SeatedCharacter == nullptr)
+			return false;
+
+		SeatedCharacter.SeatedCharacter->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+		SeatedCharacter.SeatedCharacter->SetActorLocationAndRotationVR(NewWorldLocation - (SeatedCharacter.SeatedCharacter->GetVRLocation() - SeatedCharacter.SeatedCharacter->GetActorLocation()), NewWorldRotation, true);
+		SeatedCharacter.SeatedCharacter->SetReplicateMovement(true);
+		return true;
 	}
-
-	virtual void OnChildAttached(USceneComponent * ChildComponent) override
-	{
-		Super::OnChildAttached(ChildComponent);
-
-		if (AVRBaseCharacter * BaseCharacterChild = Cast<AVRBaseCharacter>(ChildComponent->GetOwner()))
-		{
-			SeatedCharacter.OriginalRelativeLocation = BaseCharacterChild->VRReplicatedCamera->RelativeLocation;
-		}
-	}
-
-	virtual void OnChildDetached(USceneComponent* ChildComponent) 
-	{
-		Super::OnChildDetached(ChildComponent);
-	}
-
-	void UpdatePosition()
-	{
-	}
-
 };
