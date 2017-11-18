@@ -512,7 +512,9 @@ enum class ESecondaryGripType : uint8
 	SG_Free_Retain, // Retain pos on drop
 	SG_SlotOnly_Retain, 
 	SG_FreeWithScaling_Retain, // Scaling with retain pos on drop
-	SG_SlotOnlyWithScaling_Retain
+	SG_SlotOnlyWithScaling_Retain,
+	SG_Custom, // Does nothing, just provides the events for personal use
+	SG_ScalingOnly, // Does not track the hand, only scales the mesh with it
 };
 
 // Grip Late Update information
@@ -692,6 +694,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SecondaryGripSettings", meta = (editcondition = "bUseSecondaryGripSettings"))
 		bool bUseSecondaryGripDistanceInfluence;
 
+	// If true, will use the GripInfluenceDeadZone as a constant value instead of calculating the distance and lerping, lets you define a static influence amount.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SecondaryGripSettings", meta = (editcondition = "bUseSecondaryGripDistanceInfluence"))
+		bool bUseGripInfluenceDeadZoneAsConstant;
+
 	// Distance from grip point in local space where there is 100% influence
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SecondaryGripSettings", meta = (editcondition = "bUseSecondaryGripDistanceInfluence", ClampMin = "0.00", UIMin = "0.00", ClampMax = "256.00", UIMax = "256.00"))
 		float GripInfluenceDeadZone;
@@ -720,6 +726,7 @@ public:
 		bUseSecondaryGripSettings(false),
 		SecondaryGripScaler(1.0f),
 		bUseSecondaryGripDistanceInfluence(false),
+		bUseGripInfluenceDeadZoneAsConstant(false),
 		GripInfluenceDeadZone(50.0f),
 		GripInfluenceDistanceToZero(100.0f),
 		bLimitGripScaling(false),
@@ -752,18 +759,21 @@ public:
 			{
 				//Ar << GripInfluenceDeadZone;
 				//Ar << GripInfluenceDistanceToZero;
+				Ar.SerializeBits(&bUseGripInfluenceDeadZoneAsConstant, 1);
 
 				// Forcing a maximum value here so that we can compress it by making assumptions
 				// 256 max value = 8 bits + 1 bit for sign + 7 bits for precision (up to 128 on precision, so full range 2 digit precision).
 				if (Ar.IsSaving())
 				{
 					bOutSuccess &= WriteFixedCompressedFloat<256, 16>(GripInfluenceDeadZone, Ar);
-					bOutSuccess &= WriteFixedCompressedFloat<256, 16>(GripInfluenceDistanceToZero, Ar);
+					if(!bUseGripInfluenceDeadZoneAsConstant)
+						bOutSuccess &= WriteFixedCompressedFloat<256, 16>(GripInfluenceDistanceToZero, Ar);
 				}
 				else
 				{
 					bOutSuccess &= ReadFixedCompressedFloat<256, 16>(GripInfluenceDeadZone, Ar);
-					bOutSuccess &= ReadFixedCompressedFloat<256, 16>(GripInfluenceDistanceToZero, Ar);
+					if (!bUseGripInfluenceDeadZoneAsConstant)
+						bOutSuccess &= ReadFixedCompressedFloat<256, 16>(GripInfluenceDistanceToZero, Ar);
 				}
 			}
 

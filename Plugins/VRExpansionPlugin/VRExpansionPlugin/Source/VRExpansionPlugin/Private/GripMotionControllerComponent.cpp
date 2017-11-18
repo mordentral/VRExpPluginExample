@@ -1875,6 +1875,7 @@ bool UGripMotionControllerComponent::RemoveSecondaryAttachmentPoint(UObject * Gr
 			case ESecondaryGripType::SG_SlotOnlyWithScaling_Retain:
 			case ESecondaryGripType::SG_Free_Retain:
 			case ESecondaryGripType::SG_SlotOnly_Retain:
+			case ESecondaryGripType::SG_ScalingOnly:
 			{
 				GripToUse->RelativeTransform = primComp->GetComponentTransform().GetRelativeTransform(this->GetComponentTransform());
 				GripToUse->SecondaryGripInfo.LerpToRate = 0.0f;
@@ -2335,122 +2336,144 @@ void UGripMotionControllerComponent::GetGripWorldTransform(float DeltaTime, FTra
 	// Handle the interp and multi grip situations, re-checking the grip situation here as it may have changed in the switch above.
 	if ((Grip.SecondaryGripInfo.bHasSecondaryAttachment && Grip.SecondaryGripInfo.SecondaryAttachment) || Grip.SecondaryGripInfo.GripLerpState == EGripLerpState::EndLerp)
 	{
-		// Variables needed for multi grip transform
-		FVector BasePoint = this->GetComponentLocation();
-		const FTransform PivotToWorld = FTransform(FQuat::Identity, BasePoint);
-		const FTransform WorldToPivot = FTransform(FQuat::Identity, -BasePoint);
 
-		FVector frontLocOrig;
-		FVector frontLoc;
+		// Checking secondary grip type for the scaling setting
+		ESecondaryGripType SecondaryType = ESecondaryGripType::SG_None;
 
-		// Ending lerp out of a multi grip
-		if (Grip.SecondaryGripInfo.GripLerpState == EGripLerpState::EndLerp)
+		if (bRootHasInterface)
+			SecondaryType = IVRGripInterface::Execute_SecondaryGripType(root);
+		else if (bActorHasInterface)
+			SecondaryType = IVRGripInterface::Execute_SecondaryGripType(actor);
+
+		// If the grip is a custom one, skip all of this logic we won't be changing anything
+		if (SecondaryType != ESecondaryGripType::SG_Custom)
 		{
-			frontLocOrig = (WorldTransform.TransformPosition(Grip.SecondaryGripInfo.SecondaryRelativeLocation)) - BasePoint;
-			frontLoc = Grip.SecondaryGripInfo.LastRelativeLocation;
+			// Variables needed for multi grip transform
+			FVector BasePoint = this->GetComponentLocation();
+			const FTransform PivotToWorld = FTransform(FQuat::Identity, BasePoint);
+			const FTransform WorldToPivot = FTransform(FQuat::Identity, -BasePoint);
 
-			frontLocOrig = FMath::Lerp(frontLoc, frontLocOrig, FMath::Clamp(Grip.SecondaryGripInfo.curLerp / Grip.SecondaryGripInfo.LerpToRate, 0.0f, 1.0f));
-		}
-		else // Is in a multi grip, might be lerping into it as well.
-		{
-			//FVector curLocation; // Current location of the secondary grip
+			FVector frontLocOrig;
+			FVector frontLoc;
 
-			bool bPulledControllerLoc = false;
-			if (bHasAuthority && Grip.SecondaryGripInfo.SecondaryAttachment->GetOwner() == this->GetOwner())
+			// Ending lerp out of a multi grip
+			if (Grip.SecondaryGripInfo.GripLerpState == EGripLerpState::EndLerp)
 			{
-				if (UGripMotionControllerComponent * OtherController = Cast<UGripMotionControllerComponent>(Grip.SecondaryGripInfo.SecondaryAttachment))
+				frontLocOrig = (WorldTransform.TransformPosition(Grip.SecondaryGripInfo.SecondaryRelativeLocation)) - BasePoint;
+				frontLoc = Grip.SecondaryGripInfo.LastRelativeLocation;
+
+				frontLocOrig = FMath::Lerp(frontLoc, frontLocOrig, FMath::Clamp(Grip.SecondaryGripInfo.curLerp / Grip.SecondaryGripInfo.LerpToRate, 0.0f, 1.0f));
+			}
+			else // Is in a multi grip, might be lerping into it as well.
+			{
+				//FVector curLocation; // Current location of the secondary grip
+
+				bool bPulledControllerLoc = false;
+				if (bHasAuthority && Grip.SecondaryGripInfo.SecondaryAttachment->GetOwner() == this->GetOwner())
 				{
-					if (!OtherController->bUseWithoutTracking)
+					if (UGripMotionControllerComponent * OtherController = Cast<UGripMotionControllerComponent>(Grip.SecondaryGripInfo.SecondaryAttachment))
 					{
-						FVector Position;
-						FRotator Orientation;
-						float WorldToMeters = GetWorld() ? GetWorld()->GetWorldSettings()->WorldToMeters : 100.0f;
-						if (OtherController->GripPollControllerState(Position, Orientation, WorldToMeters))
+						if (!OtherController->bUseWithoutTracking)
 						{
-							/*curLocation*/ frontLoc = OtherController->CalcNewComponentToWorld(FTransform(Orientation, Position)).GetLocation() - BasePoint;
-							bPulledControllerLoc = true;
+							FVector Position;
+							FRotator Orientation;
+							float WorldToMeters = GetWorld() ? GetWorld()->GetWorldSettings()->WorldToMeters : 100.0f;
+							if (OtherController->GripPollControllerState(Position, Orientation, WorldToMeters))
+							{
+								/*curLocation*/ frontLoc = OtherController->CalcNewComponentToWorld(FTransform(Orientation, Position)).GetLocation() - BasePoint;
+								bPulledControllerLoc = true;
+							}
 						}
 					}
 				}
-			}
 
-			if (!bPulledControllerLoc)
-				/*curLocation*/ frontLoc = Grip.SecondaryGripInfo.SecondaryAttachment->GetComponentLocation() - BasePoint;
+				if (!bPulledControllerLoc)
+					/*curLocation*/ frontLoc = Grip.SecondaryGripInfo.SecondaryAttachment->GetComponentLocation() - BasePoint;
 
-			frontLocOrig = (WorldTransform.TransformPosition(Grip.SecondaryGripInfo.SecondaryRelativeLocation)) - BasePoint;
-			//frontLoc = curLocation;// -BasePoint;
+				frontLocOrig = (WorldTransform.TransformPosition(Grip.SecondaryGripInfo.SecondaryRelativeLocation)) - BasePoint;
+				//frontLoc = curLocation;// -BasePoint;
 
-			if (Grip.SecondaryGripInfo.GripLerpState == EGripLerpState::StartLerp) // Lerp into the new grip to smooth the transition
-			{
-				if (Grip.AdvancedGripSettings.SecondaryGripSettings.SecondaryGripScaler < 1.0f)
+				if (Grip.SecondaryGripInfo.GripLerpState == EGripLerpState::StartLerp) // Lerp into the new grip to smooth the transition
+				{
+					if (Grip.AdvancedGripSettings.SecondaryGripSettings.SecondaryGripScaler < 1.0f)
+					{
+						FVector SmoothedValue = Grip.AdvancedGripSettings.SecondaryGripSettings.SmoothingOneEuro.RunFilterSmoothing(frontLoc, DeltaTime);
+
+						frontLoc = FMath::Lerp(SmoothedValue, frontLoc, Grip.AdvancedGripSettings.SecondaryGripSettings.SecondaryGripScaler);
+					}
+
+					frontLocOrig = FMath::Lerp(frontLocOrig, frontLoc, FMath::Clamp(Grip.SecondaryGripInfo.curLerp / Grip.SecondaryGripInfo.LerpToRate, 0.0f, 1.0f));
+				}
+				else if (Grip.SecondaryGripInfo.GripLerpState == EGripLerpState::ConstantLerp) // If there is a frame by frame lerp
 				{
 					FVector SmoothedValue = Grip.AdvancedGripSettings.SecondaryGripSettings.SmoothingOneEuro.RunFilterSmoothing(frontLoc, DeltaTime);
 
 					frontLoc = FMath::Lerp(SmoothedValue, frontLoc, Grip.AdvancedGripSettings.SecondaryGripSettings.SecondaryGripScaler);
+					//frontLoc = FMath::Lerp(Grip.SecondaryGripInfo.LastRelativeLocation, frontLoc, Grip.AdvancedGripSettings.SecondaryGripSettings.SecondaryGripScaler);
 				}
-				
-				frontLocOrig = FMath::Lerp(frontLocOrig, frontLoc, FMath::Clamp(Grip.SecondaryGripInfo.curLerp / Grip.SecondaryGripInfo.LerpToRate, 0.0f, 1.0f));
-			}
-			else if (Grip.SecondaryGripInfo.GripLerpState == EGripLerpState::ConstantLerp) // If there is a frame by frame lerp
-			{
-				FVector SmoothedValue = Grip.AdvancedGripSettings.SecondaryGripSettings.SmoothingOneEuro.RunFilterSmoothing( frontLoc, DeltaTime);
 
-				frontLoc = FMath::Lerp(SmoothedValue, frontLoc, Grip.AdvancedGripSettings.SecondaryGripSettings.SecondaryGripScaler);
-				//frontLoc = FMath::Lerp(Grip.SecondaryGripInfo.LastRelativeLocation, frontLoc, Grip.AdvancedGripSettings.SecondaryGripSettings.SecondaryGripScaler);
+				Grip.SecondaryGripInfo.LastRelativeLocation = frontLoc;
 			}
 
-			Grip.SecondaryGripInfo.LastRelativeLocation = frontLoc;
-		}
-
-		FVector Scaler = FVector(1.0f);
-		if (Grip.SecondaryGripInfo.GripLerpState != EGripLerpState::EndLerp)
-		{
-			// Checking secondary grip type for the scaling setting
-			ESecondaryGripType SecondaryType = ESecondaryGripType::SG_None;
-
-			if (bRootHasInterface)
-				SecondaryType = IVRGripInterface::Execute_SecondaryGripType(root);
-			else if (bActorHasInterface)
-				SecondaryType = IVRGripInterface::Execute_SecondaryGripType(actor);
-
-			//float Scaler = 1.0f;
-			if (SecondaryType == ESecondaryGripType::SG_FreeWithScaling_Retain || SecondaryType == ESecondaryGripType::SG_SlotOnlyWithScaling_Retain)
+			FVector Scaler = FVector(1.0f);
+			if (Grip.SecondaryGripInfo.GripLerpState != EGripLerpState::EndLerp)
 			{
-				/*Grip.SecondaryScaler*/ Scaler = FVector(frontLoc.Size() / frontLocOrig.Size());
-				bRescalePhysicsGrips = true; // This is for the physics grips
+				//float Scaler = 1.0f;
+				if (SecondaryType == ESecondaryGripType::SG_FreeWithScaling_Retain || SecondaryType == ESecondaryGripType::SG_SlotOnlyWithScaling_Retain || SecondaryType == ESecondaryGripType::SG_ScalingOnly)
+				{
+					/*Grip.SecondaryScaler*/ Scaler = FVector(frontLoc.Size() / frontLocOrig.Size());
+					bRescalePhysicsGrips = true; // This is for the physics grips
 
-				if (Grip.AdvancedGripSettings.SecondaryGripSettings.bUseSecondaryGripSettings && Grip.AdvancedGripSettings.SecondaryGripSettings.bLimitGripScaling)
-				{					
-					// Get the total scale after modification
-					// #TODO: convert back to singular float version? Can get Min() & Max() to convert the float to a range...think about it
-					FVector WorldScale = WorldTransform.GetScale3D();
-					FVector CombinedScale = WorldScale * Scaler;
-					
-					// Clamp to the minimum and maximum values
-					CombinedScale.X = FMath::Clamp(CombinedScale.X, Grip.AdvancedGripSettings.SecondaryGripSettings.MinimumGripScaling.X, Grip.AdvancedGripSettings.SecondaryGripSettings.MaximumGripScaling.X);
-					CombinedScale.Y = FMath::Clamp(CombinedScale.Y, Grip.AdvancedGripSettings.SecondaryGripSettings.MinimumGripScaling.Y, Grip.AdvancedGripSettings.SecondaryGripSettings.MaximumGripScaling.Y);
-					CombinedScale.Z = FMath::Clamp(CombinedScale.Z, Grip.AdvancedGripSettings.SecondaryGripSettings.MinimumGripScaling.Z, Grip.AdvancedGripSettings.SecondaryGripSettings.MaximumGripScaling.Z);
+					if (Grip.AdvancedGripSettings.SecondaryGripSettings.bUseSecondaryGripSettings && Grip.AdvancedGripSettings.SecondaryGripSettings.bLimitGripScaling)
+					{
+						// Get the total scale after modification
+						// #TODO: convert back to singular float version? Can get Min() & Max() to convert the float to a range...think about it
+						FVector WorldScale = WorldTransform.GetScale3D();
+						FVector CombinedScale = WorldScale * Scaler;
 
-					// Recreate in scaler form so that the transform chain below works as normal
-					Scaler = CombinedScale / WorldScale;
+						// Clamp to the minimum and maximum values
+						CombinedScale.X = FMath::Clamp(CombinedScale.X, Grip.AdvancedGripSettings.SecondaryGripSettings.MinimumGripScaling.X, Grip.AdvancedGripSettings.SecondaryGripSettings.MaximumGripScaling.X);
+						CombinedScale.Y = FMath::Clamp(CombinedScale.Y, Grip.AdvancedGripSettings.SecondaryGripSettings.MinimumGripScaling.Y, Grip.AdvancedGripSettings.SecondaryGripSettings.MaximumGripScaling.Y);
+						CombinedScale.Z = FMath::Clamp(CombinedScale.Z, Grip.AdvancedGripSettings.SecondaryGripSettings.MinimumGripScaling.Z, Grip.AdvancedGripSettings.SecondaryGripSettings.MaximumGripScaling.Z);
+
+						// Recreate in scaler form so that the transform chain below works as normal
+						Scaler = CombinedScale / WorldScale;
+					}
+					//Scaler = Grip.SecondaryScaler;
 				}
-				//Scaler = Grip.SecondaryScaler;
+			}
+
+			Grip.SecondaryGripInfo.SecondaryGripDistance = FVector::Dist(frontLocOrig, frontLoc);
+
+			if (Grip.AdvancedGripSettings.SecondaryGripSettings.bUseSecondaryGripSettings && Grip.AdvancedGripSettings.SecondaryGripSettings.bUseSecondaryGripDistanceInfluence)
+			{
+				//  If this is true it will treat the deadzone value as a constant value to apply instead
+				if (Grip.AdvancedGripSettings.SecondaryGripSettings.bUseGripInfluenceDeadZoneAsConstant)
+				{
+					frontLoc = FMath::Lerp(frontLocOrig, frontLoc, FMath::Clamp(Grip.AdvancedGripSettings.SecondaryGripSettings.GripInfluenceDeadZone, 0.0f, 1.0f));
+				}
+				else
+				{
+					float rotScaler = 1.0f - FMath::Clamp((Grip.SecondaryGripInfo.SecondaryGripDistance - Grip.AdvancedGripSettings.SecondaryGripSettings.GripInfluenceDeadZone) / FMath::Max(Grip.AdvancedGripSettings.SecondaryGripSettings.GripInfluenceDistanceToZero, 1.0f), 0.0f, 1.0f);
+					frontLoc = FMath::Lerp(frontLocOrig, frontLoc, rotScaler);
+				}
+			}
+
+			// Skip rot val for scaling only
+			if (SecondaryType != ESecondaryGripType::SG_ScalingOnly)
+			{
+				// Get the rotation difference from the initial second grip
+				FQuat rotVal = FQuat::FindBetweenVectors(frontLocOrig, frontLoc);
+
+				// Rebase the world transform to the pivot point, add the rotation, remove the pivot point rebase
+				WorldTransform = WorldTransform * WorldToPivot * FTransform(rotVal, FVector::ZeroVector, Scaler) * PivotToWorld;
+			}
+			else
+			{
+				// Rebase the world transform to the pivot point, add the scaler, remove the pivot point rebase
+				WorldTransform = WorldTransform * WorldToPivot * FTransform(FQuat::Identity, FVector::ZeroVector, Scaler) * PivotToWorld;
 			}
 		}
-
-		Grip.SecondaryGripInfo.SecondaryGripDistance = FVector::Dist(frontLocOrig, frontLoc);
-
-		if (Grip.AdvancedGripSettings.SecondaryGripSettings.bUseSecondaryGripSettings && Grip.AdvancedGripSettings.SecondaryGripSettings.bUseSecondaryGripDistanceInfluence)
-		{
-			float rotScaler = 1.0f - FMath::Clamp((Grip.SecondaryGripInfo.SecondaryGripDistance - Grip.AdvancedGripSettings.SecondaryGripSettings.GripInfluenceDeadZone) / FMath::Max(Grip.AdvancedGripSettings.SecondaryGripSettings.GripInfluenceDistanceToZero, 1.0f), 0.0f, 1.0f);
-			frontLoc = FMath::Lerp(frontLocOrig, frontLoc, rotScaler);	
-		}
-
-		// Get the rotation difference from the initial second grip
-		FQuat rotVal = FQuat::FindBetweenVectors(frontLocOrig, frontLoc);
-
-		// Rebase the world transform to the pivot point, add the rotation, remove the pivot point rebase
-		WorldTransform = WorldTransform * WorldToPivot * FTransform(rotVal, FVector::ZeroVector, Scaler) * PivotToWorld;
 	}
 }
 
