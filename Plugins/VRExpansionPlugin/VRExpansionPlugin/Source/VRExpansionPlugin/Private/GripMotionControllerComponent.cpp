@@ -2448,15 +2448,15 @@ void UGripMotionControllerComponent::GetGripWorldTransform(float DeltaTime, FTra
 			if (Grip.AdvancedGripSettings.SecondaryGripSettings.bUseSecondaryGripSettings && Grip.AdvancedGripSettings.SecondaryGripSettings.bUseSecondaryGripDistanceInfluence)
 			{
 				//  If this is true it will treat the deadzone value as a constant value to apply instead
-				if (Grip.AdvancedGripSettings.SecondaryGripSettings.bUseGripInfluenceDeadZoneAsConstant)
+				/*if (Grip.AdvancedGripSettings.SecondaryGripSettings.bUseGripInfluenceDeadZoneAsConstant)
 				{
 					frontLoc = FMath::Lerp(frontLocOrig, frontLoc, FMath::Clamp(Grip.AdvancedGripSettings.SecondaryGripSettings.GripInfluenceDeadZone, 0.0f, 1.0f));
 				}
 				else
-				{
+				{*/
 					float rotScaler = 1.0f - FMath::Clamp((Grip.SecondaryGripInfo.SecondaryGripDistance - Grip.AdvancedGripSettings.SecondaryGripSettings.GripInfluenceDeadZone) / FMath::Max(Grip.AdvancedGripSettings.SecondaryGripSettings.GripInfluenceDistanceToZero, 1.0f), 0.0f, 1.0f);
 					frontLoc = FMath::Lerp(frontLocOrig, frontLoc, rotScaler);
-				}
+				//}
 			}
 
 			// Skip rot val for scaling only

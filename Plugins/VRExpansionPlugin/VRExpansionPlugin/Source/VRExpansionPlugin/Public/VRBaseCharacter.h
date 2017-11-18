@@ -94,7 +94,7 @@ public:
 			NewRotation = (NewRotation.Quaternion() * DeltaRot.Quaternion()).Rotator();
 			NewLocation -= NewRotation.RotateVector(PivotPoint);
 
-			if (bUseControllerRotationYaw && OwningController)
+			if (bUseControllerRotationYaw && OwningController && IsLocallyControlled())
 				OwningController->SetControlRotation(NewRotation);
 
 			// Also setting actor rot because the control rot transfers to it anyway eventually
@@ -126,7 +126,7 @@ public:
 		NewRotation = NewRot;
 		NewLocation -= NewRotation.RotateVector(PivotPoint);
 
-		if (bUseControllerRotationYaw && OwningController)
+		if (bUseControllerRotationYaw && OwningController && IsLocallyControlled())
 			OwningController->SetControlRotation(NewRotation);
 
 		// Also setting actor rot because the control rot transfers to it anyway eventually
@@ -156,7 +156,7 @@ public:
 		NewRotation = NewRot;
 		NewLocation -= NewRotation.RotateVector(PivotPoint);
 
-		if (bUseControllerRotationYaw && OwningController)
+		if (bUseControllerRotationYaw && OwningController && IsLocallyControlled())
 			OwningController->SetControlRotation(NewRotation);
 
 		// Also setting actor rot because the control rot transfers to it anyway eventually
