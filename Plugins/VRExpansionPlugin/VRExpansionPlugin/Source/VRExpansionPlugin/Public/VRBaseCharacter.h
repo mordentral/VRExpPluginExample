@@ -9,6 +9,69 @@
 #include "ParentRelativeAttachmentComponent.h"
 #include "VRBaseCharacter.generated.h"
 
+USTRUCT(Blueprintable)
+struct VREXPANSIONPLUGIN_API FVRSeatedCharacterInfo
+{
+	GENERATED_USTRUCT_BODY()
+public:
+	UPROPERTY()
+		AVRBaseCharacter * SeatedCharacter;
+	UPROPERTY()
+		bool bSitting;
+	//UPROPERTY()
+	//	USceneComponent * SeatComponent;
+	//UPROPERTY()
+	//	FVector_NetQuantize100 OriginalRelativeLocation;
+	UPROPERTY()
+		float OriginalRotationYaw;
+
+	bool bWasSeated;
+	
+	void Clear()
+	{
+		SeatedCharacter = nullptr;
+		//	OriginalRelativeLocation = FVector::ZeroVector;
+		OriginalRotationYaw = 0;
+		bWasSeated = false;
+	}
+
+
+	/** Network serialization */
+	// Doing a custom NetSerialize here because this is sent via RPCs and should change on every update
+	bool NetSerialize(FArchive& Ar, class UPackageMap* Map, bool& bOutSuccess)
+	{
+		bOutSuccess = true;
+
+		Ar.SerializeBits(&bSitting, 1);
+		//OriginalRelativeLocation.NetSerialize(Ar, Map, bOutSuccess);
+
+		if (bSitting)
+		{
+			uint16 val;
+			if (Ar.IsSaving())
+			{
+				val = FRotator::CompressAxisToShort(OriginalRotationYaw);
+				Ar << val;
+			}
+			else
+			{
+				Ar << val;
+				OriginalRotationYaw = FRotator::DecompressAxisFromShort(val);
+			}
+		}
+
+		return bOutSuccess;
+	}
+};
+template<>
+struct TStructOpsTypeTraits< FVRSeatedCharacterInfo > : public TStructOpsTypeTraitsBase2<FVRSeatedCharacterInfo>
+{
+	enum
+	{
+		WithNetSerializer = true
+	};
+};
+
 UCLASS()
 class VREXPANSIONPLUGIN_API AVRBaseCharacter : public ACharacter
 {
@@ -71,11 +134,72 @@ public:
 		return GetVRLocation();
 	}
 
+	//UPROPERTY(BlueprintReadOnly, Replicated, EditAnywhere, Category = "VRSeatComponent", ReplicatedUsing = OnRep_SeatedCharInfo)
+	FVRSeatedCharacterInfo SeatInformation;
+
+	// Event OnSetSeated(bool, uscenecomponent)
+	 
+	UFUNCTION()
+		virtual void OnRep_SeatedCharInfo()
+	{
+		// Handle setting up the player here
+
+		if (UPrimitiveComponent * root = Cast<UPrimitiveComponent>(GetRootComponent()))
+		{
+			if (SeatInformation.bSitting)
+			{
+				if (UCharacterMovementComponent * charMovement = Cast<UCharacterMovementComponent>(GetMovementComponent()))
+					charMovement->SetMovementMode(MOVE_None);
+
+				root->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+				SeatInformation.bWasSeated = true;
+
+				//ZeroSeatedPlayer();
+			}
+			else if(SeatInformation.bWasSeated)
+			{
+				root->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+
+				if (UCharacterMovementComponent * charMovement = Cast<UCharacterMovementComponent>(GetMovementComponent()))
+					charMovement->SetMovementMode(MOVE_Walking);
+
+				SeatInformation.bWasSeated = false;
+			}
+		}
+	}
+
 	// Sets seated mode on the character and then fires off an event to handle any special setup
 	UFUNCTION(BlueprintCallable, Category = "BaseVRCharacter")
-		FVector SetSeatedMode(FRotator NewRot, bool bIsInSeatedMode)
+	bool SetSeatedMode(USceneComponent * SeatParent, bool bSetSeatedMode)
 	{
+		
+		AController* OwningController = GetController();
 
+		if (bSetSeatedMode)
+		{
+			if (!SeatParent)
+				return false;
+
+			//SeatedCharacter.SeatedCharacter = CharacterToSeat;
+			SeatInformation.OriginalRotationYaw = UVRExpansionFunctionLibrary::GetHMDPureYaw_I(bUseControllerRotationYaw && OwningController ? OwningController->GetControlRotation() : GetActorRotation()).Yaw;
+
+			if (this->HasAuthority())
+			{
+				SetReplicateMovement(false);
+				AttachToComponent(SeatParent, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+			}
+
+			OnRep_SeatedCharInfo(); // Call this on server side because it won't call itself
+		}
+		else
+		{
+			DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+			//SetActorLocationAndRotationVR(NewWorldLocation - (GetVRLocation() - GetActorLocation()), NewWorldRotation, true);
+			SetReplicateMovement(true);
+			return true;
+		}
+
+		return true;
 	}
 
 	// Adds a rotation delta taking into account the HMD as a pivot point (also moves the actor), returns final location difference

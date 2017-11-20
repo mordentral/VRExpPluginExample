@@ -10,7 +10,7 @@
 
 #include "VRSeatComponent.generated.h"
 
-USTRUCT(Blueprintable)
+/*USTRUCT(Blueprintable)
 struct VREXPANSIONPLUGIN_API FVRSeatedCharacterInfo
 {
 	GENERATED_USTRUCT_BODY()
@@ -30,7 +30,6 @@ public:
 	}
 
 
-	/** Network serialization */
 	// Doing a custom NetSerialize here because this is sent via RPCs and should change on every update
 	bool NetSerialize(FArchive& Ar, class UPackageMap* Map, bool& bOutSuccess)
 	{
@@ -61,7 +60,7 @@ struct TStructOpsTypeTraits< FVRSeatedCharacterInfo > : public TStructOpsTypeTra
 	{
 		WithNetSerializer = true
 	};
-};
+};*/
 
 
 
