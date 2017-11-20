@@ -71,6 +71,13 @@ public:
 		return GetVRLocation();
 	}
 
+	// Sets seated mode on the character and then fires off an event to handle any special setup
+	UFUNCTION(BlueprintCallable, Category = "BaseVRCharacter")
+		FVector SetSeatedMode(FRotator NewRot, bool bIsInSeatedMode)
+	{
+
+	}
+
 	// Adds a rotation delta taking into account the HMD as a pivot point (also moves the actor), returns final location difference
 	UFUNCTION(BlueprintCallable, Category = "BaseVRCharacter|VRLocations")
 	FVector AddActorWorldRotationVR(FRotator DeltaRot, bool bUseYawOnly)

@@ -1391,6 +1391,13 @@ bool UGripMotionControllerComponent::NotifyGrip(FBPActorGripInformation &NewGrip
 				{
 					IVRGripInterface::Execute_OnChildGrip(pActor, this, NewGrip);
 				}
+
+			}
+
+			// Call OnChildGrip for attached grip parent
+			if (!bIsReInit && root->GetAttachParent() && root->GetAttachParent()->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
+			{
+				IVRGripInterface::Execute_OnChildGrip(root->GetAttachParent(), this, NewGrip);
 			}
 
 			if (!bIsReInit && root->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
@@ -1587,6 +1594,12 @@ void UGripMotionControllerComponent::Drop_Implementation(const FBPActorGripInfor
 					IVRGripInterface::Execute_OnChildGripRelease(pActor, this, NewDrop);
 				}
 
+			}
+
+			// Call on child grip release on attached parent component
+			if (root->GetAttachParent() && root->GetAttachParent()->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
+			{
+				IVRGripInterface::Execute_OnChildGripRelease(root->GetAttachParent(), this, NewDrop);
 			}
 
 			if (root->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
