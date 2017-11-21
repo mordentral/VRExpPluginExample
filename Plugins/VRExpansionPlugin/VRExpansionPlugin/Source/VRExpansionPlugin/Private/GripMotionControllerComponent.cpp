@@ -77,16 +77,8 @@ UGripMotionControllerComponent::UGripMotionControllerComponent(const FObjectInit
 //=============================================================================
 UGripMotionControllerComponent::~UGripMotionControllerComponent()
 {
-	if (GripViewExtension.IsValid())
-	{
-		{
-			// This component could be getting accessed from the render thread so it needs to wait
-			// before clearing MotionControllerComponent and allowing the destructor to continue
-			FScopeLock ScopeLock(&CritSect);
-			GripViewExtension->MotionControllerComponent = NULL;
-		}
-	}
-	GripViewExtension.Reset();
+	// Moved view extension destruction to BeginDestroy like the new controllers
+	// Epic had it listed as a crash in the private bug tracker I guess.
 }
 
 void UGripMotionControllerComponent::OnUnregister()
@@ -115,6 +107,22 @@ void UGripMotionControllerComponent::OnUnregister()
 	PhysicsGrips.Empty();
 
 	Super::OnUnregister();
+}
+
+void UGripMotionControllerComponent::BeginDestroy()
+{
+	Super::BeginDestroy();
+
+	if (GripViewExtension.IsValid())
+	{
+		{
+			// This component could be getting accessed from the render thread so it needs to wait
+			// before clearing MotionControllerComponent and allowing the destructor to continue
+			FScopeLock ScopeLock(&CritSect);
+			GripViewExtension->MotionControllerComponent = NULL;
+		}
+	}
+	GripViewExtension.Reset();
 }
 
 void UGripMotionControllerComponent::SendRenderTransform_Concurrent()

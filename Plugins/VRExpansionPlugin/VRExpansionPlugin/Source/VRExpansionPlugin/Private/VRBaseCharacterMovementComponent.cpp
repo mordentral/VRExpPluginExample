@@ -44,6 +44,38 @@ UVRBaseCharacterMovementComponent::UVRBaseCharacterMovementComponent(const FObje
 	bIsInPushBack = false;
 }
 
+void UVRBaseCharacterMovementComponent::TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction)
+{
+
+	if (MovementMode == MOVE_Custom && CustomMovementMode == (uint8)EVRCustomMovementMode::VRMOVE_Seated)
+	{
+		const FVector InputVector = ConsumeInputVector();
+		if (!HasValidData() || ShouldSkipUpdate(DeltaTime))
+		{
+			return;
+		}
+
+		// Skip the perform movement logic, run the re-seat logic instead - running base movement component tick instead
+		Super::Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+
+		// See if we fell out of the world.
+		//const bool bIsSimulatingPhysics = UpdatedComponent->IsSimulatingPhysics();
+		//if (CharacterOwner->Role == ROLE_Authority && (!bCheatFlying || bIsSimulatingPhysics) && !CharacterOwner->CheckStillInWorld())
+		//{
+		//	return;
+		//}
+
+		// If we are the owning client or the server then run the re-basing
+		if (CharacterOwner->Role > ROLE_SimulatedProxy)
+		{
+			// Run offset logic here, the server will update simulated proxies with the movement replication
+		}
+
+	}
+	else
+		Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+}
+
 void UVRBaseCharacterMovementComponent::StartPushBackNotification(FHitResult HitResult)
 {
 	bIsInPushBack = true;
@@ -370,6 +402,8 @@ void UVRBaseCharacterMovementComponent::PhysCustom(float deltaTime, int32 Iterat
 		break;
 	case EVRCustomMovementMode::VRMOVE_LowGrav:
 		PhysCustom_LowGrav(deltaTime, Iterations);
+		break;
+	case EVRCustomMovementMode::VRMOVE_Seated:
 		break;
 	default:
 		Super::PhysCustom(deltaTime, Iterations);

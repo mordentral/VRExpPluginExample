@@ -99,6 +99,7 @@ private:
 	virtual void OnUnregister() override;
 	virtual void PreReplication(IRepChangedPropertyTracker & ChangedPropertyTracker) override;
 	virtual void Deactivate() override;
+	virtual void BeginDestroy() override;
 
 protected:
 	//~ Begin UActorComponent Interface.

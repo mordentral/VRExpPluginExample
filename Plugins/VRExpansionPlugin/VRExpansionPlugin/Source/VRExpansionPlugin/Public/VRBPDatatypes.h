@@ -28,7 +28,8 @@ UENUM(BlueprintType)
 enum class EVRCustomMovementMode : uint8
 {
 	VRMOVE_Climbing UMETA(DisplayName = "Climbing"),
-	VRMOVE_LowGrav  UMETA(DisplayName = "LowGrav")
+	VRMOVE_LowGrav  UMETA(DisplayName = "LowGrav"),
+	VRMOVE_Seated UMETA(DisplayName = "Seated")
 //	VRMove_Spider UMETA(DisplayName = "Spider")
 };
 
@@ -47,12 +48,12 @@ enum class EVRConjoinedMovementModes : uint8
 	C_VRMOVE_Climbing = 0x08 UMETA(DisplayName = "Climbing"),
 	C_VRMOVE_LowGrav = 0x09 UMETA(DisplayName = "LowGrav"),
 	//C_VRMOVE_Spider = 0x0A UMETA(DisplayName = "Spider"),
-	C_VRMOVE_Custom1 = 0x0A UMETA(DisplayName = "Custom1"),
-	C_VRMOVE_Custom2 = 0x0B UMETA(DisplayName = "Custom2"),
-	C_VRMOVE_Custom3 = 0x0C UMETA(DisplayName = "Custom3"),
-	C_VRMOVE_Custom4 = 0x0D UMETA(DisplayName = "Custom4"),
-	C_VRMOVE_Custom5 = 0x0E UMETA(DisplayName = "Custom5"),
-	C_VRMOVE_Custom6 = 0x0F UMETA(DisplayName = "Custom6")
+	C_VRMOVE_Seated = 0x0A UMETA(DisplayName = "Seated"),
+	C_VRMOVE_Custom1 = 0x0B UMETA(DisplayName = "Custom1"),
+	C_VRMOVE_Custom2 = 0x0C UMETA(DisplayName = "Custom2"),
+	C_VRMOVE_Custom3 = 0x0D UMETA(DisplayName = "Custom3"),
+	C_VRMOVE_Custom4 = 0x0E UMETA(DisplayName = "Custom4"),
+	C_VRMOVE_Custom5 = 0x0F UMETA(DisplayName = "Custom5")
 };
 
 // This makes a lot of the blueprint functions cleaner
