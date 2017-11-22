@@ -2929,6 +2929,16 @@ void UGripMotionControllerComponent::HandleGripArray(TArray<FBPActorGripInformat
 								{
 									Grip->bColliding = false;
 								}
+
+								TArray<USceneComponent* > PrimChildren;
+								root->GetChildrenComponents(true, PrimChildren);
+								for (USceneComponent * Prim : PrimChildren)
+								{
+									if (UPrimitiveComponent * primComp = Cast<UPrimitiveComponent>(Prim))
+									{
+										CheckComponentWithSweep(primComp, move, primComp->GetComponentRotation(), false);
+									}
+								}
 							}
 						}
 
@@ -3538,6 +3548,12 @@ void UGripMotionControllerComponent::UpdatePhysicsHandleTransform(const FBPActor
 #endif // WITH_PHYSX
 }
 
+static void PullBackHitComp(FHitResult& Hit, const FVector& Start, const FVector& End, const float Dist)
+{
+	const float DesiredTimeBack = FMath::Clamp(0.1f, 0.1f / Dist, 1.f / Dist) + 0.001f;
+	Hit.Time = FMath::Clamp(Hit.Time - DesiredTimeBack, 0.f, 1.f);
+}
+
 bool UGripMotionControllerComponent::CheckComponentWithSweep(UPrimitiveComponent * ComponentToCheck, FVector Move, FRotator newOrientation, bool bSkipSimulatingComponents/*,  bool &bHadBlockingHitOut*/)
 {
 	TArray<FHitResult> Hits;
@@ -3574,7 +3590,17 @@ bool UGripMotionControllerComponent::CheckComponentWithSweep(UPrimitiveComponent
 		FCollisionResponseParams ResponseParam;
 		root->InitSweepCollisionParams(Params, ResponseParam);
 
-		bool const bHadBlockingHit = MyWorld->ComponentSweepMulti(Hits, root, start, start + Move, newOrientation.Quaternion(), Params);
+		FVector end = start + Move;
+		bool const bHadBlockingHit = MyWorld->ComponentSweepMulti(Hits, root, start, end, newOrientation.Quaternion(), Params);
+
+		if (Hits.Num() > 0)
+		{
+			const float DeltaSize = FVector::Dist(start, end);
+			for (int32 HitIdx = 0; HitIdx < Hits.Num(); HitIdx++)
+			{
+				PullBackHitComp(Hits[HitIdx], start, end, DeltaSize);
+			}
+		}
 
 		if (bHadBlockingHit)
 		{
