@@ -141,6 +141,11 @@ public:
 	UFUNCTION(BlueprintImplementableEvent, Category = "VRMovement")
 		void OnSeatedModeChanged(bool bNewSeatedMode, bool bWasAlreadySeated);
 
+	// Called when the the player either transitions to/from the threshold boundry or the scaler value of being outside the boundry changes
+	// Can be used for warnings or screen darkening, ect
+	UFUNCTION(BlueprintImplementableEvent, Category = "VRMovement")
+		void OnSeatedModeThreshholdChanged(bool bIsWithinThreshold, float ToThresholdScaler);
+
 	void ZeroToSeatInformation()
 	{
 		SetActorRelativeRotation(FRotator(0.0f, -SeatInformation.StoredYaw, 0.0f));
@@ -176,7 +181,7 @@ public:
 				root->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 				SeatInformation.bWasSeated = true;
 				SeatInformation.bOriginalControlRotation = bUseControllerRotationYaw;
-				bUseControllerRotationYaw = false;
+				bUseControllerRotationYaw = false; // This forces rotation in world space, something that we don't want
 
 				ZeroToSeatInformation();
 				OnSeatedModeChanged(SeatInformation.bSitting, SeatInformation.bWasSeated);
