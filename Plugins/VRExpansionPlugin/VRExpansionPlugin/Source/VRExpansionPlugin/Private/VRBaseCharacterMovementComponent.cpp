@@ -69,6 +69,11 @@ void UVRBaseCharacterMovementComponent::TickComponent(float DeltaTime, enum ELev
 		if (CharacterOwner->Role > ROLE_SimulatedProxy)
 		{
 			// Run offset logic here, the server will update simulated proxies with the movement replication
+			if (AVRBaseCharacter * BaseChar = Cast<AVRBaseCharacter>(CharacterOwner))
+			{
+				BaseChar->TickSeatInformation(DeltaTime);
+			}
+
 		}
 
 	}

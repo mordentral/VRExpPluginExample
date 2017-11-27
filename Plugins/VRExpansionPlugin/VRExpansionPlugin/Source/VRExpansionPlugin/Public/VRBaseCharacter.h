@@ -7,6 +7,7 @@
 #include "VRBaseCharacterMovementComponent.h"
 #include "ReplicatedVRCameraComponent.h"
 #include "ParentRelativeAttachmentComponent.h"
+#include "GripMotionControllerComponent.h"
 #include "VRBaseCharacter.generated.h"
 
 USTRUCT(Blueprintable)
@@ -14,16 +15,12 @@ struct VREXPANSIONPLUGIN_API FVRSeatedCharacterInfo
 {
 	GENERATED_USTRUCT_BODY()
 public:
-	UPROPERTY()
-		AVRBaseCharacter * SeatedCharacter;
 	UPROPERTY(BlueprintReadOnly, Category = "CharacterSeatInfo")
 		bool bSitting;
-	//UPROPERTY()
-	//	USceneComponent * SeatComponent;
 	UPROPERTY()
-		FVector_NetQuantize100 OriginalRelativeLocation;
+		FVector_NetQuantize100 StoredLocation;
 	UPROPERTY()
-		float OriginalRotationYaw;
+		float StoredYaw;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, NotReplicated, Category = "CharacterSeatInfo")
 		float AllowedDistance;
@@ -31,13 +28,14 @@ public:
 		float DistanceThreshold;
 
 	bool bWasSeated;
+	bool bOriginalControlRotation;
 	
 	void Clear()
 	{
-		SeatedCharacter = nullptr;
-		//	OriginalRelativeLocation = FVector::ZeroVector;
-		OriginalRotationYaw = 0;
+		StoredLocation = FVector::ZeroVector;
+		StoredYaw = 0;
 		bWasSeated = false;
+		bOriginalControlRotation = false;
 	}
 
 
@@ -48,21 +46,18 @@ public:
 		bOutSuccess = true;
 
 		Ar.SerializeBits(&bSitting, 1);
-		OriginalRelativeLocation.NetSerialize(Ar, Map, bOutSuccess);
+		StoredLocation.NetSerialize(Ar, Map, bOutSuccess);
 
-		if (bSitting)
+		uint16 val;
+		if (Ar.IsSaving())
 		{
-			uint16 val;
-			if (Ar.IsSaving())
-			{
-				val = FRotator::CompressAxisToShort(OriginalRotationYaw);
-				Ar << val;
-			}
-			else
-			{
-				Ar << val;
-				OriginalRotationYaw = FRotator::DecompressAxisFromShort(val);
-			}
+			val = FRotator::CompressAxisToShort(StoredYaw);
+			Ar << val;
+		}
+		else
+		{
+			Ar << val;
+			StoredYaw = FRotator::DecompressAxisFromShort(val);
 		}
 		
 		return bOutSuccess;
@@ -142,8 +137,30 @@ public:
 	UPROPERTY(BlueprintReadOnly, Replicated, EditAnywhere, Category = "VRSeatComponent", ReplicatedUsing = OnRep_SeatedCharInfo)
 	FVRSeatedCharacterInfo SeatInformation;
 
-	// Event OnSetSeated(bool, uscenecomponent)
-	 
+	// Called when the seated mode is changed
+	UFUNCTION(BlueprintImplementableEvent, Category = "VRMovement")
+		void OnSeatedModeChanged(bool bNewSeatedMode, bool bWasAlreadySeated);
+
+	void ZeroToSeatInformation()
+	{
+		SetActorRelativeRotation(FRotator(0.0f, -SeatInformation.StoredYaw, 0.0f));
+		SetActorRelativeLocation(-(VRReplicatedCamera->GetComponentLocation() - GetActorLocation()));
+
+		//SetActorLocationAndRotationVR(GetVRLocation() - GetActorLocation(), FRotator(0.0f, -SeatInformation.StoredYaw, 0.0f), true);
+		LeftMotionController->PostTeleportMoveGrippedActors();
+		RightMotionController->PostTeleportMoveGrippedActors();
+	}
+	
+	// Called from the movement component
+	void TickSeatInformation(float DeltaTime)
+	{
+		if (USceneComponent * ParentComp = GetCapsuleComponent()->GetAttachParent())
+		{
+			//SetActorLocation(GetVRLocation() - ParentComp->GetComponentLocation());
+			//SetActorRelativeLocation(GetVRLocation() - ParentComp->GetComponentLocation());
+		}
+	}
+
 	UFUNCTION()
 		virtual void OnRep_SeatedCharInfo()
 	{
@@ -158,40 +175,44 @@ public:
 
 				root->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 				SeatInformation.bWasSeated = true;
+				SeatInformation.bOriginalControlRotation = bUseControllerRotationYaw;
+				bUseControllerRotationYaw = false;
 
-				//ZeroSeatedPlayer();
+				ZeroToSeatInformation();
+				OnSeatedModeChanged(SeatInformation.bSitting, SeatInformation.bWasSeated);
 			}
-			else if(SeatInformation.bWasSeated)
+			else if(!SeatInformation.bSitting && SeatInformation.bWasSeated)
 			{
 				root->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 
 				if (UCharacterMovementComponent * charMovement = Cast<UCharacterMovementComponent>(GetMovementComponent()))
 					charMovement->SetMovementMode(MOVE_Walking);
 
+				// Re-purposing them for the new location and rotations
+				SetActorLocationAndRotationVR(SeatInformation.StoredLocation, FRotator(0.0f, SeatInformation.StoredYaw, 0.0f), true);
+				LeftMotionController->PostTeleportMoveGrippedActors();
+				RightMotionController->PostTeleportMoveGrippedActors();
+				bUseControllerRotationYaw = SeatInformation.bOriginalControlRotation;
+
+				OnSeatedModeChanged(SeatInformation.bSitting, SeatInformation.bWasSeated);
 				SeatInformation.bWasSeated = false;
+			}
+			else // Is just a reposition
+			{
+				ZeroToSeatInformation();
 			}
 		}
 	}
 
 	// Sets seated mode on the character and then fires off an event to handle any special setup
 	UFUNCTION(BlueprintCallable, Server, Reliable, WithValidation, Category = "BaseVRCharacter", meta = (DisplayName = "SetSeatedMode"))
-		void Server_SetSeatedMode(USceneComponent * SeatParent, bool bSetSeatedMode);
-
-	bool Server_SetSeatedMode_Validate(USceneComponent * SeatParent, bool bSetSeatedMode)
-	{
-		return true;
-	}
-
-	void Server_SetSeatedMode_Implementation(USceneComponent * SeatParent, bool bSetSeatedMode)
-	{
-		SetSeatedMode(SeatParent, bSetSeatedMode);
-	}
+		void Server_SetSeatedMode(USceneComponent * SeatParent, bool bSetSeatedMode, FVector_NetQuantize100 UnSeatLoc, float UnSeatYaw);
 
 	// Sets seated mode on the character and then fires off an event to handle any special setup
 	// Should only be called on the server / net authority
 	//UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "BaseVRCharacter")
-	bool SetSeatedMode(USceneComponent * SeatParent, bool bSetSeatedMode)
-	{	
+	bool SetSeatedMode(USceneComponent * SeatParent, bool bSetSeatedMode, FVector UnSeatLoc, float UnSeatYaw)
+	{
 		if (!this->HasAuthority())
 			return false;
 
@@ -201,8 +222,8 @@ public:
 		{
 			//SeatedCharacter.SeatedCharacter = CharacterToSeat;
 			SeatInformation.bSitting = true;
-			SeatInformation.OriginalRotationYaw = UVRExpansionFunctionLibrary::GetHMDPureYaw_I(bUseControllerRotationYaw && OwningController ? OwningController->GetControlRotation() : GetActorRotation()).Yaw;
-			SeatInformation.OriginalRelativeLocation = VRReplicatedCamera->RelativeLocation;
+			SeatInformation.StoredYaw = UVRExpansionFunctionLibrary::GetHMDPureYaw_I(VRReplicatedCamera->RelativeRotation).Yaw;// bUseControllerRotationYaw && OwningController ? OwningController->GetControlRotation() : GetActorRotation()).Yaw;
+			SeatInformation.StoredLocation = VRReplicatedCamera->RelativeLocation;
 
 			//SetReplicateMovement(false);
 
@@ -212,12 +233,15 @@ public:
 		else
 		{
 			DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+			SeatInformation.StoredYaw = UnSeatYaw;
+			SeatInformation.StoredLocation = UnSeatLoc;
 			//SetActorLocationAndRotationVR(NewWorldLocation - (GetVRLocation() - GetActorLocation()), NewWorldRotation, true);
 			//SetReplicateMovement(true);
 			SeatInformation.bSitting = false;
 		}
 
 		OnRep_SeatedCharInfo(); // Call this on server side because it won't call itself
+		NotifyOfTeleport(); // Teleport the controllers
 
 		return true;
 	}

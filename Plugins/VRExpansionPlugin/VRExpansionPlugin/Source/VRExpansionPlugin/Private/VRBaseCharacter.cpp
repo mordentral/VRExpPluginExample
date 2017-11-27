@@ -2,7 +2,6 @@
 
 #include "VRBaseCharacter.h"
 #include "VRPathFollowingComponent.h"
-#include "GripMotionControllerComponent.h"
 //#include "Runtime/Engine/Private/EnginePrivate.h"
 
 FName AVRBaseCharacter::LeftMotionControllerComponentName(TEXT("Left Grip Motion Controller"));
@@ -91,6 +90,17 @@ void AVRBaseCharacter::GetLifetimeReplicatedProps(TArray< class FLifetimePropert
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME_CONDITION(AVRBaseCharacter, SeatInformation, COND_OwnerOnly);
 }
+
+bool AVRBaseCharacter::Server_SetSeatedMode_Validate(USceneComponent * SeatParent, bool bSetSeatedMode, FVector_NetQuantize100 UnSeatLoc, float UnSeatYaw)
+{
+	return true;
+}
+
+void AVRBaseCharacter::Server_SetSeatedMode_Implementation(USceneComponent * SeatParent, bool bSetSeatedMode, FVector_NetQuantize100 UnSeatLoc, float UnSeatYaw)
+{
+	SetSeatedMode(SeatParent, bSetSeatedMode, UnSeatLoc, UnSeatYaw);
+}
+
 
 void AVRBaseCharacter::OnCustomMoveActionPerformed_Implementation(EVRMoveAction MoveActionType, FVector MoveActionVector, FRotator MoveActionRotator)
 {
