@@ -28,13 +28,18 @@ public:
 		float StoredYaw;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, NotReplicated, Category = "CharacterSeatInfo")
-		float AllowedDistance;
+		float AllowedRadius;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, NotReplicated, Category = "CharacterSeatInfo")
-		float DistanceThreshold;
+		float AllowedRadiusThreshold;
 
 	bool bWasSeated;
 	bool bOriginalControlRotation;
-	
+
+	FVRSeatedCharacterInfo()
+	{
+		Clear();
+	}
+
 	void Clear()
 	{
 		bZeroToHead = true;
@@ -42,6 +47,8 @@ public:
 		StoredYaw = 0;
 		bWasSeated = false;
 		bOriginalControlRotation = false;
+		AllowedRadius = 40.0f;
+		AllowedRadiusThreshold = 20.0f;
 	}
 
 
@@ -141,20 +148,20 @@ public:
 		return GetVRLocation();
 	}
 
-	UPROPERTY(BlueprintReadOnly, Replicated, EditAnywhere, Category = "VRSeatComponent", ReplicatedUsing = OnRep_SeatedCharInfo)
+	UPROPERTY(BlueprintReadOnly, Replicated, EditAnywhere, Category = "BaseVRCharacter", ReplicatedUsing = OnRep_SeatedCharInfo)
 	FVRSeatedCharacterInfo SeatInformation;
 
 	// Called when the seated mode is changed
-	UFUNCTION(BlueprintImplementableEvent, Category = "VRMovement")
+	UFUNCTION(BlueprintImplementableEvent, Category = "BaseVRCharacter")
 		void OnSeatedModeChanged(bool bNewSeatedMode, bool bWasAlreadySeated);
 
 	// Called when the the player either transitions to/from the threshold boundry or the scaler value of being outside the boundry changes
 	// Can be used for warnings or screen darkening, ect
-	UFUNCTION(BlueprintImplementableEvent, Category = "VRMovement")
+	UFUNCTION(BlueprintImplementableEvent, Category = "BaseVRCharacter")
 		void OnSeatThreshholdChanged(bool bIsWithinThreshold, float ToThresholdScaler);
 
 	// Call to use an object
-	UPROPERTY(BlueprintAssignable, Category = "VRLeverComponent")
+	UPROPERTY(BlueprintAssignable, Category = "BaseVRCharacter")
 		FVRSeatThresholdChangedSignature OnSeatThreshholdChanged_Bind;
 
 	void ZeroToSeatInformation()
@@ -171,8 +178,20 @@ public:
 	{
 		if (USceneComponent * ParentComp = GetCapsuleComponent()->GetAttachParent())
 		{
-			//SetActorLocation(GetVRLocation() - ParentComp->GetComponentLocation());
-			//SetActorRelativeLocation(GetVRLocation() - ParentComp->GetComponentLocation());
+			FVector OrigLoc = SeatInformation.StoredLocation;
+			FVector NewLoc = VRReplicatedCamera->RelativeLocation;
+
+			float DistanceBetween = FVector::Dist(OrigLoc, NewLoc);
+
+			// If over the allowed distance
+			if (FMath::Abs(DistanceBetween) > SeatInformation.AllowedRadius)
+			{
+				// Force them back into range
+			}
+			else // Not over the distance, just create the scaler
+			{
+
+			}
 		}
 	}
 
@@ -253,7 +272,7 @@ public:
 			if (!bZeroToHead)
 				SeatInformation.StoredLocation.Z = 0.0f;
 			
-			//SetReplicateMovement(false);
+			//SetReplicateMovement(false);/ / No longer doing this, allowing it to replicate down to simulated clients now instead
 
 			if (SeatParent)
 				AttachToComponent(SeatParent, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
@@ -263,8 +282,7 @@ public:
 			DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
 			SeatInformation.StoredYaw = UnSeatYaw;
 			SeatInformation.StoredLocation = UnSeatLoc;
-			//SetActorLocationAndRotationVR(NewWorldLocation - (GetVRLocation() - GetActorLocation()), NewWorldRotation, true);
-			//SetReplicateMovement(true);
+			//SetReplicateMovement(true); // No longer doing this, allowing it to replicate down to simulated clients now instead
 			SeatInformation.bSitting = false;
 		}
 

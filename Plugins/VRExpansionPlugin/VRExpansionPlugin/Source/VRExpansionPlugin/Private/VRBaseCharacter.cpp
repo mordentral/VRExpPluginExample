@@ -98,7 +98,7 @@ bool AVRBaseCharacter::Server_SetSeatedMode_Validate(USceneComponent * SeatParen
 
 void AVRBaseCharacter::Server_SetSeatedMode_Implementation(USceneComponent * SeatParent, bool bSetSeatedMode, FVector_NetQuantize100 UnSeatLoc, float UnSeatYaw, bool bZeroToHead)
 {
-	SetSeatedMode(SeatParent, bSetSeatedMode, UnSeatLoc, UnSeatYaw);
+	SetSeatedMode(SeatParent, bSetSeatedMode, UnSeatLoc, UnSeatYaw, bZeroToHead);
 }
 
 void AVRBaseCharacter::Server_ReZeroSeating_Implementation(FVector_NetQuantize100 NewRelativeHeadLoc, float NewRelativeHeadYaw, bool bZeroToHead = true)
