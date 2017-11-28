@@ -10,6 +10,9 @@
 #include "GripMotionControllerComponent.h"
 #include "VRBaseCharacter.generated.h"
 
+/** Delegate for notification when the lever state changes. */
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FVRSeatThresholdChangedSignature, bool, bIsWithinThreshold, float, ToThresholdScaler);
+
 USTRUCT(Blueprintable)
 struct VREXPANSIONPLUGIN_API FVRSeatedCharacterInfo
 {
@@ -17,6 +20,8 @@ struct VREXPANSIONPLUGIN_API FVRSeatedCharacterInfo
 public:
 	UPROPERTY(BlueprintReadOnly, Category = "CharacterSeatInfo")
 		bool bSitting;
+	UPROPERTY(BlueprintReadOnly, Category = "CharacterSeatInfo")
+		bool bZeroToHead;
 	UPROPERTY()
 		FVector_NetQuantize100 StoredLocation;
 	UPROPERTY()
@@ -32,6 +37,7 @@ public:
 	
 	void Clear()
 	{
+		bZeroToHead = true;
 		StoredLocation = FVector::ZeroVector;
 		StoredYaw = 0;
 		bWasSeated = false;
@@ -46,6 +52,7 @@ public:
 		bOutSuccess = true;
 
 		Ar.SerializeBits(&bSitting, 1);
+		Ar.SerializeBits(&bZeroToHead, 1);
 		StoredLocation.NetSerialize(Ar, Map, bOutSuccess);
 
 		uint16 val;
@@ -144,7 +151,11 @@ public:
 	// Called when the the player either transitions to/from the threshold boundry or the scaler value of being outside the boundry changes
 	// Can be used for warnings or screen darkening, ect
 	UFUNCTION(BlueprintImplementableEvent, Category = "VRMovement")
-		void OnSeatedModeThreshholdChanged(bool bIsWithinThreshold, float ToThresholdScaler);
+		void OnSeatThreshholdChanged(bool bIsWithinThreshold, float ToThresholdScaler);
+
+	// Call to use an object
+	UPROPERTY(BlueprintAssignable, Category = "VRLeverComponent")
+		FVRSeatThresholdChangedSignature OnSeatThreshholdChanged_Bind;
 
 	void ZeroToSeatInformation()
 	{
@@ -212,13 +223,18 @@ public:
 	}
 
 	// Sets seated mode on the character and then fires off an event to handle any special setup
+	UFUNCTION(BlueprintCallable, Server, Reliable, WithValidation, Category = "BaseVRCharacter", meta = (DisplayName = "ReZeroSeating"))
+		void Server_ReZeroSeating(FVector_NetQuantize100 NewLoc, float NewYaw, bool bZeroToHead = true);
+
+
+	// Sets seated mode on the character and then fires off an event to handle any special setup
 	UFUNCTION(BlueprintCallable, Server, Reliable, WithValidation, Category = "BaseVRCharacter", meta = (DisplayName = "SetSeatedMode"))
-		void Server_SetSeatedMode(USceneComponent * SeatParent, bool bSetSeatedMode, FVector_NetQuantize100 UnSeatLoc, float UnSeatYaw);
+		void Server_SetSeatedMode(USceneComponent * SeatParent, bool bSetSeatedMode, FVector_NetQuantize100 UnSeatLoc, float UnSeatYaw, bool bZeroToHead = true);
 
 	// Sets seated mode on the character and then fires off an event to handle any special setup
 	// Should only be called on the server / net authority
 	//UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "BaseVRCharacter")
-	bool SetSeatedMode(USceneComponent * SeatParent, bool bSetSeatedMode, FVector UnSeatLoc, float UnSeatYaw)
+	bool SetSeatedMode(USceneComponent * SeatParent, bool bSetSeatedMode, FVector UnSeatLoc, float UnSeatYaw, bool bZeroToHead = true)
 	{
 		if (!this->HasAuthority())
 			return false;
@@ -230,8 +246,13 @@ public:
 			//SeatedCharacter.SeatedCharacter = CharacterToSeat;
 			SeatInformation.bSitting = true;
 			SeatInformation.StoredYaw = UVRExpansionFunctionLibrary::GetHMDPureYaw_I(VRReplicatedCamera->RelativeRotation).Yaw;// bUseControllerRotationYaw && OwningController ? OwningController->GetControlRotation() : GetActorRotation()).Yaw;
+			
 			SeatInformation.StoredLocation = VRReplicatedCamera->RelativeLocation;
-
+			
+			// Null out Z so we keep feet location if not zeroing to head
+			if (!bZeroToHead)
+				SeatInformation.StoredLocation.Z = 0.0f;
+			
 			//SetReplicateMovement(false);
 
 			if (SeatParent)

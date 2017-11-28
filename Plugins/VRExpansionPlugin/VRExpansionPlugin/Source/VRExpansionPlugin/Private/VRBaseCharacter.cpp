@@ -91,16 +91,31 @@ void AVRBaseCharacter::GetLifetimeReplicatedProps(TArray< class FLifetimePropert
 	DOREPLIFETIME_CONDITION(AVRBaseCharacter, SeatInformation, COND_OwnerOnly);
 }
 
-bool AVRBaseCharacter::Server_SetSeatedMode_Validate(USceneComponent * SeatParent, bool bSetSeatedMode, FVector_NetQuantize100 UnSeatLoc, float UnSeatYaw)
+bool AVRBaseCharacter::Server_SetSeatedMode_Validate(USceneComponent * SeatParent, bool bSetSeatedMode, FVector_NetQuantize100 UnSeatLoc, float UnSeatYaw, bool bZeroToHead)
 {
 	return true;
 }
 
-void AVRBaseCharacter::Server_SetSeatedMode_Implementation(USceneComponent * SeatParent, bool bSetSeatedMode, FVector_NetQuantize100 UnSeatLoc, float UnSeatYaw)
+void AVRBaseCharacter::Server_SetSeatedMode_Implementation(USceneComponent * SeatParent, bool bSetSeatedMode, FVector_NetQuantize100 UnSeatLoc, float UnSeatYaw, bool bZeroToHead)
 {
 	SetSeatedMode(SeatParent, bSetSeatedMode, UnSeatLoc, UnSeatYaw);
 }
 
+void AVRBaseCharacter::Server_ReZeroSeating_Implementation(FVector_NetQuantize100 NewRelativeHeadLoc, float NewRelativeHeadYaw, bool bZeroToHead = true)
+{
+	SeatInformation.StoredYaw = NewRelativeHeadYaw;
+
+	SeatInformation.StoredLocation = NewRelativeHeadLoc;
+
+	// Null out Z so we keep feet location if not zeroing to head
+	if (!bZeroToHead)
+		SeatInformation.StoredLocation.Z = 0.0f;
+}
+
+bool AVRBaseCharacter::Server_ReZeroSeating_Validate(FVector_NetQuantize100 NewLoc, float NewYaw, bool bZeroToHead = true)
+{
+	return true;
+}
 
 void AVRBaseCharacter::OnCustomMoveActionPerformed_Implementation(EVRMoveAction MoveActionType, FVector MoveActionVector, FRotator MoveActionRotator)
 {
