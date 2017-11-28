@@ -148,8 +148,7 @@ public:
 
 	void ZeroToSeatInformation()
 	{
-		SetActorRelativeRotation(FRotator(0.0f, -SeatInformation.StoredYaw, 0.0f));
-		SetActorRelativeLocation(-(VRReplicatedCamera->GetComponentLocation() - GetActorLocation()));
+		SetActorRelativeLocationAndRotationVR(-SeatInformation.StoredLocation, FRotator(0.0f, -SeatInformation.StoredYaw, 0.0f), true);
 
 		//SetActorLocationAndRotationVR(GetVRLocation() - GetActorLocation(), FRotator(0.0f, -SeatInformation.StoredYaw, 0.0f), true);
 		LeftMotionController->PostTeleportMoveGrippedActors();
@@ -193,11 +192,14 @@ public:
 				if (UCharacterMovementComponent * charMovement = Cast<UCharacterMovementComponent>(GetMovementComponent()))
 					charMovement->SetMovementMode(MOVE_Walking);
 
+				bUseControllerRotationYaw = SeatInformation.bOriginalControlRotation;
+
 				// Re-purposing them for the new location and rotations
-				SetActorLocationAndRotationVR(SeatInformation.StoredLocation, FRotator(0.0f, SeatInformation.StoredYaw, 0.0f), true);
+				SetActorLocationAndRotation(GetTeleportLocation(SeatInformation.StoredLocation), FRotator(0.0f, SeatInformation.StoredYaw, 0.0f));
+				//SetActorLocationAndRotationVR(SeatInformation.StoredLocation, FRotator(0.0f, SeatInformation.StoredYaw, 0.0f), true);
 				LeftMotionController->PostTeleportMoveGrippedActors();
 				RightMotionController->PostTeleportMoveGrippedActors();
-				bUseControllerRotationYaw = SeatInformation.bOriginalControlRotation;
+
 
 				OnSeatedModeChanged(SeatInformation.bSitting, SeatInformation.bWasSeated);
 				SeatInformation.bWasSeated = false;
@@ -282,6 +284,32 @@ public:
 			return NewLocation - OrigLocation;
 	}
 
+	// Sets the actors rotation taking into account the HMD as a pivot point (also moves the actor), returns the location difference
+	UFUNCTION(BlueprintCallable, Category = "BaseVRCharacter|VRLocations")
+	FVector SetActorRelativeLocationAndRotationVR(FVector NewLoc, FRotator NewRot, bool bUseYawOnly)
+	{
+		FTransform RelTransform = GetRootComponent()->GetRelativeTransform();
+
+		FVector NewLocation;
+		FRotator NewRotation;
+		FVector PivotPoint = VRReplicatedCamera->RelativeLocation;
+
+		NewRotation = RelTransform.GetRotation().Rotator();
+
+		if (bUseYawOnly)
+		{
+			NewRotation.Pitch = 0.0f;
+			NewRotation.Roll = 0.0f;
+		}
+
+		NewLocation = NewLoc + NewRotation.RotateVector(PivotPoint);
+		NewRotation = NewRot;
+		NewLocation -= NewRotation.RotateVector(PivotPoint);
+
+		// Also setting actor rot because the control rot transfers to it anyway eventually
+		SetActorRelativeTransform(FTransform(NewRotation, NewLocation, RelTransform.GetScale3D()));
+		return NewLocation - NewLoc;
+	}
 
 	// Sets the actors rotation taking into account the HMD as a pivot point (also moves the actor), returns the location difference
 	UFUNCTION(BlueprintCallable, Category = "BaseVRCharacter|VRLocations")
