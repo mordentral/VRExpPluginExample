@@ -91,14 +91,14 @@ void AVRBaseCharacter::GetLifetimeReplicatedProps(TArray< class FLifetimePropert
 	DOREPLIFETIME_CONDITION(AVRBaseCharacter, SeatInformation, COND_OwnerOnly);
 }
 
-bool AVRBaseCharacter::Server_SetSeatedMode_Validate(USceneComponent * SeatParent, bool bSetSeatedMode, FVector_NetQuantize100 UnSeatLoc, float UnSeatYaw, bool bZeroToHead)
+bool AVRBaseCharacter::Server_SetSeatedMode_Validate(USceneComponent * SeatParent, bool bSetSeatedMode, FVector_NetQuantize100 TargetLoc, float TargetYaw, bool bZeroToHead)
 {
 	return true;
 }
 
-void AVRBaseCharacter::Server_SetSeatedMode_Implementation(USceneComponent * SeatParent, bool bSetSeatedMode, FVector_NetQuantize100 UnSeatLoc, float UnSeatYaw, bool bZeroToHead)
+void AVRBaseCharacter::Server_SetSeatedMode_Implementation(USceneComponent * SeatParent, bool bSetSeatedMode, FVector_NetQuantize100 TargetLoc, float TargetYaw, bool bZeroToHead)
 {
-	SetSeatedMode(SeatParent, bSetSeatedMode, UnSeatLoc, UnSeatYaw, bZeroToHead);
+	SetSeatedMode(SeatParent, bSetSeatedMode, TargetLoc, TargetYaw, bZeroToHead);
 }
 
 void AVRBaseCharacter::Server_ReZeroSeating_Implementation(FVector_NetQuantize100 NewRelativeHeadLoc, float NewRelativeHeadYaw, bool bZeroToHead = true)
