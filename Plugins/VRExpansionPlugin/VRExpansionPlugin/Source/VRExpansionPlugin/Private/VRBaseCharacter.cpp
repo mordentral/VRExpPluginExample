@@ -103,13 +103,17 @@ void AVRBaseCharacter::Server_SetSeatedMode_Implementation(USceneComponent * Sea
 
 void AVRBaseCharacter::Server_ReZeroSeating_Implementation(FVector_NetQuantize100 NewRelativeHeadLoc, float NewRelativeHeadYaw, bool bZeroToHead = true)
 {
-	SeatInformation.StoredYaw = NewRelativeHeadYaw;
+	if (FMath::IsNearlyEqual(SeatInformation.StoredYaw, NewRelativeHeadYaw) && SeatInformation.StoredLocation.Equals(NewRelativeHeadLoc))
+		return;
 
+	SeatInformation.StoredYaw = NewRelativeHeadYaw;
 	SeatInformation.StoredLocation = NewRelativeHeadLoc;
 
 	// Null out Z so we keep feet location if not zeroing to head
 	if (!bZeroToHead)
 		SeatInformation.StoredLocation.Z = 0.0f;
+
+	OnRep_SeatedCharInfo();
 }
 
 bool AVRBaseCharacter::Server_ReZeroSeating_Validate(FVector_NetQuantize100 NewLoc, float NewYaw, bool bZeroToHead = true)

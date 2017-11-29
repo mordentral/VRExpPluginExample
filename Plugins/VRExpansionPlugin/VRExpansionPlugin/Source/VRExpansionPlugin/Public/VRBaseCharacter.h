@@ -22,18 +22,23 @@ public:
 		bool bSitting;
 	UPROPERTY(BlueprintReadOnly, Category = "CharacterSeatInfo")
 		bool bZeroToHead;
-	UPROPERTY()
+	UPROPERTY(BlueprintReadOnly, Category = "CharacterSeatInfo")
 		FVector_NetQuantize100 StoredLocation;
-	UPROPERTY()
+	UPROPERTY(BlueprintReadOnly, Category = "CharacterSeatInfo")
 		float StoredYaw;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, NotReplicated, Category = "CharacterSeatInfo")
 		float AllowedRadius;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, NotReplicated, Category = "CharacterSeatInfo")
 		float AllowedRadiusThreshold;
+	UPROPERTY(BlueprintReadOnly, NotReplicated, Category = "CharacterSeatInfo")
+		float CurrentThresholdScaler;
+	UPROPERTY(BlueprintReadOnly, NotReplicated, Category = "CharacterSeatInfo")
+		bool bIsOverThreshold;
 
 	bool bWasSeated;
 	bool bOriginalControlRotation;
+	bool bWasOverLimit;
 
 	FVRSeatedCharacterInfo()
 	{
@@ -42,6 +47,7 @@ public:
 
 	void Clear()
 	{
+		bWasOverLimit = false;
 		bZeroToHead = true;
 		StoredLocation = FVector::ZeroVector;
 		StoredYaw = 0;
@@ -49,6 +55,7 @@ public:
 		bOriginalControlRotation = false;
 		AllowedRadius = 40.0f;
 		AllowedRadiusThreshold = 20.0f;
+		CurrentThresholdScaler = 0.0f;
 	}
 
 
@@ -166,9 +173,7 @@ public:
 
 	void ZeroToSeatInformation()
 	{
-		SetActorRelativeLocationAndRotationVR(-SeatInformation.StoredLocation, FRotator(0.0f, -SeatInformation.StoredYaw, 0.0f), true);
-
-		//SetActorLocationAndRotationVR(GetVRLocation() - GetActorLocation(), FRotator(0.0f, -SeatInformation.StoredYaw, 0.0f), true);
+		SetActorRelativeLocationAndRotationVR(SeatInformation.StoredLocation, -SeatInformation.StoredLocation, FRotator(0.0f, -SeatInformation.StoredYaw, 0.0f), true);
 		LeftMotionController->PostTeleportMoveGrippedActors();
 		RightMotionController->PostTeleportMoveGrippedActors();
 	}
@@ -176,22 +181,45 @@ public:
 	// Called from the movement component
 	void TickSeatInformation(float DeltaTime)
 	{
-		if (USceneComponent * ParentComp = GetCapsuleComponent()->GetAttachParent())
+		float LastThresholdScaler = SeatInformation.CurrentThresholdScaler;
+		bool bLastOverThreshold = SeatInformation.bIsOverThreshold;
+
+		FVector NewLoc = VRReplicatedCamera->RelativeLocation;
+		
+		if (!SeatInformation.bZeroToHead)
+			NewLoc.Z = 0.0f;
+
+		float AbsDistance = FMath::Abs(FVector::Dist(SeatInformation.StoredLocation, NewLoc));
+
+		// If over the allowed distance
+		if (AbsDistance > SeatInformation.AllowedRadius)
 		{
-			FVector OrigLoc = SeatInformation.StoredLocation;
-			FVector NewLoc = VRReplicatedCamera->RelativeLocation;
+			// Force them back into range
+			FVector diff = NewLoc - SeatInformation.StoredLocation;
+			diff.Normalize();
+			diff = (-diff * (AbsDistance - SeatInformation.AllowedRadius));	
 
-			float DistanceBetween = FVector::Dist(OrigLoc, NewLoc);
+			FRotator Rot = FRotator(0.0f, -SeatInformation.StoredYaw, 0.0f);
+			SetActorRelativeLocationAndRotationVR(SeatInformation.StoredLocation, (-SeatInformation.StoredLocation) + Rot.RotateVector(diff), Rot, true);
+			SeatInformation.bWasOverLimit = true;
+		}
+		else if (SeatInformation.bWasOverLimit) // Make sure we are in the zero point otherwise
+		{
+			SetActorRelativeLocationAndRotationVR(SeatInformation.StoredLocation, -SeatInformation.StoredLocation, FRotator(0.0f, -SeatInformation.StoredYaw, 0.0f), true);
+			SeatInformation.bWasOverLimit = false;
+		}
 
-			// If over the allowed distance
-			if (FMath::Abs(DistanceBetween) > SeatInformation.AllowedRadius)
-			{
-				// Force them back into range
-			}
-			else // Not over the distance, just create the scaler
-			{
+		if (AbsDistance > SeatInformation.AllowedRadius - SeatInformation.AllowedRadiusThreshold)
+			SeatInformation.bIsOverThreshold = true;
+		else
+			SeatInformation.bIsOverThreshold = false;
 
-			}
+		SeatInformation.CurrentThresholdScaler = FMath::Clamp((AbsDistance - (SeatInformation.AllowedRadius - SeatInformation.AllowedRadiusThreshold)) / SeatInformation.AllowedRadiusThreshold, 0.0f, 1.0f);		
+
+		if (bLastOverThreshold != SeatInformation.bIsOverThreshold || !FMath::IsNearlyEqual(LastThresholdScaler, SeatInformation.CurrentThresholdScaler))
+		{
+			OnSeatThreshholdChanged(!SeatInformation.bIsOverThreshold, SeatInformation.CurrentThresholdScaler);
+			OnSeatThreshholdChanged_Bind.Broadcast(!SeatInformation.bIsOverThreshold, SeatInformation.CurrentThresholdScaler);
 		}
 	}
 
@@ -232,7 +260,7 @@ public:
 
 
 				OnSeatedModeChanged(SeatInformation.bSitting, SeatInformation.bWasSeated);
-				SeatInformation.bWasSeated = false;
+				SeatInformation.Clear();
 			}
 			else // Is just a reposition
 			{
@@ -325,29 +353,18 @@ public:
 
 	// Sets the actors rotation taking into account the HMD as a pivot point (also moves the actor), returns the location difference
 	UFUNCTION(BlueprintCallable, Category = "BaseVRCharacter|VRLocations")
-	FVector SetActorRelativeLocationAndRotationVR(FVector NewLoc, FRotator NewRot, bool bUseYawOnly)
+	void SetActorRelativeLocationAndRotationVR(FVector Pivot, FVector NewLoc, FRotator NewRot, bool bUseYawOnly)
 	{
-		FTransform RelTransform = GetRootComponent()->GetRelativeTransform();
-
-		FVector NewLocation;
-		FRotator NewRotation;
-		FVector PivotPoint = VRReplicatedCamera->RelativeLocation;
-
-		NewRotation = RelTransform.GetRotation().Rotator();
-
 		if (bUseYawOnly)
 		{
-			NewRotation.Pitch = 0.0f;
-			NewRotation.Roll = 0.0f;
+			NewRot.Pitch = 0.0f;
+			NewRot.Roll = 0.0f;
 		}
 
-		NewLocation = NewLoc + NewRotation.RotateVector(PivotPoint);
-		NewRotation = NewRot;
-		NewLocation -= NewRotation.RotateVector(PivotPoint);
+		NewLoc = NewLoc + Pivot;
+		NewLoc -= NewRot.RotateVector(Pivot);
 
-		// Also setting actor rot because the control rot transfers to it anyway eventually
-		SetActorRelativeTransform(FTransform(NewRotation, NewLocation, RelTransform.GetScale3D()));
-		return NewLocation - NewLoc;
+		SetActorRelativeTransform(FTransform(NewRot, NewLoc, GetCapsuleComponent()->RelativeScale3D));
 	}
 
 	// Sets the actors rotation taking into account the HMD as a pivot point (also moves the actor), returns the location difference
