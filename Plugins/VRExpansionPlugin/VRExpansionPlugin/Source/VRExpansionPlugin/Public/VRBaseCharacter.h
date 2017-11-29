@@ -23,6 +23,8 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = "CharacterSeatInfo")
 		bool bZeroToHead;
 	UPROPERTY(BlueprintReadOnly, Category = "CharacterSeatInfo")
+		bool bAutoBindToInput;
+	UPROPERTY(BlueprintReadOnly, Category = "CharacterSeatInfo")
 		FVector_NetQuantize100 StoredLocation;
 	UPROPERTY(BlueprintReadOnly, Category = "CharacterSeatInfo")
 		float StoredYaw;
@@ -47,6 +49,7 @@ public:
 
 	void Clear()
 	{
+		bAutoBindToInput = false;
 		bWasOverLimit = false;
 		bZeroToHead = true;
 		StoredLocation = FVector::ZeroVector;
@@ -67,6 +70,7 @@ public:
 
 		Ar.SerializeBits(&bSitting, 1);
 		Ar.SerializeBits(&bZeroToHead, 1);
+		Ar.SerializeBits(&bAutoBindToInput, 1);
 		StoredLocation.NetSerialize(Ar, Map, bOutSuccess);
 
 		uint16 val;
@@ -293,7 +297,7 @@ public:
 			SeatInformation.bSitting = true;
 			SeatInformation.StoredYaw = TargetYaw;
 			SeatInformation.StoredLocation = TargetLoc;
-			
+		
 			// Null out Z so we keep feet location if not zeroing to head
 			if (!bZeroToHead)
 				SeatInformation.StoredLocation.Z = 0.0f;
