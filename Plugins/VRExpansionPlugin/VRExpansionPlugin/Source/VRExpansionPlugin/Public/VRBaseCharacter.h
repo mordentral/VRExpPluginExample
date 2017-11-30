@@ -23,15 +23,13 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = "CharacterSeatInfo")
 		bool bZeroToHead;
 	UPROPERTY(BlueprintReadOnly, Category = "CharacterSeatInfo")
-		bool bAutoBindToInput;
-	UPROPERTY(BlueprintReadOnly, Category = "CharacterSeatInfo")
 		FVector_NetQuantize100 StoredLocation;
 	UPROPERTY(BlueprintReadOnly, Category = "CharacterSeatInfo")
 		float StoredYaw;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, NotReplicated, Category = "CharacterSeatInfo")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, NotReplicated, Category = "CharacterSeatInfo", meta = (ClampMin = "1.000", UIMin = "1.000", ClampMax = "256.000", UIMax = "256.000"))
 		float AllowedRadius;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, NotReplicated, Category = "CharacterSeatInfo")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, NotReplicated, Category = "CharacterSeatInfo", meta = (ClampMin = "1.000", UIMin = "1.000", ClampMax = "256.000", UIMax = "256.000"))
 		float AllowedRadiusThreshold;
 	UPROPERTY(BlueprintReadOnly, NotReplicated, Category = "CharacterSeatInfo")
 		float CurrentThresholdScaler;
@@ -49,7 +47,6 @@ public:
 
 	void Clear()
 	{
-		bAutoBindToInput = false;
 		bWasOverLimit = false;
 		bZeroToHead = true;
 		StoredLocation = FVector::ZeroVector;
@@ -58,6 +55,14 @@ public:
 		bOriginalControlRotation = false;
 		AllowedRadius = 40.0f;
 		AllowedRadiusThreshold = 20.0f;
+		CurrentThresholdScaler = 0.0f;
+	}
+
+	void ClearTempVals()
+	{
+		bWasOverLimit = false;
+		bWasSeated = false;
+		bOriginalControlRotation = false;
 		CurrentThresholdScaler = 0.0f;
 	}
 
@@ -70,7 +75,23 @@ public:
 
 		Ar.SerializeBits(&bSitting, 1);
 		Ar.SerializeBits(&bZeroToHead, 1);
-		Ar.SerializeBits(&bAutoBindToInput, 1);
+
+		if (bSitting)
+		{
+			// Forcing a maximum value here so that we can compress it by making assumptions
+			// 256 max value = 8 bits + 1 bit for sign + 7 bits for precision (up to 128 on precision, so full range 2 digit precision).
+			if (Ar.IsSaving())
+			{
+				bOutSuccess &= WriteFixedCompressedFloat<256, 16>(AllowedRadius, Ar);
+				bOutSuccess &= WriteFixedCompressedFloat<256, 16>(AllowedRadiusThreshold, Ar);
+			}
+			else
+			{
+				bOutSuccess &= ReadFixedCompressedFloat<256, 16>(AllowedRadius, Ar);
+				bOutSuccess &= ReadFixedCompressedFloat<256, 16>(AllowedRadiusThreshold, Ar);
+			}
+		}
+
 		StoredLocation.NetSerialize(Ar, Map, bOutSuccess);
 
 		uint16 val;
@@ -234,14 +255,18 @@ public:
 
 		if (UPrimitiveComponent * root = Cast<UPrimitiveComponent>(GetRootComponent()))
 		{
-			if (SeatInformation.bSitting && !SeatInformation.bWasSeated)
+			if (SeatInformation.bSitting /*&& !SeatInformation.bWasSeated*/) // Removing WasSeated check because we may be switching seats
 			{
 				if (UCharacterMovementComponent * charMovement = Cast<UCharacterMovementComponent>(GetMovementComponent()))
 					charMovement->SetMovementMode(MOVE_Custom, (uint8)EVRCustomMovementMode::VRMOVE_Seated);
 
 				root->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+				// Set it before it is set below
+				if(!SeatInformation.bWasSeated)
+					SeatInformation.bOriginalControlRotation = bUseControllerRotationYaw;
+
 				SeatInformation.bWasSeated = true;
-				SeatInformation.bOriginalControlRotation = bUseControllerRotationYaw;
 				bUseControllerRotationYaw = false; // This forces rotation in world space, something that we don't want
 
 				ZeroToSeatInformation();
@@ -262,7 +287,7 @@ public:
 				RightMotionController->PostTeleportMoveGrippedActors();
 
 				OnSeatedModeChanged(SeatInformation.bSitting, SeatInformation.bWasSeated);
-				SeatInformation.Clear();
+				SeatInformation.ClearTempVals();
 			}
 			else // Is just a reposition
 			{
@@ -280,11 +305,11 @@ public:
 	// Target loc is for teleport location if standing up, or relative camera location when sitting down.
 	// Target rot is for PURE YAW of standing up, or sitting down (use Get HMDPureYaw).
 	UFUNCTION(BlueprintCallable, Server, Reliable, WithValidation, Category = "BaseVRCharacter", meta = (DisplayName = "SetSeatedMode"))
-		void Server_SetSeatedMode(USceneComponent * SeatParent, bool bSetSeatedMode, FVector_NetQuantize100 TargetLoc, float TargetYaw, bool bZeroToHead = true);
+		void Server_SetSeatedMode(USceneComponent * SeatParent, bool bSetSeatedMode, FVector_NetQuantize100 TargetLoc, float TargetYaw, float AllowedRadius = 40.0f, float AllowedRadiusThreshold = 20.0f, bool bZeroToHead = true);
 
 	// Sets seated mode on the character and then fires off an event to handle any special setup
 	// Should only be called on the server / net authority
-	bool SetSeatedMode(USceneComponent * SeatParent, bool bSetSeatedMode, FVector TargetLoc, float TargetYaw, bool bZeroToHead = true)
+	bool SetSeatedMode(USceneComponent * SeatParent, bool bSetSeatedMode, FVector TargetLoc, float TargetYaw, float AllowedRadius = 40.0f, float AllowedRadiusThreshold = 20.0f, bool bZeroToHead = true)
 	{
 		if (!this->HasAuthority())
 			return false;
@@ -297,6 +322,8 @@ public:
 			SeatInformation.bSitting = true;
 			SeatInformation.StoredYaw = TargetYaw;
 			SeatInformation.StoredLocation = TargetLoc;
+			SeatInformation.AllowedRadius = AllowedRadius;
+			SeatInformation.AllowedRadiusThreshold = AllowedRadiusThreshold;
 		
 			// Null out Z so we keep feet location if not zeroing to head
 			if (!bZeroToHead)
