@@ -115,9 +115,6 @@ class VREXPANSIONPLUGIN_API UVRLeverComponent : public UStaticMeshComponent, pub
 	bool bLeverState;
 	bool bIsInFirstTick;
 
-	FVector IntialInteractionLocationLimitedYaw;
-	FVector IntialInteractionLocationLimitedPitch;
-
 	float CalcAngle(EVRInteractibleLeverAxis AxisToCalc, FVector CurInteractorLocation)
 	{
 		float ReturnAxis = 0.0f;
@@ -125,7 +122,6 @@ class VREXPANSIONPLUGIN_API UVRLeverComponent : public UStaticMeshComponent, pub
 		switch (AxisToCalc)
 		{
 		case EVRInteractibleLeverAxis::Axis_X:
-		case EVRInteractibleLeverAxis::Axis_XZ:
 		{
 			ReturnAxis = FMath::RadiansToDegrees(FMath::Atan2(CurInteractorLocation.Y, CurInteractorLocation.Z)) - InitialGripRot;
 		}break;
