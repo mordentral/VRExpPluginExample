@@ -205,8 +205,7 @@ void UVRLeverComponent::TickGrip_Implementation(UGripMotionControllerComponent *
 
 		this->SetRelativeRotation((FTransform(SetAxisValue(DeltaAngle, FRotator::ZeroRotator)) * InitialRelativeTransform).Rotator());
 		LastDeltaAngle = DeltaAngle;
-	}
-	break
+	}break;
 	default:break;
 	}
 
