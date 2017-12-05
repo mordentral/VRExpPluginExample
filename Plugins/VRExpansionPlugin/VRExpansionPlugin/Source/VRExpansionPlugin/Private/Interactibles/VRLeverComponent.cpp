@@ -174,7 +174,7 @@ void UVRLeverComponent::TickGrip_Implementation(UGripMotionControllerComponent *
 	}
 	break;
 
-	case EVRInteractibleLeverAxis::Axis_XZ:
+	/*case EVRInteractibleLeverAxis::Axis_XZ:
 	{
 		//Yaw Axis
 		FVector nAxis;
@@ -182,20 +182,72 @@ void UVRLeverComponent::TickGrip_Implementation(UGripMotionControllerComponent *
 		FQuat BetweenTemp;
 
 		BetweenTemp = FQuat::FindBetweenVectors(qRotAtGrab.UnrotateVector(FVector(InitialInteractorLocation.X, InitialInteractorLocation.Y, 0.0f)), FVector(CurInteractorLocation.X, CurInteractorLocation.Y, 0));
-		BetweenTemp.ToAxisAndAngle(nAxis, nAngle);
+		//BetweenTemp.ToAxisAndAngle(nAxis, nAngle);
 
-		float yaw = FQuat(nAxis, nAngle).Rotator().Yaw;
-		float DeltaAnglePitch = CalcAngle(LeverRotationAxis, CurInteractorLocation);
+		float yaw = BetweenTemp.Rotator().Yaw;// FQuat(nAxis, nAngle).Rotator().Yaw;
+
+		//Pitch axis. CurInteractionLocation has to be rotated by yaw to not interfere with yaw axis. Also allows separated axis limitation if necessary.	
+		FVector CurInteractionLocationLimitedPitch = FRotator(0, yaw, 0).UnrotateVector(CurInteractorLocation);
+
+		BetweenTemp = FQuat::FindBetweenVectors(qRotAtGrab.UnrotateVector(FVector(0.0f, InitialInteractorLocation.Y, InitialInteractorLocation.Z)), FVector(0, CurInteractionLocationLimitedPitch.Y, CurInteractionLocationLimitedPitch.Z));
+		//BetweenTemp.ToAxisAndAngle(nAxis, nAngle);
+		//nAngle = FMath::Clamp(nAnglePitch, 0.0f, FMath::DegreesToRadians(LeverLimitPositive));
+
+		float pitch = BetweenTemp.Rotator().Roll;
 		
-		LastDeltaAngle = DeltaAnglePitch;
-		float pitch = DeltaAnglePitch;
+		//IntialInteractionLocationLimitedYaw = qRotAtGrab.UnrotateVector(FVector(InitialInteractorLocation.X, InitialInteractorLocation.Y, 0));
+		//IntialInteractionLocationLimitedPitch = qRotAtGrab.UnrotateVector(FVector(0, InitialInteractorLocation.Y, InitialInteractorLocation.Z));
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("yaw: %f, pitch: %f"), yaw, pitch));
+
+		//Final Rotation
+		FRotator ShortestDistanceRot = FRotator(0, yaw, pitch);
+		this->SetRelativeRotation((FTransform(ShortestDistanceRot) * InitialRelativeTransform).Rotator());
+		
+		//float DeltaAnglePitch = CalcAngle(LeverRotationAxis, CurInteractorLocation);
+
+		//LastDeltaAngle = DeltaAnglePitch;
+		//float pitch = DeltaAnglePitch;
 		
 		//Final Rotation
-		FRotator ShortestDistanceRot = (FRotator(0.0f, 0.0f, pitch).Quaternion() * FRotator(0, yaw, 0).Quaternion()).Rotator();// FRotator(0.0f, yaw, pitch);
-		ShortestDistanceRot.Yaw = yaw;
-		this->SetRelativeRotation((FTransform(ShortestDistanceRot) * InitialRelativeTransform).Rotator());
+		//FRotator ShortestDistanceRot = (FRotator(0.0f, 0.0f, pitch).Quaternion() * FRotator(0, yaw, 0).Quaternion()).Rotator();// FRotator(0.0f, yaw, pitch);
+		//ShortestDistanceRot.Yaw = yaw;
+		//this->SetRelativeRotation((FTransform(ShortestDistanceRot) * InitialRelativeTransform).Rotator());
+		
 	}
-	break;
+	break;*/
+	case EVRInteractibleLeverAxis::Axis_XZ:
+		{
+					//Yaw Axis
+				FVector nAxisYaw;
+			float nAngleYaw = 0.0f;
+			
+				FVector CurInteractionLocationLimitedYaw = FVector(CurInteractorLocation.X, CurInteractorLocation.Y, 0);
+			
+				FQuat BetweenYaw = FQuat::FindBetweenVectors(IntialInteractionLocationLimitedYaw, CurInteractionLocationLimitedYaw);
+			BetweenYaw.ToAxisAndAngle(nAxisYaw, nAngleYaw);
+			nAngleYaw = FMath::Clamp(nAngleYaw, 0.0f, FMath::DegreesToRadians(LeverLimitPositive));
+			
+				float yaw = BetweenYaw.Rotator().Yaw;
+			
+				
+						//Pitch axis. CurInteractionLocation has to be rotated by yaw to not interfere with yaw axis. Also allows seperated axis limitation if necessary.
+				FVector nAxisPitch;
+			float nAnglePitch = 0.0f;
+			
+				FVector CurInteractionLocationLimitedPitch = FRotator(0, yaw, 0).UnrotateVector(CurInteractorLocation);
+			
+				FQuat BetweenPitch = FQuat::FindBetweenVectors(IntialInteractionLocationLimitedPitch, FVector(0, CurInteractionLocationLimitedPitch.Y, CurInteractionLocationLimitedPitch.Z));
+			BetweenPitch.ToAxisAndAngle(nAxisPitch, nAnglePitch);
+			nAnglePitch = FMath::Clamp(nAnglePitch, 0.0f, FMath::DegreesToRadians(LeverLimitPositive));
+			
+				float pitch = BetweenPitch.Rotator().Roll;
+			
+				
+						//Final Rotation
+				FRotator ShortestDistanceRot = (FTransform(FRotator(0, yaw, pitch)) * InitialRelativeTransform).Rotator();
+			this->SetRelativeRotation(ShortestDistanceRot);
+			}
+		break;
 
 	case EVRInteractibleLeverAxis::Axis_X:
 	case EVRInteractibleLeverAxis::Axis_Y:
@@ -240,13 +292,11 @@ void UVRLeverComponent::OnGrip_Implementation(UGripMotionControllerComponent * G
 		switch (LeverRotationAxis)
 		{
 		case EVRInteractibleLeverAxis::Axis_XY:
-		{
-			qRotAtGrab = this->GetComponentTransform().GetRelativeTransform(CurrentRelativeTransform).GetRotation();
-		}break;
 		case EVRInteractibleLeverAxis::Axis_XZ:
 		{
-			InitialGripRot = FMath::RadiansToDegrees(FMath::Atan2(InitialInteractorLocation.Y, InitialInteractorLocation.Z));
 			qRotAtGrab = this->GetComponentTransform().GetRelativeTransform(CurrentRelativeTransform).GetRotation();
+			IntialInteractionLocationLimitedYaw = qRotAtGrab.UnrotateVector(FVector(InitialInteractorLocation.X, InitialInteractorLocation.Y, 0));
+			IntialInteractionLocationLimitedPitch = qRotAtGrab.UnrotateVector(FVector(0, InitialInteractorLocation.Y, InitialInteractorLocation.Z));
 		}break;
 		case EVRInteractibleLeverAxis::Axis_X:
 		{
