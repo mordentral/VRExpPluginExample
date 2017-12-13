@@ -476,7 +476,10 @@ void UVRRootComponent::TickComponent(float DeltaTime, enum ELevelTick TickType, 
 				DifferenceFromLastFrame = FVector::ZeroVector;
 		}
 		else
+		{
 			bHadRelativeMovement = false;
+			DifferenceFromLastFrame = FVector::ZeroVector;
+		}
 	}
 	else
 	{
