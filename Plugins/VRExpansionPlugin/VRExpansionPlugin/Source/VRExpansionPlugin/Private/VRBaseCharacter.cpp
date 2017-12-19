@@ -28,9 +28,6 @@ AVRBaseCharacter::AVRBaseCharacter(const FObjectInitializer& ObjectInitializer)
 	NetSmoother = CreateDefaultSubobject<USceneComponent>(AVRBaseCharacter::SmoothingSceneParentComponentName);
 	if (NetSmoother)
 	{
-		// 2.15f is ((MIN_FLOOR_DIST + MAX_FLOOR_DIST) / 2), same value that walking attempts to retain
-		// 1.9f is MIN_FLOOR_DIST, this would not go below ledges when hanging off
-		//NetSmoother->SetRelativeLocation(FVector(0.f, 0.f, -2.15f));
 		NetSmoother->SetupAttachment(RootComponent);
 	}
 
