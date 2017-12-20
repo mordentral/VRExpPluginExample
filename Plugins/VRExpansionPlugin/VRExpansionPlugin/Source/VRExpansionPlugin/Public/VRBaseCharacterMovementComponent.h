@@ -155,7 +155,6 @@ public:
 	{
 		CustomVRInputVector = FVector::ZeroVector;
 		RequestedVelocity = FVector::ZeroVector;
-		ClientBaseBoneName = NAME_None;
 		ClientMovementBase = nullptr;
 	}
 
@@ -175,7 +174,25 @@ public:
 		if (bHasMovementBase)
 		{
 			Ar << ClientMovementBase;
-			Ar << ClientBaseBoneName;
+
+			// String replicating the FName, it doesn't automatically do this - I Checked
+			if (Ar.IsSaving())
+			{
+				// send by string
+				FString OutString = ClientBaseBoneName.GetPlainNameString();
+				int32 OutNumber = ClientBaseBoneName.GetNumber();
+				Ar << OutString;
+				Ar << OutNumber;
+			}
+			else if (Ar.IsLoading())
+			{
+				// replicated by string
+				FString InString;
+				int32 InNumber;
+				Ar << InString;
+				Ar << InNumber;
+				ClientBaseBoneName = FName(*InString, InNumber);
+			}
 		}
 
 		bool bHasAnyProperties = bHasVRinput || bHasRequestedVelocity || bHasMoveAction;
