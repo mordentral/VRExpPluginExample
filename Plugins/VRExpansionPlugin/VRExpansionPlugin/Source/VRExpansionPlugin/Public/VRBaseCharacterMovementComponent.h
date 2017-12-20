@@ -145,10 +145,18 @@ public:
 	UPROPERTY(Transient)
 		FVRMoveActionContainer MoveAction;
 
+	// Moved these here to avoid having to duplicate tons of properties
+	UPROPERTY(Transient)
+	UPrimitiveComponent* ClientMovementBase;
+	UPROPERTY(Transient)
+	FName ClientBaseBoneName;
+
 	FVRConditionalMoveRep()
 	{
 		CustomVRInputVector = FVector::ZeroVector;
 		RequestedVelocity = FVector::ZeroVector;
+		ClientBaseBoneName = NAME_None;
+		ClientMovementBase = nullptr;
 	}
 
 	/** Network serialization */
@@ -161,7 +169,14 @@ public:
 		bool bHasRequestedVelocity = !RequestedVelocity.IsZero();
 		bool bHasMoveAction = MoveAction.MoveAction != EVRMoveAction::VRMOVEACTION_None;
 
-		// Defines the level of Quantization
+		bool bHasMovementBase = ClientMovementBase != nullptr;
+		Ar.SerializeBits(&bHasMovementBase, 1);
+
+		if (bHasMovementBase)
+		{
+			Ar << ClientMovementBase;
+			Ar << ClientBaseBoneName;
+		}
 
 		bool bHasAnyProperties = bHasVRinput || bHasRequestedVelocity || bHasMoveAction;
 		Ar.SerializeBits(&bHasAnyProperties, 1);

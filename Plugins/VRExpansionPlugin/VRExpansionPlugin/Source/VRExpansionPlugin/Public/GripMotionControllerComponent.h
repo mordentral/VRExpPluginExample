@@ -9,10 +9,10 @@
 #include "VRBPDatatypes.h"
 #include "MotionControllerComponent.h"
 #include "LateUpdateManager.h"
+#include "IIdentifiableXRDevice.h" // for FXRDeviceId
 #include "IXRTrackingSystem.h"
 #include "VRGripInterface.h"
 #include "VRGlobalSettings.h"
-
 #include "GripMotionControllerComponent.generated.h"
 
 class AVRBaseCharacter;
@@ -33,11 +33,15 @@ class VREXPANSIONPLUGIN_API FExpandedLateUpdateManager
 public:
 	FExpandedLateUpdateManager();
 
+	virtual ~FExpandedLateUpdateManager() {}
 	/** Setup state for applying the render thread late update */
 	void Setup(const FTransform& ParentToWorld, UGripMotionControllerComponent* Component);
 
 	/** Apply the late update delta to the cached components */
 	void Apply_RenderThread(FSceneInterface* Scene, const FTransform& OldRelativeTransform, const FTransform& NewRelativeTransform);
+
+	/** Increments the double buffered read index, etc. - in prep for the next render frame (read: MUST be called for each frame Setup() was called on). */
+	void PostRender_RenderThread();
 
 public:
 
@@ -794,8 +798,6 @@ private:
 		// #TODO: 4.18 - Uses an auto register base now, revise declaration and implementation
 	public:
 		FGripViewExtension(const FAutoRegister& AutoRegister, UGripMotionControllerComponent* InMotionControllerComponent)
-			: FSceneViewExtensionBase(AutoRegister)
-			, MotionControllerComponent(InMotionControllerComponent)
 		{}
 		virtual ~FGripViewExtension() {}
 
@@ -805,6 +807,7 @@ private:
 		virtual void BeginRenderViewFamily(FSceneViewFamily& InViewFamily) override;
 		virtual void PreRenderView_RenderThread(FRHICommandListImmediate& RHICmdList, FSceneView& InView) override {}
 		virtual void PreRenderViewFamily_RenderThread(FRHICommandListImmediate& RHICmdList, FSceneViewFamily& InViewFamily) override;
+		virtual void PostRenderViewFamily_RenderThread(FRHICommandListImmediate& RHICmdList, FSceneViewFamily& InViewFamily) override;
 
 		virtual int32 GetPriority() const override { return -10; }
 		virtual bool IsActiveThisFrame(class FViewport* InViewport) const;
