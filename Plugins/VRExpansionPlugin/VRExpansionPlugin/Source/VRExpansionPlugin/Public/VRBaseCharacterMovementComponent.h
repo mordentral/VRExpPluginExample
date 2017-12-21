@@ -175,23 +175,13 @@ public:
 		{
 			Ar << ClientMovementBase;
 
-			// String replicating the FName, it doesn't automatically do this - I Checked
-			if (Ar.IsSaving())
+			bool bValidName = ClientBaseBoneName != NAME_None;
+			Ar.SerializeBits(&bValidName, 1);
+
+			// This saves 9 bits on average, we almost never have a valid bone name and default rep goes to 9 bits for hardcoded
+			if (bValidName)
 			{
-				// send by string
-				FString OutString = ClientBaseBoneName.GetPlainNameString();
-				int32 OutNumber = ClientBaseBoneName.GetNumber();
-				Ar << OutString;
-				Ar << OutNumber;
-			}
-			else if (Ar.IsLoading())
-			{
-				// replicated by string
-				FString InString;
-				int32 InNumber;
-				Ar << InString;
-				Ar << InNumber;
-				ClientBaseBoneName = FName(*InString, InNumber);
+				Ar << ClientBaseBoneName;
 			}
 		}
 
