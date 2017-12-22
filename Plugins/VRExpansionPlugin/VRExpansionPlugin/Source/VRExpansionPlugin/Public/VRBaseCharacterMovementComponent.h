@@ -268,6 +268,7 @@ public:
 			Ar.SerializeBits(&bValidName, 1);
 
 			// This saves 9 bits on average, we almost never have a valid bone name and default rep goes to 9 bits for hardcoded
+			// total of 6 bits savings as we use 3 extra for our flags in here.
 			if (bValidName)
 			{
 				Ar << ClientBaseBoneName;
