@@ -790,7 +790,16 @@ void UVRCharacterMovementComponent::CallServerMove
 	if (ClientData->PendingMove.IsValid())
 	{
 		// This should send same as the uint16 because it uses a packedINT send by default for shorts
-		uint32 OldClientYawPitchINT = PackYawAndPitchTo32(ClientData->PendingMove->SavedControlRotation.Yaw, ClientData->PendingMove->SavedControlRotation.Pitch);
+		//uint32 OldClientYawPitchINT = PackYawAndPitchTo32(ClientData->PendingMove->SavedControlRotation.Yaw, ClientData->PendingMove->SavedControlRotation.Pitch);
+
+		uint32 cPitch = 0;
+		if (CharacterOwner && (CharacterOwner->bUseControllerRotationPitch))
+			cPitch = FRotator::CompressAxisToShort(ClientData->PendingMove->SavedControlRotation.Pitch);
+		
+		uint32 cYaw = FRotator::CompressAxisToShort(ClientData->PendingMove->SavedControlRotation.Yaw);
+
+		// Switch the order of pitch and yaw to place Yaw in smallest value, this will cut down on rep cost since normally pitch is zero'd out in VR
+		uint32 OldClientYawPitchINT = (cPitch << 16) | (cYaw);
 
 		FSavedMove_VRCharacter* oldMove = (FSavedMove_VRCharacter*)ClientData->PendingMove.Get();
 		const uint16 OldCapsuleYawShort = FRotator::CompressAxisToShort(oldMove->VRCapsuleRotation.Yaw);

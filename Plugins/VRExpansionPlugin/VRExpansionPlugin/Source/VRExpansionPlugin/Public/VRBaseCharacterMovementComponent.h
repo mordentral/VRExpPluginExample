@@ -226,8 +226,9 @@ public:
 
 	void UnpackAndSetINTRotations(uint32 Rotation32)
 	{
-		ClientPitch = (Rotation32 & 65535);
-		ClientYaw = (Rotation32 >> 16);
+		// Reversed the order of these so it costs less to replicate
+		ClientYaw = (Rotation32 & 65535);
+		ClientPitch = (Rotation32 >> 16);
 	}
 
 	/** Network serialization */
@@ -241,7 +242,8 @@ public:
 
 		if (bRepRollAndPitch)
 		{
-			uint32 Rotation32 = (ClientYaw << 16) | ClientPitch;
+			// Reversed the order of these
+			uint32 Rotation32 = (((uint32)ClientPitch) << 16) | ((uint32)ClientYaw);
 			Ar.SerializeIntPacked(Rotation32);
 			Ar << ClientRoll;
 

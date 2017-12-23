@@ -1126,9 +1126,18 @@ void UVRSimpleCharacterMovementComponent::CallServerMove
 	FNetworkPredictionData_Client_Character* ClientData = GetPredictionData_Client_Character();
 	if (ClientData->PendingMove.IsValid())
 	{
-		const uint32 OldClientYawPitchINT = PackYawAndPitchTo32(ClientData->PendingMove->SavedControlRotation.Yaw, ClientData->PendingMove->SavedControlRotation.Pitch);
+		//const uint32 OldClientYawPitchINT = PackYawAndPitchTo32(ClientData->PendingMove->SavedControlRotation.Yaw, ClientData->PendingMove->SavedControlRotation.Pitch);
 		FSavedMove_VRSimpleCharacter* oldMove = (FSavedMove_VRSimpleCharacter*)ClientData->PendingMove.Get();
 		//const uint8 OldCapsuleYawBYTE = FRotator::CompressAxisToByte(oldMove->VRCapsuleRotation.Yaw);
+
+		uint32 cPitch = 0;
+		if (CharacterOwner && (CharacterOwner->bUseControllerRotationPitch))
+			cPitch = FRotator::CompressAxisToShort(ClientData->PendingMove->SavedControlRotation.Pitch);
+
+		uint32 cYaw = FRotator::CompressAxisToShort(ClientData->PendingMove->SavedControlRotation.Yaw);
+
+		// Switch the order of pitch and yaw to place Yaw in smallest value, this will cut down on rep cost since normally pitch is zero'd out in VR
+		uint32 OldClientYawPitchINT = (cPitch << 16) | (cYaw);
 
 		// If we delayed a move without root motion, and our new move has root motion, send these through a special function, so the server knows how to process them.
 		if ((ClientData->PendingMove->RootMotionMontage == NULL) && (NewMove->RootMotionMontage != NULL))
