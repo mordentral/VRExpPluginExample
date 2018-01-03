@@ -3211,7 +3211,7 @@ bool UGripMotionControllerComponent::SetUpPhysicsHandle(const FBPActorGripInform
 			{
 				// I actually don't need any of this code anymore or the HandleInfo->RootBoneRotation
 				// However I would have to expect people to pass in the bone transform without it.
-				// For now I am keeping it to keep it backwards compatible
+				// For now I am keeping it to keep it backwards compatible as it will adjust for root bone rotation automatically then
 				USkeletalMeshComponent * skele = Cast<USkeletalMeshComponent>(root);
 				if (skele && skele->GetNumBones() > 0)
 				{
@@ -3558,7 +3558,7 @@ void UGripMotionControllerComponent::UpdatePhysicsHandleTransform(const FBPActor
 		{	
 /*#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
 			UPrimitiveComponent * me = Cast<UPrimitiveComponent>(GrippedActor.GetGrippedActor()->GetRootComponent());
-			FVector curCOMPosition = me->GetBodyInstance()->GetCOMPosition();//rBodyInstance->GetUnrealWorldTransform().InverseTransformPosition(rBodyInstance->GetCOMPosition());
+			FVector curCOMPosition = me->GetBodyInstance(GrippedActor.GrippedBoneName)->GetCOMPosition();//rBodyInstance->GetUnrealWorldTransform().InverseTransformPosition(rBodyInstance->GetCOMPosition());
 			DrawDebugSphere(GetWorld(), curCOMPosition, 4, 32, FColor::Red, false);
 			DrawDebugSphere(GetWorld(), P2UTransform(U2PTransform(HandleInfo->RootBoneRotation * terns) * HandleInfo->COMPosition).GetLocation(), 4, 32, FColor::Cyan, false);
 			//DrawDebugSphere(GetWorld(), terns.GetLocation(), 4, 32, FColor::Cyan, false);

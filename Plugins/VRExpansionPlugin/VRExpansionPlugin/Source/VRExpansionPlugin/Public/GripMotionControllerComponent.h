@@ -393,6 +393,7 @@ public:
 			float GripStiffness = 1500.0f,
 			float GripDamping = 200.0f, bool bIsSlotGrip = false);
 
+
 	// Auto drop any uobject that is/root is a primitive component and has the VR Grip Interface	
 	UFUNCTION(BlueprintCallable, Category = "VRGrip")
 		bool DropObject(
@@ -588,7 +589,7 @@ public:
 	// Handle modifying the transform per the grip interaction settings, returns final world transform
 	inline FTransform HandleInteractionSettings(float DeltaTime, const FTransform & ParentTransform, UPrimitiveComponent * root, FBPInteractionSettings InteractionSettings, FBPActorGripInformation & GripInfo);
 
-	// Converts a worldspace transform into being relative to this motion controller, optionally can check interface settings for a given object as well to modify the given transform
+	// Converts a worldspace transform into being relative to this motion controller
 	UFUNCTION(BlueprintPure, Category = "VRGrip")
 	FTransform ConvertToControllerRelativeTransform(const FTransform & InTransform)
 	{
