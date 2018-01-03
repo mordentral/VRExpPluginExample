@@ -50,8 +50,8 @@ UVRSimpleCharacterMovementComponent::UVRSimpleCharacterMovementComponent(const F
 	//VRCameraCollider = NULL;
 
 	this->bRequestedMoveUseAcceleration = false;
-	this->MaxAcceleration = 200048.0f;
-	this->BrakingDecelerationWalking = 200048.0f;
+	//this->MaxAcceleration = 200048.0f;
+	//this->BrakingDecelerationWalking = 200048.0f;
 	this->bUpdateOnlyIfRendered = false;
 	this->AirControl = 0.0f;
 
