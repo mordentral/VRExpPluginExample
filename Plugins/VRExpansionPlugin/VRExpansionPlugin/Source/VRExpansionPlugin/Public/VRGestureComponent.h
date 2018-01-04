@@ -8,14 +8,31 @@
 #include "VRGestureComponent.generated.h"
 
 
-USTRUCT()
+USTRUCT(BlueprintType, Category = "VRGestures")
 struct VREXPANSIONPLUGIN_API FVRGesture
 {
 	GENERATED_BODY()
 public:
 
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRGestures")
 	FString Name;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRGestures")
 	TArray<FVector> Samples;
+};
+
+
+/**
+* Items Database DataAsset, here we can save all of our game items
+*/
+UCLASS(BlueprintType, Category = "VRGestures")
+class VREXPANSIONPLUGIN_API UGesturesDatabase : public UDataAsset
+{
+	GENERATED_BODY()
+public:
+
+		UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRGestures")
+		TArray <FVRGesture> gestures;
 };
 
 /**
@@ -91,6 +108,8 @@ public:
 		// So pre-reverse it and keep it stored like that on init. When we do the initial sample we can check off of the first index instead of last then
 		
 		// Should also be able to get SizeSquared for values and compared to squared thresholds instead of doing the full SQRT calc.
+
+		// Getting number of average samples recorded over of a gesture (top down) may be able to achieve a basic % completed check
 
 		// Init
 		TArray<FVector> seq1Reversed = seq1.Samples;
