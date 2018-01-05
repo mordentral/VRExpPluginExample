@@ -1,12 +1,21 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+
 
 #pragma once
 
 #include "CoreMinimal.h"
 #include "VRBPDatatypes.h"
 #include "Algo/Reverse.h"
+#include "Components/SplineMeshComponent.h"
 #include "VRGestureComponent.generated.h"
 
+
+UENUM(Blueprintable)
+enum class EVRGestureState : uint8
+{
+	GES_None,
+	GES_Recording,
+	GES_Detecting
+};
 
 USTRUCT(BlueprintType, Category = "VRGestures")
 struct VREXPANSIONPLUGIN_API FVRGesture
@@ -14,13 +23,33 @@ struct VREXPANSIONPLUGIN_API FVRGesture
 	GENERATED_BODY()
 public:
 
+	// Name of the recorded gesture
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRGestures")
 	FString Name;
 
+	// Samples in the recorded gesture
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRGestures")
 	TArray<FVector> Samples;
-};
 
+	// Minimum length to start recognizing this gesture at
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRGestures")
+	int Minimum_Gesture_Length;
+
+	// Maximum distance between the last observations before throwing out this gesture
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRGestures")
+	float firstThreshold;
+
+	// If enabled this gesture will be checked when inside a DB
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRGestures")
+	bool bEnabled;
+
+	FVRGesture()
+	{
+		Minimum_Gesture_Length = 1;
+		firstThreshold = 10.0f;
+		bEnabled = true;
+	}
+};
 
 /**
 * Items Database DataAsset, here we can save all of our game items
@@ -31,156 +60,126 @@ class VREXPANSIONPLUGIN_API UGesturesDatabase : public UDataAsset
 	GENERATED_BODY()
 public:
 
-		UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRGestures")
-		TArray <FVRGesture> gestures;
+	// Gestures in this database
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRGestures")
+	TArray <FVRGesture> Gestures;
 };
+
+
+/** Delegate for notification when the lever state changes. */
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FVRGestureDetectedSignature, float, DTW, int, DetectedGestureIndex, UGesturesDatabase *, GestureDataBase);
 
 /**
 * A scene component that can sample its positions to record / track VR gestures
-*
+* Core code is from https://social.msdn.microsoft.com/Forums/en-US/4a428391-82df-445a-a867-557f284bd4b1/dynamic-time-warping-to-recognize-gestures?forum=kinectsdk
+* I would also like to acknowledge RuneBerg as he appears to have used the same core codebase and I discovered that halfway through implementing this
+* If this algorithm should not prove stable enough I will likely look into using a more complex and faster one in the future, I have several modifications
+* to the base DTW algorithm noted from a few research papers. I only implemented this one first as it was a single header file and the quickest to implement.
 */
 UCLASS(Blueprintable, meta = (BlueprintSpawnableComponent), ClassGroup = (VRExpansionPlugin))
 class VREXPANSIONPLUGIN_API UVRGestureComponent : public USceneComponent
 {
-	GENERATED_BODY()
+	GENERATED_UCLASS_BODY()
 
 public:
 
 	// Size of obeservations vectors.
 	//int dim; // Not needed, this is just dimensionality
 	// Can be used for arrays of samples (IE: multiple points), could add back in eventually
+	// if I decide to support three point tracked gestures or something at some point, but its a waste for single point.
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "BaseVRCharacter")
+		void OnGestureDetected(float DTW, int DetectedGestureIndex, UGesturesDatabase * GestureDatabase);
+
+	// Call to use an object
+	UPROPERTY(BlueprintAssignable, Category = "VRGestures")
+		FVRGestureDetectedSignature OnGestureDetected_Bind;
 
 	// Known sequences
-	TArray<FVRGesture> Gestures;
-	//ArrayList sequences;
-
-	// Labels of those known sequences
-	//ArrayList labels;
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRGestures")
+	UGesturesDatabase *GesturesDB;
 
 	// Maximum DTW distance between an example and a sequence being classified.
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRGestures")
 	float globalThreshold;
-	//double globalThreshold;
 
-	// Maximum distance between the last observations of each sequence.
-	float firstThreshold;
-	//double firstThreshold;
+	// Tolerance within we throw out duplicate samples
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRGestures")
+		float SameSampleTolerance;
+
+	// HTZ to run recording at for detection and saving
+	int RecordingHTZ;
+
+	// Number of samples to keep in memory during detection
+	int RecordingBufferSize;
+
+	float RecordingClampingTolerance;
 
 	// Maximum vertical or horizontal steps in a row.
 	int maxSlope;
 
+	EVRGestureState CurrentState;
+	FVRGesture GestureLog;
+
+	FVector StartVector;
+	float RecordingDelta;
+
+	UFUNCTION(BlueprintCallable, Category = "VRGestures")
+	void BeginRecording(bool bRunDetection, int SamplingHTZ = 60, int SampleBufferSize = 120, float ClampingTolerance = 0.01f)
+	{
+		RecordingBufferSize = SampleBufferSize;
+		RecordingHTZ = SamplingHTZ;
+		RecordingClampingTolerance = ClampingTolerance;
+
+		// Reset does the reserve already
+		GestureLog.Samples.Reset(RecordingBufferSize);
+		RecordingDelta = 0.0f;
+
+		CurrentState = bRunDetection ? EVRGestureState::GES_Detecting : EVRGestureState::GES_Recording;
+	
+		StartVector = this->GetComponentLocation();
+		this->SetComponentTickEnabled(true);
+	}
+
+	UFUNCTION(BlueprintCallable, Category = "VRGestures")
+	FVRGesture EndRecording()
+	{
+		this->SetComponentTickEnabled(false);
+		CurrentState = EVRGestureState::GES_None;
+
+		return GestureLog;
+	}
+
+	// Clear the current recording
+	UFUNCTION(BlueprintCallable, Category = "VRGestures")
+	void ClearRecording()
+	{
+		GestureLog.Samples.Reset(RecordingBufferSize);
+	}
+
+	UFUNCTION(BlueprintCallable, Category = "VRGestures")
+	void SaveRecording(UPARAM(ref) FVRGesture &Recording, FString RecordingName)
+	{
+		if (GesturesDB)
+		{
+			Recording.Name = RecordingName;
+			GesturesDB->Gestures.Add(Recording);
+		}
+	}
+
+	void CaptureGestureFrame();
+
+	void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction) override;
+
+
 	// Recognize gesture in the given sequence.
 	// It will always assume that the gesture ends on the last observation of that sequence.
-	// If the distance between the last observations of each sequence is too great, or if the overall DTW distance between the two sequence is too great, no gesture will be recognized.
-	int recognize(FVRGesture inputGesture)
-	{
-		float minDist = MAX_FLT;
-		//double minDist = double.PositiveInfinity;
+	// If the distance between the last observations of each sequence is too great, or if the overall DTW distance between the two sequences is too great, no gesture will be recognized.
+	void RecognizeGesture(FVRGesture inputGesture);
 
-		int OutGestureIndex = -1;
-
-		for (int i = 0; i < Gestures.Num(); i++)
-		{
-			FVRGesture exampleGesture = Gestures[i];
-			//ArrayList example = (ArrayList)sequences[i];
-			
-			if (FVector::Dist(inputGesture.Samples[i - 1], exampleGesture.Samples[exampleGesture.Samples.Num() - 1]) < firstThreshold)
-			{
-				float d = dtw(inputGesture, exampleGesture) / (exampleGesture.Samples.Num());
-				if (d < minDist)
-				{
-					minDist = d;
-					OutGestureIndex = i;
-				}
-			}
-		}
-
-		return (minDist < globalThreshold ? OutGestureIndex : -1);
-	}
-#ifndef FINDEX
-#define FINDEX(array, x, y) array[y*RowCount+x]
-#endif
 
 	// Compute the min DTW distance between seq2 and all possible endings of seq1.
-	float dtw(FVRGesture seq1, FVRGesture seq2)
-	{
-
-		// #TODO: Skip copying the array and reversing it in the future, we only ever use the reversed value.
-		// So pre-reverse it and keep it stored like that on init. When we do the initial sample we can check off of the first index instead of last then
-		
-		// Should also be able to get SizeSquared for values and compared to squared thresholds instead of doing the full SQRT calc.
-
-		// Getting number of average samples recorded over of a gesture (top down) may be able to achieve a basic % completed check
-
-		// Init
-		TArray<FVector> seq1Reversed = seq1.Samples;
-		Algo::Reverse(seq1Reversed);
-
-		TArray<FVector> seq2Reversed = seq2.Samples;
-		Algo::Reverse(seq2Reversed);
-
-		int ColumnCount = seq1Reversed.Num() + 1;
-		int RowCount = seq2Reversed.Num() + 1;
-
-		TArray<float> LookupTable;
-		LookupTable.AddZeroed(ColumnCount * RowCount);
-
-		TArray<int> SlopeI;
-		SlopeI.AddZeroed(ColumnCount * RowCount);
-		TArray<int> SlopeJ;
-		SlopeJ.AddZeroed(ColumnCount * RowCount);
-
-		for (int i = 0; i < (ColumnCount * RowCount); i++)
-		{
-			LookupTable[i] = MAX_FLT;
-			//tab[i* j] = double.PositiveInfinity;
-			//slopeI[i, j] = 0;
-			//slopeJ[i, j] = 0;
-		}
-		// Don't need to do this, it is already handled by add zeroed
-		//tab[0, 0] = 0;
-
-		// Dynamic computation of the DTW matrix.
-		for (int i = 1; i < ColumnCount; i++)
-		{
-			for (int j = 1; j < RowCount; j++)
-			{
-				if (FINDEX(LookupTable, i, j - 1) < FINDEX(LookupTable, i - 1, j - 1) && FINDEX(LookupTable, i, j - 1) < FINDEX(LookupTable, i - 1, j) && FINDEX(SlopeI, i, j - 1) < maxSlope)
-				{
-					FINDEX(LookupTable, i, j) = FVector::Dist(seq1Reversed[i - 1], seq2Reversed[j - 1]) + FINDEX(LookupTable, i, j - 1);
-					FINDEX(SlopeI, i, j) = FINDEX(SlopeJ, i, j - 1) + 1;
-					FINDEX(SlopeJ, i, j) = 0;
-				}
-				else if (FINDEX(LookupTable, i - 1, j) < FINDEX(LookupTable, i - 1, j - 1) && FINDEX(LookupTable, i - 1, j) < FINDEX(LookupTable, i, j - 1) && FINDEX(SlopeJ, i - 1, j) < maxSlope)
-				{
-					FINDEX(LookupTable, i, j) = FVector::Dist(seq1Reversed[i - 1], seq2Reversed[j - 1]) + FINDEX(LookupTable, i - 1, j);
-					FINDEX(SlopeI, i, j) = 0;
-					FINDEX(SlopeJ, i, j) = FINDEX(SlopeJ, i - 1, j) + 1;
-				}
-				else
-				{
-					FINDEX(LookupTable, i, j) = FVector::Dist(seq1Reversed[i - 1], seq2Reversed[j - 1]) + FINDEX(LookupTable, i - 1, j - 1);
-					FINDEX(SlopeI, i, j) = 0;
-					FINDEX(SlopeJ, i, j) = 0;
-				}
-			}
-		}
-
-		// Find best between seq2 and an ending (postfix) of seq1.
-		float bestMatch = FLT_MAX;
-
-		for (int i = 1; i < seq1Reversed.Num() + 1; i++)
-		{
-			if (FINDEX(LookupTable, i, seq2Reversed.Num()) < bestMatch)
-				bestMatch = FINDEX(LookupTable, i, seq2Reversed.Num());
-		}
-
-		return bestMatch;
-	}
-
-#ifdef FINDEX
-#undef FINDEX
-#endif
-
+	float dtw(FVRGesture seq1, FVRGesture seq2);
 
 };
 
