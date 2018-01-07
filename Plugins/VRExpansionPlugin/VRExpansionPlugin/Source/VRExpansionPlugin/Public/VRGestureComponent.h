@@ -6,6 +6,7 @@
 #include "VRBPDatatypes.h"
 #include "Algo/Reverse.h"
 #include "Components/SplineMeshComponent.h"
+#include "VRBaseCharacter.h"
 #include "VRGestureComponent.generated.h"
 
 
@@ -35,9 +36,13 @@ public:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRGestures")
 	int Minimum_Gesture_Length;
 
-	// Maximum distance between the last observations before throwing out this gesture
+	// Maximum distance between the last observations before throwing out this gesture, raise this to make it easier to start checking this gesture
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRGestures")
 	float firstThreshold;
+
+	// Full threshold before detecting the gesture, raise this to lower accuracy but make it easier to detect this gesture
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRGestures")
+		float FullThreshold;
 
 	// If enabled this gesture will be checked when inside a DB
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRGestures")
@@ -46,7 +51,8 @@ public:
 	FVRGesture()
 	{
 		Minimum_Gesture_Length = 1;
-		firstThreshold = 10.0f;
+		firstThreshold = 5.0f;
+		FullThreshold = 5.0f;
 		bEnabled = true;
 	}
 };
@@ -67,7 +73,7 @@ public:
 
 
 /** Delegate for notification when the lever state changes. */
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FVRGestureDetectedSignature, float, DTW, int, DetectedGestureIndex, UGesturesDatabase *, GestureDataBase);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FVRGestureDetectedSignature, float, DTW, int, DetectedGestureIndex, FString, DetectedGestureName, UGesturesDatabase *, GestureDataBase);
 
 /**
 * A scene component that can sample its positions to record / track VR gestures
@@ -89,7 +95,7 @@ public:
 	// if I decide to support three point tracked gestures or something at some point, but its a waste for single point.
 
 	UFUNCTION(BlueprintImplementableEvent, Category = "BaseVRCharacter")
-		void OnGestureDetected(float DTW, int DetectedGestureIndex, UGesturesDatabase * GestureDatabase);
+		void OnGestureDetected(float & DTW, int & DetectedGestureIndex, FString &DetectedGestureName, UGesturesDatabase * GestureDatabase);
 
 	// Call to use an object
 	UPROPERTY(BlueprintAssignable, Category = "VRGestures")
@@ -100,12 +106,16 @@ public:
 	UGesturesDatabase *GesturesDB;
 
 	// Maximum DTW distance between an example and a sequence being classified.
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRGestures")
-	float globalThreshold;
+//	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRGestures")
+	//float globalThreshold;
 
 	// Tolerance within we throw out duplicate samples
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRGestures")
 		float SameSampleTolerance;
+
+	// Tolerance within we throw out duplicate samples
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRGestures")
+		AVRBaseCharacter * TargetCharacter;
 
 	// HTZ to run recording at for detection and saving
 	int RecordingHTZ;
@@ -115,31 +125,22 @@ public:
 
 	float RecordingClampingTolerance;
 
-	// Maximum vertical or horizontal steps in a row.
+	// Maximum vertical or horizontal steps in a row in the lookup table before throwing out a gesture
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRGestures")
 	int maxSlope;
 
+	UPROPERTY(BlueprintReadOnly, Category = "VRGestures")
 	EVRGestureState CurrentState;
+
 	FVRGesture GestureLog;
 
+
 	FVector StartVector;
+	FTransform OriginatingTransform;
 	float RecordingDelta;
 
 	UFUNCTION(BlueprintCallable, Category = "VRGestures")
-	void BeginRecording(bool bRunDetection, int SamplingHTZ = 60, int SampleBufferSize = 120, float ClampingTolerance = 0.01f)
-	{
-		RecordingBufferSize = SampleBufferSize;
-		RecordingHTZ = SamplingHTZ;
-		RecordingClampingTolerance = ClampingTolerance;
-
-		// Reset does the reserve already
-		GestureLog.Samples.Reset(RecordingBufferSize);
-		RecordingDelta = 0.0f;
-
-		CurrentState = bRunDetection ? EVRGestureState::GES_Detecting : EVRGestureState::GES_Recording;
-	
-		StartVector = this->GetComponentLocation();
-		this->SetComponentTickEnabled(true);
-	}
+		void BeginRecording(bool bRunDetection, int SamplingHTZ = 30, int SampleBufferSize = 60, float ClampingTolerance = 0.01f);
 
 	UFUNCTION(BlueprintCallable, Category = "VRGestures")
 	FVRGesture EndRecording()

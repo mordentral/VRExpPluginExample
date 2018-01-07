@@ -10,14 +10,41 @@ UVRGestureComponent::UVRGestureComponent(const FObjectInitializer& ObjectInitial
 	PrimaryComponentTick.bTickEvenWhenPaused = false;
 
 	maxSlope = 3;// INT_MAX;
-	globalThreshold = 10.0f;
+	//globalThreshold = 10.0f;
 	SameSampleTolerance = 0.1f;
+}
+
+void UVRGestureComponent::BeginRecording(bool bRunDetection, int SamplingHTZ, int SampleBufferSize, float ClampingTolerance)
+{
+	RecordingBufferSize = SampleBufferSize;
+	RecordingHTZ = SamplingHTZ;
+	RecordingClampingTolerance = ClampingTolerance;
+
+	// Reset does the reserve already
+	GestureLog.Samples.Reset(RecordingBufferSize);
+	RecordingDelta = 0.0f;
+
+	CurrentState = bRunDetection ? EVRGestureState::GES_Detecting : EVRGestureState::GES_Recording;
+
+	if (TargetCharacter != nullptr)
+	{
+		OriginatingTransform = TargetCharacter->OffsetComponentToWorld;
+	}
+	else if (AVRBaseCharacter * own = Cast<AVRBaseCharacter>(GetOwner()))
+	{
+		OriginatingTransform = own->OffsetComponentToWorld;
+	}
+	else
+		OriginatingTransform = this->GetComponentTransform();
+
+	StartVector = OriginatingTransform.InverseTransformPosition(this->GetComponentLocation());
+	this->SetComponentTickEnabled(true);
 }
 
 void UVRGestureComponent::CaptureGestureFrame()
 {
 
-	FVector NewSample = this->GetComponentLocation() - StartVector;
+	FVector NewSample = OriginatingTransform.InverseTransformPosition(this->GetComponentLocation()) - StartVector;
 
 	if (RecordingClampingTolerance > 0.0f)
 	{
@@ -84,13 +111,13 @@ void UVRGestureComponent::RecognizeGesture(FVRGesture inputGesture)
 	for (int i = 0; i < GesturesDB->Gestures.Num(); i++)
 	{
 		FVRGesture exampleGesture = GesturesDB->Gestures[i];
-		if (!exampleGesture.bEnabled || exampleGesture.Samples.Num() < 1)
+		if (!exampleGesture.bEnabled || exampleGesture.Samples.Num() < 1 || inputGesture.Samples.Num() < exampleGesture.Minimum_Gesture_Length)
 			continue;
 
 		if (FVector::DistSquared(inputGesture.Samples[0], exampleGesture.Samples[0]) < FMath::Square(exampleGesture.firstThreshold))
 		{
 			float d = dtw(inputGesture, exampleGesture) / (exampleGesture.Samples.Num());
-			if (d < minDist)
+			if (d < minDist && d < FMath::Square(exampleGesture.FullThreshold))
 			{
 				minDist = d;
 				OutGestureIndex = i;
@@ -98,10 +125,10 @@ void UVRGestureComponent::RecognizeGesture(FVRGesture inputGesture)
 		}
 	}
 
-	if (minDist < FMath::Square(globalThreshold) && OutGestureIndex != -1)
+	if (/*minDist < FMath::Square(globalThreshold) && */OutGestureIndex != -1)
 	{
-		OnGestureDetected(minDist, OutGestureIndex, GesturesDB);
-		OnGestureDetected_Bind.Broadcast(minDist, OutGestureIndex, GesturesDB);
+		OnGestureDetected(minDist, OutGestureIndex, GesturesDB->Gestures[OutGestureIndex].Name, GesturesDB);
+		OnGestureDetected_Bind.Broadcast(minDist, OutGestureIndex, GesturesDB->Gestures[OutGestureIndex].Name, GesturesDB);
 		ClearRecording(); // Clear the recording out, we don't want to detect this gesture again with the same data
 	}
 }
@@ -175,7 +202,7 @@ float UVRGestureComponent::dtw(FVRGesture seq1, FVRGesture seq2)
 	// Find best between seq2 and an ending (postfix) of seq1.
 	float bestMatch = FLT_MAX;
 
-	for (int i = 1; i < seq1.Samples.Num() + 1 - seq2.Minimum_Gesture_Length; i++)
+	for (int i = 1; i < seq1.Samples.Num() + 1/* - seq2.Minimum_Gesture_Length*/; i++)
 	{
 		if (LookupTable[(i*ColumnCount) + seq2.Samples.Num()] < bestMatch)
 		bestMatch = LookupTable[(i*ColumnCount) + seq2.Samples.Num()];
