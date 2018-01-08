@@ -6,6 +6,7 @@
 #include "VRBPDatatypes.h"
 #include "Algo/Reverse.h"
 #include "Components/SplineMeshComponent.h"
+#include "Components/SplineComponent.h"
 #include "VRBaseCharacter.h"
 #include "VRGestureComponent.generated.h"
 
@@ -166,6 +167,25 @@ public:
 			Recording.Name = RecordingName;
 			GesturesDB->Gestures.Add(Recording);
 		}
+	}
+
+	UFUNCTION(BlueprintCallable, Category = "VRGestures")
+	void ImportSplineAsGesture(USplineComponent * HostSplineComponent, FString GestureName)
+	{
+		if (HostSplineComponent->GetNumberOfSplinePoints() < 1 || GesturesDB == nullptr)
+			return;
+
+		FVRGesture NewGesture;
+		NewGesture.Name = GestureName;
+
+		FVector FirstPointPos = HostSplineComponent->GetLocationAtSplinePoint(0, ESplineCoordinateSpace::Local);
+
+		for (int i = 1; i < HostSplineComponent->GetNumberOfSplinePoints(); ++i)
+		{
+			NewGesture.Samples.Insert(HostSplineComponent->GetLocationAtSplinePoint(i, ESplineCoordinateSpace::Local) - FirstPointPos, 0);
+		}
+
+		GesturesDB->Gestures.Add(NewGesture);
 	}
 
 	void CaptureGestureFrame();
