@@ -8,6 +8,8 @@
 #include "Components/SplineMeshComponent.h"
 #include "Components/SplineComponent.h"
 #include "VRBaseCharacter.h"
+#include "DrawDebugHelpers.h"
+#include "Components/LineBatchComponent.h"
 #include "VRGestureComponent.generated.h"
 
 
@@ -133,8 +135,59 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = "VRGestures")
 	EVRGestureState CurrentState;
 
-	FVRGesture GestureLog;
+	UFUNCTION(BlueprintCallable, Category = "VRGestures",meta = (WorldContext = "WorldContextObject", DevelopmentOnly))
+	void DrawDebugGesture(UObject* WorldContextObject, FTransform StartTransform, FVRGesture GestureToDraw, FColor const& Color, bool bPersistentLines = false, uint8 DepthPriority = 0, float LifeTime = -1.f, float Thickness = 0.f)
+	{
+#if ENABLE_DRAW_DEBUG
+		UWorld* InWorld = GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::LogAndReturnNull);
+		
+		if (InWorld != nullptr)
+		{
+			// no debug line drawing on dedicated server
+			if (GEngine->GetNetMode(InWorld) != NM_DedicatedServer && GestureToDraw.Samples.Num() > 0)
+			{
+				// this means foreground lines can't be persistent 
+				ULineBatchComponent* const LineBatcher = (InWorld ? ((DepthPriority == SDPG_Foreground) ? InWorld->ForegroundLineBatcher : ((bPersistentLines || (LifeTime > 0.f)) ? InWorld->PersistentLineBatcher : InWorld->LineBatcher)) : NULL);
 
+				if (LineBatcher != NULL)
+				{
+					float const LineLifeTime = (LifeTime > 0.f) ? LifeTime : LineBatcher->DefaultLifeTime;
+
+					TArray<FBatchedLine> Lines;
+					FBatchedLine Line;
+					Line.Color = Color;
+					Line.Thickness = Thickness;
+					Line.RemainingLifeTime = LineLifeTime;
+					Line.DepthPriority = DepthPriority;
+
+					FVector FirstLoc = FVector::ZeroVector;// StartTransform.GetLocation();
+
+					for (int i = GestureToDraw.Samples.Num() - 1; i >= 0; --i)
+					{
+						Line.Start = GestureToDraw.Samples[i];
+						Line.End = FirstLoc;
+						FirstLoc = Line.Start;
+
+						Line.End = StartTransform.TransformPosition(Line.End);
+						Line.Start = StartTransform.TransformPosition(Line.Start);
+
+						Lines.Add(Line);
+					}
+
+					/*Line.Start = FirstLoc;
+					Line.End = StartLocation;
+					Lines.Add(Line);*/
+
+
+					LineBatcher->DrawLines(Lines);
+				}
+			}
+		}
+#endif
+	}
+
+
+	FVRGesture GestureLog;
 
 	FVector StartVector;
 	FTransform OriginatingTransform;
@@ -174,15 +227,16 @@ public:
 	{
 		if (HostSplineComponent->GetNumberOfSplinePoints() < 1 || GesturesDB == nullptr)
 			return;
-
+		
 		FVRGesture NewGesture;
 		NewGesture.Name = GestureName;
 
 		FVector FirstPointPos = HostSplineComponent->GetLocationAtSplinePoint(0, ESplineCoordinateSpace::Local);
 
-		for (int i = 1; i < HostSplineComponent->GetNumberOfSplinePoints(); ++i)
+		// Inserting in reverse order
+		for (int i = HostSplineComponent->GetNumberOfSplinePoints() - 1; i >= 1; --i)
 		{
-			NewGesture.Samples.Insert(HostSplineComponent->GetLocationAtSplinePoint(i, ESplineCoordinateSpace::Local) - FirstPointPos, 0);
+			NewGesture.Samples.Add(HostSplineComponent->GetLocationAtSplinePoint(i, ESplineCoordinateSpace::Local) - FirstPointPos);
 		}
 
 		GesturesDB->Gestures.Add(NewGesture);
