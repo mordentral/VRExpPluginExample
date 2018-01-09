@@ -14,11 +14,13 @@ UVRGestureComponent::UVRGestureComponent(const FObjectInitializer& ObjectInitial
 	SameSampleTolerance = 0.1f;
 }
 
-void UVRGestureComponent::BeginRecording(bool bRunDetection, int SamplingHTZ, int SampleBufferSize, float ClampingTolerance)
+void UVRGestureComponent::BeginRecording(bool bRunDetection, bool bDrawGesture, bool bDrawAsSpline, int SamplingHTZ, int SampleBufferSize, float ClampingTolerance)
 {
 	RecordingBufferSize = SampleBufferSize;
 	RecordingHTZ = SamplingHTZ;
 	RecordingClampingTolerance = ClampingTolerance;
+	bDrawRecordingGesture = bDrawGesture;
+	bDrawRecordingGestureAsSpline = bDrawAsSpline;
 
 	// Reset does the reserve already
 	GestureLog.Samples.Reset(RecordingBufferSize);
@@ -96,6 +98,18 @@ void UVRGestureComponent::TickComponent(float DeltaTime, enum ELevelTick TickTyp
 
 	case EVRGestureState::GES_None:
 	default: {}break;
+	}
+
+	if (bDrawRecordingGesture)
+	{
+		if (!bDrawRecordingGestureAsSpline)
+		{
+			DrawDebugGesture(this, FTransform(StartVector) * OriginatingTransform, GestureLog, FColor::White);
+		}
+		else
+		{
+
+		}
 	}
 }
 

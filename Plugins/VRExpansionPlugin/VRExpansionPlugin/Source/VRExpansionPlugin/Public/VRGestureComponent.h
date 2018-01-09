@@ -127,6 +127,9 @@ public:
 	int RecordingBufferSize;
 
 	float RecordingClampingTolerance;
+	bool bDrawRecordingGesture;
+	bool bDrawRecordingGestureAsSpline;
+
 
 	// Maximum vertical or horizontal steps in a row in the lookup table before throwing out a gesture
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRGestures")
@@ -144,7 +147,7 @@ public:
 		if (InWorld != nullptr)
 		{
 			// no debug line drawing on dedicated server
-			if (GEngine->GetNetMode(InWorld) != NM_DedicatedServer && GestureToDraw.Samples.Num() > 0)
+			if (GEngine->GetNetMode(InWorld) != NM_DedicatedServer && GestureToDraw.Samples.Num() > 1)
 			{
 				// this means foreground lines can't be persistent 
 				ULineBatchComponent* const LineBatcher = (InWorld ? ((DepthPriority == SDPG_Foreground) ? InWorld->ForegroundLineBatcher : ((bPersistentLines || (LifeTime > 0.f)) ? InWorld->PersistentLineBatcher : InWorld->LineBatcher)) : NULL);
@@ -160,9 +163,9 @@ public:
 					Line.RemainingLifeTime = LineLifeTime;
 					Line.DepthPriority = DepthPriority;
 
-					FVector FirstLoc = FVector::ZeroVector;// StartTransform.GetLocation();
+					FVector FirstLoc = GestureToDraw.Samples[GestureToDraw.Samples.Num() - 1];// FVector::ZeroVector;
 
-					for (int i = GestureToDraw.Samples.Num() - 1; i >= 0; --i)
+					for (int i = GestureToDraw.Samples.Num() - 2; i >= 0; --i)
 					{
 						Line.Start = GestureToDraw.Samples[i];
 						Line.End = FirstLoc;
@@ -194,7 +197,7 @@ public:
 	float RecordingDelta;
 
 	UFUNCTION(BlueprintCallable, Category = "VRGestures")
-		void BeginRecording(bool bRunDetection, int SamplingHTZ = 30, int SampleBufferSize = 60, float ClampingTolerance = 0.01f);
+		void BeginRecording(bool bRunDetection, bool bDrawGesture = true, bool bDrawAsSpline = false, int SamplingHTZ = 30, int SampleBufferSize = 60, float ClampingTolerance = 0.01f);
 
 	UFUNCTION(BlueprintCallable, Category = "VRGestures")
 	FVRGesture EndRecording()
@@ -222,24 +225,102 @@ public:
 		}
 	}
 
+	// Imports a spline as a gesture, Segment len is the max segment length (will break lines up into lengths of this size)
 	UFUNCTION(BlueprintCallable, Category = "VRGestures")
-	void ImportSplineAsGesture(USplineComponent * HostSplineComponent, FString GestureName)
+	FVRGesture ImportSplineAsGesture(USplineComponent * HostSplineComponent, FString GestureName, bool bKeepSplineCurves = true, float SegmentLen = 10.0f)
 	{
-		if (HostSplineComponent->GetNumberOfSplinePoints() < 1 || GesturesDB == nullptr)
-			return;
-		
 		FVRGesture NewGesture;
+
+		if (HostSplineComponent->GetNumberOfSplinePoints() < 2 || GesturesDB == nullptr)
+			return NewGesture;
+		
 		NewGesture.Name = GestureName;
 
 		FVector FirstPointPos = HostSplineComponent->GetLocationAtSplinePoint(0, ESplineCoordinateSpace::Local);
 
-		// Inserting in reverse order
-		for (int i = HostSplineComponent->GetNumberOfSplinePoints() - 1; i >= 1; --i)
+		float LastDistance= 0.f;
+		float ThisDistance = 0.f;
+		FVector LastDistanceV;
+		FVector ThisDistanceV;
+		FVector DistNormal;
+		float DistAlongSegment = 0.f;
+
+		// Realign to xForward on the gesture, normally splines lay out as X to the right
+		FTransform Realignment = FTransform(FRotator(0.f,90.f,0.f), -FirstPointPos);
+
+		// Prefill the first point
+		NewGesture.Samples.Add(Realignment.TransformPosition(HostSplineComponent->GetLocationAtSplinePoint(HostSplineComponent->GetNumberOfSplinePoints() - 1, ESplineCoordinateSpace::Local)));
+
+		// Inserting in reverse order -2 so we start one down
+		for (int i = HostSplineComponent->GetNumberOfSplinePoints() - 2; i >= 0; --i)
 		{
-			NewGesture.Samples.Add(HostSplineComponent->GetLocationAtSplinePoint(i, ESplineCoordinateSpace::Local) - FirstPointPos);
+			if (bKeepSplineCurves)
+			{
+				LastDistance = HostSplineComponent->GetDistanceAlongSplineAtSplinePoint(i + 1);
+				ThisDistance = HostSplineComponent->GetDistanceAlongSplineAtSplinePoint(i);
+
+				DistAlongSegment = FMath::Abs(ThisDistance - LastDistance);
+			}
+			else
+			{
+				LastDistanceV = Realignment.TransformPosition(HostSplineComponent->GetLocationAtSplinePoint(i + 1, ESplineCoordinateSpace::Local));
+				ThisDistanceV = Realignment.TransformPosition(HostSplineComponent->GetLocationAtSplinePoint(i, ESplineCoordinateSpace::Local));
+
+				DistAlongSegment = FVector::Dist(ThisDistanceV, LastDistanceV);
+				DistNormal = ThisDistanceV - LastDistanceV;
+				DistNormal.Normalize();
+			}
+
+
+			float SegmentCount = FMath::FloorToFloat(DistAlongSegment / SegmentLen);
+			float OverFlow = FMath::Fmod(DistAlongSegment, SegmentLen);
+
+			if (SegmentCount < 1)
+			{
+				SegmentCount++;
+			}
+
+			float DistPerSegment = (DistAlongSegment / SegmentCount);
+			//float DistPerSegOverflow = OverFlow / SegmentCount;
+			/*if (i == 0)
+			{
+				// Don't run last segment point
+				SegmentCount--;
+			}*/
+
+			for (int j = 0; j < SegmentCount; j++)
+			{
+				if (j == SegmentCount - 1 && i > 0)
+					DistPerSegment += OverFlow;
+
+				if (bKeepSplineCurves)
+				{
+					LastDistance -= DistPerSegment;
+					if (j == SegmentCount - 1 && i > 0)
+					{
+						LastDistance = ThisDistance;
+					}
+					FVector loc = Realignment.TransformPosition(HostSplineComponent->GetLocationAtDistanceAlongSpline(LastDistance, ESplineCoordinateSpace::Local));
+
+					if(!loc.IsNearlyZero())
+						NewGesture.Samples.Add(loc);
+				}
+				else
+				{				
+					LastDistanceV += DistPerSegment * DistNormal;
+
+					if (j == SegmentCount - 1 && i > 0)
+					{
+						LastDistanceV = ThisDistanceV;
+					}
+
+					if (!LastDistanceV.IsNearlyZero())
+						NewGesture.Samples.Add(LastDistanceV);
+				}
+			}
 		}
 
-		GesturesDB->Gestures.Add(NewGesture);
+		return NewGesture;
 	}
 
 	void CaptureGestureFrame();
