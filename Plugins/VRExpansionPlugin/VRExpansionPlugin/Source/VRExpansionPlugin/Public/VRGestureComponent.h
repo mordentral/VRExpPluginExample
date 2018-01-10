@@ -12,6 +12,8 @@
 #include "Components/LineBatchComponent.h"
 #include "VRGestureComponent.generated.h"
 
+DECLARE_STATS_GROUP(TEXT("TICKGesture"), STATGROUP_TickGesture, STATCAT_Advanced);
+
 
 UENUM(Blueprintable)
 enum class EVRGestureState : uint8
@@ -20,6 +22,17 @@ enum class EVRGestureState : uint8
 	GES_Recording,
 	GES_Detecting
 };
+
+
+UENUM(Blueprintable)
+enum class EVRGestureMirrorMode : uint8
+{
+	GES_NoMirror,
+	GES_MirrorLeft,
+	GES_MirrorRight,
+	GES_MirrorBoth
+};
+
 
 USTRUCT(BlueprintType, Category = "VRGestures")
 struct VREXPANSIONPLUGIN_API FVRGesture
@@ -47,6 +60,11 @@ public:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRGestures")
 		float FullThreshold;
 
+	// If set to left/right, will mirror the detected gesture if the gesture component is set to match that value
+	// If set to Both mode, the gesture will be checked both normal and mirrored and the best match will be chosen
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRGestures")
+	EVRGestureMirrorMode MirrorMode;
+
 	// If enabled this gesture will be checked when inside a DB
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRGestures")
 	bool bEnabled;
@@ -56,6 +74,7 @@ public:
 		Minimum_Gesture_Length = 1;
 		firstThreshold = 5.0f;
 		FullThreshold = 5.0f;
+		MirrorMode = EVRGestureMirrorMode::GES_NoMirror;
 		bEnabled = true;
 	}
 };
@@ -116,6 +135,10 @@ public:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRGestures")
 		float SameSampleTolerance;
 
+	// If a gesture is set to match this value then detection will mirror the gesture
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRGestures")
+		EVRGestureMirrorMode MirroringHand;
+
 	// Tolerance within we throw out duplicate samples
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRGestures")
 		AVRBaseCharacter * TargetCharacter;
@@ -129,6 +152,7 @@ public:
 	float RecordingClampingTolerance;
 	bool bDrawRecordingGesture;
 	bool bDrawRecordingGestureAsSpline;
+	bool bGestureChanged;
 
 
 	// Maximum vertical or horizontal steps in a row in the lookup table before throwing out a gesture
@@ -137,6 +161,16 @@ public:
 
 	UPROPERTY(BlueprintReadOnly, Category = "VRGestures")
 	EVRGestureState CurrentState;
+
+	inline float GetGestureDistance(FVector Seq1, FVector Seq2, bool bMirrorGesture = false)
+	{
+		if (bMirrorGesture)
+		{
+			return FVector::DistSquared(Seq1, FVector(Seq2.X, -Seq2.Y, Seq2.Z));
+		}
+
+		return FVector::DistSquared(Seq1, Seq2);
+	}
 
 	UFUNCTION(BlueprintCallable, Category = "VRGestures",meta = (WorldContext = "WorldContextObject", DevelopmentOnly))
 	void DrawDebugGesture(UObject* WorldContextObject, FTransform StartTransform, FVRGesture GestureToDraw, FColor const& Color, bool bPersistentLines = false, uint8 DepthPriority = 0, float LifeTime = -1.f, float Thickness = 0.f)
@@ -149,6 +183,9 @@ public:
 			// no debug line drawing on dedicated server
 			if (GEngine->GetNetMode(InWorld) != NM_DedicatedServer && GestureToDraw.Samples.Num() > 1)
 			{
+				bool bMirrorGesture = (MirroringHand != EVRGestureMirrorMode::GES_NoMirror && MirroringHand == GestureToDraw.MirrorMode);
+				FVector MirrorVector = FVector(1.f, -1.f, 1.f); // Only mirroring on Y axis to flip Left/Right
+
 				// this means foreground lines can't be persistent 
 				ULineBatchComponent* const LineBatcher = (InWorld ? ((DepthPriority == SDPG_Foreground) ? InWorld->ForegroundLineBatcher : ((bPersistentLines || (LifeTime > 0.f)) ? InWorld->PersistentLineBatcher : InWorld->LineBatcher)) : NULL);
 
@@ -163,11 +200,12 @@ public:
 					Line.RemainingLifeTime = LineLifeTime;
 					Line.DepthPriority = DepthPriority;
 
-					FVector FirstLoc = GestureToDraw.Samples[GestureToDraw.Samples.Num() - 1];// FVector::ZeroVector;
+					FVector FirstLoc = bMirrorGesture ? GestureToDraw.Samples[GestureToDraw.Samples.Num() - 1] * MirrorVector : GestureToDraw.Samples[GestureToDraw.Samples.Num() - 1];
 
 					for (int i = GestureToDraw.Samples.Num() - 2; i >= 0; --i)
 					{
-						Line.Start = GestureToDraw.Samples[i];
+						Line.Start = bMirrorGesture ? GestureToDraw.Samples[i] * MirrorVector : GestureToDraw.Samples[i];
+						
 						Line.End = FirstLoc;
 						FirstLoc = Line.Start;
 
@@ -335,7 +373,7 @@ public:
 
 
 	// Compute the min DTW distance between seq2 and all possible endings of seq1.
-	float dtw(FVRGesture seq1, FVRGesture seq2);
+	float dtw(FVRGesture seq1, FVRGesture seq2, bool bMirrorGesture = false);
 
 };
 
