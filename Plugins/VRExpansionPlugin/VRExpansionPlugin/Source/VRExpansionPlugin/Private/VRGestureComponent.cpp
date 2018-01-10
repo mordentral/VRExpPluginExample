@@ -180,8 +180,8 @@ void UVRGestureComponent::RecognizeGesture(FVRGesture inputGesture)
 
 	if (/*minDist < FMath::Square(globalThreshold) && */OutGestureIndex != -1)
 	{
-		OnGestureDetected(minDist, OutGestureIndex, GesturesDB->Gestures[OutGestureIndex].Name, GesturesDB);
-		OnGestureDetected_Bind.Broadcast(minDist, OutGestureIndex, GesturesDB->Gestures[OutGestureIndex].Name, GesturesDB);
+		OnGestureDetected(GesturesDB->Gestures[OutGestureIndex].GestureType, /*minDist,*/ GesturesDB->Gestures[OutGestureIndex].Name, OutGestureIndex, GesturesDB);
+		OnGestureDetected_Bind.Broadcast(GesturesDB->Gestures[OutGestureIndex].GestureType, /*minDist,*/ GesturesDB->Gestures[OutGestureIndex].Name, OutGestureIndex, GesturesDB);
 		ClearRecording(); // Clear the recording out, we don't want to detect this gesture again with the same data
 	}
 }

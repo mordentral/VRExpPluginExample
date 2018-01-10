@@ -41,32 +41,36 @@ struct VREXPANSIONPLUGIN_API FVRGesture
 public:
 
 	// Name of the recorded gesture
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRGestures")
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRGesture")
 	FString Name;
 
+	// Enum uint8 for end user use
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRGesture")
+	uint8 GestureType;
+
 	// Samples in the recorded gesture
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRGestures")
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRGesture|Advanced")
 	TArray<FVector> Samples;
 
 	// Minimum length to start recognizing this gesture at
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRGestures")
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRGesture|Advanced")
 	int Minimum_Gesture_Length;
 
 	// Maximum distance between the last observations before throwing out this gesture, raise this to make it easier to start checking this gesture
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRGestures")
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRGesture|Advanced")
 	float firstThreshold;
 
 	// Full threshold before detecting the gesture, raise this to lower accuracy but make it easier to detect this gesture
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRGestures")
-		float FullThreshold;
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRGesture|Advanced")
+	float FullThreshold;
 
 	// If set to left/right, will mirror the detected gesture if the gesture component is set to match that value
 	// If set to Both mode, the gesture will be checked both normal and mirrored and the best match will be chosen
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRGestures")
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRGesture|Advanced")
 	EVRGestureMirrorMode MirrorMode;
 
 	// If enabled this gesture will be checked when inside a DB
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRGestures")
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRGesture|Advanced")
 	bool bEnabled;
 
 	FVRGesture()
@@ -95,7 +99,7 @@ public:
 
 
 /** Delegate for notification when the lever state changes. */
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FVRGestureDetectedSignature, float, DTW, int, DetectedGestureIndex, FString, DetectedGestureName, UGesturesDatabase *, GestureDataBase);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FVRGestureDetectedSignature, uint8, GestureType, FString, DetectedGestureName, int, DetectedGestureIndex, UGesturesDatabase *, GestureDataBase);
 
 /**
 * A scene component that can sample its positions to record / track VR gestures
@@ -117,7 +121,7 @@ public:
 	// if I decide to support three point tracked gestures or something at some point, but its a waste for single point.
 
 	UFUNCTION(BlueprintImplementableEvent, Category = "BaseVRCharacter")
-		void OnGestureDetected(float & DTW, int & DetectedGestureIndex, FString &DetectedGestureName, UGesturesDatabase * GestureDatabase);
+		void OnGestureDetected(uint8 GestureType, FString &DetectedGestureName, int & DetectedGestureIndex, UGesturesDatabase * GestureDatabase);
 
 	// Call to use an object
 	UPROPERTY(BlueprintAssignable, Category = "VRGestures")
