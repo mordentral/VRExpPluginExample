@@ -15,6 +15,8 @@ UVRGestureComponent::UVRGestureComponent(const FObjectInitializer& ObjectInitial
 	SameSampleTolerance = 0.1f;
 	bGestureChanged = false;
 	MirroringHand = EVRGestureMirrorMode::GES_NoMirror;
+	bDrawSplinesCurved = true;
+	bGetGestureInWorldSpace = true;
 }
 
 void UVRGestureComponent::BeginRecording(bool bRunDetection, bool bDrawGesture, bool bDrawAsSpline, int SamplingHTZ, int SampleBufferSize, float ClampingTolerance)
@@ -24,6 +26,24 @@ void UVRGestureComponent::BeginRecording(bool bRunDetection, bool bDrawGesture, 
 	RecordingClampingTolerance = ClampingTolerance;
 	bDrawRecordingGesture = bDrawGesture;
 	bDrawRecordingGestureAsSpline = bDrawAsSpline;
+	GestureLog.GestureSize.Init();
+
+	// Reinit the drawing spline
+	if (!bDrawAsSpline || !bDrawGesture)
+		RecordingGestureDraw.Clear(); // Not drawing or not as a spline, remove the components if they exist
+	else
+	{
+		RecordingGestureDraw.Reset(); // Otherwise just clear points and hide mesh components
+
+		if (RecordingGestureDraw.SplineComponent == nullptr)
+		{
+			RecordingGestureDraw.SplineComponent = NewObject<USplineComponent>(GetAttachParent());
+			RecordingGestureDraw.SplineComponent->RegisterComponentWithWorld(GetWorld());
+			RecordingGestureDraw.SplineComponent->SetMobility(EComponentMobility::Movable);
+			RecordingGestureDraw.SplineComponent->AttachToComponent(GetAttachParent(), FAttachmentTransformRules::KeepRelativeTransform);
+			RecordingGestureDraw.SplineComponent->ClearSplinePoints(true);
+		}
+	}
 
 	// Reset does the reserve already
 	GestureLog.Samples.Reset(RecordingBufferSize);
@@ -37,7 +57,8 @@ void UVRGestureComponent::BeginRecording(bool bRunDetection, bool bDrawGesture, 
 	}
 	else if (AVRBaseCharacter * own = Cast<AVRBaseCharacter>(GetOwner()))
 	{
-		OriginatingTransform = own->OffsetComponentToWorld;
+		TargetCharacter = own;
+		OriginatingTransform = TargetCharacter->OffsetComponentToWorld;
 	}
 	else
 		OriginatingTransform = this->GetComponentTransform();
@@ -61,9 +82,100 @@ void UVRGestureComponent::CaptureGestureFrame()
 	// Add in newest sample at beginning (reverse order)
 	if (NewSample != FVector::ZeroVector && (GestureLog.Samples.Num() < 1 || !GestureLog.Samples[0].Equals(NewSample, SameSampleTolerance)))
 	{
+		bool bClearLatestSpline = false;
 		// Pop off oldest sample
 		if (GestureLog.Samples.Num() >= RecordingBufferSize)
+		{
 			GestureLog.Samples.Pop(false);
+			bClearLatestSpline = true;
+		}
+		
+		GestureLog.GestureSize.Max.X = FMath::Max(NewSample.X, GestureLog.GestureSize.Max.X);
+		GestureLog.GestureSize.Max.Y = FMath::Max(NewSample.Y, GestureLog.GestureSize.Max.Y);
+		GestureLog.GestureSize.Max.Z = FMath::Max(NewSample.Z, GestureLog.GestureSize.Max.Z);
+
+		GestureLog.GestureSize.Min.X = FMath::Min(NewSample.X, GestureLog.GestureSize.Min.X);
+		GestureLog.GestureSize.Min.Y = FMath::Min(NewSample.Y, GestureLog.GestureSize.Min.Y);
+		GestureLog.GestureSize.Min.Z = FMath::Min(NewSample.Z, GestureLog.GestureSize.Min.Z);
+
+
+		if (bDrawRecordingGesture && bDrawRecordingGestureAsSpline && SplineMesh != nullptr && SplineMaterial != nullptr)
+		{
+
+			if (bClearLatestSpline)
+				RecordingGestureDraw.ClearLastPoint();
+
+			FSplinePoint newPoint;
+			RecordingGestureDraw.SplineComponent->AddSplinePoint(NewSample, ESplineCoordinateSpace::Local, false);
+			int SplineIndex = RecordingGestureDraw.SplineComponent->GetNumberOfSplinePoints() - 1;
+			RecordingGestureDraw.SplineComponent->SetSplinePointType(SplineIndex, bDrawSplinesCurved ? ESplinePointType::Curve : ESplinePointType::Linear, true);
+
+			bool bFoundEmptyMesh = false;
+			USplineMeshComponent * MeshComp = nullptr;
+			int MeshIndex = 0;
+
+			for (int i = 0; i < RecordingGestureDraw.SplineMeshes.Num(); i++)
+			{
+				MeshIndex = i;
+				MeshComp = RecordingGestureDraw.SplineMeshes[i];
+				if (MeshComp == nullptr)
+				{
+					RecordingGestureDraw.SplineMeshes[i] = NewObject<USplineMeshComponent>(RecordingGestureDraw.SplineComponent);
+					MeshComp = RecordingGestureDraw.SplineMeshes[i];
+
+					MeshComp->RegisterComponentWithWorld(GetWorld());
+					MeshComp->SetMobility(EComponentMobility::Movable);
+					MeshComp->SetStaticMesh(SplineMesh);
+					MeshComp->SetMaterial(0, SplineMaterial);
+					bFoundEmptyMesh = true;
+					break;
+				}
+				else if (!MeshComp->IsVisible())
+				{
+					bFoundEmptyMesh = true;
+					break;
+				}
+			}
+
+			if (!bFoundEmptyMesh)
+			{
+				USplineMeshComponent * newSplineMesh = NewObject<USplineMeshComponent>(RecordingGestureDraw.SplineComponent);
+				MeshComp = newSplineMesh;
+				MeshComp->RegisterComponentWithWorld(GetWorld());
+				MeshComp->SetMobility(EComponentMobility::Movable);
+				RecordingGestureDraw.SplineMeshes.Add(MeshComp);
+				MeshIndex = RecordingGestureDraw.SplineMeshes.Num() - 1;
+				MeshComp->SetStaticMesh(SplineMesh);
+				MeshComp->SetMaterial(0, SplineMaterial);
+				if (!bGetGestureInWorldSpace && TargetCharacter)
+					MeshComp->AttachToComponent(TargetCharacter->GetRootComponent(), FAttachmentTransformRules::KeepRelativeTransform);
+			}
+
+			if (MeshComp != nullptr)
+			{
+				// Fill in last mesh component tangent and end pos
+				if (RecordingGestureDraw.LastIndexSet != MeshIndex && RecordingGestureDraw.SplineMeshes[RecordingGestureDraw.LastIndexSet] != nullptr)
+				{
+					RecordingGestureDraw.SplineMeshes[RecordingGestureDraw.LastIndexSet]->SetEndPosition(NewSample, false);
+					RecordingGestureDraw.SplineMeshes[RecordingGestureDraw.LastIndexSet]->SetEndTangent(RecordingGestureDraw.SplineComponent->GetTangentAtSplinePoint(SplineIndex, ESplineCoordinateSpace::Local), true);
+				}
+
+				MeshComp->SetStartAndEnd(NewSample,
+					RecordingGestureDraw.SplineComponent->GetTangentAtSplinePoint(SplineIndex, ESplineCoordinateSpace::Local),
+					NewSample,
+					FVector::ZeroVector,
+					true);
+
+				if (bGetGestureInWorldSpace)
+					MeshComp->SetWorldLocationAndRotation(OriginatingTransform.TransformPosition(StartVector), OriginatingTransform.GetRotation());
+				else
+					MeshComp->SetRelativeLocationAndRotation(/*OriginatingTransform.TransformPosition(*/StartVector/*)*/, FQuat::Identity/*OriginatingTransform.GetRotation()*/);
+
+				RecordingGestureDraw.LastIndexSet = MeshIndex;
+				MeshComp->SetVisibility(true);
+			}
+		
+		}
 
 		GestureLog.Samples.Insert(NewSample, 0);
 		bGestureChanged = true;
@@ -134,27 +246,27 @@ void UVRGestureComponent::RecognizeGesture(FVRGesture inputGesture)
 	{
 		FVRGesture exampleGesture = GesturesDB->Gestures[i];
 
-		if (!exampleGesture.bEnabled || exampleGesture.Samples.Num() < 1 || inputGesture.Samples.Num() < exampleGesture.Minimum_Gesture_Length)
+		if (!exampleGesture.GestureSettings.bEnabled || exampleGesture.Samples.Num() < 1 || inputGesture.Samples.Num() < exampleGesture.GestureSettings.Minimum_Gesture_Length)
 			continue;
 
-		bMirrorGesture = (MirroringHand != EVRGestureMirrorMode::GES_NoMirror && MirroringHand != EVRGestureMirrorMode::GES_MirrorBoth && MirroringHand == exampleGesture.MirrorMode);
+		bMirrorGesture = (MirroringHand != EVRGestureMirrorMode::GES_NoMirror && MirroringHand != EVRGestureMirrorMode::GES_MirrorBoth && MirroringHand == exampleGesture.GestureSettings.MirrorMode);
 
-		if (GetGestureDistance(inputGesture.Samples[0], exampleGesture.Samples[0], bMirrorGesture) < FMath::Square(exampleGesture.firstThreshold))
+		if (GetGestureDistance(inputGesture.Samples[0], exampleGesture.Samples[0], bMirrorGesture) < FMath::Square(exampleGesture.GestureSettings.firstThreshold))
 		{
 			float d = dtw(inputGesture, exampleGesture, bMirrorGesture) / (exampleGesture.Samples.Num());
-			if (d < minDist && d < FMath::Square(exampleGesture.FullThreshold))
+			if (d < minDist && d < FMath::Square(exampleGesture.GestureSettings.FullThreshold))
 			{
 				minDist = d;
 				OutGestureIndex = i;
 			}
 		}
-		else if (exampleGesture.MirrorMode == EVRGestureMirrorMode::GES_MirrorBoth)
+		else if (exampleGesture.GestureSettings.MirrorMode == EVRGestureMirrorMode::GES_MirrorBoth)
 		{
 			bMirrorGesture = true;
-			if (GetGestureDistance(inputGesture.Samples[0], exampleGesture.Samples[0], bMirrorGesture) < FMath::Square(exampleGesture.firstThreshold))
+			if (GetGestureDistance(inputGesture.Samples[0], exampleGesture.Samples[0], bMirrorGesture) < FMath::Square(exampleGesture.GestureSettings.firstThreshold))
 			{
 				float d = dtw(inputGesture, exampleGesture, bMirrorGesture) / (exampleGesture.Samples.Num());
-				if (d < minDist && d < FMath::Square(exampleGesture.FullThreshold))
+				if (d < minDist && d < FMath::Square(exampleGesture.GestureSettings.FullThreshold))
 				{
 					minDist = d;
 					OutGestureIndex = i;
@@ -166,10 +278,10 @@ void UVRGestureComponent::RecognizeGesture(FVRGesture inputGesture)
 		{
 			bMirrorGesture = true;
 
-			if (GetGestureDistance(inputGesture.Samples[0], exampleGesture.Samples[0], bMirrorGesture) < FMath::Square(exampleGesture.firstThreshold))
+			if (GetGestureDistance(inputGesture.Samples[0], exampleGesture.Samples[0], bMirrorGesture) < FMath::Square(exampleGesture.GestureSettings.firstThreshold))
 			{
 				float d = dtw(inputGesture, exampleGesture, bMirrorGesture) / (exampleGesture.Samples.Num());
-				if (d < minDist && d < FMath::Square(exampleGesture.FullThreshold))
+				if (d < minDist && d < FMath::Square(exampleGesture.GestureSettings.FullThreshold))
 				{
 					minDist = d;
 					OutGestureIndex = i;
@@ -183,6 +295,7 @@ void UVRGestureComponent::RecognizeGesture(FVRGesture inputGesture)
 		OnGestureDetected(GesturesDB->Gestures[OutGestureIndex].GestureType, /*minDist,*/ GesturesDB->Gestures[OutGestureIndex].Name, OutGestureIndex, GesturesDB);
 		OnGestureDetected_Bind.Broadcast(GesturesDB->Gestures[OutGestureIndex].GestureType, /*minDist,*/ GesturesDB->Gestures[OutGestureIndex].Name, OutGestureIndex, GesturesDB);
 		ClearRecording(); // Clear the recording out, we don't want to detect this gesture again with the same data
+		RecordingGestureDraw.Reset();
 	}
 }
 

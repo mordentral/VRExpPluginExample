@@ -33,6 +33,42 @@ enum class EVRGestureMirrorMode : uint8
 	GES_MirrorBoth
 };
 
+USTRUCT(BlueprintType, Category = "VRGestures")
+struct VREXPANSIONPLUGIN_API FVRGestureSettings
+{
+	GENERATED_BODY()
+public:
+
+	// Minimum length to start recognizing this gesture at
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRGesture|Advanced")
+		int Minimum_Gesture_Length;
+
+	// Maximum distance between the last observations before throwing out this gesture, raise this to make it easier to start checking this gesture
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRGesture|Advanced")
+		float firstThreshold;
+
+	// Full threshold before detecting the gesture, raise this to lower accuracy but make it easier to detect this gesture
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRGesture|Advanced")
+		float FullThreshold;
+
+	// If set to left/right, will mirror the detected gesture if the gesture component is set to match that value
+	// If set to Both mode, the gesture will be checked both normal and mirrored and the best match will be chosen
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRGesture|Advanced")
+		EVRGestureMirrorMode MirrorMode;
+
+	// If enabled this gesture will be checked when inside a DB
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRGesture|Advanced")
+		bool bEnabled;
+
+	FVRGestureSettings()
+	{
+		Minimum_Gesture_Length = 1;
+		firstThreshold = 5.0f;
+		FullThreshold = 5.0f;
+		MirrorMode = EVRGestureMirrorMode::GES_NoMirror;
+		bEnabled = true;
+	}
+};
 
 USTRUCT(BlueprintType, Category = "VRGestures")
 struct VREXPANSIONPLUGIN_API FVRGesture
@@ -49,37 +85,32 @@ public:
 	uint8 GestureType;
 
 	// Samples in the recorded gesture
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRGesture|Advanced")
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "VRGesture")
 	TArray<FVector> Samples;
 
-	// Minimum length to start recognizing this gesture at
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRGesture|Advanced")
-	int Minimum_Gesture_Length;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "VRGesture")
+	FBox GestureSize;
 
-	// Maximum distance between the last observations before throwing out this gesture, raise this to make it easier to start checking this gesture
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRGesture|Advanced")
-	float firstThreshold;
-
-	// Full threshold before detecting the gesture, raise this to lower accuracy but make it easier to detect this gesture
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRGesture|Advanced")
-	float FullThreshold;
-
-	// If set to left/right, will mirror the detected gesture if the gesture component is set to match that value
-	// If set to Both mode, the gesture will be checked both normal and mirrored and the best match will be chosen
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRGesture|Advanced")
-	EVRGestureMirrorMode MirrorMode;
-
-	// If enabled this gesture will be checked when inside a DB
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRGesture|Advanced")
-	bool bEnabled;
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRGesture")
+		FVRGestureSettings GestureSettings;
 
 	FVRGesture()
+	{}
+
+	void CalculateSizeOfGesture()
 	{
-		Minimum_Gesture_Length = 1;
-		firstThreshold = 5.0f;
-		FullThreshold = 5.0f;
-		MirrorMode = EVRGestureMirrorMode::GES_NoMirror;
-		bEnabled = true;
+		FVector NewSample;
+		for (int i = 0; i < Samples.Num(); ++i)
+		{
+			NewSample = Samples[i];
+			GestureSize.Max.X = FMath::Max(NewSample.X, GestureSize.Max.X);
+			GestureSize.Max.Y = FMath::Max(NewSample.Y, GestureSize.Max.Y);
+			GestureSize.Max.Z = FMath::Max(NewSample.Z, GestureSize.Max.Z);
+
+			GestureSize.Min.X = FMath::Min(NewSample.X, GestureSize.Min.X);
+			GestureSize.Min.Y = FMath::Min(NewSample.Y, GestureSize.Min.Y);
+			GestureSize.Min.Z = FMath::Min(NewSample.Z, GestureSize.Min.Z);
+		}
 	}
 };
 
@@ -97,6 +128,86 @@ public:
 	TArray <FVRGesture> Gestures;
 };
 
+
+USTRUCT(BlueprintType, Category = "VRGestures")
+struct VREXPANSIONPLUGIN_API FVRGestureSplineDraw
+{
+	GENERATED_BODY()
+public:
+
+	UPROPERTY()
+	USplineComponent* SplineComponent;
+
+	UPROPERTY()
+	TArray<USplineMeshComponent*> SplineMeshes;
+
+	int LastIndexSet;
+	int NextIndexCleared;
+
+	// Marches through the array and clears the last point
+	void ClearLastPoint()
+	{
+		SplineComponent->RemoveSplinePoint(0, false);
+
+		if (SplineMeshes.Num() < NextIndexCleared + 1)
+			NextIndexCleared = 0;
+
+		SplineMeshes[NextIndexCleared]->SetVisibility(false);
+		NextIndexCleared++;
+	}
+
+	// Hides all spline meshes and re-inits the spline component
+	void Reset()
+	{
+		if(SplineComponent != nullptr)
+			SplineComponent->ClearSplinePoints(true);
+
+		for (int i = SplineMeshes.Num() - 1; i >= 0; --i)
+		{
+			if (SplineMeshes[i] != nullptr)
+				SplineMeshes[i]->SetVisibility(false);
+			else
+				SplineMeshes.RemoveAt(i);
+		}
+
+		LastIndexSet = 0;
+		NextIndexCleared = 0;
+	}
+
+	void Clear()
+	{
+		for (int i = 0; i < SplineMeshes.Num(); ++i)
+		{
+			if (SplineMeshes[i] != nullptr && !SplineMeshes[i]->IsBeingDestroyed())
+			{
+				SplineMeshes[i]->Modify();
+				SplineMeshes[i]->DestroyComponent();
+			}
+		}
+		SplineMeshes.Empty();
+
+		if (SplineComponent != nullptr)
+		{
+			SplineComponent->DestroyComponent();
+			SplineComponent = nullptr;
+		}
+
+		LastIndexSet = 0;
+		NextIndexCleared = 0;
+	}
+
+	FVRGestureSplineDraw()
+	{
+		SplineComponent = nullptr;
+		NextIndexCleared = 0;
+		LastIndexSet = 0;
+	}
+
+	~FVRGestureSplineDraw()
+	{
+		Clear();
+	}
+};
 
 /** Delegate for notification when the lever state changes. */
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FVRGestureDetectedSignature, uint8, GestureType, FString, DetectedGestureName, int, DetectedGestureIndex, UGesturesDatabase *, GestureDataBase);
@@ -131,10 +242,6 @@ public:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRGestures")
 	UGesturesDatabase *GesturesDB;
 
-	// Maximum DTW distance between an example and a sequence being classified.
-//	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRGestures")
-	//float globalThreshold;
-
 	// Tolerance within we throw out duplicate samples
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRGestures")
 		float SameSampleTolerance;
@@ -147,6 +254,25 @@ public:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRGestures")
 		AVRBaseCharacter * TargetCharacter;
 
+	UPROPERTY(BlueprintReadWrite, Category = "VRGestures")
+	TArray<FVRGestureSplineDraw> DrawnGestures;
+	FVRGestureSplineDraw RecordingGestureDraw;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRGestures")
+		bool bDrawSplinesCurved;
+
+	// If false will get the gesture in relative space instead
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRGestures")
+		bool bGetGestureInWorldSpace;
+
+	// Mesh to use when drawing splines
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRGestures")
+		UStaticMesh* SplineMesh;
+
+	// Material to use when drawing splines
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRGestures")
+		UMaterial* SplineMaterial;
+
 	// HTZ to run recording at for detection and saving
 	int RecordingHTZ;
 
@@ -158,13 +284,16 @@ public:
 	bool bDrawRecordingGestureAsSpline;
 	bool bGestureChanged;
 
-
 	// Maximum vertical or horizontal steps in a row in the lookup table before throwing out a gesture
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRGestures")
 	int maxSlope;
 
 	UPROPERTY(BlueprintReadOnly, Category = "VRGestures")
 	EVRGestureState CurrentState;
+
+	// Currently recording gesture
+	UPROPERTY(BlueprintReadOnly, Category = "VRGestures")
+	FVRGesture GestureLog;
 
 	inline float GetGestureDistance(FVector Seq1, FVector Seq2, bool bMirrorGesture = false)
 	{
@@ -174,6 +303,25 @@ public:
 		}
 
 		return FVector::DistSquared(Seq1, Seq2);
+	}
+
+	void BeginDestroy() override
+	{
+		Super::BeginDestroy();
+		RecordingGestureDraw.Clear();
+
+		for (int i = 0; i < DrawnGestures.Num(); i++)
+		{
+			DrawnGestures[i].Clear();
+		}
+		DrawnGestures.Empty();
+	}
+
+
+	UFUNCTION(BlueprintCallable, Category = "VRGestures")
+	void RecalculateGestureSize(UPARAM(ref) FVRGesture & InputGesture)
+	{
+		InputGesture.CalculateSizeOfGesture();
 	}
 
 	UFUNCTION(BlueprintCallable, Category = "VRGestures",meta = (WorldContext = "WorldContextObject", DevelopmentOnly))
@@ -187,7 +335,7 @@ public:
 			// no debug line drawing on dedicated server
 			if (GEngine->GetNetMode(InWorld) != NM_DedicatedServer && GestureToDraw.Samples.Num() > 1)
 			{
-				bool bMirrorGesture = (MirroringHand != EVRGestureMirrorMode::GES_NoMirror && MirroringHand == GestureToDraw.MirrorMode);
+				bool bMirrorGesture = (MirroringHand != EVRGestureMirrorMode::GES_NoMirror && MirroringHand == GestureToDraw.GestureSettings.MirrorMode);
 				FVector MirrorVector = FVector(1.f, -1.f, 1.f); // Only mirroring on Y axis to flip Left/Right
 
 				// this means foreground lines can't be persistent 
@@ -232,8 +380,6 @@ public:
 	}
 
 
-	FVRGesture GestureLog;
-
 	FVector StartVector;
 	FTransform OriginatingTransform;
 	float RecordingDelta;
@@ -246,6 +392,9 @@ public:
 	{
 		this->SetComponentTickEnabled(false);
 		CurrentState = EVRGestureState::GES_None;
+
+		// Reset the recording gesture
+		RecordingGestureDraw.Reset();
 
 		return GestureLog;
 	}
@@ -362,6 +511,7 @@ public:
 			}
 		}
 
+		NewGesture.CalculateSizeOfGesture();
 		return NewGesture;
 	}
 
