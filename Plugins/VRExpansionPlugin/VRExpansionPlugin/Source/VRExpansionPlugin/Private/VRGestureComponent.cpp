@@ -379,3 +379,53 @@ float UVRGestureComponent::dtw(FVRGesture seq1, FVRGesture seq2, bool bMirrorGes
 
 	return bestMatch;
 }
+
+void UVRGestureComponent::DrawDebugGesture(UObject* WorldContextObject, FTransform StartTransform, FVRGesture GestureToDraw, FColor const& Color, bool bPersistentLines, uint8 DepthPriority, float LifeTime, float Thickness)
+{
+#if ENABLE_DRAW_DEBUG
+
+	UWorld* InWorld = GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::LogAndReturnNull);
+
+	if (InWorld != nullptr)
+	{
+		// no debug line drawing on dedicated server
+		if (GEngine->GetNetMode(InWorld) != NM_DedicatedServer && GestureToDraw.Samples.Num() > 1)
+		{
+			bool bMirrorGesture = (MirroringHand != EVRGestureMirrorMode::GES_NoMirror && MirroringHand == GestureToDraw.GestureSettings.MirrorMode);
+			FVector MirrorVector = FVector(1.f, -1.f, 1.f); // Only mirroring on Y axis to flip Left/Right
+
+															// this means foreground lines can't be persistent 
+			ULineBatchComponent* const LineBatcher = (InWorld ? ((DepthPriority == SDPG_Foreground) ? InWorld->ForegroundLineBatcher : ((bPersistentLines || (LifeTime > 0.f)) ? InWorld->PersistentLineBatcher : InWorld->LineBatcher)) : NULL);
+
+			if (LineBatcher != NULL)
+			{
+				float const LineLifeTime = (LifeTime > 0.f) ? LifeTime : LineBatcher->DefaultLifeTime;
+
+				TArray<FBatchedLine> Lines;
+				FBatchedLine Line;
+				Line.Color = Color;
+				Line.Thickness = Thickness;
+				Line.RemainingLifeTime = LineLifeTime;
+				Line.DepthPriority = DepthPriority;
+
+				FVector FirstLoc = bMirrorGesture ? GestureToDraw.Samples[GestureToDraw.Samples.Num() - 1] * MirrorVector : GestureToDraw.Samples[GestureToDraw.Samples.Num() - 1];
+
+				for (int i = GestureToDraw.Samples.Num() - 2; i >= 0; --i)
+				{
+					Line.Start = bMirrorGesture ? GestureToDraw.Samples[i] * MirrorVector : GestureToDraw.Samples[i];
+
+					Line.End = FirstLoc;
+					FirstLoc = Line.Start;
+
+					Line.End = StartTransform.TransformPosition(Line.End);
+					Line.Start = StartTransform.TransformPosition(Line.Start);
+
+					Lines.Add(Line);
+				}
+
+				LineBatcher->DrawLines(Lines);
+			}
+		}
+	}
+#endif
+}
