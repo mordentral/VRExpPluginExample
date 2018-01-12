@@ -251,9 +251,12 @@ void UVRGestureComponent::RecognizeGesture(FVRGesture inputGesture)
 
 		bMirrorGesture = (MirroringHand != EVRGestureMirrorMode::GES_NoMirror && MirroringHand != EVRGestureMirrorMode::GES_MirrorBoth && MirroringHand == exampleGesture.GestureSettings.MirrorMode);
 
-		if (GetGestureDistance(inputGesture.Samples[0], exampleGesture.Samples[0], bMirrorGesture) < FMath::Square(exampleGesture.GestureSettings.firstThreshold))
+		FVector Size = inputGesture.GestureSize.GetSize();
+		float Scaler = GesturesDB->TargetGestureScale / Size.GetMax();
+
+		if (GetGestureDistance(inputGesture.Samples[0] * Scaler, exampleGesture.Samples[0], bMirrorGesture) < FMath::Square(exampleGesture.GestureSettings.firstThreshold))
 		{
-			float d = dtw(inputGesture, exampleGesture, bMirrorGesture) / (exampleGesture.Samples.Num());
+			float d = dtw(inputGesture, exampleGesture, bMirrorGesture, Scaler) / (exampleGesture.Samples.Num());
 			if (d < minDist && d < FMath::Square(exampleGesture.GestureSettings.FullThreshold))
 			{
 				minDist = d;
@@ -263,9 +266,9 @@ void UVRGestureComponent::RecognizeGesture(FVRGesture inputGesture)
 		else if (exampleGesture.GestureSettings.MirrorMode == EVRGestureMirrorMode::GES_MirrorBoth)
 		{
 			bMirrorGesture = true;
-			if (GetGestureDistance(inputGesture.Samples[0], exampleGesture.Samples[0], bMirrorGesture) < FMath::Square(exampleGesture.GestureSettings.firstThreshold))
+			if (GetGestureDistance(inputGesture.Samples[0] * Scaler, exampleGesture.Samples[0], bMirrorGesture) < FMath::Square(exampleGesture.GestureSettings.firstThreshold))
 			{
-				float d = dtw(inputGesture, exampleGesture, bMirrorGesture) / (exampleGesture.Samples.Num());
+				float d = dtw(inputGesture, exampleGesture, bMirrorGesture, Scaler) / (exampleGesture.Samples.Num());
 				if (d < minDist && d < FMath::Square(exampleGesture.GestureSettings.FullThreshold))
 				{
 					minDist = d;
@@ -299,7 +302,7 @@ void UVRGestureComponent::RecognizeGesture(FVRGesture inputGesture)
 	}
 }
 
-float UVRGestureComponent::dtw(FVRGesture seq1, FVRGesture seq2, bool bMirrorGesture)
+float UVRGestureComponent::dtw(FVRGesture seq1, FVRGesture seq2, bool bMirrorGesture, float Scaler)
 {
 
 	// #TODO: Skip copying the array and reversing it in the future, we only ever use the reversed value.
@@ -343,7 +346,7 @@ float UVRGestureComponent::dtw(FVRGesture seq1, FVRGesture seq2, bool bMirrorGes
 				LookupTable[icol + (j - 1)] < LookupTable[icolneg + j] &&
 				SlopeI[icol + (j - 1)] < maxSlope)
 			{
-				LookupTable[icol + j] = GetGestureDistance(seq1.Samples[i - 1], seq2.Samples[j - 1], bMirrorGesture) + LookupTable[icol + j - 1];
+				LookupTable[icol + j] = GetGestureDistance(seq1.Samples[i - 1] * Scaler, seq2.Samples[j - 1], bMirrorGesture) + LookupTable[icol + j - 1];
 				SlopeI[icol + j] = SlopeJ[icol + j - 1] + 1;
 				SlopeJ[icol + j] = 0;
 			}
@@ -352,13 +355,13 @@ float UVRGestureComponent::dtw(FVRGesture seq1, FVRGesture seq2, bool bMirrorGes
 				LookupTable[icolneg + j] < LookupTable[icol + j - 1] &&
 				SlopeJ[icolneg + j] < maxSlope)
 			{
-				LookupTable[icol + j] = GetGestureDistance(seq1.Samples[i - 1], seq2.Samples[j - 1], bMirrorGesture) + LookupTable[icolneg + j];
+				LookupTable[icol + j] = GetGestureDistance(seq1.Samples[i - 1] * Scaler, seq2.Samples[j - 1], bMirrorGesture) + LookupTable[icolneg + j];
 				SlopeI[icol + j] = 0;
 				SlopeJ[icol + j] = SlopeJ[icolneg + j] + 1;
 			}
 			else
 			{
-				LookupTable[icol + j] = GetGestureDistance(seq1.Samples[i - 1], seq2.Samples[j - 1], bMirrorGesture) + LookupTable[icolneg + j - 1];
+				LookupTable[icol + j] = GetGestureDistance(seq1.Samples[i - 1] * Scaler, seq2.Samples[j - 1], bMirrorGesture) + LookupTable[icolneg + j - 1];
 				SlopeI[icol + j] = 0;
 				SlopeJ[icol + j] = 0;
 			}

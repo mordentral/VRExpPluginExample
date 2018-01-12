@@ -8,6 +8,7 @@
 #include "Components/SplineMeshComponent.h"
 #include "Components/SplineComponent.h"
 #include "VRBaseCharacter.h"
+#include "Engine/DataAsset.h"
 #include "DrawDebugHelpers.h"
 #include "Components/LineBatchComponent.h"
 #include "VRGestureComponent.generated.h"
@@ -63,8 +64,8 @@ public:
 	FVRGestureSettings()
 	{
 		Minimum_Gesture_Length = 1;
-		firstThreshold = 5.0f;
-		FullThreshold = 5.0f;
+		firstThreshold = 20.0f;
+		FullThreshold = 20.0f;
 		MirrorMode = EVRGestureMirrorMode::GES_NoMirror;
 		bEnabled = true;
 	}
@@ -97,7 +98,7 @@ public:
 	FVRGesture()
 	{}
 
-	void CalculateSizeOfGesture()
+	void CalculateSizeOfGesture(bool bAllowResizing = false, float TargetExtentSize = 1.f)
 	{
 		FVector NewSample;
 		for (int i = 0; i < Samples.Num(); ++i)
@@ -110,6 +111,20 @@ public:
 			GestureSize.Min.X = FMath::Min(NewSample.X, GestureSize.Min.X);
 			GestureSize.Min.Y = FMath::Min(NewSample.Y, GestureSize.Min.Y);
 			GestureSize.Min.Z = FMath::Min(NewSample.Z, GestureSize.Min.Z);
+		}
+
+		if (bAllowResizing)
+		{
+			FVector BoxSize = GestureSize.GetSize();
+			float Scaler = TargetExtentSize / BoxSize.GetMax();
+
+			for (int i = 0; i < Samples.Num(); ++i)
+			{
+				Samples[i] *= Scaler;
+			}
+
+			GestureSize.Min *= Scaler;
+			GestureSize.Max *= Scaler;
 		}
 	}
 };
@@ -126,6 +141,14 @@ public:
 	// Gestures in this database
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRGestures")
 	TArray <FVRGesture> Gestures;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRGestures")
+		float TargetGestureScale;
+
+	UGesturesDatabase()
+	{
+		TargetGestureScale = 100.0f;
+	}
 };
 
 
@@ -319,9 +342,12 @@ public:
 
 
 	UFUNCTION(BlueprintCallable, Category = "VRGestures")
-	void RecalculateGestureSize(UPARAM(ref) FVRGesture & InputGesture)
+	void RecalculateGestureSize(UPARAM(ref) FVRGesture & InputGesture, UGesturesDatabase * GestureDB)
 	{
-		InputGesture.CalculateSizeOfGesture();
+		if(GestureDB != nullptr)
+			InputGesture.CalculateSizeOfGesture(true, GestureDB->TargetGestureScale);
+		else
+			InputGesture.CalculateSizeOfGesture(false);
 	}
 
 	UFUNCTION(BlueprintCallable, Category = "VRGestures",meta = (WorldContext = "WorldContextObject", DevelopmentOnly))
@@ -411,6 +437,7 @@ public:
 	{
 		if (GesturesDB)
 		{
+			Recording.CalculateSizeOfGesture(true, GesturesDB->TargetGestureScale);
 			Recording.Name = RecordingName;
 			GesturesDB->Gestures.Add(Recording);
 		}
@@ -511,7 +538,7 @@ public:
 			}
 		}
 
-		NewGesture.CalculateSizeOfGesture();
+		NewGesture.CalculateSizeOfGesture(false);
 		return NewGesture;
 	}
 
@@ -527,7 +554,7 @@ public:
 
 
 	// Compute the min DTW distance between seq2 and all possible endings of seq1.
-	float dtw(FVRGesture seq1, FVRGesture seq2, bool bMirrorGesture = false);
+	float dtw(FVRGesture seq1, FVRGesture seq2, bool bMirrorGesture = false, float Scaler = 1.f);
 
 };
 
