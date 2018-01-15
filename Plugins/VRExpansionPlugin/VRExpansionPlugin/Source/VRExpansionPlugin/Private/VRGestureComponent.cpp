@@ -19,6 +19,108 @@ UVRGestureComponent::UVRGestureComponent(const FObjectInitializer& ObjectInitial
 	bGetGestureInWorldSpace = true;
 }
 
+void UGesturesDatabase::FillSplineWithGesture(FVRGesture &Gesture, USplineComponent * SplineComponent, bool bCenterPointsOnSpline, bool bScaleToBounds, FVector OptionalBounds, bool bUseCurvedPoints, bool bFillInSplineMeshComponents, UStaticMesh * Mesh, UMaterial * MeshMat)
+{
+	if (!SplineComponent)
+		return;
+
+	SplineComponent->ClearSplinePoints(false);
+
+	FVector PointOffset = FVector::ZeroVector;
+	float Scaler = 1.0f;
+	if (bScaleToBounds)
+	{
+		Scaler = OptionalBounds.GetMax() / Gesture.GestureSize.GetSize().GetMax();
+	}
+
+	if (bCenterPointsOnSpline)
+	{
+		PointOffset = -Gesture.GestureSize.GetCenter();
+	}
+
+	int curIndex = 0;
+	for (int i = Gesture.Samples.Num() - 1; i >= 0; --i)
+	{
+		SplineComponent->AddSplinePoint((Gesture.Samples[i] + PointOffset) * Scaler, ESplineCoordinateSpace::Local, false);
+		curIndex++;
+		SplineComponent->SetSplinePointType(curIndex, bUseCurvedPoints ? ESplinePointType::Curve : ESplinePointType::Linear, false);
+	}
+
+	// Update spline now
+	SplineComponent->UpdateSpline();
+
+	if (bFillInSplineMeshComponents && Mesh != nullptr && MeshMat != nullptr)
+	{
+		TArray<USplineMeshComponent *> CurrentSplineChildren;
+		
+		TArray<USceneComponent*> Children;
+		SplineComponent->GetChildrenComponents(false, Children);
+		for (auto Child : Children)
+		{
+			USplineMeshComponent* SplineMesh = Cast<USplineMeshComponent>(Child);
+			if (SplineMesh != nullptr && !SplineMesh->IsPendingKill())
+			{
+				CurrentSplineChildren.Add(SplineMesh);
+			}
+		}
+
+		if (CurrentSplineChildren.Num() > SplineComponent->GetNumberOfSplinePoints())
+		{
+			int diff = CurrentSplineChildren.Num() - (CurrentSplineChildren.Num() - SplineComponent->GetNumberOfSplinePoints());
+
+			for (int i = CurrentSplineChildren.Num()- 1; i >= diff; --i)
+			{
+				if (!CurrentSplineChildren[i]->IsBeingDestroyed())
+				{
+					CurrentSplineChildren[i]->SetVisibility(false);
+					CurrentSplineChildren[i]->Modify();
+					CurrentSplineChildren[i]->DestroyComponent();
+					CurrentSplineChildren.RemoveAt(i);
+				}
+			}
+		}
+		else
+		{
+			for (int i = CurrentSplineChildren.Num(); i < SplineComponent->GetNumberOfSplinePoints(); ++i)
+			{
+				USplineMeshComponent * newSplineMesh = NewObject<USplineMeshComponent>(SplineComponent);
+
+				newSplineMesh->RegisterComponentWithWorld(GetWorld());
+				newSplineMesh->SetMobility(EComponentMobility::Movable);
+				CurrentSplineChildren.Add(newSplineMesh);
+				newSplineMesh->SetStaticMesh(Mesh);
+				newSplineMesh->SetMaterial(0, MeshMat);
+				newSplineMesh->AttachToComponent(SplineComponent, FAttachmentTransformRules::SnapToTargetIncludingScale);
+				newSplineMesh->SetVisibility(true);
+			}
+		}
+
+
+		for(int i=0; i<CurrentSplineChildren.Num(); i++)
+		{
+			
+			FVector locationAtSplinePoint = SplineComponent->GetLocationAtSplinePoint(i, ESplineCoordinateSpace::Local);
+
+			// Fill in last mesh component tangent and end pos
+			if (i > 0)
+			{
+				CurrentSplineChildren[i - 1]->SetEndPosition(locationAtSplinePoint, false);
+				CurrentSplineChildren[i - 1]->SetEndTangent(SplineComponent->GetTangentAtSplinePoint(i, ESplineCoordinateSpace::Local), true);
+			}
+
+			if (i == CurrentSplineChildren.Num() - 1)
+				continue;
+
+			CurrentSplineChildren[i]->SetStartAndEnd(locationAtSplinePoint,
+				SplineComponent->GetTangentAtSplinePoint(i, ESplineCoordinateSpace::Local),
+				locationAtSplinePoint,
+				FVector::ZeroVector,
+				true);
+		}
+	}
+
+}
+
 void UVRGestureComponent::BeginRecording(bool bRunDetection, bool bDrawGesture, bool bDrawAsSpline, int SamplingHTZ, int SampleBufferSize, float ClampingTolerance)
 {
 	RecordingBufferSize = SampleBufferSize;
@@ -105,7 +207,6 @@ void UVRGestureComponent::CaptureGestureFrame()
 			if (bClearLatestSpline)
 				RecordingGestureDraw.ClearLastPoint();
 
-			FSplinePoint newPoint;
 			RecordingGestureDraw.SplineComponent->AddSplinePoint(NewSample, ESplineCoordinateSpace::Local, false);
 			int SplineIndex = RecordingGestureDraw.SplineComponent->GetNumberOfSplinePoints() - 1;
 			RecordingGestureDraw.SplineComponent->SetSplinePointType(SplineIndex, bDrawSplinesCurved ? ESplinePointType::Curve : ESplinePointType::Linear, true);

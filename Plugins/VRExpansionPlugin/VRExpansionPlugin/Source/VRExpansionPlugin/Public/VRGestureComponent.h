@@ -159,6 +159,110 @@ public:
 			Gestures[i].CalculateSizeOfGesture(true, TargetGestureScale);
 		}
 	}
+
+	// Fills a spline component with a gesture, optionally also generates spline mesh components for it (uses ones already attached if possible)
+	UFUNCTION(BlueprintCallable, Category = "VRGestures")
+		void FillSplineWithGesture(UPARAM(ref)FVRGesture &Gesture, USplineComponent * SplineComponent, bool bCenterPointsOnSpline = true, bool bScaleToBounds = false, FVector OptionalBounds = FVector::ZeroVector, bool bUseCurvedPoints = true, bool bFillInSplineMeshComponents = true, UStaticMesh * Mesh = nullptr, UMaterial * MeshMat = nullptr);
+
+	// Imports a spline as a gesture, Segment len is the max segment length (will break lines up into lengths of this size)
+	UFUNCTION(BlueprintCallable, Category = "VRGestures")
+	bool ImportSplineAsGesture(USplineComponent * HostSplineComponent, FString GestureName, bool bKeepSplineCurves = true, float SegmentLen = 10.0f)
+	{
+		FVRGesture NewGesture;
+
+		if (HostSplineComponent->GetNumberOfSplinePoints() < 2)
+			return false;
+
+		NewGesture.Name = GestureName;
+
+		FVector FirstPointPos = HostSplineComponent->GetLocationAtSplinePoint(0, ESplineCoordinateSpace::Local);
+
+		float LastDistance = 0.f;
+		float ThisDistance = 0.f;
+		FVector LastDistanceV;
+		FVector ThisDistanceV;
+		FVector DistNormal;
+		float DistAlongSegment = 0.f;
+
+		// Realign to xForward on the gesture, normally splines lay out as X to the right
+		FTransform Realignment = FTransform(FRotator(0.f, 90.f, 0.f), -FirstPointPos);
+
+		// Prefill the first point
+		NewGesture.Samples.Add(Realignment.TransformPosition(HostSplineComponent->GetLocationAtSplinePoint(HostSplineComponent->GetNumberOfSplinePoints() - 1, ESplineCoordinateSpace::Local)));
+
+		// Inserting in reverse order -2 so we start one down
+		for (int i = HostSplineComponent->GetNumberOfSplinePoints() - 2; i >= 0; --i)
+		{
+			if (bKeepSplineCurves)
+			{
+				LastDistance = HostSplineComponent->GetDistanceAlongSplineAtSplinePoint(i + 1);
+				ThisDistance = HostSplineComponent->GetDistanceAlongSplineAtSplinePoint(i);
+
+				DistAlongSegment = FMath::Abs(ThisDistance - LastDistance);
+			}
+			else
+			{
+				LastDistanceV = Realignment.TransformPosition(HostSplineComponent->GetLocationAtSplinePoint(i + 1, ESplineCoordinateSpace::Local));
+				ThisDistanceV = Realignment.TransformPosition(HostSplineComponent->GetLocationAtSplinePoint(i, ESplineCoordinateSpace::Local));
+
+				DistAlongSegment = FVector::Dist(ThisDistanceV, LastDistanceV);
+				DistNormal = ThisDistanceV - LastDistanceV;
+				DistNormal.Normalize();
+			}
+
+
+			float SegmentCount = FMath::FloorToFloat(DistAlongSegment / SegmentLen);
+			float OverFlow = FMath::Fmod(DistAlongSegment, SegmentLen);
+
+			if (SegmentCount < 1)
+			{
+				SegmentCount++;
+			}
+
+			float DistPerSegment = (DistAlongSegment / SegmentCount);
+			//float DistPerSegOverflow = OverFlow / SegmentCount;
+			/*if (i == 0)
+			{
+			// Don't run last segment point
+			SegmentCount--;
+			}*/
+
+			for (int j = 0; j < SegmentCount; j++)
+			{
+				if (j == SegmentCount - 1 && i > 0)
+					DistPerSegment += OverFlow;
+
+				if (bKeepSplineCurves)
+				{
+					LastDistance -= DistPerSegment;
+					if (j == SegmentCount - 1 && i > 0)
+					{
+						LastDistance = ThisDistance;
+					}
+					FVector loc = Realignment.TransformPosition(HostSplineComponent->GetLocationAtDistanceAlongSpline(LastDistance, ESplineCoordinateSpace::Local));
+
+					if (!loc.IsNearlyZero())
+						NewGesture.Samples.Add(loc);
+				}
+				else
+				{
+					LastDistanceV += DistPerSegment * DistNormal;
+
+					if (j == SegmentCount - 1 && i > 0)
+					{
+						LastDistanceV = ThisDistanceV;
+					}
+
+					if (!LastDistanceV.IsNearlyZero())
+						NewGesture.Samples.Add(LastDistanceV);
+				}
+			}
+		}
+
+		NewGesture.CalculateSizeOfGesture(true, this->TargetGestureScale);
+		Gestures.Add(NewGesture);
+		return true;
+	}
 };
 
 
@@ -287,8 +391,6 @@ public:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRGestures")
 		AVRBaseCharacter * TargetCharacter;
 
-	UPROPERTY(BlueprintReadWrite, Category = "VRGestures")
-	TArray<FVRGestureSplineDraw> DrawnGestures;
 	FVRGestureSplineDraw RecordingGestureDraw;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRGestures")
@@ -342,12 +444,6 @@ public:
 	{
 		Super::BeginDestroy();
 		RecordingGestureDraw.Clear();
-
-		for (int i = 0; i < DrawnGestures.Num(); i++)
-		{
-			DrawnGestures[i].Clear();
-		}
-		DrawnGestures.Empty();
 	}
 
 
@@ -360,7 +456,7 @@ public:
 			InputGesture.CalculateSizeOfGesture(false);
 	}
 
-	UFUNCTION(BlueprintCallable, Category = "VRGestures", meta = (WorldContext = "WorldContextObject", DevelopmentOnly))
+	UFUNCTION(BlueprintCallable, Category = "VRGestures", meta = (WorldContext = "WorldContextObject"))
 		void DrawDebugGesture(UObject* WorldContextObject, FTransform StartTransform, FVRGesture GestureToDraw, FColor const& Color, bool bPersistentLines = false, uint8 DepthPriority = 0, float LifeTime = -1.f, float Thickness = 0.f);
 
 	FVector StartVector;
@@ -398,105 +494,6 @@ public:
 			Recording.Name = RecordingName;
 			GesturesDB->Gestures.Add(Recording);
 		}
-	}
-
-	// Imports a spline as a gesture, Segment len is the max segment length (will break lines up into lengths of this size)
-	UFUNCTION(BlueprintCallable, Category = "VRGestures")
-	FVRGesture ImportSplineAsGesture(USplineComponent * HostSplineComponent, FString GestureName, bool bKeepSplineCurves = true, float SegmentLen = 10.0f)
-	{
-		FVRGesture NewGesture;
-
-		if (HostSplineComponent->GetNumberOfSplinePoints() < 2 || GesturesDB == nullptr)
-			return NewGesture;
-		
-		NewGesture.Name = GestureName;
-
-		FVector FirstPointPos = HostSplineComponent->GetLocationAtSplinePoint(0, ESplineCoordinateSpace::Local);
-
-		float LastDistance= 0.f;
-		float ThisDistance = 0.f;
-		FVector LastDistanceV;
-		FVector ThisDistanceV;
-		FVector DistNormal;
-		float DistAlongSegment = 0.f;
-
-		// Realign to xForward on the gesture, normally splines lay out as X to the right
-		FTransform Realignment = FTransform(FRotator(0.f,90.f,0.f), -FirstPointPos);
-
-		// Prefill the first point
-		NewGesture.Samples.Add(Realignment.TransformPosition(HostSplineComponent->GetLocationAtSplinePoint(HostSplineComponent->GetNumberOfSplinePoints() - 1, ESplineCoordinateSpace::Local)));
-
-		// Inserting in reverse order -2 so we start one down
-		for (int i = HostSplineComponent->GetNumberOfSplinePoints() - 2; i >= 0; --i)
-		{
-			if (bKeepSplineCurves)
-			{
-				LastDistance = HostSplineComponent->GetDistanceAlongSplineAtSplinePoint(i + 1);
-				ThisDistance = HostSplineComponent->GetDistanceAlongSplineAtSplinePoint(i);
-
-				DistAlongSegment = FMath::Abs(ThisDistance - LastDistance);
-			}
-			else
-			{
-				LastDistanceV = Realignment.TransformPosition(HostSplineComponent->GetLocationAtSplinePoint(i + 1, ESplineCoordinateSpace::Local));
-				ThisDistanceV = Realignment.TransformPosition(HostSplineComponent->GetLocationAtSplinePoint(i, ESplineCoordinateSpace::Local));
-
-				DistAlongSegment = FVector::Dist(ThisDistanceV, LastDistanceV);
-				DistNormal = ThisDistanceV - LastDistanceV;
-				DistNormal.Normalize();
-			}
-
-
-			float SegmentCount = FMath::FloorToFloat(DistAlongSegment / SegmentLen);
-			float OverFlow = FMath::Fmod(DistAlongSegment, SegmentLen);
-
-			if (SegmentCount < 1)
-			{
-				SegmentCount++;
-			}
-
-			float DistPerSegment = (DistAlongSegment / SegmentCount);
-			//float DistPerSegOverflow = OverFlow / SegmentCount;
-			/*if (i == 0)
-			{
-				// Don't run last segment point
-				SegmentCount--;
-			}*/
-
-			for (int j = 0; j < SegmentCount; j++)
-			{
-				if (j == SegmentCount - 1 && i > 0)
-					DistPerSegment += OverFlow;
-
-				if (bKeepSplineCurves)
-				{
-					LastDistance -= DistPerSegment;
-					if (j == SegmentCount - 1 && i > 0)
-					{
-						LastDistance = ThisDistance;
-					}
-					FVector loc = Realignment.TransformPosition(HostSplineComponent->GetLocationAtDistanceAlongSpline(LastDistance, ESplineCoordinateSpace::Local));
-
-					if(!loc.IsNearlyZero())
-						NewGesture.Samples.Add(loc);
-				}
-				else
-				{				
-					LastDistanceV += DistPerSegment * DistNormal;
-
-					if (j == SegmentCount - 1 && i > 0)
-					{
-						LastDistanceV = ThisDistanceV;
-					}
-
-					if (!LastDistanceV.IsNearlyZero())
-						NewGesture.Samples.Add(LastDistanceV);
-				}
-			}
-		}
-
-		NewGesture.CalculateSizeOfGesture(false);
-		return NewGesture;
 	}
 
 	void CaptureGestureFrame();
