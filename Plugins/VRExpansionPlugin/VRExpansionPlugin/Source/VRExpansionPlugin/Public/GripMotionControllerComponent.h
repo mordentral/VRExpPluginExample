@@ -13,6 +13,7 @@
 #include "IXRTrackingSystem.h"
 #include "VRGripInterface.h"
 #include "VRGlobalSettings.h"
+#include "XRMotionControllerBase.h" // for GetHandEnumForSourceName()
 #include "GripMotionControllerComponent.generated.h"
 
 class AVRBaseCharacter;
@@ -114,6 +115,19 @@ protected:
 	FVector GripRenderThreadComponentScale;
 
 public:
+
+	// Gets the hand enum
+	UFUNCTION(BlueprintPure, Category = "VRExpansionFunctions", meta = (bIgnoreSelf = "true", DisplayName = "GetHandType"))
+	bool GetHandType(EControllerHand& Hand)
+	{
+		Hand = EControllerHand::Left;
+		if (FXRMotionControllerBase::GetHandEnumForSourceName(MotionSource, Hand))
+		{
+			return true;
+		}
+
+		return false;
+	}
 
 	// When possible I suggest that you use GetAllGrips/GetGrippedObjects instead of directly referencing this
 	UPROPERTY(BlueprintReadOnly, Replicated, Category = "VRGrip", ReplicatedUsing = OnRep_GrippedObjects)
