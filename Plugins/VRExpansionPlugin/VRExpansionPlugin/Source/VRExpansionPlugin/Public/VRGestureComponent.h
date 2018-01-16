@@ -464,9 +464,20 @@ public:
 	FTransform OriginatingTransform;
 	float RecordingDelta;
 
+	/* Function to begin recording a gesture for detection or saving
+	*
+	* bRunDetection: Should we detect gestures or only record them
+	* bFlattenGestue: Should we flatten the gesture into 2 dimensions (more stable detection and recording, less pretty visually)
+	* bDrawGesture: Should we draw the gesture during recording of it
+	* bDrawAsSpline: If true we will use spline meshes, if false we will draw as debug lines
+	* SamplingHTZ: How many times a second we will record a gesture point
+	* SampleBufferSize: How many points we will store in history at a time
+	* ClampingTolerance: If larger than 0.0, we will clamp points to a grid of this size
+	*/
 	UFUNCTION(BlueprintCallable, Category = "VRGestures")
 		void BeginRecording(bool bRunDetection, bool bFlattenGesture = true, bool bDrawGesture = true, bool bDrawAsSpline = false, int SamplingHTZ = 30, int SampleBufferSize = 60, float ClampingTolerance = 0.01f);
 
+	// Ends recording and returns the recorded gesture
 	UFUNCTION(BlueprintCallable, Category = "VRGestures")
 	FVRGesture EndRecording()
 	{
@@ -479,13 +490,14 @@ public:
 		return GestureLog;
 	}
 
-	// Clear the current recording
+	// Clears the current recording
 	UFUNCTION(BlueprintCallable, Category = "VRGestures")
 	void ClearRecording()
 	{
 		GestureLog.Samples.Reset(RecordingBufferSize);
 	}
 
+	// Saves a VRGesture to the database
 	UFUNCTION(BlueprintCallable, Category = "VRGestures")
 	void SaveRecording(UPARAM(ref) FVRGesture &Recording, FString RecordingName)
 	{
