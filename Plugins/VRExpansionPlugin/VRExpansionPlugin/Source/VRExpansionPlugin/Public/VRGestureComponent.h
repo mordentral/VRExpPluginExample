@@ -162,7 +162,7 @@ public:
 
 	// Fills a spline component with a gesture, optionally also generates spline mesh components for it (uses ones already attached if possible)
 	UFUNCTION(BlueprintCallable, Category = "VRGestures")
-		void FillSplineWithGesture(UPARAM(ref)FVRGesture &Gesture, USplineComponent * SplineComponent, bool bCenterPointsOnSpline = true, bool bScaleToBounds = false, FVector OptionalBounds = FVector::ZeroVector, bool bUseCurvedPoints = true, bool bFillInSplineMeshComponents = true, UStaticMesh * Mesh = nullptr, UMaterial * MeshMat = nullptr);
+		void FillSplineWithGesture(UPARAM(ref)FVRGesture &Gesture, USplineComponent * SplineComponent, bool bCenterPointsOnSpline = true, bool bScaleToBounds = false, float OptionalBounds = 0.0f, bool bUseCurvedPoints = true, bool bFillInSplineMeshComponents = true, UStaticMesh * Mesh = nullptr, UMaterial * MeshMat = nullptr);
 
 	// Imports a spline as a gesture, Segment len is the max segment length (will break lines up into lengths of this size)
 	UFUNCTION(BlueprintCallable, Category = "VRGestures")
