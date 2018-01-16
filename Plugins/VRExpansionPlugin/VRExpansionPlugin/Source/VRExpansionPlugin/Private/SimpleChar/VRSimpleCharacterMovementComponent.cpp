@@ -1288,6 +1288,12 @@ void UVRSimpleCharacterMovementComponent::ReplicateMoveToServer(float DeltaTime,
 		const FVector OldStartLocation = ClientData->PendingMove->GetRevertedLocation();
 		if (!OverlapTest(OldStartLocation, ClientData->PendingMove->StartRotation.Quaternion(), UpdatedComponent->GetCollisionObjectType(), GetPawnCapsuleCollisionShape(SHRINK_None), CharacterOwner))
 		{
+			// Avoid updating Mesh bones to physics during the teleport back, since PerformMovement() will update it right away anyway below.
+			// Note: this must be before the FScopedMovementUpdate below, since that scope is what actually moves the character and mesh.
+			FScopedMeshBoneUpdateOverride ScopedNoMeshBoneUpdate(CharacterOwner->GetMesh(), EKinematicBonesUpdateToPhysics::SkipAllBones);
+
+			// Accumulate multiple transform updates until scope ends.
+
 			FScopedMovementUpdate ScopedMovementUpdate(UpdatedComponent, EScopedUpdate::DeferredUpdates);
 			UE_LOG(LogNetPlayerMovement, VeryVerbose, TEXT("CombineMove: add delta %f + %f and revert from %f %f to %f %f"), DeltaTime, ClientData->PendingMove->DeltaTime, UpdatedComponent->GetComponentLocation().X, UpdatedComponent->GetComponentLocation().Y, OldStartLocation.X, OldStartLocation.Y);
 
@@ -1395,6 +1401,11 @@ void UVRSimpleCharacterMovementComponent::ReplicateMoveToServer(float DeltaTime,
 			NewMove->TimeStamp, *NewMove->Acceleration.ToString(), *UpdatedComponent->GetComponentLocation().ToString(), DeltaTime);
 
 		// Send move to server if this character is replicating movement
+		bool bSendServerMove = true;
+#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+		bSendServerMove = (CharacterMovementCVars::NetForceClientServerMoveLossPercent == 0.f) || (FMath::SRand() >= CharacterMovementCVars::NetForceClientServerMoveLossPercent);
+#endif
+		if (bSendServerMove)
 		{
 			SCOPE_CYCLE_COUNTER(STAT_CharacterMovementCallServerMoveVRSimple);
 			//CallServerMove(NewMove.Get(), OldMove.Get());
