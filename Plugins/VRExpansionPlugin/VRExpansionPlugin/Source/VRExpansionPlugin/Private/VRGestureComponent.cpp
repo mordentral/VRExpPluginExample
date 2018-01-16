@@ -19,7 +19,7 @@ UVRGestureComponent::UVRGestureComponent(const FObjectInitializer& ObjectInitial
 	bGetGestureInWorldSpace = true;
 }
 
-void UGesturesDatabase::FillSplineWithGesture(FVRGesture &Gesture, USplineComponent * SplineComponent, bool bCenterPointsOnSpline, bool bScaleToBounds, FVector OptionalBounds, bool bUseCurvedPoints, bool bFillInSplineMeshComponents, UStaticMesh * Mesh, UMaterial * MeshMat)
+void UGesturesDatabase::FillSplineWithGesture(FVRGesture &Gesture, USplineComponent * SplineComponent, bool bCenterPointsOnSpline, bool bScaleToBounds, float OptionalBounds, bool bUseCurvedPoints, bool bFillInSplineMeshComponents, UStaticMesh * Mesh, UMaterial * MeshMat)
 {
 	if (!SplineComponent || Gesture.Samples.Num() < 2)
 		return;
@@ -33,9 +33,9 @@ void UGesturesDatabase::FillSplineWithGesture(FVRGesture &Gesture, USplineCompon
 
 	FVector PointOffset = FVector::ZeroVector;
 	float Scaler = 1.0f;
-	if (bScaleToBounds)
+	if (bScaleToBounds && OptionalBounds > 0.0f)
 	{
-		Scaler = OptionalBounds.GetMax() / Gesture.GestureSize.GetSize().GetMax();
+		Scaler = OptionalBounds / Gesture.GestureSize.GetSize().GetMax();
 	}
 
 	if (bCenterPointsOnSpline)
