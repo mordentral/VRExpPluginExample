@@ -220,12 +220,6 @@ public:
 			}
 
 			float DistPerSegment = (DistAlongSegment / SegmentCount);
-			//float DistPerSegOverflow = OverFlow / SegmentCount;
-			/*if (i == 0)
-			{
-			// Don't run last segment point
-			SegmentCount--;
-			}*/
 
 			for (int j = 0; j < SegmentCount; j++)
 			{
@@ -393,6 +387,7 @@ public:
 
 	FVRGestureSplineDraw RecordingGestureDraw;
 
+	// Should we draw splines curved or straight
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRGestures")
 		bool bDrawSplinesCurved;
 
@@ -447,7 +442,7 @@ public:
 		RecordingGestureDraw.Clear();
 	}
 
-
+	// Recalculates a gestures size and re-scales it to the given database
 	UFUNCTION(BlueprintCallable, Category = "VRGestures")
 	void RecalculateGestureSize(UPARAM(ref) FVRGesture & InputGesture, UGesturesDatabase * GestureDB)
 	{
@@ -457,6 +452,7 @@ public:
 			InputGesture.CalculateSizeOfGesture(false);
 	}
 
+	// Draw a gesture with a debug line batch
 	UFUNCTION(BlueprintCallable, Category = "VRGestures", meta = (WorldContext = "WorldContextObject"))
 		void DrawDebugGesture(UObject* WorldContextObject, FTransform StartTransform, FVRGesture GestureToDraw, FColor const& Color, bool bPersistentLines = false, uint8 DepthPriority = 0, float LifeTime = -1.f, float Thickness = 0.f);
 
