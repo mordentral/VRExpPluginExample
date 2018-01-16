@@ -21,7 +21,12 @@ UVRGestureComponent::UVRGestureComponent(const FObjectInitializer& ObjectInitial
 
 void UGesturesDatabase::FillSplineWithGesture(FVRGesture &Gesture, USplineComponent * SplineComponent, bool bCenterPointsOnSpline, bool bScaleToBounds, FVector OptionalBounds, bool bUseCurvedPoints, bool bFillInSplineMeshComponents, UStaticMesh * Mesh, UMaterial * MeshMat)
 {
-	if (!SplineComponent)
+	if (!SplineComponent || Gesture.Samples.Num() < 2)
+		return;
+
+	UWorld* InWorld = GEngine->GetWorldFromContextObject(SplineComponent, EGetWorldErrorMode::LogAndReturnNull);
+
+	if (!InWorld)
 		return;
 
 	SplineComponent->ClearSplinePoints(false);
@@ -64,9 +69,9 @@ void UGesturesDatabase::FillSplineWithGesture(FVRGesture &Gesture, USplineCompon
 			}
 		}
 
-		if (CurrentSplineChildren.Num() > SplineComponent->GetNumberOfSplinePoints())
+		if (CurrentSplineChildren.Num() > SplineComponent->GetNumberOfSplinePoints() - 1)
 		{
-			int diff = CurrentSplineChildren.Num() - (CurrentSplineChildren.Num() - SplineComponent->GetNumberOfSplinePoints());
+			int diff = CurrentSplineChildren.Num() - (CurrentSplineChildren.Num() - (SplineComponent->GetNumberOfSplinePoints() -1));
 
 			for (int i = CurrentSplineChildren.Num()- 1; i >= diff; --i)
 			{
@@ -81,11 +86,11 @@ void UGesturesDatabase::FillSplineWithGesture(FVRGesture &Gesture, USplineCompon
 		}
 		else
 		{
-			for (int i = CurrentSplineChildren.Num(); i < SplineComponent->GetNumberOfSplinePoints(); ++i)
+			for (int i = CurrentSplineChildren.Num(); i < SplineComponent->GetNumberOfSplinePoints() -1; ++i)
 			{
 				USplineMeshComponent * newSplineMesh = NewObject<USplineMeshComponent>(SplineComponent);
 
-				newSplineMesh->RegisterComponentWithWorld(GetWorld());
+				newSplineMesh->RegisterComponentWithWorld(InWorld);
 				newSplineMesh->SetMobility(EComponentMobility::Movable);
 				CurrentSplineChildren.Add(newSplineMesh);
 				newSplineMesh->SetStaticMesh(Mesh);
@@ -96,25 +101,12 @@ void UGesturesDatabase::FillSplineWithGesture(FVRGesture &Gesture, USplineCompon
 		}
 
 
-		for(int i=0; i<CurrentSplineChildren.Num(); i++)
+		for(int i=0; i<SplineComponent->GetNumberOfSplinePoints() - 1; i++)
 		{
-			
-			FVector locationAtSplinePoint = SplineComponent->GetLocationAtSplinePoint(i, ESplineCoordinateSpace::Local);
-
-			// Fill in last mesh component tangent and end pos
-			if (i > 0)
-			{
-				CurrentSplineChildren[i - 1]->SetEndPosition(locationAtSplinePoint, false);
-				CurrentSplineChildren[i - 1]->SetEndTangent(SplineComponent->GetTangentAtSplinePoint(i, ESplineCoordinateSpace::Local), true);
-			}
-
-			if (i == CurrentSplineChildren.Num() - 1)
-				continue;
-
-			CurrentSplineChildren[i]->SetStartAndEnd(locationAtSplinePoint,
+			CurrentSplineChildren[i]->SetStartAndEnd(SplineComponent->GetLocationAtSplinePoint(i, ESplineCoordinateSpace::Local),
 				SplineComponent->GetTangentAtSplinePoint(i, ESplineCoordinateSpace::Local),
-				locationAtSplinePoint,
-				FVector::ZeroVector,
+				SplineComponent->GetLocationAtSplinePoint(i + 1, ESplineCoordinateSpace::Local),
+				SplineComponent->GetTangentAtSplinePoint(i + 1, ESplineCoordinateSpace::Local),
 				true);
 		}
 	}
