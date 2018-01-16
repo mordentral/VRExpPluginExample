@@ -809,8 +809,8 @@ private:
 
 		// #TODO: 4.18 - Uses an auto register base now, revise declaration and implementation
 	public:
-		FGripViewExtension(const FAutoRegister& AutoRegister, UGripMotionControllerComponent* InMotionControllerComponent)
-		{}
+		FGripViewExtension(const FAutoRegister& AutoRegister, UGripMotionControllerComponent* InMotionControllerComponent);
+
 		virtual ~FGripViewExtension() {}
 
 		/** ISceneViewExtension interface */

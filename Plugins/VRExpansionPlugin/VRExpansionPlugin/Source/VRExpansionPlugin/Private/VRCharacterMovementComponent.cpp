@@ -1515,7 +1515,8 @@ void UVRCharacterMovementComponent::ReplicateMoveToServer(float DeltaTime, const
 		// Send move to server if this character is replicating movement
 		bool bSendServerMove = true;
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-		bSendServerMove = (CharacterMovementCVars::NetForceClientServerMoveLossPercent == 0.f) || (FMath::SRand() >= CharacterMovementCVars::NetForceClientServerMoveLossPercent);
+		static const auto CVarNetForceClientServerMoveLossPercent = IConsoleManager::Get().FindConsoleVariable(TEXT("p.NetForceClientServerMoveLossPercent"));
+		bSendServerMove = (CVarNetForceClientServerMoveLossPercent->GetFloat() == 0.f) || (FMath::SRand() >= CVarNetForceClientServerMoveLossPercent->GetFloat());
 #endif
 		if (bSendServerMove)
 		{
@@ -3470,8 +3471,9 @@ void UVRCharacterMovementComponent::SimulateMovement(float DeltaSeconds)
 		OldVelocity = Velocity;
 		OldLocation = UpdatedComponent->GetComponentLocation();
 
+		static const auto CVarNetEnableSkipProxyPredictionOnNetUpdate = IConsoleManager::Get().FindConsoleVariable(TEXT("p.NetEnableSkipProxyPredictionOnNetUpdate"));
 		// May only need to simulate forward on frames where we haven't just received a new position update.
-		if (!bHandledNetUpdate || !bNetworkSkipProxyPredictionOnNetUpdate || !CharacterMovementCVars::NetEnableSkipProxyPredictionOnNetUpdate)
+		if (!bHandledNetUpdate || !bNetworkSkipProxyPredictionOnNetUpdate || !CVarNetEnableSkipProxyPredictionOnNetUpdate->GetInt())
 		{
 			UE_LOG(LogCharacterMovement, Verbose, TEXT("Proxy %s simulating movement"), *GetNameSafe(CharacterOwner));
 			FStepDownResult StepDownResult;

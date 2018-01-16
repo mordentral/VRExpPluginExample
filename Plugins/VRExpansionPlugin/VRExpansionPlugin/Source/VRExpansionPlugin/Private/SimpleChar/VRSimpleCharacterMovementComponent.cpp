@@ -40,6 +40,43 @@ DECLARE_CYCLE_STAT(TEXT("Char CallServerMoveVRSimple"), STAT_CharacterMovementCa
 const float MAX_STEP_SIDE_ZZ = 0.08f;	// maximum z value for the normal on the vertical side of steps
 const float VERTICAL_SLOPE_NORMAL_ZZ = 0.001f; // Slope is vertical if Abs(Normal.Z) <= this threshold. Accounts for precision problems that sometimes angle normals slightly off horizontal for vertical surface.
 
+/**
+* Helper to change mesh bone updates within a scope.
+* Example usage:
+*	{
+*		FScopedPreventMeshBoneUpdate ScopedNoMeshBoneUpdate(CharacterOwner->GetMesh(), EKinematicBonesUpdateToPhysics::SkipAllBones);
+*		// Do something to move mesh, bones will not update
+*	}
+*	// Movement of mesh at this point will use previous setting.
+*/
+struct FScopedMeshBoneUpdateOverride
+{
+	FScopedMeshBoneUpdateOverride(USkeletalMeshComponent* Mesh, EKinematicBonesUpdateToPhysics::Type OverrideSetting)
+		: MeshRef(Mesh)
+	{
+		if (MeshRef)
+		{
+			// Save current state.
+			SavedUpdateSetting = MeshRef->KinematicBonesUpdateType;
+			// Override bone update setting.
+			MeshRef->KinematicBonesUpdateType = OverrideSetting;
+		}
+	}
+
+	~FScopedMeshBoneUpdateOverride()
+	{
+		if (MeshRef)
+		{
+			// Restore bone update flag.
+			MeshRef->KinematicBonesUpdateType = SavedUpdateSetting;
+		}
+	}
+
+private:
+	USkeletalMeshComponent * MeshRef;
+	EKinematicBonesUpdateToPhysics::Type SavedUpdateSetting;
+};
+
 UVRSimpleCharacterMovementComponent::UVRSimpleCharacterMovementComponent(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {
@@ -1403,7 +1440,8 @@ void UVRSimpleCharacterMovementComponent::ReplicateMoveToServer(float DeltaTime,
 		// Send move to server if this character is replicating movement
 		bool bSendServerMove = true;
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-		bSendServerMove = (CharacterMovementCVars::NetForceClientServerMoveLossPercent == 0.f) || (FMath::SRand() >= CharacterMovementCVars::NetForceClientServerMoveLossPercent);
+		static const auto CVarNetForceClientServerMoveLossPercent = IConsoleManager::Get().FindConsoleVariable(TEXT("p.NetForceClientServerMoveLossPercent"));
+		bSendServerMove = (CVarNetForceClientServerMoveLossPercent->GetFloat() == 0.f) || (FMath::SRand() >= CVarNetForceClientServerMoveLossPercent->GetFloat());
 #endif
 		if (bSendServerMove)
 		{

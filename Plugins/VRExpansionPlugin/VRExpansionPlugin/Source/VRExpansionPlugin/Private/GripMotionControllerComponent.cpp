@@ -50,7 +50,7 @@ namespace {
 } // anonymous namespace
 
 // #TODO: May need this locally here for 4.19
-FName UMotionControllerComponent::CustomModelSourceId(TEXT("Custom"));
+//FName UGripMotionControllerComponent::CustomModelSourceId(TEXT("Custom"));
 /*
 namespace LegacyMotionSources
 {
@@ -80,7 +80,8 @@ UGripMotionControllerComponent::UGripMotionControllerComponent(const FObjectInit
 	PrimaryComponentTick.bTickEvenWhenPaused = true;
 
 	PlayerIndex = 0;
-	Hand = EControllerHand::Left;
+	MotionSource = FXRMotionControllerBase::LeftHandSourceId;
+	//Hand = EControllerHand::Left;
 	bDisableLowLatencyUpdate = false;
 	bHasAuthority = false;
 	bUseWithoutTracking = false;
@@ -3753,10 +3754,6 @@ bool UGripMotionControllerComponent::GripPollControllerState(FVector& Position, 
 			CurrentTrackingStatus = MotionController->GetControllerTrackingStatus(PlayerIndex, MotionSource);
 			if (MotionController->GetControllerOrientationAndPosition(PlayerIndex, MotionSource, Orientation, Position, WorldToMetersScale))
 			{
-				InUseMotionController = MotionController;
-				OnMotionControllerUpdated();
-				InUseMotionController = nullptr;
-			
 				if (bOffsetByHMD)
 				{
 					if (IsInGameThread())
@@ -3779,39 +3776,11 @@ bool UGripMotionControllerComponent::GripPollControllerState(FVector& Position, 
 
 					Position -= LastLocationForLateUpdate;
 				}
+
+				InUseMotionController = MotionController;
+				OnMotionControllerUpdated();
+				InUseMotionController = nullptr;
 							
-				return true;
-			}
-
-			// If we've made it here, we need to see if there's a right hand controller that reports back the position
-			if (Hand == EControllerHand::AnyHand && MotionController->GetControllerOrientationAndPosition(PlayerIndex, EControllerHand::Right, Orientation, Position, WorldToMetersScale))
-			{
-				CurrentTrackingStatus = MotionController->GetControllerTrackingStatus(PlayerIndex, EControllerHand::Right);
-				
-				if (bOffsetByHMD)
-				{
-					if (IsInGameThread())
-					{
-						if (GEngine->XRSystem.IsValid() && GEngine->XRSystem->IsHeadTrackingAllowed())
-						{
-							FQuat curRot;
-							FVector curLoc;
-							if (GEngine->XRSystem->GetCurrentPose(IXRTrackingSystem::HMDDeviceId, curRot, curLoc))
-							{
-								curLoc.Z = 0;
-
-								LastLocationForLateUpdate = curLoc;
-							}
-							else
-							{
-								// Keep last location instead
-							}
-						}
-					}
-
-					Position -= LastLocationForLateUpdate;
-				}
-
 				return true;
 			}
 		}
@@ -3820,6 +3789,12 @@ bool UGripMotionControllerComponent::GripPollControllerState(FVector& Position, 
 }
 
 //=============================================================================
+UGripMotionControllerComponent::FGripViewExtension::FGripViewExtension(const FAutoRegister& AutoRegister, UGripMotionControllerComponent* InMotionControllerComponent)
+	: FSceneViewExtensionBase(AutoRegister)
+	, MotionControllerComponent(InMotionControllerComponent)
+{}
+
+
 void UGripMotionControllerComponent::FGripViewExtension::PreRenderViewFamily_RenderThread(FRHICommandListImmediate& RHICmdList, FSceneViewFamily& InViewFamily)
 {
 	FTransform OldTransform;
@@ -3874,11 +3849,6 @@ void UGripMotionControllerComponent::FGripViewExtension::PostRenderViewFamily_Re
 	}
 	LateUpdate.PostRender_RenderThread();
 }
-
-UGripMotionControllerComponent::FGripViewExtension::FGripViewExtension(const FAutoRegister& AutoRegister, UGripMotionControllerComponent* InMotionControllerComponent)
-	: FSceneViewExtensionBase(AutoRegister)
-	, MotionControllerComponent(InMotionControllerComponent)
-{}
 
 bool UGripMotionControllerComponent::FGripViewExtension::IsActiveThisFrame(class FViewport* InViewport) const
 {
