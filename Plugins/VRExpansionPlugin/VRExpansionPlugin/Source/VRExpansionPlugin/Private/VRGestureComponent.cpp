@@ -113,13 +113,14 @@ void UGesturesDatabase::FillSplineWithGesture(FVRGesture &Gesture, USplineCompon
 
 }
 
-void UVRGestureComponent::BeginRecording(bool bRunDetection, bool bDrawGesture, bool bDrawAsSpline, int SamplingHTZ, int SampleBufferSize, float ClampingTolerance)
+void UVRGestureComponent::BeginRecording(bool bRunDetection, bool bFlattenGesture, bool bDrawGesture, bool bDrawAsSpline, int SamplingHTZ, int SampleBufferSize, float ClampingTolerance)
 {
 	RecordingBufferSize = SampleBufferSize;
 	RecordingHTZ = SamplingHTZ;
 	RecordingClampingTolerance = ClampingTolerance;
 	bDrawRecordingGesture = bDrawGesture;
 	bDrawRecordingGestureAsSpline = bDrawAsSpline;
+	bRecordingFlattenGesture = bFlattenGesture;
 	GestureLog.GestureSize.Init();
 
 	// Reinit the drawing spline
@@ -165,6 +166,9 @@ void UVRGestureComponent::CaptureGestureFrame()
 {
 
 	FVector NewSample = OriginatingTransform.InverseTransformPosition(this->GetComponentLocation()) - StartVector;
+
+	if (bRecordingFlattenGesture)
+		NewSample.X = 0;
 
 	if (RecordingClampingTolerance > 0.0f)
 	{

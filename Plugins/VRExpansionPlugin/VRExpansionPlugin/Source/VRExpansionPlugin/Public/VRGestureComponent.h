@@ -415,6 +415,7 @@ public:
 	int RecordingBufferSize;
 
 	float RecordingClampingTolerance;
+	bool bRecordingFlattenGesture;
 	bool bDrawRecordingGesture;
 	bool bDrawRecordingGestureAsSpline;
 	bool bGestureChanged;
@@ -464,7 +465,7 @@ public:
 	float RecordingDelta;
 
 	UFUNCTION(BlueprintCallable, Category = "VRGestures")
-		void BeginRecording(bool bRunDetection, bool bDrawGesture = true, bool bDrawAsSpline = false, int SamplingHTZ = 30, int SampleBufferSize = 60, float ClampingTolerance = 0.01f);
+		void BeginRecording(bool bRunDetection, bool bFlattenGesture = true, bool bDrawGesture = true, bool bDrawAsSpline = false, int SamplingHTZ = 30, int SampleBufferSize = 60, float ClampingTolerance = 0.01f);
 
 	UFUNCTION(BlueprintCallable, Category = "VRGestures")
 	FVRGesture EndRecording()
