@@ -320,11 +320,8 @@ void UVRGestureComponent::TickComponent(float DeltaTime, enum ELevelTick TickTyp
 	{
 		if (!bDrawRecordingGestureAsSpline)
 		{
-			DrawDebugGesture(this, FTransform(StartVector) * OriginatingTransform, GestureLog, FColor::White);
-		}
-		else
-		{
-
+			FTransform DrawTransform = FTransform(StartVector) * OriginatingTransform;
+			DrawDebugGesture(this, DrawTransform, GestureLog, FColor::White);
 		}
 	}
 }
