@@ -149,6 +149,13 @@ EBPHMDDeviceType UVRExpansionFunctionLibrary::GetHMDType()
 	// Temp workaround for 4.18 which doesn't have the enum anymore and only deals in names
 	if (GEngine && GEngine->XRSystem.IsValid())
 	{
+		/*
+			if (GEngine && GEngine->XRSystem.IsValid())
+	{
+		Ar.Logf(*GEngine->XRSystem->GetVersionString());
+	}
+		*/
+
 		// #TODO 4.19: Figure out a way to replace this...its broken now
 		/*IHeadMountedDisplay* HMDDevice = GEngine->XRSystem->GetHMDDevice();
 		if (HMDDevice)
@@ -183,8 +190,8 @@ EBPHMDDeviceType UVRExpansionFunctionLibrary::GetHMDType()
 		//#TODO 4.19: had these commented in 4.18
 		if (DeviceName == FName("SimpleHMD"))
 			return EBPHMDDeviceType::DT_ES2GenericStereoMesh;
-		else if (DeviceName == FName(""))
-			return EBPHMDDeviceType::DT_GearVR;
+		//else if (DeviceName == FName("")) // This doesn't have an entry
+		//	return EBPHMDDeviceType::DT_GearVR;
 		else if (DeviceName == FName("PSVR"))
 			return EBPHMDDeviceType::DT_Morpheus;
 		else if (DeviceName == FName("OculusHMD"))
