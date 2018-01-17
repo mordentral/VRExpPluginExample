@@ -146,7 +146,6 @@ bool UVRExpansionFunctionLibrary::GetIsHMDConnected()
 
 EBPHMDDeviceType UVRExpansionFunctionLibrary::GetHMDType()
 {
-	// Temp workaround for 4.18 which doesn't have the enum anymore and only deals in names
 	if (GEngine && GEngine->XRSystem.IsValid())
 	{
 		/*
