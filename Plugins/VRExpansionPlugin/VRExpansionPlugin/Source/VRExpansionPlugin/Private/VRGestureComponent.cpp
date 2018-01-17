@@ -477,7 +477,7 @@ float UVRGestureComponent::dtw(FVRGesture seq1, FVRGesture seq2, bool bMirrorGes
 	return bestMatch;
 }
 
-void UVRGestureComponent::DrawDebugGesture(UObject* WorldContextObject, FTransform StartTransform, FVRGesture GestureToDraw, FColor const& Color, bool bPersistentLines, uint8 DepthPriority, float LifeTime, float Thickness)
+void UVRGestureComponent::DrawDebugGesture(UObject* WorldContextObject, FTransform &StartTransform, FVRGesture GestureToDraw, FColor const& Color, bool bPersistentLines, uint8 DepthPriority, float LifeTime, float Thickness)
 {
 #if ENABLE_DRAW_DEBUG
 
