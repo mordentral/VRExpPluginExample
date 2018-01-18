@@ -184,27 +184,27 @@ EBPHMDDeviceType UVRExpansionFunctionLibrary::GetHMDType()
 		static const FName OSVRSystemName(TEXT("OSVR"));
 		static const FName GoogleARCoreSystemName(TEXT("FGoogleARCoreHMD"));
 		static const FName AppleARKitSystemName(TEXT("AppleARKit"));
-		static const FName GoogleVRHMDSystemName(TEXT(FName("FGoogleVRHMD")));
+		static const FName GoogleVRHMDSystemName(TEXT("FGoogleVRHMD"));
 
 		FName DeviceName(NAME_None);
 		DeviceName = GEngine->XRSystem->GetSystemName();
 
 
-		if DeviceName == FName("SimpleHMD")) 
+		if (DeviceName == FName(TEXT("SimpleHMD")))
 			return EBPHMDDeviceType::DT_ES2GenericStereoMesh;
-		else if DeviceName == SteamVRSystemName)
+		else if (DeviceName == SteamVRSystemName)
 			return EBPHMDDeviceType::DT_SteamVR;
-		else if DeviceName == OculusSystemName)
+		else if (DeviceName == OculusSystemName)
 			return EBPHMDDeviceType::DT_OculusHMD;
-		else if DeviceName == PSVRSystemName)
+		else if (DeviceName == PSVRSystemName)
 			return EBPHMDDeviceType::DT_PSVR;
-		else if DeviceName == OSVRSystemName)
+		else if (DeviceName == OSVRSystemName)
 			return EBPHMDDeviceType::DT_SteamVR;
-		else if DeviceName == GoogleARCoreSystemName)
+		else if (DeviceName == GoogleARCoreSystemName)
 			return EBPHMDDeviceType::DT_GoogleARCore;
-		else if DeviceName == AppleARKitSystemName)
+		else if (DeviceName == AppleARKitSystemName)
 			return EBPHMDDeviceType::DT_AppleARKit;
-		else if DeviceName == GoogleVRHMDSystemName)
+		else if (DeviceName == GoogleVRHMDSystemName)
 			return EBPHMDDeviceType::DT_GoogleVR;
 	}
 
