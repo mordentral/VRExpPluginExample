@@ -70,7 +70,7 @@ class VREXPANSIONPLUGIN_API UParentRelativeAttachmentComponent : public USceneCo
 	{
 		FRotator FinalRot = FRotator::ZeroRotator;
 
-		if ((FPlatformMath::Abs(FRotator::ClampAxis(InverseRot.Yaw) - LastRot)) < YawTolerance)	// This is never true with the default value of 0.0f
+		if ((FPlatformMath::Abs(FRotator::/*ClampAxis*/NormalizeAxis(InverseRot.Yaw) - LastRot)) < YawTolerance)	// This is never true with the default value of 0.0f
 		{
 			if (!bWasSetOnce)
 			{
@@ -96,17 +96,17 @@ class VREXPANSIONPLUGIN_API UParentRelativeAttachmentComponent : public USceneCo
 			// If we are using a snap threshold
 			if (!FMath::IsNearlyZero(YawTolerance))
 			{
-				LerpTarget = FRotator::ClampAxis(InverseRot.Yaw);
+				LerpTarget = FRotator::/*ClampAxis*/NormalizeAxis(InverseRot.Yaw);
 				LastLerpVal = FMath::FixedTurn(LastRot, LerpTarget, LerpSpeed * DeltaTime);
 				//LastLerpVal = FMath::FInterpConstantTo(LastLerpVal, LerpTarget, DeltaTime, LerpSpeed);
 				FinalRot = FRotator(0, LastLerpVal, 0);
 			}
 			else // If we aren't then just directly set it to the correct rotation
 			{
-				FinalRot = FRotator(0, FRotator::ClampAxis(InverseRot.Yaw), 0);
+				FinalRot = FRotator(0, FRotator::/*ClampAxis*/NormalizeAxis(InverseRot.Yaw), 0);
 			}
 
-			LastRot = FRotator::ClampAxis(InverseRot.Yaw);
+			LastRot = FRotator::/*ClampAxis*/NormalizeAxis(InverseRot.Yaw);
 		}
 
 		return FinalRot.Quaternion();
