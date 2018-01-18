@@ -410,7 +410,7 @@ void UVRStereoWidgetComponent::UpdateRenderTarget(FIntPoint DesiredRenderTargetS
 }
 
 /** Represents a billboard sprite to the scene manager. */
-class FStereoWidget3DSceneProxy : public FPrimitiveSceneProxy
+class FStereoWidget3DSceneProxy final : public FPrimitiveSceneProxy
 {
 public:
 	SIZE_T GetTypeHash() const override
