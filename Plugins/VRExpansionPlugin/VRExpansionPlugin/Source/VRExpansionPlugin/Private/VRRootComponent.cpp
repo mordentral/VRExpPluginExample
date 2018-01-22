@@ -234,7 +234,7 @@ static bool ShouldIgnoreOverlapResult(const UWorld* World, const AActor* ThisAct
 }
 
 /** Represents a UVRRootComponent to the scene manager. */
-class FDrawCylinderSceneProxy final : public FPrimitiveSceneProxy
+class FDrawVRCylinderSceneProxy final : public FPrimitiveSceneProxy
 {
 public:
 	SIZE_T GetTypeHash() const override
@@ -243,11 +243,11 @@ public:
 		return reinterpret_cast<size_t>(&UniquePointer);
 	}
 
-	FDrawCylinderSceneProxy(const UVRRootComponent* InComponent)
+	FDrawVRCylinderSceneProxy(const UVRRootComponent* InComponent)
 		: FPrimitiveSceneProxy(InComponent)
 		, bDrawOnlyIfSelected(InComponent->bDrawOnlyIfSelected)
-		, CapsuleRadius(InComponent->CapsuleRadius)
-		, CapsuleHalfHeight(InComponent->CapsuleHalfHeight)
+		, CapsuleRadius(InComponent->GetScaledCapsuleRadius())
+		, CapsuleHalfHeight(InComponent->GetScaledCapsuleHalfHeight())
 		, ShapeColor(InComponent->ShapeColor)
 		, VRCapsuleOffset(InComponent->VRCapsuleOffset)
 		//, OffsetComponentToWorld(InComponent->OffsetComponentToWorld)
@@ -359,7 +359,7 @@ UVRRootComponent::UVRRootComponent(const FObjectInitializer& ObjectInitializer)
 
 FPrimitiveSceneProxy* UVRRootComponent::CreateSceneProxy()
 {
-	return new FDrawCylinderSceneProxy(this);
+	return new FDrawVRCylinderSceneProxy(this);
 }
 
 void UVRRootComponent::BeginPlay()
@@ -525,7 +525,7 @@ void UVRRootComponent::OnUpdateTransform(EUpdateTransformFlags UpdateTransformFl
 	{
 		ENQUEUE_UNIQUE_RENDER_COMMAND_THREEPARAMETER(
 			FDrawCylinderTransformUpdate,
-			FDrawCylinderSceneProxy*, CylinderSceneProxy, (FDrawCylinderSceneProxy*)SceneProxy,
+			FDrawVRCylinderSceneProxy*, CylinderSceneProxy, (FDrawVRCylinderSceneProxy*)SceneProxy,
 			FTransform, OffsetComponentToWorld, OffsetComponentToWorld, float, CapsuleHalfHeight, CapsuleHalfHeight,
 			{
 				CylinderSceneProxy->UpdateTransform_RenderThread(OffsetComponentToWorld, CapsuleHalfHeight);
