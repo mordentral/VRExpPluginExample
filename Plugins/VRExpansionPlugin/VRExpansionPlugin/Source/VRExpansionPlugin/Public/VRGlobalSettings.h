@@ -63,9 +63,31 @@ public:
 	UPROPERTY(config, EditAnywhere, Category = "Secondary Grip 1Euro Settings")
 	float OneEuroDeltaCutoff;
 
+	// Return an HMD profile
+	UFUNCTION(BlueprintPure, Category = "VRControllerProfiles")
+	static FBPVRControllerProfile GetControllerProfile(FName ControllerProfileName)
+	{
+		if (ControllerProfileName == NAME_None)
+			return FBPVRControllerProfile();
+
+		const UVRGlobalSettings& VRSettings = *GetDefault<UVRGlobalSettings>();
+
+		const FBPVRControllerProfile * FoundProfile = VRSettings.ControllerProfiles.FindByPredicate([ControllerProfileName](const FBPVRControllerProfile & ArrayItem)
+		{
+			return ArrayItem.ControllerName == ControllerProfileName;
+		});
+
+		if (FoundProfile)
+		{
+			return *FoundProfile;
+		}
+
+		return FBPVRControllerProfile();
+	}
+
 	// Adjust the transform of a socket for a particular controller model
 	UFUNCTION(BlueprintPure, Category = "VRControllerProfiles")
-	static FTransform AdjustRelativeTransformByControllerProfile(FName ControllerProfileName, const FTransform & SocketTransform)
+	static FTransform AdjustTransformByControllerProfile(FName ControllerProfileName, const FTransform & SocketTransform)
 	{
 		if (ControllerProfileName == NAME_None)
 			return SocketTransform;
