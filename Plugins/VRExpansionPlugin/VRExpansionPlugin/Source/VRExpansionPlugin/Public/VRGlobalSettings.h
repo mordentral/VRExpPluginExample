@@ -5,10 +5,10 @@
 #include "VRGlobalSettings.generated.h"
 
 
-namespace ControllerProfileStatics
+/*namespace ControllerProfileStatics
 {
 	static const FTransform OculusTouchStaticOffset(FRotator(-70.f, 0.f, 0.f));
-}
+}*/
 
 
 USTRUCT(BlueprintType, Category = "VRGlobalSettings")
@@ -21,13 +21,6 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input")
 	TArray<FInputAxisKeyMapping> AxisMappings;
 
-	/** Whether this axis should invert its outputs */
-	//uint8 bInverted : 1;
-
-	//FAxisKeyDetails()
-	//	: bInverted(false)
-	//{
-	//}
 };
 
 USTRUCT(BlueprintType, Category = "VRGlobalSettings")
@@ -39,36 +32,28 @@ public:
 	/** List of all axis key mappings that correspond to the axis name in the containing map */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input")
 		TArray<FInputActionKeyMapping> ActionMappings;
-
-	/** Whether this axis should invert its outputs */
-	//uint8 bInverted : 1;
-
-	//FAxisKeyDetails()
-	//	: bInverted(false)
-	//{
-	//}
 };
 
-USTRUCT(BlueprintType, Category = "VRGlobalSettings")
+USTRUCT(BlueprintType, Category = "ControllerProfiles")
 struct VREXPANSIONPLUGIN_API FBPVRControllerProfile
 {
 	GENERATED_BODY()
 public:
 
 	// Name of controller profile
-	UPROPERTY(EditAnywhere, Category = "ControllerProfiles")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ControllerProfiles")
 		FName ControllerName;
 
 	// Offset to use with this controller
-	UPROPERTY(EditAnywhere, Category = "ControllerProfiles")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ControllerProfiles")
 		FTransform SocketOffsetTransform;
 
-	// Setting an axis value here with key bindings will override the equivilant bindings on profile load
-	UPROPERTY(EditAnywhere, Category = "ControllerProfiles")
+	// Setting an axis value here with key bindings will override the equivalent bindings on profile load
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ControllerProfiles")
 	TMap<FName, FAxisMappingDetails> AxisOverrides;
 
-	// Setting action mappings here will override the equivilant bindings on profile load
-	UPROPERTY(EditAnywhere, Category = "ControllerProfiles")
+	// Setting action mappings here will override the equivalent bindings on profile load
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ControllerProfiles")
 	TMap<FName, FActionMappingDetails> ActionOverrides;
 
 
@@ -96,10 +81,11 @@ class VREXPANSIONPLUGIN_API UVRGlobalSettings : public UObject
 
 public:
 
-	// Controller profiles to store related information on a per model basis
+	// Controller profiles to store related information on a per profile basis
 	UPROPERTY(config, EditAnywhere, Category = "ControllerProfiles")
 	TArray<FBPVRControllerProfile> ControllerProfiles;
 
+	// Store these to save some processing when getting the transform after a profile is loaded
 	FName CurrentControllerProfileInUse;
 	FTransform CurrentControllerProfileTransform;
 
@@ -124,6 +110,7 @@ public:
 	}
 
 	// Adjust the transform of a socket for a particular controller model, if a name is not sent in, it will use the currently loaded one
+	// If there is no currently loaded one, it will return the input transform as is.
 	UFUNCTION(BlueprintPure, Category = "VRControllerProfiles")
 	static FTransform AdjustTransformByControllerProfile(FName OptionalControllerProfileName, const FTransform & SocketTransform)
 	{
@@ -156,6 +143,7 @@ public:
 		return SocketTransform;
 	}
 
+	// Get array of controller profiles
 	UFUNCTION(BlueprintPure, Category = "VRControllerProfiles")
 		static TArray<FBPVRControllerProfile> GetControllerProfiles()
 	{
@@ -164,6 +152,7 @@ public:
 		return VRSettings.ControllerProfiles;
 	}
 
+	// Get name of currently loaded profile (if one is loaded)
 	UFUNCTION(BlueprintCallable, Category = "VRControllerProfiles")
 		static FName GetCurrentProfile()
 	{
@@ -172,6 +161,7 @@ public:
 		return VRSettings.CurrentControllerProfileInUse;
 	}
 
+	// Get a controller profile by name
 	UFUNCTION(BlueprintCallable, Category = "VRControllerProfiles")
 		static bool GetControllerProfile(FName ControllerProfileName, FBPVRControllerProfile & OutProfile)
 	{
@@ -191,6 +181,11 @@ public:
 		return false;
 	}
 
+	// Load a controller profile by name
+	// Action / Axis mappings overwrite ones with the same action/axis name in the input settings.
+	// If you have an action/axis override but don't assign buttons to it then it will just delete it.
+	// This can be useful for removing actions and using multiple actions (IE: Grip Touch, Grip Vive actions)
+	// For when just changing the buttons isn't good enough
 	UFUNCTION(BlueprintCallable, Category = "VRControllerProfiles")
 	static bool LoadControllerProfileByName(FName ControllerProfileName)
 	{
@@ -209,7 +204,12 @@ public:
 		return false;
 	}
 
-	UFUNCTION(BlueprintPure, Category = "VRControllerProfiles")
+	// Load a controller profile
+	// Action / Axis mappings overwrite ones with the same action/axis name in the input settings.
+	// If you have an action/axis override but don't assign buttons to it then it will just delete it.
+	// This can be useful for removing actions and using multiple actions (IE: Grip Touch, Grip Vive actions)
+	// For when just changing the buttons isn't good enough
+	UFUNCTION(BlueprintCallable, Category = "VRControllerProfiles")
 		static bool LoadControllerProfile(const FBPVRControllerProfile & ControllerProfile)
 	{
 		if (ControllerProfile.ActionOverrides.Num() == 0 && ControllerProfile.AxisOverrides.Num() == 0)
@@ -294,12 +294,14 @@ public:
 	virtual void PostInitProperties() override
 	{
 #if WITH_EDITOR
-		if (ControllerProfiles.Num() == 0)
+		// Not doing this currently, loading defaults is cool, and I may go back to it later when i get
+		// controller offsets for vive/touch/MR vs each other.
+		/*if (ControllerProfiles.Num() == 0)
 		{
 			ControllerProfiles.Add(FBPVRControllerProfile(TEXT("Vive_Wands")));
 			ControllerProfiles.Add(FBPVRControllerProfile(TEXT("Oculus_Touch"), ControllerProfileStatics::OculusTouchStaticOffset));
 			this->SaveConfig(CPF_Config, *this->GetDefaultConfigFilename());
-		}
+		}*/
 #endif
 		Super::PostInitProperties();
 	}
