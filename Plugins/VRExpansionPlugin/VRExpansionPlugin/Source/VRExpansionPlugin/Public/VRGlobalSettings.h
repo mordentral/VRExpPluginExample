@@ -101,14 +101,6 @@ public:
 	UPROPERTY(config, EditAnywhere, Category = "Secondary Grip 1Euro Settings")
 	float OneEuroDeltaCutoff;
 
-
-	UVRGlobalSettings() :
-		CurrentControllerProfileInUse(NAME_None),
-		CurrentControllerProfileTransform(FTransform::Identity)
-	{
-
-	}
-
 	// Adjust the transform of a socket for a particular controller model, if a name is not sent in, it will use the currently loaded one
 	// If there is no currently loaded one, it will return the input transform as is.
 	UFUNCTION(BlueprintPure, Category = "VRControllerProfiles")
