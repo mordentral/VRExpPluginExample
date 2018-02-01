@@ -39,6 +39,20 @@ static FName SteamVRSystemName(TEXT("SteamVR"));
 //General Advanced Sessions Log
 DECLARE_LOG_CATEGORY_EXTERN(OpenVRExpansionFunctionLibraryLog, Log, All);
 
+
+UENUM()
+enum class EBPOpenVRTrackedDeviceClass : uint8
+{
+	// #TODO: Keep up to date
+	//enum ETrackedDeviceClass - copied from valves enum
+TrackedDeviceClass_Invalid = 0,				// the ID was not valid.
+TrackedDeviceClass_HMD = 1,					// Head-Mounted Displays
+TrackedDeviceClass_Controller = 2,			// Tracked controllers
+TrackedDeviceClass_GenericTracker = 3,		// Generic trackers, similar to controllers
+TrackedDeviceClass_TrackingReference = 4,	// Camera and base stations that serve as tracking reference points
+TrackedDeviceClass_DisplayRedirect = 5,		// Accessories that aren't necessarily tracked themselves, but may redirect video output from other tracked devices
+};
+
 // This makes a lot of the blueprint functions cleaner
 UENUM()
 enum class EBPVRDeviceIndex : uint8
@@ -69,11 +83,6 @@ enum class EBPVRDeviceIndex : uint8
 	SecondTracking_Reference = 2,
 	FirstController = 3,
 	SecondController = 4,
-
-	//FirstController = 1,
-	//SecondController = 2,
-	//FirstTracking_Reference = 3,
-	//SecondTracking_Reference = 4,
 	TrackedDevice1 = 5,
 	TrackedDevice2 = 6,
 	TrackedDevice3 = 7,
@@ -84,6 +93,7 @@ enum class EBPVRDeviceIndex : uint8
 	TrackedDevice8 = 12,
 	TrackedDevice9 = 13,
 	TrackedDevice10 = 14,
+	TrackedDevice11 = 15,
 	None = 255
 };
 
@@ -470,9 +480,21 @@ public:
 
 #endif
 
-	// Checks if a specific OpenVR device is connected
+	// Checks if a specific OpenVR device is connected, index names are assumed, they may not be exact
 	UFUNCTION(BlueprintPure, Category = "VRExpansionFunctions|SteamVR", meta = (bIgnoreSelf = "true"))
 	static bool IsOpenVRDeviceConnected(EBPVRDeviceIndex OpenVRDeviceIndex);
+
+	// Get what type a specific openVR device index is
+	UFUNCTION(BlueprintPure, Category = "VRExpansionFunctions|SteamVR", meta = (bIgnoreSelf = "true"))
+	static EBPOpenVRTrackedDeviceClass GetOpenVRDeviceType(EBPVRDeviceIndex OpenVRDeviceIndex);
+
+	// Get a list of all currently tracked devices and their types, index in the array is their device index
+	UFUNCTION(BlueprintCallable, Category = "VRExpansionFunctions|SteamVR", meta = (bIgnoreSelf = "true"))
+	static void GetOpenVRDevices(TArray<EBPOpenVRTrackedDeviceClass> &FoundDevices);
+
+	// Get a list of all currently tracked devices of a specific type
+	UFUNCTION(BlueprintCallable, Category = "VRExpansionFunctions|SteamVR", meta = (bIgnoreSelf = "true"))
+	static void GetOpenVRDevicesByType(EBPOpenVRTrackedDeviceClass TypeToRetreive, TArray<uint8> &FoundIndexs);
 
 	// Gets the model / texture of a SteamVR Device, can use to fill procedural mesh components or just get the texture of them to apply to a pre-made model.
 	UFUNCTION(BlueprintCallable, Category = "VRExpansionFunctions|SteamVR", meta = (bIgnoreSelf = "true", WorldContext = "WorldContextObject", DisplayName = "GetVRDeviceModelAndTexture", ExpandEnumAsExecs = "Result"))
