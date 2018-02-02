@@ -462,11 +462,11 @@ public:
 
 	// Checks if a specific OpenVR device is connected, index names are assumed, they may not be exact
 	UFUNCTION(BlueprintPure, Category = "VRExpansionFunctions|SteamVR", meta = (bIgnoreSelf = "true"))
-	static bool IsOpenVRDeviceConnected(uint8 DeviceIndex);
+	static bool IsOpenVRDeviceConnected(int32 DeviceIndex);
 
 	// Get what type a specific openVR device index is
 	UFUNCTION(BlueprintPure, Category = "VRExpansionFunctions|SteamVR", meta = (bIgnoreSelf = "true"))
-	static EBPOpenVRTrackedDeviceClass GetOpenVRDeviceType(uint8 DeviceIndex);
+	static EBPOpenVRTrackedDeviceClass GetOpenVRDeviceType(int32 DeviceIndex);
 
 	// Get a list of all currently tracked devices and their types, index in the array is their device index
 	UFUNCTION(BlueprintCallable, Category = "VRExpansionFunctions|SteamVR", meta = (bIgnoreSelf = "true"))
@@ -474,7 +474,7 @@ public:
 
 	// Get a list of all currently tracked devices of a specific type
 	UFUNCTION(BlueprintCallable, Category = "VRExpansionFunctions|SteamVR", meta = (bIgnoreSelf = "true"))
-	static void GetOpenVRDevicesByType(EBPOpenVRTrackedDeviceClass TypeToRetreive, TArray<uint8> &FoundIndexs);
+	static void GetOpenVRDevicesByType(EBPOpenVRTrackedDeviceClass TypeToRetreive, TArray<int32> &FoundIndexs);
 
 	// Gets the model / texture of a SteamVR Device, can use to fill procedural mesh components or just get the texture of them to apply to a pre-made model.
 	UFUNCTION(BlueprintCallable, Category = "VRExpansionFunctions|SteamVR", meta = (bIgnoreSelf = "true", WorldContext = "WorldContextObject", DisplayName = "GetVRDeviceModelAndTexture", ExpandEnumAsExecs = "Result", AdvancedDisplay = "OverrideDeviceID"))

@@ -606,13 +606,13 @@ void UOpenVRExpansionFunctionLibrary::GetVRDevicePropertyMatrix34AsTransform(EVR
 }
 
 
-EBPOpenVRTrackedDeviceClass UOpenVRExpansionFunctionLibrary::GetOpenVRDeviceType(uint8 OpenVRDeviceIndex)
+EBPOpenVRTrackedDeviceClass UOpenVRExpansionFunctionLibrary::GetOpenVRDeviceType(int32 OpenVRDeviceIndex)
 {
 #if !STEAMVR_SUPPORTED_PLATFORM
 	return EBPOpenVRTrackedDeviceClass::TrackedDeviceClass_Invalid;
 #else
 
-	if ((uint32_t)OpenVRDeviceIndex > (vr::k_unMaxTrackedDeviceCount - 1))
+	if (OpenVRDeviceIndex < 0 || OpenVRDeviceIndex > (vr::k_unMaxTrackedDeviceCount - 1))
 		return EBPOpenVRTrackedDeviceClass::TrackedDeviceClass_Invalid;
 
 	vr::HmdError HmdErr;
@@ -625,7 +625,7 @@ EBPOpenVRTrackedDeviceClass UOpenVRExpansionFunctionLibrary::GetOpenVRDeviceType
 		return EBPOpenVRTrackedDeviceClass::TrackedDeviceClass_Invalid;
 	}
 
-	return (EBPOpenVRTrackedDeviceClass)VRSystem->GetTrackedDeviceClass((uint32_t)OpenVRDeviceIndex);
+	return (EBPOpenVRTrackedDeviceClass)VRSystem->GetTrackedDeviceClass(OpenVRDeviceIndex);
 #endif
 }
 
@@ -655,7 +655,7 @@ void UOpenVRExpansionFunctionLibrary::GetOpenVRDevices(TArray<EBPOpenVRTrackedDe
 #endif
 }
 
-void UOpenVRExpansionFunctionLibrary::GetOpenVRDevicesByType(EBPOpenVRTrackedDeviceClass TypeToRetreive, TArray<uint8> &FoundIndexs)
+void UOpenVRExpansionFunctionLibrary::GetOpenVRDevicesByType(EBPOpenVRTrackedDeviceClass TypeToRetreive, TArray<int32> &FoundIndexs)
 {
 #if !STEAMVR_SUPPORTED_PLATFORM
 #else
@@ -678,7 +678,7 @@ void UOpenVRExpansionFunctionLibrary::GetOpenVRDevicesByType(EBPOpenVRTrackedDev
 #endif
 }
 
-bool UOpenVRExpansionFunctionLibrary::IsOpenVRDeviceConnected(uint8 OpenVRDeviceIndex)
+bool UOpenVRExpansionFunctionLibrary::IsOpenVRDeviceConnected(int32 OpenVRDeviceIndex)
 {
 #if !STEAMVR_SUPPORTED_PLATFORM
 	return false;
@@ -694,7 +694,7 @@ bool UOpenVRExpansionFunctionLibrary::IsOpenVRDeviceConnected(uint8 OpenVRDevice
 		return false;
 	}
 
-	return VRSystem->IsTrackedDeviceConnected((uint32_t)OpenVRDeviceIndex);
+	return VRSystem->IsTrackedDeviceConnected(OpenVRDeviceIndex);
 
 #endif
 }
@@ -733,11 +733,11 @@ UTexture2D * UOpenVRExpansionFunctionLibrary::GetVRDeviceModelAndTexture(UObject
 		return nullptr;
 	}
 
-	uint32 DeviceID = 0;
-	if (OverrideDeviceID != 255)
+	int32 DeviceID = 0;
+	if (OverrideDeviceID != -1)
 	{
 		DeviceID = (uint32)OverrideDeviceID;
-		if ((uint32_t)OverrideDeviceID > (vr::k_unMaxTrackedDeviceCount - 1) || VRSystem->GetTrackedDeviceClass(DeviceID) == vr::k_unTrackedDeviceIndexInvalid)
+		if (OverrideDeviceID > (vr::k_unMaxTrackedDeviceCount - 1) || VRSystem->GetTrackedDeviceClass(DeviceID) == vr::k_unTrackedDeviceIndexInvalid)
 		{
 			UE_LOG(OpenVRExpansionFunctionLibraryLog, Warning, TEXT("Override Tracked Device Was Missing!!"));
 			Result = EAsyncBlueprintResultSwitch::OnFailure;
@@ -746,7 +746,7 @@ UTexture2D * UOpenVRExpansionFunctionLibrary::GetVRDeviceModelAndTexture(UObject
 	}
 	else
 	{
-		TArray<uint8> FoundIDs;
+		TArray<int32> FoundIDs;
 		UOpenVRExpansionFunctionLibrary::GetOpenVRDevicesByType(DeviceType, FoundIDs);
 
 		if (FoundIDs.Num() == 0)
