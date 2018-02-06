@@ -17,6 +17,8 @@
 
 #define LOCTEXT_NAMESPACE "VRRootComponent"
 
+DECLARE_CYCLE_STAT(TEXT("UpdateOverlapsExtendedVR"), STAT_UpdateOverlapsExtendedVR, STATGROUP_VRRootComponent);
+
 typedef TArray<FOverlapInfo, TInlineAllocator<3>> TInlineOverlapInfoArray;
 
 FORCEINLINE_DEBUGGABLE static bool CanComponentsGenerateOverlap(const UPrimitiveComponent* MyComponent, /*const*/ UPrimitiveComponent* OtherComp)
@@ -921,18 +923,23 @@ void UVRRootComponent::UpdateOverlaps(const TArray<FOverlapInfo>* NewPendingOver
 				}
 			}
 
-			// TODO: Filter this better so it runs even less often?
-			// Its not that bad currently running off of NewPendingOverlaps
-			// It forces checking for end location overlaps again if none are registered, just in case
-			// the capsule isn't setting things correctly.
 			const TArray<FOverlapInfo>* OverlapsAtEndLocationPtr;
-			TArray<FOverlapInfo> OverlapsAtEnd;
-			if ((!OverlapsAtEndLocation || OverlapsAtEndLocation->Num() < 1) && NewPendingOverlaps && NewPendingOverlaps->Num() > 0)
-			{
-				OverlapsAtEndLocationPtr = ConvertSweptOverlapsToCurrentOverlaps(OverlapsAtEnd, *NewPendingOverlaps, 0, OffsetComponentToWorld.GetLocation(), GetComponentQuat());
+
+			{ // In a scope for my cycle counter
+
+				SCOPE_CYCLE_COUNTER(STAT_UpdateOverlapsExtendedVR);
+				// TODO: Filter this better so it runs even less often?
+				// Its not that bad currently running off of NewPendingOverlaps
+				// It forces checking for end location overlaps again if none are registered, just in case
+				// the capsule isn't setting things correctly.
+				TArray<FOverlapInfo> OverlapsAtEnd;
+				if ((!OverlapsAtEndLocation || OverlapsAtEndLocation->Num() < 1) && NewPendingOverlaps && NewPendingOverlaps->Num() > 0)
+				{
+					OverlapsAtEndLocationPtr = ConvertSweptOverlapsToCurrentOverlaps(OverlapsAtEnd, *NewPendingOverlaps, 0, OffsetComponentToWorld.GetLocation(), GetComponentQuat());
+				}
+				else
+					OverlapsAtEndLocationPtr = OverlapsAtEndLocation;
 			}
-			else
-				OverlapsAtEndLocationPtr = OverlapsAtEndLocation;
 
 			// now generate full list of new touches, so we can compare to existing list and
 			// determine what changed
