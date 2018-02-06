@@ -697,7 +697,7 @@ public:
 	}
 
 	// Gets if the given Component is a secondary attach point to a gripped actor
-	UFUNCTION(BlueprintPure, Category = "VRGrip")
+	UFUNCTION(BlueprintCallable, Category = "VRGrip")
 	bool GetIsSecondaryAttachment(const USceneComponent * ComponentToCheck, FBPActorGripInformation & Grip)
 	{
 		if (!ComponentToCheck)
