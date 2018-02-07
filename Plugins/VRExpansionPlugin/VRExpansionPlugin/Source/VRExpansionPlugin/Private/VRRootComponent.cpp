@@ -17,8 +17,6 @@
 
 #define LOCTEXT_NAMESPACE "VRRootComponent"
 
-DECLARE_CYCLE_STAT(TEXT("UpdateOverlapsExtendedVR"), STAT_UpdateOverlapsExtendedVR, STATGROUP_VRRootComponent);
-
 typedef TArray<FOverlapInfo, TInlineAllocator<3>> TInlineOverlapInfoArray;
 
 FORCEINLINE_DEBUGGABLE static bool CanComponentsGenerateOverlap(const UPrimitiveComponent* MyComponent, /*const*/ UPrimitiveComponent* OtherComp)
@@ -616,11 +614,12 @@ void UVRRootComponent::PostEditChangeProperty(FPropertyChangedEvent& PropertyCha
 // This overrides the movement logic to use the offset location instead of the default location for sweeps.
 bool UVRRootComponent::MoveComponentImpl(const FVector& Delta, const FQuat& NewRotationQuat, bool bSweep, FHitResult* OutHit, EMoveComponentFlags MoveFlags, ETeleportType Teleport)
 {
+	// static things can move before they are registered (e.g. immediately after streaming), but not after.
 	if (IsPendingKill() || (this->Mobility == EComponentMobility::Static && IsRegistered()))//|| CheckStaticMobilityAndWarn(PrimitiveComponentStatics::MobilityWarnText))
 	{
 		if (OutHit)
 		{
-			*OutHit = FHitResult();
+			OutHit->Init();
 		}
 		return false;
 	}
@@ -628,14 +627,15 @@ bool UVRRootComponent::MoveComponentImpl(const FVector& Delta, const FQuat& NewR
 	ConditionalUpdateComponentToWorld();
 
 	// Init HitResult
-	FHitResult BlockingHit(1.f);
-	/*const*/ FVector TraceStart = OffsetComponentToWorld.GetLocation();// .GetLocation();//GetComponentLocation();
-	/*const*/ FVector TraceEnd = TraceStart + Delta;
-	BlockingHit.TraceStart = TraceStart;
-	BlockingHit.TraceEnd = TraceEnd;
+	//FHitResult BlockingHit(1.f);
+	const FVector TraceStart = OffsetComponentToWorld.GetLocation();// .GetLocation();//GetComponentLocation();
+	const FVector TraceEnd = TraceStart + Delta;
+	//BlockingHit.TraceStart = TraceStart;
+	//BlockingHit.TraceEnd = TraceEnd;
+	float DeltaSizeSq = (TraceEnd - TraceStart).SizeSquared();				// Recalc here to account for precision loss of float addition
 
 	// Set up.
-	float DeltaSizeSq = Delta.SizeSquared();
+//	float DeltaSizeSq = Delta.SizeSquared();
 	const FQuat InitialRotationQuat = GetComponentTransform().GetRotation();//ComponentToWorld.GetRotation();
 
 	// ComponentSweepMulti does nothing if moving < KINDA_SMALL_NUMBER in distance, so it's important to not try to sweep distances smaller than that. 
@@ -648,27 +648,31 @@ bool UVRRootComponent::MoveComponentImpl(const FVector& Delta, const FQuat& NewR
 			// copy to optional output param
 			if (OutHit)
 			{
-				*OutHit = BlockingHit;
+				OutHit->Init(TraceStart, TraceEnd);
 			}
 			return true;
 		}
 		DeltaSizeSq = 0.f;
 	}
 
-
-
 	const bool bSkipPhysicsMove = ((MoveFlags & MOVECOMP_SkipPhysicsMove) != MOVECOMP_NoFlags);
 
+	// WARNING: HitResult is only partially initialized in some paths. All data is valid only if bFilledHitResult is true.
+	FHitResult BlockingHit(NoInit);
+	BlockingHit.bBlockingHit = false;
+	BlockingHit.Time = 1.f;
+	bool bFilledHitResult = false;
 	bool bMoved = false;
 	bool bIncludesOverlapsAtEnd = false;
 	bool bRotationOnly = false;
 	TArray<FOverlapInfo> PendingOverlaps;
 	AActor* const Actor = GetOwner();
+	FVector OrigLocation = GetComponentLocation();
 
 	if (!bSweep)
 	{
 		// not sweeping, just go directly to the new transform
-		bMoved = InternalSetWorldLocationAndRotation(/*TraceEnd*/GetComponentLocation() + Delta, NewRotationQuat, bSkipPhysicsMove, Teleport);
+		bMoved = InternalSetWorldLocationAndRotation(/*TraceEnd*/OrigLocation + Delta, NewRotationQuat, bSkipPhysicsMove, Teleport);
 		GenerateOffsetToWorld();
 		bRotationOnly = (DeltaSizeSq == 0);
 		bIncludesOverlapsAtEnd = bRotationOnly && (AreSymmetricRotations(InitialRotationQuat, NewRotationQuat, GetComponentScale())) && IsCollisionEnabled();
@@ -676,24 +680,24 @@ bool UVRRootComponent::MoveComponentImpl(const FVector& Delta, const FQuat& NewR
 	else
 	{
 		TArray<FHitResult> Hits;
-		FVector NewLocation = GetComponentLocation();//TraceStart;
+		FVector NewLocation = OrigLocation;//TraceStart;
 		// Perform movement collision checking if needed for this actor.
-		const bool bCollisionEnabled = IsCollisionEnabled();
+		const bool bCollisionEnabled = IsQueryCollisionEnabled();
 		if (bCollisionEnabled && (DeltaSizeSq > 0.f))
 		{
-/*#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
 			if (!IsRegistered())
 			{
 				if (Actor)
 				{
-					//	UE_LOG(LogPrimitiveComponent, Fatal, TEXT("%s MovedComponent %s not initialized deleteme %d"), *Actor->GetName(), *GetName(), Actor->IsPendingKill());
+					ensureMsgf(IsRegistered(), TEXT("%s MovedComponent %s not initialized deleteme %d"),*Actor->GetName(), *GetName(), Actor->IsPendingKill());
 				}
 				else
-				{
-					//	UE_LOG(LogPrimitiveComponent, Fatal, TEXT("MovedComponent %s not initialized"), *GetFullName());
+				{ //-V523
+					ensureMsgf(IsRegistered(), TEXT("MovedComponent %s not initialized"), *GetFullName());
 				}
 			}
-#endif*/
+#endif
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST) && PERF_MOVECOMPONENT_STATS
 			MoveTimer.bDidLineCheck = true;
 #endif 
@@ -718,7 +722,7 @@ bool UVRRootComponent::MoveComponentImpl(const FVector& Delta, const FQuat& NewR
 
 			// If we had a valid blocking hit, store it.
 			// If we are looking for overlaps, store those as well.
-			uint32 FirstNonInitialOverlapIdx = INDEX_NONE;
+			int32 FirstNonInitialOverlapIdx = INDEX_NONE;
 			if (bHadBlockingHit || (bGenerateOverlapEvents || bForceGatherOverlaps))
 			{
 				int32 BlockingHitIndex = INDEX_NONE;
@@ -780,6 +784,7 @@ bool UVRRootComponent::MoveComponentImpl(const FVector& Delta, const FQuat& NewR
 				if (BlockingHitIndex >= 0)
 				{
 					BlockingHit = Hits[BlockingHitIndex];
+					bFilledHitResult = true;
 				}
 			}
 
@@ -790,20 +795,22 @@ bool UVRRootComponent::MoveComponentImpl(const FVector& Delta, const FQuat& NewR
 			}
 			else
 			{
+				check(bFilledHitResult);
 				NewLocation += (BlockingHit.Time * (TraceEnd - TraceStart));
 
 				// Sanity check
-				const FVector ToNewLocation = (NewLocation - GetComponentLocation()/*TraceStart*/);
+				const FVector ToNewLocation = (NewLocation - OrigLocation/*TraceStart*/);
 				if (ToNewLocation.SizeSquared() <= MinMovementDistSq)
 				{
 					// We don't want really small movements to put us on or inside a surface.
-					NewLocation = GetComponentLocation();//TraceStart;
+					NewLocation = OrigLocation;//TraceStart;
 					BlockingHit.Time = 0.f;
 
 					// Remove any pending overlaps after this point, we are not going as far as we swept.
 					if (FirstNonInitialOverlapIdx != INDEX_NONE)
 					{
-						PendingOverlaps.SetNum(FirstNonInitialOverlapIdx);
+						const bool bAllowShrinking = false;
+						PendingOverlaps.SetNum(FirstNonInitialOverlapIdx, bAllowShrinking);
 					}
 				}
 			}
@@ -868,8 +875,10 @@ bool UVRRootComponent::MoveComponentImpl(const FVector& Delta, const FQuat& NewR
 	}
 
 	// Handle blocking hit notifications. Avoid if pending kill (which could happen after overlaps).
-	if (BlockingHit.bBlockingHit && !IsPendingKill())
+	const bool bAllowHitDispatch = !BlockingHit.bStartPenetrating || !(MoveFlags & MOVECOMP_DisableBlockingOverlapDispatch);
+	if (BlockingHit.bBlockingHit && bAllowHitDispatch && !IsPendingKill())
 	{
+		check(bFilledHitResult);
 		if (IsDeferringMovementUpdates())
 		{
 			FScopedMovementUpdate* ScopedUpdate = GetCurrentScopedMovement();
@@ -884,7 +893,14 @@ bool UVRRootComponent::MoveComponentImpl(const FVector& Delta, const FQuat& NewR
 	// copy to optional output param
 	if (OutHit)
 	{
-		*OutHit = BlockingHit;
+		if (bFilledHitResult)
+		{
+			*OutHit = BlockingHit;
+		}
+		else
+		{
+			OutHit->Init(TraceStart, TraceEnd);
+		}
 	}
 
 	// Return whether we moved at all.
@@ -925,21 +941,17 @@ void UVRRootComponent::UpdateOverlaps(const TArray<FOverlapInfo>* NewPendingOver
 
 			const TArray<FOverlapInfo>* OverlapsAtEndLocationPtr;
 
-			{ // In a scope for my cycle counter
-
-				SCOPE_CYCLE_COUNTER(STAT_UpdateOverlapsExtendedVR);
-				// TODO: Filter this better so it runs even less often?
-				// Its not that bad currently running off of NewPendingOverlaps
-				// It forces checking for end location overlaps again if none are registered, just in case
-				// the capsule isn't setting things correctly.
-				TArray<FOverlapInfo> OverlapsAtEnd;
-				if ((!OverlapsAtEndLocation || OverlapsAtEndLocation->Num() < 1) && NewPendingOverlaps && NewPendingOverlaps->Num() > 0)
-				{
-					OverlapsAtEndLocationPtr = ConvertSweptOverlapsToCurrentOverlaps(OverlapsAtEnd, *NewPendingOverlaps, 0, OffsetComponentToWorld.GetLocation(), GetComponentQuat());
-				}
-				else
-					OverlapsAtEndLocationPtr = OverlapsAtEndLocation;
+			// TODO: Filter this better so it runs even less often?
+			// Its not that bad currently running off of NewPendingOverlaps
+			// It forces checking for end location overlaps again if none are registered, just in case
+			// the capsule isn't setting things correctly.
+			TArray<FOverlapInfo> OverlapsAtEnd;
+			if ((!OverlapsAtEndLocation || OverlapsAtEndLocation->Num() < 1) && NewPendingOverlaps && NewPendingOverlaps->Num() > 0)
+			{
+				OverlapsAtEndLocationPtr = ConvertSweptOverlapsToCurrentOverlaps(OverlapsAtEnd, *NewPendingOverlaps, 0, OffsetComponentToWorld.GetLocation(), GetComponentQuat());
 			}
+			else
+				OverlapsAtEndLocationPtr = OverlapsAtEndLocation;
 
 			// now generate full list of new touches, so we can compare to existing list and
 			// determine what changed
