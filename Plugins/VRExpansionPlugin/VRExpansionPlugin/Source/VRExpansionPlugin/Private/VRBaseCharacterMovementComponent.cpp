@@ -90,6 +90,17 @@ void UVRBaseCharacterMovementComponent::TickComponent(float DeltaTime, enum ELev
 	}
 	else
 		Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+
+
+	// This should be valid for both Simulated and owning clients as well as the server
+	// Better here than in perform movement
+	if (UVRRootComponent * VRRoot = Cast<UVRRootComponent>(CharacterOwner->GetCapsuleComponent()))
+	{
+		// If we didn't move the capsule, have it update itself here so the visual and physics representation is correct
+		// We do this specifically to avoid double calling into the render / physics threads.
+		if (!VRRoot->bCalledUpdateTransform)
+			VRRoot->OnUpdateTransform_Public(EUpdateTransformFlags::None, ETeleportType::None);
+	}
 }
 
 void UVRBaseCharacterMovementComponent::StartPushBackNotification(FHitResult HitResult)
