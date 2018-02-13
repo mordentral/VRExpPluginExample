@@ -5,7 +5,6 @@
 #include "VRBPDatatypes.h"
 #include "VRBaseCharacterMovementComponent.generated.h"
 
-
 /** Shared pointer for easy memory management of FSavedMove_Character, for accumulating and replaying network moves. */
 //typedef TSharedPtr<class FSavedMove_Character> FSavedMovePtr;
 
@@ -411,6 +410,18 @@ public:
 	virtual void PostUpdate(ACharacter* C, EPostUpdateMode PostUpdateMode) override;
 };
 
+// Using this fixes the problem where the character capsule isn't reset after a scoped movement update revert (pretty much just in StepUp operations)
+class VREXPANSIONPLUGIN_API FVRCharacterScopedMovementUpdate : public FScopedMovementUpdate
+{
+public:
+
+	FVRCharacterScopedMovementUpdate(USceneComponent* Component, EScopedUpdate::Type ScopeBehavior = EScopedUpdate::DeferredUpdates, bool bRequireOverlapsEventFlagToQueueOverlaps = true);
+
+	FTransform InitialVRTransform;
+
+	/** Revert movement to the initial location of the Component at the start of the scoped update. Also clears pending overlaps and sets bHasMoved to false. */
+	void RevertMove();
+};
 
 UCLASS()
 class VREXPANSIONPLUGIN_API UVRBaseCharacterMovementComponent : public UCharacterMovementComponent
@@ -553,6 +564,11 @@ public:
 	// Make sure that you set simulating objects to the physics body channel if you want this to work correctly
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRMovement")
 		bool bIgnoreSimulatingComponentsInFloorCheck;
+
+	// If true will run the control rotation in the CMC instead of in the player controller
+	// This puts the player rotation into the scoped movement (perf savings) and also ensures it is properly rotated prior to movement
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRMovement")
+		bool bRunControlRotationInMovementComponent;
 
 	// Moved into compute floor dist
 	// Option to Skip simulating components when looking for floor

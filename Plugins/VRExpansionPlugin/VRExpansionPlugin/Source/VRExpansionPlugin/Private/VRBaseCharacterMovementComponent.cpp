@@ -8,6 +8,8 @@
 #include "VRBaseCharacterMovementComponent.h"
 #include "VRBPDatatypes.h"
 #include "VRBaseCharacter.h"
+#include "VRRootComponent.h"
+#include "VRPlayerController.h"
 #include "GameFramework/PhysicsVolume.h"
 
 
@@ -53,6 +55,9 @@ UVRBaseCharacterMovementComponent::UVRBaseCharacterMovementComponent(const FObje
 
 	bWasInPushBack = false;
 	bIsInPushBack = false;
+
+	// #TODO: Make default true?, and eventually remove option?
+	bRunControlRotationInMovementComponent = false;
 }
 
 void UVRBaseCharacterMovementComponent::TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction)
@@ -70,11 +75,11 @@ void UVRBaseCharacterMovementComponent::TickComponent(float DeltaTime, enum ELev
 		Super::Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
 		// See if we fell out of the world.
-		//const bool bIsSimulatingPhysics = UpdatedComponent->IsSimulatingPhysics();
-		//if (CharacterOwner->Role == ROLE_Authority && (!bCheatFlying || bIsSimulatingPhysics) && !CharacterOwner->CheckStillInWorld())
-		//{
-		//	return;
-		//}
+		const bool bIsSimulatingPhysics = UpdatedComponent->IsSimulatingPhysics();
+		if (CharacterOwner->Role == ROLE_Authority && (!bCheatFlying || bIsSimulatingPhysics) && !CharacterOwner->CheckStillInWorld())
+		{
+			return;
+		}
 
 		// If we are the owning client or the server then run the re-basing
 		if (CharacterOwner->Role > ROLE_SimulatedProxy)
@@ -921,6 +926,21 @@ void UVRBaseCharacterMovementComponent::SetReplicatedMovementMode(EVRConjoinedMo
 */
 void UVRBaseCharacterMovementComponent::PerformMovement(float DeltaSeconds)
 {
+	// Scope these, they nest with Outer references so it should work fine
+	FVRCharacterScopedMovementUpdate ScopedMovementUpdate(UpdatedComponent, bEnableScopedMovementUpdates ? EScopedUpdate::DeferredUpdates : EScopedUpdate::ImmediateUpdates);
+
+	// This moves it into update scope
+	if (bRunControlRotationInMovementComponent && IsLocallyControlled())
+	{
+		if (AVRPlayerController * PC = Cast<AVRPlayerController>(CharacterOwner->GetController()))
+		{
+			PC->RotationInput = PC->LastRotationInput;
+			PC->UpdateRotation(DeltaSeconds);
+			PC->LastRotationInput = FRotator::ZeroRotator;
+			PC->RotationInput = FRotator::ZeroRotator;
+		}
+	}
+
 	if (VRReplicatedMovementMode != EVRConjoinedMovementModes::C_MOVE_MAX)//None)
 	{
 		if (VRReplicatedMovementMode <= EVRConjoinedMovementModes::C_MOVE_MAX)
@@ -939,7 +959,7 @@ void UVRBaseCharacterMovementComponent::PerformMovement(float DeltaSeconds)
 		VRReplicatedMovementMode = EVRConjoinedMovementModes::C_MOVE_MAX;//None;
 	}
 
-	// Handle move actions here
+	// Handle move actions here - Should be scoped
 	CheckForMoveAction();
 
 	// Clear out this flag prior to movement so we can see if it gets changed
@@ -1178,5 +1198,35 @@ void UVRBaseCharacterMovementComponent::SmoothClientPosition_UpdateVRVisuals()
 		{
 			// Unhandled mode
 		}
+	}
+}
+
+FVRCharacterScopedMovementUpdate::FVRCharacterScopedMovementUpdate(USceneComponent* Component, EScopedUpdate::Type ScopeBehavior, bool bRequireOverlapsEventFlagToQueueOverlaps)
+	: FScopedMovementUpdate(Component, ScopeBehavior, bRequireOverlapsEventFlagToQueueOverlaps)
+{
+	UVRRootComponent* RootComponent = Cast<UVRRootComponent>(Owner);
+	if (RootComponent)
+	{
+		InitialVRTransform = RootComponent->OffsetComponentToWorld;
+	}
+}
+
+void FVRCharacterScopedMovementUpdate::RevertMove()
+{
+	bool bTransformIsDirty = IsTransformDirty();
+
+	FScopedMovementUpdate::RevertMove();
+
+	UVRRootComponent* RootComponent = Cast<UVRRootComponent>(Owner);
+	if (RootComponent)
+	{
+		// If the base class was going to miss bad overlaps, ie: the offsetcomponent to world is different but the transform isn't
+		if (!bTransformIsDirty && !IsDeferringUpdates() && !InitialVRTransform.Equals(RootComponent->OffsetComponentToWorld))
+		{
+			RootComponent->UpdateOverlaps();
+		}
+
+		// Fix offset
+		RootComponent->GenerateOffsetToWorld();
 	}
 }

@@ -29,7 +29,6 @@ class VREXPANSIONPLUGIN_API UVRRootComponent : public UCapsuleComponent, public 
 public:
 	friend class FDrawCylinderSceneProxy;
 
-
 	bool bCalledUpdateTransform;
 
 	FORCEINLINE void GenerateOffsetToWorld(bool bUpdateBounds = true, bool bGetPureYaw = true);
