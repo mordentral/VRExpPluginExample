@@ -535,7 +535,7 @@ void UVRRootComponent::TickComponent(float DeltaTime, enum ELevelTick TickType, 
 			bCalledUpdateTransform = false;
 
 			// If the character movement doesn't exist or is not active/ticking
-			if (!CharMove || !CharMove->IsComponentTickEnabled() || !CharMove->IsActive())
+			if (!CharMove || !CharMove->IsActive())
 			{
 				OnUpdateTransform(EUpdateTransformFlags::None, ETeleportType::None);
 			}
