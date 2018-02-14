@@ -564,7 +564,6 @@ void UVRRootComponent::SendPhysicsTransform(ETeleportType Teleport)
 void UVRRootComponent::OnUpdateTransform(EUpdateTransformFlags UpdateTransformFlags, ETeleportType Teleport)
 {
 	GenerateOffsetToWorld();
-
 	// Using the physics flag for all of this anyway, no reason for a custom flag, it handles it fine
 	if (!(UpdateTransformFlags & EUpdateTransformFlags::SkipPhysicsUpdate))
 	{

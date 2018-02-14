@@ -34,6 +34,7 @@ void AVRPlayerController::InitNavigationControl(UPathFollowingComponent*& PathFo
 
 void AVRPlayerController::PlayerTick(float DeltaTime)
 {
+
 	// #TODO: Should I be only doing this if ticking CMC and CMC is active?
 	if (AVRBaseCharacter * VRChar = Cast<AVRBaseCharacter>(GetPawn()))
 	{
