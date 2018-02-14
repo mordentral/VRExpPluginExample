@@ -138,10 +138,6 @@ public:
 	UPROPERTY(Transient)
 		FVector RequestedVelocity;
 	UPROPERTY(Transient)
-		FVector MoveActionLoc;
-	UPROPERTY(Transient)
-		FRotator MoveActionRot;
-	UPROPERTY(Transient)
 		FVRMoveActionContainer MoveAction;
 
 	FVRConditionalMoveRep()
