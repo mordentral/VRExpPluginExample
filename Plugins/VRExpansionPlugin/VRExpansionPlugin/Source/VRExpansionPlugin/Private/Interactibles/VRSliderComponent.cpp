@@ -35,6 +35,7 @@ UVRSliderComponent::UVRSliderComponent(const FObjectInitializer& ObjectInitializ
 
 	bFollowSplineRotationAndScale = false;
 	bLerpAlongSpline = true;
+	SplineLerpValue = 0.5f;
 
 	GripPriority = 1;
 	LastSliderProgressState = -1.0f;
@@ -88,20 +89,6 @@ void UVRSliderComponent::TickComponent(float DeltaTime, enum ELevelTick TickType
 void UVRSliderComponent::TickGrip_Implementation(UGripMotionControllerComponent * GrippingController, const FBPActorGripInformation & GripInformation, float DeltaTime) 
 {
 	// Handle manual tracking here
-
-	/*FTransform CurrentRelativeTransform;
-	FTransform ParentTransform = FTransform::Identity;
-	if (ParentComponent.IsValid())
-	{
-		ParentTransform = ParentComponent->GetComponentTransform();
-		// during grip there is no parent so we do this, might as well do it anyway for lerping as well
-		CurrentRelativeTransform = InitialRelativeTransform * ParentTransform
-	}
-	else
-	{
-		CurrentRelativeTransform = InitialRelativeTransform;
-	}*/
-
 	FTransform ParentTransform = GetCurrentParentTransform();
 	FTransform CurrentRelativeTransform = InitialRelativeTransform * ParentTransform;
 	FVector CurInteractorLocation = CurrentRelativeTransform.InverseTransformPosition(GrippingController->GetComponentLocation());
@@ -117,15 +104,22 @@ void UVRSliderComponent::TickGrip_Implementation(UGripMotionControllerComponent 
 	{	
 		FVector WorldCalculatedLocation = CurrentRelativeTransform.TransformPosition(CalculatedLocation);
 		float ClosestKey = 0.0f;
-		if (bEnforceSplineLinearity && (ClosestKey = (SplineComponentToFollow->FindInputKeyClosestToWorldLocation(WorldCalculatedLocation) - LastInputKey)) >= 1.9f)
+		if (bEnforceSplineLinearity && FMath::Abs((ClosestKey = (SplineComponentToFollow->FindInputKeyClosestToWorldLocation(WorldCalculatedLocation) - FMath::TruncToFloat(LastInputKey)))) >= 2.0f)
 		{
 		}
 		else
 		{
-			LastInputKey = FMath::TruncToFloat(ClosestKey);
 			if (bFollowSplineRotationAndScale)
 			{
-				FTransform trans = SplineComponentToFollow->FindTransformClosestToWorldLocation(WorldCalculatedLocation, ESplineCoordinateSpace::World);
+				FTransform trans;
+				if (bLerpAlongSpline && ClosestKey != LastInputKey)
+				{				
+					//FMath::FInterpTo
+					trans = SplineComponentToFollow->GetTransformAtSplineInputKey(FMath::Lerp(LastInputKey, ClosestKey, SplineLerpValue), ESplineCoordinateSpace::World);
+				}
+				else
+					trans = SplineComponentToFollow->FindTransformClosestToWorldLocation(WorldCalculatedLocation, ESplineCoordinateSpace::World);
+
 				trans = trans * ParentTransform.Inverse();
 				trans.MultiplyScale3D(InitialRelativeTransform.GetScale3D());
 
@@ -133,10 +127,21 @@ void UVRSliderComponent::TickGrip_Implementation(UGripMotionControllerComponent 
 			}
 			else
 			{
-				this->SetRelativeLocation(ParentTransform.InverseTransformPosition(SplineComponentToFollow->FindLocationClosestToWorldLocation(WorldCalculatedLocation, ESplineCoordinateSpace::World)));
+				FVector WorldLocation;
+				if (bLerpAlongSpline && ClosestKey != LastInputKey)
+				{
+					WorldLocation = SplineComponentToFollow->GetLocationAtSplineInputKey(FMath::Lerp(LastInputKey, ClosestKey, SplineLerpValue), ESplineCoordinateSpace::World);
+				}
+				else
+				{
+					WorldLocation = SplineComponentToFollow->FindLocationClosestToWorldLocation(WorldCalculatedLocation, ESplineCoordinateSpace::World);
+				}
+
+				this->SetRelativeLocation(ParentTransform.InverseTransformPosition(WorldLocation));
 			}
 
 			CurrentSliderProgress = GetCurrentSliderProgress(WorldCalculatedLocation);
+			LastInputKey = ClosestKey;
 		}
 	}
 	else

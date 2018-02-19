@@ -63,6 +63,7 @@ class VREXPANSIONPLUGIN_API UVRSliderComponent : public UStaticMeshComponent, pu
 	// Where the slider should follow the rotation and scale of the spline as well
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRSliderComponent")
 		bool bLerpAlongSpline;
+	float SplineLerpValue;
 
 	FTransform InitialRelativeTransform;
 	FVector InitialInteractorLocation;
