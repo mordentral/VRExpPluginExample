@@ -82,7 +82,7 @@ public:
 
 	// Inits the initial relative transform of an interactible on begin play
 	UFUNCTION(BlueprintCallable, Category = "VRInteractibleFunctions", meta = (bIgnoreSelf = "true"))
-		static bool Interactible_BeginPlayInit(USceneComponent * InteractibleComp, UPARAM(ref) FBPVRInteractibleBaseData & BaseDataToInit)
+		static void Interactible_BeginPlayInit(USceneComponent * InteractibleComp, UPARAM(ref) FBPVRInteractibleBaseData & BaseDataToInit)
 	{
 		if (!InteractibleComp)
 			return;
@@ -92,7 +92,7 @@ public:
 
 	// Inits the calculated values of a VR Interactible Base Data Structure on a grip event
 	UFUNCTION(BlueprintCallable, Category = "VRInteractibleFunctions", meta = (bIgnoreSelf = "true"))
-		static bool Interactible_OnGripInit(USceneComponent * InteractibleComp, FBPActorGripInformation GripInformation, UPARAM(ref) FBPVRInteractibleBaseData & BaseDataToInit)
+		static void Interactible_OnGripInit(USceneComponent * InteractibleComp, FBPActorGripInformation GripInformation, UPARAM(ref) FBPVRInteractibleBaseData & BaseDataToInit)
 	{
 		if (!InteractibleComp)
 			return;
