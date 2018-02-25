@@ -137,14 +137,6 @@ void UVRBaseCharacterMovementComponent::EndPushBackNotification()
 	}
 }
 
-// Rewind the players position by the new capsule location
-void UVRBaseCharacterMovementComponent::RewindVRRelativeMovement()
-{
-	//FHitResult AHit;
-	MoveUpdatedComponent(-AdditionalVRInputVector, UpdatedComponent->GetComponentQuat(), false);
-	//SafeMoveUpdatedComponent(-AdditionalVRInputVector, UpdatedComponent->GetComponentQuat(), false, AHit);
-}
-
 /*
 bool UVRBaseCharacterMovementComponent::FloorSweepTest(
 	FHitResult& OutHit,
@@ -465,7 +457,7 @@ void UVRBaseCharacterMovementComponent::PerformMoveAction_Teleport(FVector Telep
 {
 	MoveAction.MoveAction = EVRMoveAction::VRMOVEACTION_Teleport;
 	MoveAction.MoveActionLoc = TeleportLocation;
-	MoveAction.MoveActionRot = TeleportRotation;
+	MoveAction.MoveActionRot.Yaw = TeleportRotation.Yaw;
 }
 
 void UVRBaseCharacterMovementComponent::PerformMoveAction_StopAllMovement()
@@ -550,7 +542,7 @@ bool UVRBaseCharacterMovementComponent::DoMATeleport()
 				return false;
 			}
 
-			OwningCharacter->TeleportTo(MoveAction.MoveActionLoc, OwningCharacter->GetActorRotation(), false, false);
+			OwningCharacter->TeleportTo(MoveAction.MoveActionLoc, MoveAction.MoveActionRot, false, false);
 
 			if (OwningCharacter->bUseControllerRotationYaw)
 				OwningController->SetControlRotation(MoveAction.MoveActionRot);
