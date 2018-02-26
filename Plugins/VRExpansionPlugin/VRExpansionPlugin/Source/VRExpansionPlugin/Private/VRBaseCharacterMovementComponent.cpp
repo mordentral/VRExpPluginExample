@@ -754,6 +754,13 @@ void UVRBaseCharacterMovementComponent::SetReplicatedMovementMode(EVRConjoinedMo
 */
 void UVRBaseCharacterMovementComponent::PerformMovement(float DeltaSeconds)
 {
+	bool bPreloadedMoveAction = false;
+	if (MoveAction.MoveAction == EVRMoveAction::VRMOVEACTION_Teleport)
+	{
+		CheckForMoveAction();
+		bPreloadedMoveAction = true;
+	}
+	
 	if (VRReplicatedMovementMode != EVRConjoinedMovementModes::C_MOVE_MAX)//None)
 	{
 		if (VRReplicatedMovementMode <= EVRConjoinedMovementModes::C_MOVE_MAX)
@@ -773,7 +780,8 @@ void UVRBaseCharacterMovementComponent::PerformMovement(float DeltaSeconds)
 	}
 
 	// Handle move actions here
-	CheckForMoveAction();
+	if(!bPreloadedMoveAction)
+		CheckForMoveAction();
 
 	// Clear out this flag prior to movement so we can see if it gets changed
 	bIsInPushBack = false;
