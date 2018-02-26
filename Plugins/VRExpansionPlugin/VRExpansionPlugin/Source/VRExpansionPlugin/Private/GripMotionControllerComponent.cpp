@@ -1924,6 +1924,7 @@ bool UGripMotionControllerComponent::TeleportMoveGrip(FBPActorGripInformation &G
 
 	if (!bHasMovementAuthority)
 		return false;
+		
 
 	UPrimitiveComponent * PrimComp = NULL;
 	AActor * actor = NULL;
@@ -2032,7 +2033,7 @@ bool UGripMotionControllerComponent::TeleportMoveGrip(FBPActorGripInformation &G
 	FTransform ParentTransform = this->GetComponentTransform();
 
 	FBPActorGripInformation copyGrip = Grip;
-
+	
 	bool bRescalePhysicsGrips = false;
 	GetGripWorldTransform(0.0f, WorldTransform, ParentTransform, copyGrip, actor, PrimComp, bRootHasInterface, bActorHasInterface, bRescalePhysicsGrips);
 

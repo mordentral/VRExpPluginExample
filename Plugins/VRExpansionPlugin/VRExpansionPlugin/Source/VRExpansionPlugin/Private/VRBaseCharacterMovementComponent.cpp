@@ -919,6 +919,13 @@ void UVRBaseCharacterMovementComponent::SetReplicatedMovementMode(EVRConjoinedMo
 void UVRBaseCharacterMovementComponent::PerformMovement(float DeltaSeconds)
 {
 	// Scope these, they nest with Outer references so it should work fine
+	bool bPreloadedMoveAction = false;
+	if (MoveAction.MoveAction == EVRMoveAction::VRMOVEACTION_Teleport)
+	{
+		CheckForMoveAction();
+		bPreloadedMoveAction = true;
+	}
+	
 	FVRCharacterScopedMovementUpdate ScopedMovementUpdate(UpdatedComponent, bEnableScopedMovementUpdates ? EScopedUpdate::DeferredUpdates : EScopedUpdate::ImmediateUpdates);
 
 	// This moves it into update scope
@@ -952,7 +959,8 @@ void UVRBaseCharacterMovementComponent::PerformMovement(float DeltaSeconds)
 	}
 
 	// Handle move actions here - Should be scoped
-	CheckForMoveAction();
+	if(!bPreloadedMoveAction)
+		CheckForMoveAction();
 
 	// Clear out this flag prior to movement so we can see if it gets changed
 	bIsInPushBack = false;
