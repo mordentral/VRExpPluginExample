@@ -72,6 +72,7 @@ UGripMotionControllerComponent::UGripMotionControllerComponent(const FObjectInit
 	bSmoothReplicatedMotion = false;
 	bReppedOnce = false;
 	bOffsetByHMD = false;
+	bIsPostTeleport = false;
 }
 
 //=============================================================================
@@ -1256,7 +1257,10 @@ bool UGripMotionControllerComponent::DropGrip(const FBPActorGripInformation &Gri
 	else
 	{
 		// Had to move in front of deletion to properly set velocity
-		if (Grip.GripMovementReplicationSetting == EGripMovementReplicationSettings::ForceClientSideMovement && (OptionalLinearVelocity != FVector::ZeroVector || OptionalAngularVelocity != FVector::ZeroVector))
+		if(	(bWasLocalGrip && !IsLocallyControlled()) ||
+			Grip.GripMovementReplicationSetting == EGripMovementReplicationSettings::ForceClientSideMovement && 
+			(OptionalLinearVelocity != FVector::ZeroVector || OptionalAngularVelocity != FVector::ZeroVector)
+		)
 		{
 			PrimComp->SetPhysicsLinearVelocity(OptionalLinearVelocity);
 			PrimComp->SetPhysicsAngularVelocityInDegrees(OptionalAngularVelocity);
@@ -1267,7 +1271,7 @@ bool UGripMotionControllerComponent::DropGrip(const FBPActorGripInformation &Gri
 	{
 		if (GetNetMode() == ENetMode::NM_Client)
 		{
-			Server_NotifyLocalGripRemoved(LocallyGrippedObjects[FoundIndex]);
+			Server_NotifyLocalGripRemoved(LocallyGrippedObjects[FoundIndex], OptionalAngularVelocity, OptionalLinearVelocity);
 				
 			// Have to call this ourselves
 			Drop_Implementation(LocallyGrippedObjects[FoundIndex], bSimulate);
@@ -1911,7 +1915,13 @@ bool UGripMotionControllerComponent::TeleportMoveGrippedComponent(UPrimitiveComp
 	return false;
 }
 
-bool UGripMotionControllerComponent::TeleportMoveGrip(FBPActorGripInformation &Grip, bool bIsPostTeleport)
+bool UGripMotionControllerComponent::TeleportMoveGrip(FBPActorGripInformation &Grip, bool bIsForPostTeleport)
+{
+	FTransform EmptyTransform = FTransform::Identity;
+	return TeleportMoveGrip_Impl(Grip, bIsForPostTeleport, EmptyTransform);
+}
+
+bool UGripMotionControllerComponent::TeleportMoveGrip_Impl(FBPActorGripInformation &Grip, bool bIsForPostTeleport, FTransform & OptionalTransform)
 {
 	bool bHasMovementAuthority = HasGripMovementAuthority(Grip);
 
@@ -1981,7 +1991,7 @@ bool UGripMotionControllerComponent::TeleportMoveGrip(FBPActorGripInformation &G
 		bSimulateOnDrop = IVRGripInterface::Execute_SimulateOnDrop(actor);
 	}
 
-	if (bIsPostTeleport)
+	if (bIsForPostTeleport)
 	{
 		if (TeleportBehavior == EGripInterfaceTeleportBehavior::OnlyTeleportRootComponent)
 		{
@@ -2028,7 +2038,12 @@ bool UGripMotionControllerComponent::TeleportMoveGrip(FBPActorGripInformation &G
 	FBPActorGripInformation copyGrip = Grip;
 	
 	bool bRescalePhysicsGrips = false;
-	GetGripWorldTransform(0.0f, WorldTransform, ParentTransform, copyGrip, actor, PrimComp, bRootHasInterface, bActorHasInterface, bRescalePhysicsGrips);
+
+	//FTransform EmptyTransform = FTransform::Identity;
+	if (OptionalTransform.Equals(FTransform::Identity))
+		WorldTransform = OptionalTransform;
+	else
+		GetGripWorldTransform(0.0f, WorldTransform, ParentTransform, copyGrip, actor, PrimComp, bRootHasInterface, bActorHasInterface, bRescalePhysicsGrips);
 
 	//WorldTransform = Grip.RelativeTransform * ParentTransform;
 
@@ -2040,7 +2055,7 @@ bool UGripMotionControllerComponent::TeleportMoveGrip(FBPActorGripInformation &G
 	{
 		PrimComp->SetWorldTransform(WorldTransform, false, NULL, ETeleportType::TeleportPhysics);
 	}
-	else if (Handle && Handle->KinActorData && bIsPostTeleport)
+	else if (Handle && Handle->KinActorData && bIsForPostTeleport)
 	{
 		// Don't try to autodrop on next tick, let the physx constraint update its local frame first
 		if (HasGripAuthority(Grip))
@@ -2526,6 +2541,13 @@ void UGripMotionControllerComponent::HandleGripArray(TArray<FBPActorGripInformat
 				// Get the world transform for this grip after handling secondary grips and interaction differences
 				GetGripWorldTransform(DeltaTime, WorldTransform, ParentTransform, *Grip, actor, root, bRootHasInterface, bActorHasInterface, bRescalePhysicsGrips);
 
+				// If we just teleported, skip this update and just teleport forward
+				if (bIsPostTeleport)
+				{
+					TeleportMoveGrip_Impl(*Grip, true, WorldTransform);
+					continue;
+				}
+
 				// Auto drop based on distance from expected point
 				// Not perfect, should be done post physics or in next frame prior to changing controller location
 				// However I don't want to recalculate world transform
@@ -2908,6 +2930,9 @@ void UGripMotionControllerComponent::HandleGripArray(TArray<FBPActorGripInformat
 				CleanUpBadGrip(GrippedObjectsArray, i, bReplicatedArray);
 			}
 		}
+
+		// Empty out the teleport flag
+		bIsPostTeleport = false;
 	}
 }
 
@@ -3858,12 +3883,12 @@ void UGripMotionControllerComponent::Server_NotifyLocalGripAddedOrChanged_Implem
 }
 
 
-bool UGripMotionControllerComponent::Server_NotifyLocalGripRemoved_Validate(const FBPActorGripInformation & removeGrip)
+bool UGripMotionControllerComponent::Server_NotifyLocalGripRemoved_Validate(const FBPActorGripInformation & removeGrip, FVector_NetQuantize100 AngularVelocity, FVector_NetQuantize100 LinearVelocity)
 {
 	return true;
 }
 
-void UGripMotionControllerComponent::Server_NotifyLocalGripRemoved_Implementation(const FBPActorGripInformation & removeGrip)
+void UGripMotionControllerComponent::Server_NotifyLocalGripRemoved_Implementation(const FBPActorGripInformation & removeGrip, FVector_NetQuantize100 AngularVelocity, FVector_NetQuantize100 LinearVelocity)
 {
 	FBPActorGripInformation FoundGrip;
 	EBPVRResultSwitch Result;
@@ -3871,10 +3896,6 @@ void UGripMotionControllerComponent::Server_NotifyLocalGripRemoved_Implementatio
 
 	if (Result == EBPVRResultSwitch::OnFailed)
 		return;
-
-	FVector AngularVelocity;
-	FVector LinearVelocity;
-	GetPhysicsVelocities(removeGrip, AngularVelocity, LinearVelocity);
 
 	DropObjectByInterface(FoundGrip.GrippedObject, AngularVelocity, LinearVelocity);
 }
