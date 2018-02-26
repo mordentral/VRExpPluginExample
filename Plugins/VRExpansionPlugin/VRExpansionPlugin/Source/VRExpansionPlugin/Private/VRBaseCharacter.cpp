@@ -183,14 +183,15 @@ FVector AVRBaseCharacter::GetTeleportLocation(FVector OriginalLocation)
 
 void AVRBaseCharacter::NotifyOfTeleport_Implementation()
 {
-	if (!IsLocallyControlled())
-	{
-		if (LeftMotionController)
-			LeftMotionController->bIsPostTeleport = true;
+	// Regenerate the capsule offset location - Should be done anyway in the move_impl function, but playing it safe
+	//if (VRRootReference)
+	//	VRRootReference->GenerateOffsetToWorld();
 
-		if (RightMotionController)
-			RightMotionController->bIsPostTeleport = true;
-	}
+	if (LeftMotionController)
+		LeftMotionController->PostTeleportMoveGrippedObjects();
+
+	if (RightMotionController)
+		RightMotionController->PostTeleportMoveGrippedObjects();
 }
 
 void AVRBaseCharacter::ExtendedSimpleMoveToLocation(const FVector& GoalLocation, float AcceptanceRadius, bool bStopOnOverlap, bool bUsePathfinding, bool bProjectDestinationToNavigation, bool bCanStrafe, TSubclassOf<UNavigationQueryFilter> FilterClass, bool bAllowPartialPaths)

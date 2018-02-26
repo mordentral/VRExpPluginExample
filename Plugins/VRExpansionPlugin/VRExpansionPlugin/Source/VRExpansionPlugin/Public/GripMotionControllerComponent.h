@@ -138,7 +138,7 @@ public:
 	// Notify change on relative position editing as well, make RPCS callable in blueprint
 	// Notify the server that we locally gripped something
 	UFUNCTION(Reliable, Server, WithValidation)
-	void Server_NotifyLocalGripRemoved(const FBPActorGripInformation & removeGrip, FVector_NetQuantize100 AngularVelocity, FVector_NetQuantize100 LinearVelocity);
+	void Server_NotifyLocalGripRemoved(const FBPActorGripInformation & removeGrip);
 	
 
 	// Enable this to send the TickGrip event every tick even for non custom grip types - has a slight performance hit
@@ -691,8 +691,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "VRGrip")
 	void PostTeleportMoveGrippedObjects();
 
-	bool bIsPostTeleport;
-
 	// Move a single gripped item back into position ignoring collision in the way
 	UFUNCTION(BlueprintCallable, Category = "VRGrip")
 	bool TeleportMoveGrippedActor(AActor * GrippedActorToMove);
@@ -702,8 +700,7 @@ public:
 	bool TeleportMoveGrippedComponent(UPrimitiveComponent * ComponentToMove);
 
 	UFUNCTION(BlueprintCallable, Category = "VRGrip")
-	bool TeleportMoveGrip(UPARAM(ref)FBPActorGripInformation &Grip, bool bIsForPostTeleport = false);
-	bool TeleportMoveGrip_Impl(FBPActorGripInformation &Grip, bool bIsForPostTeleport, FTransform & OptionalTransform);
+	bool TeleportMoveGrip(UPARAM(ref)FBPActorGripInformation &Grip, bool bIsPostTeleport = false);
 
 	// Adds a secondary attachment point to the grip
 	UFUNCTION(BlueprintCallable, Category = "VRGrip")
