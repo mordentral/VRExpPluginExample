@@ -101,7 +101,8 @@ void UVRSliderComponent::TickGrip_Implementation(UGripMotionControllerComponent 
 	FVector CurInteractorLocation = CurrentRelativeTransform.InverseTransformPosition(GrippingController->GetComponentLocation());
 
 	FVector CalculatedLocation = InitialGripLoc + (CurInteractorLocation - InitialInteractorLocation);
-
+	
+	float SplineProgress = CurrentSliderProgress;
 	if (SplineComponentToFollow != nullptr)
 	{
 		FVector WorldCalculatedLocation = CurrentRelativeTransform.TransformPosition(CalculatedLocation);
@@ -110,9 +111,9 @@ void UVRSliderComponent::TickGrip_Implementation(UGripMotionControllerComponent 
 		if (bSliderUsesSnapPoints)
 		{
 			float SplineLength = SplineComponentToFollow->GetSplineLength();
-			float SplineProgress = GetCurrentSliderProgress(WorldCalculatedLocation, true, ClosestKey);
+			SplineProgress = GetCurrentSliderProgress(WorldCalculatedLocation, true, ClosestKey);
 
-			float SplineProgress = UVRInteractibleFunctionLibrary::Interactible_GetThresholdSnappedValue(SplineProgress, SnapIncrement, SnapThreshold);
+			SplineProgress = UVRInteractibleFunctionLibrary::Interactible_GetThresholdSnappedValue(SplineProgress, SnapIncrement, SnapThreshold);
 
 			const int32 NumPoints = SplineComponentToFollow->SplineCurves.Position.Points.Num();
 
