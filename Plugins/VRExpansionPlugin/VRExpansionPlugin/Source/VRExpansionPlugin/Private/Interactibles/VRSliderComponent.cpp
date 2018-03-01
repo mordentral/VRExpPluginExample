@@ -103,45 +103,34 @@ void UVRSliderComponent::TickGrip_Implementation(UGripMotionControllerComponent 
 	FVector CalculatedLocation = InitialGripLoc + (CurInteractorLocation - InitialInteractorLocation);
 
 	if (SplineComponentToFollow != nullptr)
-	{	
+	{
 		FVector WorldCalculatedLocation = CurrentRelativeTransform.TransformPosition(CalculatedLocation);
 		float ClosestKey = SplineComponentToFollow->FindInputKeyClosestToWorldLocation(WorldCalculatedLocation);
 
 		if (bSliderUsesSnapPoints)
 		{
-
-			// In this case it is a world location
-			int32 primaryKey = FMath::TruncToInt(ClosestKey);
-
-			float distance1 = SplineComponentToFollow->GetDistanceAlongSplineAtSplinePoint(primaryKey);
-			float distance2 = SplineComponentToFollow->GetDistanceAlongSplineAtSplinePoint(primaryKey + 1);
-
-			float FinalDistance = ((distance2 - distance1) * (ClosestKey - (float)primaryKey)) + distance1;
 			float SplineLength = SplineComponentToFollow->GetSplineLength();
+			float SplineProgress = GetCurrentSliderProgress(WorldCalculatedLocation, true, ClosestKey);
 
-			float SplineProgress = FMath::Clamp(FinalDistance / SplineLength, 0.0f, 1.0f);
-			SplineProgress = UVRInteractibleFunctionLibrary::Interactible_GetThresholdSnappedValue(SplineProgress, SnapIncrement, SnapThreshold);
-			WorldCalculatedLocation = SplineComponentToFollow->GetWorldLocationAtDistanceAlongSpline(SplineProgress * SplineLength);
-			ClosestKey = SplineComponentToFollow->FindInputKeyClosestToWorldLocation(WorldCalculatedLocation);
-			/*float SplineLength = SplineComponentToFollow->GetSplineLength();
-			float progress = GetCurrentSliderProgress(WorldCalculatedLocation, true, ClosestKey);
+			float SplineProgress = UVRInteractibleFunctionLibrary::Interactible_GetThresholdSnappedValue(SplineProgress, SnapIncrement, SnapThreshold);
 
-			progress = UVRInteractibleFunctionLibrary::Interactible_GetThresholdSnappedValue(progress, SnapIncrement, SnapThreshold);
-			
 			const int32 NumPoints = SplineComponentToFollow->SplineCurves.Position.Points.Num();
 
 			if (SplineComponentToFollow->SplineCurves.Position.Points.Num() > 1)
 			{
-				ClosestKey = SplineComponentToFollow->SplineCurves.ReparamTable.Eval(progress * SplineLength, 0.0f);
+				ClosestKey = SplineComponentToFollow->SplineCurves.ReparamTable.Eval(SplineProgress * SplineLength, 0.0f);
 			}
 
-			WorldCalculatedLocation = SplineComponentToFollow->GetLocationAtSplineInputKey(ClosestKey, ESplineCoordinateSpace::World);*/
+			WorldCalculatedLocation = SplineComponentToFollow->GetLocationAtSplineInputKey(ClosestKey, ESplineCoordinateSpace::World);
 		}
 
 		bool bLerpToNewKey = true;
 		bool bChangedLocation = false;
 
-		if (bEnforceSplineLinearity && LastInputKey >= 0.0f && FMath::Abs((FMath::TruncToFloat(ClosestKey) - FMath::TruncToFloat(LastInputKey))) > 1.0f)
+		if (	bEnforceSplineLinearity && LastInputKey >= 0.0f &&
+				FMath::Abs((FMath::TruncToFloat(ClosestKey) - FMath::TruncToFloat(LastInputKey))) > 1.0f &&
+				(!bSliderUsesSnapPoints || (SplineProgress - CurrentSliderProgress > SnapIncrement))
+			)
 		{
 			bLerpToNewKey = false;
 		}
