@@ -21,8 +21,7 @@ public class VRExpansionPlugin : ModuleRules
         {
             PrivateDependencyModuleNames.AddRange(
                 new string[] {
-                    "UnrealEd",
-                    "PropertyEditor"
+                    "UnrealEd"
                 }
             );
         }
