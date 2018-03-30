@@ -9,6 +9,7 @@
 #include "GameplayTagContainer.h"
 #include "GameplayTagAssetInterface.h"
 #include "VRInteractibleFunctionLibrary.h"
+#include "VRExpansionFunctionLibrary.h"
 #include "PhysicsEngine/ConstraintInstance.h"
 
 #include "PhysicsPublic.h"
@@ -217,21 +218,25 @@ class VREXPANSIONPLUGIN_API UVRLeverComponent : public UStaticMeshComponent, pub
 		}break;
 		case EVRInteractibleLeverReturnType::RetainMomentum:
 		{
-			if (MomentumAtDrop >= 0)
-				TargetAngle = FMath::RoundToFloat(LeverLimitPositive);
-			else
-				TargetAngle = -FMath::RoundToFloat(LeverLimitNegative);
-
-			if (FMath::IsNearlyZero(MomentumAtDrop))
+			if (FMath::IsNearlyZero(MomentumAtDrop, 0.1f))
 			{
 				MomentumAtDrop = 0.0f;
 				FinalReturnSpeed = 1000.0f;
 				TargetAngle = CurrentAngle;
 			}
 			else
+			{
 				FinalReturnSpeed = FMath::Abs(MomentumAtDrop);
+
+				if (MomentumAtDrop > 0.0f)
+					TargetAngle = FMath::RoundToFloat(LeverLimitPositive);
+				else if (MomentumAtDrop < 0.0f)
+					TargetAngle = -FMath::RoundToFloat(LeverLimitNegative);
+				else
+					TargetAngle = 0.0f;
+			}
 			
-			MomentumAtDrop = FMath::FInterpConstantTo(MomentumAtDrop, 0.0f, DeltaTime, LeverMomentumFriction);
+			MomentumAtDrop = FMath::FInterpTo(MomentumAtDrop, 0.0f, DeltaTime, LeverMomentumFriction);
 
 		}break;
 		case EVRInteractibleLeverReturnType::ReturnToZero:
@@ -239,8 +244,11 @@ class VREXPANSIONPLUGIN_API UVRLeverComponent : public UStaticMeshComponent, pub
 		{}break;
 		}
 
-		float LerpedVal = FMath::FixedTurn(CurrentAngle, TargetAngle, FinalReturnSpeed * DeltaTime);
-		//float LerpedVal = FMath::FInterpConstantTo(angle, TargetAngle, DeltaTime, LeverReturnSpeed);
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Some variable values: x: %f"), MomentumAtDrop));
+
+		//float LerpedVal = FMath::FixedTurn(CurrentAngle, TargetAngle, FinalReturnSpeed * DeltaTime);
+		float LerpedVal = FMath::FInterpConstantTo(CurrentAngle, TargetAngle, DeltaTime, FinalReturnSpeed);
+
 		if (FMath::IsNearlyEqual(LerpedVal, TargetAngle))
 		{
 			this->SetComponentTickEnabled(false);
@@ -248,7 +256,7 @@ class VREXPANSIONPLUGIN_API UVRLeverComponent : public UStaticMeshComponent, pub
 		}
 		else
 		{
-				this->SetRelativeRotation((FTransform(SetAxisValue(LerpedVal, FRotator::ZeroRotator)) * InitialRelativeTransform).Rotator());
+			this->SetRelativeRotation((FTransform(SetAxisValue(LerpedVal, FRotator::ZeroRotator)) * InitialRelativeTransform).Rotator());
 		}
 	}
 

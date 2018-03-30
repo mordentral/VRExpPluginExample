@@ -131,7 +131,13 @@ void UVRLeverComponent::TickComponent(float DeltaTime, enum ELevelTick TickType,
 
 	if (!bIsLerping)
 	{
-		MomentumAtDrop = (CurrentLeverAngle - LastLeverAngle) / DeltaTime;
+		// Number of samples to use (IE: frames to record for momentum).
+		static const float numSamples = 1.0f;
+
+		// Rolling average across num samples
+		MomentumAtDrop -= MomentumAtDrop / numSamples;
+		MomentumAtDrop += ((CurrentLeverAngle - LastLeverAngle) / DeltaTime) / numSamples;
+
 		LastLeverAngle = CurrentLeverAngle;
 	}
 
