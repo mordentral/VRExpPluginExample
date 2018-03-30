@@ -35,6 +35,9 @@ UVRLeverComponent::UVRLeverComponent(const FObjectInitializer& ObjectInitializer
 
 	LeverReturnTypeWhenReleased = EVRInteractibleLeverReturnType::ReturnToZero;
 	LeverReturnSpeed = 50.0f;
+	MomentumAtDrop = 0.0f;
+	LeverMomentumFriction = 0.0f;
+	LastLeverAngle = 0.0f;
 	bSendLeverEventsDuringLerp = false;
 
 	InitialRelativeTransform = FTransform::Identity;
@@ -125,6 +128,12 @@ void UVRLeverComponent::TickComponent(float DeltaTime, enum ELevelTick TickType,
 	FTransform CurrentRelativeTransform = this->GetComponentTransform().GetRelativeTransform(GetCurrentParentTransform());
 
 	CalculateCurrentAngle(CurrentRelativeTransform);
+
+	if (!bIsLerping)
+	{
+		MomentumAtDrop = (CurrentLeverAngle - LastLeverAngle) / DeltaTime;
+		LastLeverAngle = CurrentLeverAngle;
+	}
 
 	bool bNewLeverState = (!FMath::IsNearlyZero(LeverLimitNegative) && CurrentLeverAngle <= -(LeverLimitNegative * LeverTogglePercentage)) || (!FMath::IsNearlyZero(LeverLimitPositive) && CurrentLeverAngle >= (LeverLimitPositive * LeverTogglePercentage));
 	//if (FMath::Abs(CurrentLeverAngle) >= LeverLimit  )
@@ -265,6 +274,7 @@ void UVRLeverComponent::OnGrip_Implementation(UGripMotionControllerComponent * G
 		RotAtGrab = GetAxisValue(this->GetComponentTransform().GetRelativeTransform(CurrentRelativeTransform).Rotator());
 	}
 
+	LastLeverAngle = CurrentLeverAngle;
 	bIsLerping = false;
 	bIsInFirstTick = true;
 	this->SetComponentTickEnabled(true);
@@ -280,7 +290,7 @@ void UVRLeverComponent::OnGripRelease_Implementation(UGripMotionControllerCompon
 	}
 	
 	if (LeverReturnTypeWhenReleased != EVRInteractibleLeverReturnType::Stay)
-	{
+	{		
 		bIsLerping = true;
 	}
 	else

@@ -41,10 +41,20 @@ enum class EVRInteractibleLeverEventType : uint8
 UENUM(Blueprintable)
 enum class EVRInteractibleLeverReturnType : uint8
 {
+	/** Stays in place on drop */
 	Stay,
+
+	/** Returns to zero on drop (lerps) */
 	ReturnToZero,
+
+	/** Lerps to closest max */
 	LerpToMax,
-	LerpToMaxIfOverThreshold
+
+	/** Lerps to closest max if over the toggle threshold */
+	LerpToMaxIfOverThreshold,
+
+	/** Retains momentum on release (only works with X/Y/Z axis levers) */
+	RetainMomentum
 };
 
 /** Delegate for notification when the lever state changes. */
@@ -103,6 +113,10 @@ class VREXPANSIONPLUGIN_API UVRLeverComponent : public UStaticMeshComponent, pub
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRLeverComponent")
 		float LeverReturnSpeed;
 
+	// Units in degrees per second to slow a momentum lerp down
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRLeverComponent", meta = (ClampMin = "0.0", ClampMax = "179.8", UIMin = "0.0", UIMax = "180.0"))
+		float LeverMomentumFriction;
+
 	UPROPERTY(BlueprintReadOnly, Category = "VRLeverComponent")
 		bool bIsLerping;
 
@@ -118,6 +132,9 @@ class VREXPANSIONPLUGIN_API UVRLeverComponent : public UStaticMeshComponent, pub
 	FQuat qRotAtGrab;
 	bool bLeverState;
 	bool bIsInFirstTick;
+
+	float MomentumAtDrop;
+	float LastLeverAngle;
 
 	float CalcAngle(EVRInteractibleLeverAxis AxisToCalc, FVector CurInteractorLocation)
 	{
@@ -178,6 +195,7 @@ class VREXPANSIONPLUGIN_API UVRLeverComponent : public UStaticMeshComponent, pub
 	void LerpAxis(float CurrentAngle, float DeltaTime)
 	{
 		float TargetAngle = 0.0f;
+		float FinalReturnSpeed = LeverReturnSpeed;
 
 		switch (LeverReturnTypeWhenReleased)
 		{
@@ -197,12 +215,31 @@ class VREXPANSIONPLUGIN_API UVRLeverComponent : public UStaticMeshComponent, pub
 			//else - Handled by the default value
 			//TargetAngle = 0.0f;
 		}break;
+		case EVRInteractibleLeverReturnType::RetainMomentum:
+		{
+			if (MomentumAtDrop >= 0)
+				TargetAngle = FMath::RoundToFloat(LeverLimitPositive);
+			else
+				TargetAngle = -FMath::RoundToFloat(LeverLimitNegative);
+
+			if (FMath::IsNearlyZero(MomentumAtDrop))
+			{
+				MomentumAtDrop = 0.0f;
+				FinalReturnSpeed = 1000.0f;
+				TargetAngle = CurrentAngle;
+			}
+			else
+				FinalReturnSpeed = FMath::Abs(MomentumAtDrop);
+			
+			MomentumAtDrop = FMath::FInterpConstantTo(MomentumAtDrop, 0.0f, DeltaTime, LeverMomentumFriction);
+
+		}break;
 		case EVRInteractibleLeverReturnType::ReturnToZero:
 		default:
 		{}break;
 		}
 
-		float LerpedVal = FMath::FixedTurn(CurrentAngle, TargetAngle, LeverReturnSpeed * DeltaTime);
+		float LerpedVal = FMath::FixedTurn(CurrentAngle, TargetAngle, FinalReturnSpeed * DeltaTime);
 		//float LerpedVal = FMath::FInterpConstantTo(angle, TargetAngle, DeltaTime, LeverReturnSpeed);
 		if (FMath::IsNearlyEqual(LerpedVal, TargetAngle))
 		{
