@@ -8,6 +8,7 @@
 #include "Engine/InputDelegateBinding.h"
 #include "Components/InputComponent.h"
 #include "GameFramework/PlayerController.h"
+#include "WheeledVehicleMovementComponent.h"
 #include "VRWheeledVehicle.generated.h"
 
 
@@ -118,6 +119,20 @@ public:
 
 		return false;
 	}
+
+	// Calls the movement components override controller function
+	UFUNCTION(BlueprintCallable, Category = "Pawn")
+		virtual bool SetOverrideController(AController * NewController)
+	{
+		if (UWheeledVehicleMovementComponent * MoveComp = Cast<UWheeledVehicleMovementComponent>(this->GetMovementComponent()))
+		{
+			MoveComp->SetOverrideController(NewController);
+			return true;
+		}
+		
+		return false;
+	}
+
 
 	UFUNCTION(BlueprintCallable, Category = "Pawn")
 		virtual bool ForceSecondaryPossession(AController * NewController)
