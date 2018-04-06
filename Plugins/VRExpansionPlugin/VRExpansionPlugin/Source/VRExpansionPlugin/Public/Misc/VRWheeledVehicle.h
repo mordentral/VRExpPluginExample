@@ -9,6 +9,7 @@
 #include "Components/InputComponent.h"
 #include "GameFramework/PlayerController.h"
 #include "WheeledVehicleMovementComponent.h"
+#include "SimpleWheeledVehicleMovementComponent.h"
 #include "VRWheeledVehicle.generated.h"
 
 
@@ -171,4 +172,17 @@ public:
 		//UpdateNavigationComponents();
 	}
 
+};
+
+UCLASS(config = Game, BlueprintType)
+class VREXPANSIONPLUGIN_API AVRSimpleWheeledVehicle : public AVRWheeledVehicle
+{
+	GENERATED_BODY()
+
+public:
+
+	AVRSimpleWheeledVehicle(const FObjectInitializer& ObjectInitializer)
+		: Super(ObjectInitializer.SetDefaultSubobjectClass<USimpleWheeledVehicleMovementComponent>(VehicleMovementComponentName))
+	{
+	}
 };
