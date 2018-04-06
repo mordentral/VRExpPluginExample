@@ -493,7 +493,7 @@ public:
 		if (VRReplicatedMovementMode != EVRConjoinedMovementModes::C_MOVE_MAX)//_None)
 			return true;
 
-		if (!ConditionalValues.CustomVRInputVector.IsZero())
+		if (!ConditionalValues.CustomVRInputVector.IsZero())	
 			return true;
 
 		if (!ConditionalValues.RequestedVelocity.IsZero())
@@ -537,6 +537,18 @@ class VREXPANSIONPLUGIN_API UVRBaseCharacterMovementComponent : public UCharacte
 public:
 
 	UVRBaseCharacterMovementComponent(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
+
+	virtual void SendClientAdjustment() override;
+	//FRotator LastControlRotation;
+
+	/** Replicate position correction to client, associated with a timestamped servermove.  Client will replay subsequent moves after applying adjustment.  */
+	virtual void ClientAdjustPositionVR(float TimeStamp, FVector NewLoc, uint16 NewYaw, FVector NewVel, UPrimitiveComponent* NewBase, FName NewBaseBoneName, bool bHasBase, bool bBaseRelativePosition, uint8 ServerMovementMode);
+	virtual void ClientAdjustPositionVR_Implementation(float TimeStamp, FVector NewLoc, uint16 NewYaw, FVector NewVel, UPrimitiveComponent* NewBase, FName NewBaseBoneName, bool bHasBase, bool bBaseRelativePosition, uint8 ServerMovementMode);
+
+	/* Bandwidth saving version, when velocity is zeroed */
+	virtual void ClientVeryShortAdjustPositionVR(float TimeStamp, FVector NewLoc, uint16 NewYaw, UPrimitiveComponent* NewBase, FName NewBaseBoneName, bool bHasBase, bool bBaseRelativePosition, uint8 ServerMovementMode);
+	virtual void ClientVeryShortAdjustPositionVR_Implementation(float TimeStamp, FVector NewLoc, uint16 NewYaw, UPrimitiveComponent* NewBase, FName NewBaseBoneName, bool bHasBase, bool bBaseRelativePosition, uint8 ServerMovementMode);
+
 
 	virtual void PerformMovement(float DeltaSeconds) override;
 	//virtual void ReplicateMoveToServer(float DeltaTime, const FVector& NewAcceleration) override;

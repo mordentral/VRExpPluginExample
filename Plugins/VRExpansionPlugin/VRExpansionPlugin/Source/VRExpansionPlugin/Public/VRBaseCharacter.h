@@ -129,6 +129,17 @@ public:
 	AVRBaseCharacter(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
 
 	//These functions are now housed in the base character and used when possible, it saves about 7 bits of packet header overhead per send.
+
+	/** Replicate position correction to client, associated with a timestamped servermove.  Client will replay subsequent moves after applying adjustment.  */
+	UFUNCTION(unreliable, client)
+		void ClientAdjustPositionVR(float TimeStamp, FVector NewLoc, uint16 NewYaw, FVector NewVel, UPrimitiveComponent* NewBase, FName NewBaseBoneName, bool bHasBase, bool bBaseRelativePosition, uint8 ServerMovementMode);
+	void ClientAdjustPositionVR_Implementation(float TimeStamp, FVector NewLoc, uint16 NewYaw, FVector NewVel, UPrimitiveComponent* NewBase, FName NewBaseBoneName, bool bHasBase, bool bBaseRelativePosition, uint8 ServerMovementMode);
+
+	/* Bandwidth saving version, when velocity is zeroed */
+	UFUNCTION(unreliable, client)
+		void ClientVeryShortAdjustPositionVR(float TimeStamp, FVector NewLoc, uint16 NewYaw, UPrimitiveComponent* NewBase, FName NewBaseBoneName, bool bHasBase, bool bBaseRelativePosition, uint8 ServerMovementMode);
+	void ClientVeryShortAdjustPositionVR_Implementation(float TimeStamp, FVector NewLoc, uint16 NewYaw, UPrimitiveComponent* NewBase, FName NewBaseBoneName, bool bHasBase, bool bBaseRelativePosition, uint8 ServerMovementMode);
+
 	// I'm sending it unreliable because it is being resent pretty often
 	UFUNCTION(Unreliable, Server, WithValidation)
 		void Server_SendTransformCamera(FBPVRComponentPosRep NewTransform);
