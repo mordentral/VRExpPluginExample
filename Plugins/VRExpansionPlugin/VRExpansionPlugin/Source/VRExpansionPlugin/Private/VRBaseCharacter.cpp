@@ -151,18 +151,6 @@ void AVRBaseCharacter::OnEndWallPushback_Implementation()
 
 }
 
-// ClientAdjustPosition
-void AVRBaseCharacter::ClientAdjustPositionVR_Implementation(float TimeStamp, FVector NewLoc, uint16 NewYaw, FVector NewVel, UPrimitiveComponent* NewBase, FName NewBaseBoneName, bool bHasBase, bool bBaseRelativePosition, uint8 ServerMovementMode)
-{
-	((UVRBaseCharacterMovementComponent*)GetCharacterMovement())->ClientAdjustPositionVR_Implementation(TimeStamp, NewLoc, NewYaw, NewVel, NewBase, NewBaseBoneName, bHasBase, bBaseRelativePosition, ServerMovementMode);
-}
-
-// ClientVeryShortAdjustPosition
-void AVRBaseCharacter::ClientVeryShortAdjustPositionVR_Implementation(float TimeStamp, FVector NewLoc, uint16 NewYaw, UPrimitiveComponent* NewBase, FName NewBaseBoneName, bool bHasBase, bool bBaseRelativePosition, uint8 ServerMovementMode)
-{
-	((UVRBaseCharacterMovementComponent*)GetCharacterMovement())->ClientVeryShortAdjustPositionVR_Implementation(TimeStamp, NewLoc, NewYaw, NewBase, NewBaseBoneName, bHasBase, bBaseRelativePosition, ServerMovementMode);
-}
-
 void AVRBaseCharacter::Server_SendTransformCamera_Implementation(FBPVRComponentPosRep NewTransform)
 {
 	if(VRReplicatedCamera)

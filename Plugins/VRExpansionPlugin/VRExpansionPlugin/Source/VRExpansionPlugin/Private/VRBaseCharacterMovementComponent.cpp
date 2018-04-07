@@ -449,8 +449,17 @@ void UVRBaseCharacterMovementComponent::AddCustomReplicatedMovement(FVector Move
 void UVRBaseCharacterMovementComponent::PerformMoveAction_SnapTurn(float DeltaYawAngle)
 {
 	FVRMoveActionContainer MoveAction;
+	MoveAction.MoveAction = EVRMoveAction::VRMOVEACTION_SnapTurn; 
+
+	MoveAction.MoveActionRot = FRotator(0.0f, FMath::RoundToFloat(((FRotator(0.f,DeltaYawAngle, 0.f).Quaternion() * UpdatedComponent->GetComponentQuat()).Rotator().Yaw) * 100.f) / 100.f, 0.0f);
+	MoveActionArray.MoveActions.Add(MoveAction);
+}
+
+void UVRBaseCharacterMovementComponent::PerformMoveAction_SetRotation(float NewYaw)
+{
+	FVRMoveActionContainer MoveAction;
 	MoveAction.MoveAction = EVRMoveAction::VRMOVEACTION_SnapTurn;
-	MoveAction.MoveActionRot = FRotator(0.0f, DeltaYawAngle, 0.0f);
+	MoveAction.MoveActionRot = FRotator(0.0f, FMath::RoundToFloat(NewYaw * 100.f) / 100.f, 0.0f);
 	MoveActionArray.MoveActions.Add(MoveAction);
 }
 
@@ -458,8 +467,8 @@ void UVRBaseCharacterMovementComponent::PerformMoveAction_Teleport(FVector Telep
 {
 	FVRMoveActionContainer MoveAction;
 	MoveAction.MoveAction = EVRMoveAction::VRMOVEACTION_Teleport;
-	MoveAction.MoveActionLoc = TeleportLocation;
-	MoveAction.MoveActionRot.Yaw = TeleportRotation.Yaw;
+	MoveAction.MoveActionLoc = RoundDirectMovement(TeleportLocation);
+	MoveAction.MoveActionRot.Yaw = FMath::RoundToFloat(TeleportRotation.Yaw * 10.f) / 10.f;
 	MoveActionArray.MoveActions.Add(MoveAction);
 }
 
@@ -518,8 +527,11 @@ bool UVRBaseCharacterMovementComponent::DoMASnapTurn(FVRMoveActionContainer& Mov
 {
 	if (AVRBaseCharacter * OwningCharacter = Cast<AVRBaseCharacter>(GetCharacterOwner()))
 	{
-		if (!IsLocallyControlled())
+		OwningCharacter->SetActorRotationVR(MoveAction.MoveActionRot, true);
+		//OwningCharacter->AddActorWorldRotationVR(MoveAction.MoveActionRot, true);
+	/*	if (!IsLocallyControlled())
 		{
+						MoveAction.MoveActionLoc = OwningCharacter->AddActorWorldRotationVR(MoveAction.MoveActionRot, true);
 			OwningCharacter->AddActorWorldOffset(MoveAction.MoveActionLoc);
 			return true;
 		}
@@ -527,7 +539,7 @@ bool UVRBaseCharacterMovementComponent::DoMASnapTurn(FVRMoveActionContainer& Mov
 		{
 			MoveAction.MoveActionLoc = OwningCharacter->AddActorWorldRotationVR(MoveAction.MoveActionRot, true);
 			return true;
-		}
+		}*/
 	}
 
 	return false;
@@ -537,13 +549,13 @@ bool UVRBaseCharacterMovementComponent::DoMATeleport(FVRMoveActionContainer& Mov
 {
 	if (AVRBaseCharacter * OwningCharacter = Cast<AVRBaseCharacter>(GetCharacterOwner()))
 	{
-		if (!IsLocallyControlled())
+		/*if (!IsLocallyControlled())
 		{
 			OwningCharacter->TeleportTo(MoveAction.MoveActionLoc, OwningCharacter->GetActorRotation(), false, false);
 			return true;
 		}
 		else
-		{
+		{*/
 			AController* OwningController = OwningCharacter->GetController();
 
 			if (!OwningController)
@@ -558,7 +570,7 @@ bool UVRBaseCharacterMovementComponent::DoMATeleport(FVRMoveActionContainer& Mov
 				OwningController->SetControlRotation(MoveAction.MoveActionRot);
 
 			return true;
-		}
+	//	}
 	}
 
 	return false;
@@ -1248,281 +1260,4 @@ void FVRCharacterScopedMovementUpdate::RevertMove()
 		// Fix offset
 		RootComponent->GenerateOffsetToWorld();
 	}
-}
-
-void UVRBaseCharacterMovementComponent::SendClientAdjustment()
-{
-	if (!HasValidData())
-	{
-		return;
-	}
-
-	FNetworkPredictionData_Server_Character* ServerData = GetPredictionData_Server_Character();
-	check(ServerData);
-
-	if (ServerData->PendingAdjustment.TimeStamp <= 0.f)
-	{
-		return;
-	}
-
-	const float CurrentTime = GetWorld()->GetTimeSeconds();
-	if (ServerData->PendingAdjustment.bAckGoodMove)
-	{
-		// just notify client this move was received
-		if (CurrentTime - ServerLastClientGoodMoveAckTime > NetworkMinTimeBetweenClientAckGoodMoves)
-		{
-			ServerLastClientGoodMoveAckTime = CurrentTime;
-			ClientAckGoodMove(ServerData->PendingAdjustment.TimeStamp);
-		}
-	}
-	else
-	{
-		// We won't be back in here until the next client move and potential correction is received, so use the correct time now.
-		// Protect against bad data by taking appropriate min/max of editable values.
-		const float AdjustmentTimeThreshold = bNetworkLargeClientCorrection ?
-			FMath::Min(NetworkMinTimeBetweenClientAdjustmentsLargeCorrection, NetworkMinTimeBetweenClientAdjustments) :
-			FMath::Max(NetworkMinTimeBetweenClientAdjustmentsLargeCorrection, NetworkMinTimeBetweenClientAdjustments);
-
-		// Check if correction is throttled based on time limit between updates.
-		if (CurrentTime - ServerLastClientAdjustmentTime > AdjustmentTimeThreshold)
-		{
-			ServerLastClientAdjustmentTime = CurrentTime;
-
-			const bool bIsPlayingNetworkedRootMotionMontage = CharacterOwner->IsPlayingNetworkedRootMotionMontage();
-			if (HasRootMotionSources())
-			{
-				FRotator Rotation = ServerData->PendingAdjustment.NewRot.GetNormalized();
-				FVector_NetQuantizeNormal CompressedRotation(Rotation.Pitch / 180.f, Rotation.Yaw / 180.f, Rotation.Roll / 180.f);
-				ClientAdjustRootMotionSourcePosition
-				(
-					ServerData->PendingAdjustment.TimeStamp,
-					CurrentRootMotion,
-					bIsPlayingNetworkedRootMotionMontage,
-					bIsPlayingNetworkedRootMotionMontage ? CharacterOwner->GetRootMotionAnimMontageInstance()->GetPosition() : -1.f,
-					ServerData->PendingAdjustment.NewLoc,
-					CompressedRotation,
-					ServerData->PendingAdjustment.NewVel.Z,
-					ServerData->PendingAdjustment.NewBase,
-					ServerData->PendingAdjustment.NewBaseBoneName,
-					ServerData->PendingAdjustment.NewBase != NULL,
-					ServerData->PendingAdjustment.bBaseRelativePosition,
-					PackNetworkMovementMode()
-				);
-			}
-			else if (bIsPlayingNetworkedRootMotionMontage)
-			{
-				FRotator Rotation = ServerData->PendingAdjustment.NewRot.GetNormalized();
-				FVector_NetQuantizeNormal CompressedRotation(Rotation.Pitch / 180.f, Rotation.Yaw / 180.f, Rotation.Roll / 180.f);
-				ClientAdjustRootMotionPosition
-				(
-					ServerData->PendingAdjustment.TimeStamp,
-					CharacterOwner->GetRootMotionAnimMontageInstance()->GetPosition(),
-					ServerData->PendingAdjustment.NewLoc,
-					CompressedRotation,
-					ServerData->PendingAdjustment.NewVel.Z,
-					ServerData->PendingAdjustment.NewBase,
-					ServerData->PendingAdjustment.NewBaseBoneName,
-					ServerData->PendingAdjustment.NewBase != NULL,
-					ServerData->PendingAdjustment.bBaseRelativePosition,
-					PackNetworkMovementMode()
-				);
-			}
-			else if (ServerData->PendingAdjustment.NewVel.IsZero())
-			{
-
-				ClientVeryShortAdjustPositionVR
-				(
-					ServerData->PendingAdjustment.TimeStamp,
-					ServerData->PendingAdjustment.NewLoc,
-					FRotator::CompressAxisToShort(GetCharacterOwner()->GetControlRotation().Yaw),
-					ServerData->PendingAdjustment.NewBase,
-					ServerData->PendingAdjustment.NewBaseBoneName,
-					ServerData->PendingAdjustment.NewBase != NULL,
-					ServerData->PendingAdjustment.bBaseRelativePosition,
-					PackNetworkMovementMode()
-				);
-			}
-			else
-			{
-				ClientAdjustPositionVR
-				(
-					ServerData->PendingAdjustment.TimeStamp,
-					ServerData->PendingAdjustment.NewLoc,
-					FRotator::CompressAxisToShort(GetCharacterOwner()->GetControlRotation().Yaw),
-					ServerData->PendingAdjustment.NewVel,
-					ServerData->PendingAdjustment.NewBase,
-					ServerData->PendingAdjustment.NewBaseBoneName,
-					ServerData->PendingAdjustment.NewBase != NULL,
-					ServerData->PendingAdjustment.bBaseRelativePosition,
-					PackNetworkMovementMode()
-				);
-			}
-		}
-	}
-
-	ServerData->PendingAdjustment.TimeStamp = 0;
-	ServerData->PendingAdjustment.bAckGoodMove = false;
-	ServerData->bForceClientUpdate = false;
-}
-
-
-void UVRBaseCharacterMovementComponent::ClientVeryShortAdjustPositionVR(float TimeStamp, FVector NewLoc, uint16 NewYaw, UPrimitiveComponent* NewBase, FName NewBaseBoneName, bool bHasBase, bool bBaseRelativePosition, uint8 ServerMovementMode)
-{
-	((AVRBaseCharacter*)CharacterOwner)->ClientVeryShortAdjustPositionVR(TimeStamp, NewLoc, NewYaw, NewBase, NewBaseBoneName, bHasBase, bBaseRelativePosition, ServerMovementMode);
-}
-
-void UVRBaseCharacterMovementComponent::ClientVeryShortAdjustPositionVR_Implementation
-(
-	float TimeStamp,
-	FVector NewLoc,
-	uint16 NewYaw,
-	UPrimitiveComponent* NewBase,
-	FName NewBaseBoneName,
-	bool bHasBase,
-	bool bBaseRelativePosition,
-	uint8 ServerMovementMode
-)
-{
-	if (HasValidData())
-	{
-		ClientAdjustPositionVR(TimeStamp, NewLoc, NewYaw, FVector::ZeroVector, NewBase, NewBaseBoneName, bHasBase, bBaseRelativePosition, ServerMovementMode);
-	}
-}
-
-
-void UVRBaseCharacterMovementComponent::ClientAdjustPositionVR(float TimeStamp, FVector NewLoc, uint16 NewYaw, FVector NewVel, UPrimitiveComponent* NewBase, FName NewBaseBoneName, bool bHasBase, bool bBaseRelativePosition, uint8 ServerMovementMode)
-{
-	((AVRBaseCharacter*)CharacterOwner)->ClientAdjustPositionVR(TimeStamp, NewLoc, NewYaw, NewVel, NewBase, NewBaseBoneName, bHasBase, bBaseRelativePosition, ServerMovementMode);
-}
-
-void UVRBaseCharacterMovementComponent::ClientAdjustPositionVR_Implementation
-(
-	float TimeStamp,
-	FVector NewLocation,
-	uint16 NewYaw,
-	FVector NewVelocity,
-	UPrimitiveComponent* NewBase,
-	FName NewBaseBoneName,
-	bool bHasBase,
-	bool bBaseRelativePosition,
-	uint8 ServerMovementMode
-)
-{
-	if (!HasValidData() || !IsActive())
-	{
-		return;
-	}
-
-
-	FNetworkPredictionData_Client_Character* ClientData = GetPredictionData_Client_Character();
-	check(ClientData);
-
-	// Make sure the base actor exists on this client.
-	const bool bUnresolvedBase = bHasBase && (NewBase == NULL);
-	if (bUnresolvedBase)
-	{
-		if (bBaseRelativePosition)
-		{
-			UE_LOG(LogNetPlayerMovement, Warning, TEXT("ClientAdjustPosition_Implementation could not resolve the new relative movement base actor, ignoring server correction!"));
-			return;
-		}
-		else
-		{
-			UE_LOG(LogNetPlayerMovement, Verbose, TEXT("ClientAdjustPosition_Implementation could not resolve the new absolute movement base actor, but WILL use the position!"));
-		}
-	}
-
-	// Ack move if it has not expired.
-	int32 MoveIndex = ClientData->GetSavedMoveIndex(TimeStamp);
-	if (MoveIndex == INDEX_NONE)
-	{
-		if (ClientData->LastAckedMove.IsValid())
-		{
-			UE_LOG(LogNetPlayerMovement, Log, TEXT("ClientAdjustPosition_Implementation could not find Move for TimeStamp: %f, LastAckedTimeStamp: %f, CurrentTimeStamp: %f"), TimeStamp, ClientData->LastAckedMove->TimeStamp, ClientData->CurrentTimeStamp);
-		}
-		return;
-	}
-
-	// Trust the server's control yaw
-	if (ClientData->LastAckedMove.IsValid() && !FMath::IsNearlyEqual(ClientData->LastAckedMove->SavedControlRotation.Yaw, FRotator::DecompressAxisFromShort(NewYaw)))
-	{
-		if (AVRBaseCharacter * BaseChar = Cast<AVRBaseCharacter>(CharacterOwner))
-		{
-			AController * myController = BaseChar->GetController();
-			if (myController)
-			{
-				FRotator newRot = myController->GetControlRotation();
-				myController->SetControlRotation(ClientData->LastAckedMove->SavedControlRotation);
-			}
-		}
-	}
-
-	ClientData->AckMove(MoveIndex);
-
-	FVector WorldShiftedNewLocation;
-	//  Received Location is relative to dynamic base
-	if (bBaseRelativePosition)
-	{
-		FVector BaseLocation;
-		FQuat BaseRotation;
-		MovementBaseUtility::GetMovementBaseTransform(NewBase, NewBaseBoneName, BaseLocation, BaseRotation); // TODO: error handling if returns false		
-		WorldShiftedNewLocation = NewLocation + BaseLocation;
-	}
-	else
-	{
-		WorldShiftedNewLocation = FRepMovement::RebaseOntoLocalOrigin(NewLocation, this);
-	}
-
-
-	// Trigger event
-	OnClientCorrectionReceived(*ClientData, TimeStamp, NewLocation, NewVelocity, NewBase, NewBaseBoneName, bHasBase, bBaseRelativePosition, ServerMovementMode);
-
-	// Trust the server's positioning.
-	UpdatedComponent->SetWorldLocation(WorldShiftedNewLocation, false);
-	Velocity = NewVelocity;
-
-	// Trust the server's movement mode
-	UPrimitiveComponent* PreviousBase = CharacterOwner->GetMovementBase();
-	ApplyNetworkMovementMode(ServerMovementMode);
-
-	// Set base component
-	UPrimitiveComponent* FinalBase = NewBase;
-	FName FinalBaseBoneName = NewBaseBoneName;
-	if (bUnresolvedBase)
-	{
-		check(NewBase == NULL);
-		check(!bBaseRelativePosition);
-
-		// We had an unresolved base from the server
-		// If walking, we'd like to continue walking if possible, to avoid falling for a frame, so try to find a base where we moved to.
-		if (PreviousBase)
-		{
-			FindFloor(UpdatedComponent->GetComponentLocation(), CurrentFloor, false); //-V595
-			if (CurrentFloor.IsWalkableFloor())
-			{
-				FinalBase = CurrentFloor.HitResult.Component.Get();
-				FinalBaseBoneName = CurrentFloor.HitResult.BoneName;
-			}
-			else
-			{
-				FinalBase = nullptr;
-				FinalBaseBoneName = NAME_None;
-			}
-		}
-	}
-	SetBase(FinalBase, FinalBaseBoneName);
-
-	// Update floor at new location
-	UpdateFloorFromAdjustment();
-	bJustTeleported = true;
-
-	// Even if base has not changed, we need to recompute the relative offsets (since we've moved).
-	SaveBaseLocation();
-
-	LastUpdateLocation = UpdatedComponent ? UpdatedComponent->GetComponentLocation() : FVector::ZeroVector;
-	LastUpdateRotation = UpdatedComponent ? UpdatedComponent->GetComponentQuat() : FQuat::Identity;
-	LastUpdateVelocity = Velocity;
-
-	UpdateComponentVelocity();
-	ClientData->bUpdatePosition = true;
 }

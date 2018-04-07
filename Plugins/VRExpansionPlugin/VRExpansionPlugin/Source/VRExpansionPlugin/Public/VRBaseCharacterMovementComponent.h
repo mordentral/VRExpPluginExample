@@ -92,8 +92,38 @@ public:
 		{
 		case EVRMoveAction::VRMOVEACTION_None: break;
 		case EVRMoveAction::VRMOVEACTION_SnapTurn:
+		{
+			uint16 Yaw;
+			
+			if (Ar.IsSaving())
+			{
+				Yaw = FRotator::CompressAxisToShort(MoveActionRot.Yaw);
+
+				Ar << Yaw;
+			}
+			else
+			{
+				Ar << Yaw;
+				MoveActionRot.Yaw = FRotator::DecompressAxisFromShort(Yaw);
+			}
+
+			//bOutSuccess &= SerializePackedVector<100, 30>(MoveActionLoc, Ar);
+		}break;
 		case EVRMoveAction::VRMOVEACTION_Teleport: // Not replicating rot as Control rot does that already
 		{
+			uint16 Yaw;
+
+			if (Ar.IsSaving())
+			{
+				FRotator::CompressAxisToShort(MoveActionRot.Yaw);
+
+				Ar << Yaw;
+			}
+			else
+			{
+				Ar << Yaw;
+				MoveActionRot.Yaw = FRotator::DecompressAxisFromShort(Yaw);
+			}
 			bOutSuccess &= SerializePackedVector<100, 30>(MoveActionLoc, Ar);
 		}break;
 		case EVRMoveAction::VRMOVEACTION_StopAllMovement:
@@ -421,7 +451,6 @@ public:
 
 	FVector VRCapsuleLocation;
 	FVector LFDiff;
-	FVector SnapTurnOffset;
 	FRotator VRCapsuleRotation;
 	FVRConditionalMoveRep ConditionalValues;
 
@@ -538,18 +567,6 @@ public:
 
 	UVRBaseCharacterMovementComponent(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
 
-	virtual void SendClientAdjustment() override;
-	//FRotator LastControlRotation;
-
-	/** Replicate position correction to client, associated with a timestamped servermove.  Client will replay subsequent moves after applying adjustment.  */
-	virtual void ClientAdjustPositionVR(float TimeStamp, FVector NewLoc, uint16 NewYaw, FVector NewVel, UPrimitiveComponent* NewBase, FName NewBaseBoneName, bool bHasBase, bool bBaseRelativePosition, uint8 ServerMovementMode);
-	virtual void ClientAdjustPositionVR_Implementation(float TimeStamp, FVector NewLoc, uint16 NewYaw, FVector NewVel, UPrimitiveComponent* NewBase, FName NewBaseBoneName, bool bHasBase, bool bBaseRelativePosition, uint8 ServerMovementMode);
-
-	/* Bandwidth saving version, when velocity is zeroed */
-	virtual void ClientVeryShortAdjustPositionVR(float TimeStamp, FVector NewLoc, uint16 NewYaw, UPrimitiveComponent* NewBase, FName NewBaseBoneName, bool bHasBase, bool bBaseRelativePosition, uint8 ServerMovementMode);
-	virtual void ClientVeryShortAdjustPositionVR_Implementation(float TimeStamp, FVector NewLoc, uint16 NewYaw, UPrimitiveComponent* NewBase, FName NewBaseBoneName, bool bHasBase, bool bBaseRelativePosition, uint8 ServerMovementMode);
-
-
 	virtual void PerformMovement(float DeltaSeconds) override;
 	//virtual void ReplicateMoveToServer(float DeltaTime, const FVector& NewAcceleration) override;
 
@@ -598,6 +615,10 @@ public:
 	// Perform a snap turn in line with the move action system
 	UFUNCTION(BlueprintCallable, Category = "VRMovement")
 		void PerformMoveAction_SnapTurn(float SnapTurnDeltaYaw);
+
+	// Perform a snap turn in line with the move action system
+	UFUNCTION(BlueprintCallable, Category = "VRMovement")
+		void PerformMoveAction_SetRotation(float NewYaw);
 
 	// Perform a teleport in line with the move action system
 	UFUNCTION(BlueprintCallable, Category = "VRMovement")
