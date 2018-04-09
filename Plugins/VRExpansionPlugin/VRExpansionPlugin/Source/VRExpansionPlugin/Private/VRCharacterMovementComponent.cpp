@@ -4320,9 +4320,9 @@ bool UVRCharacterMovementComponent::ServerCheckClientErrorVR(float ClientTimeSta
 		return true;
 	}
 	
+	// If we are rolling back client rotation
 	if (!bUseClientControlRotation && !FMath::IsNearlyEqual(FRotator::ClampAxis(ClientYaw), FRotator::ClampAxis(UpdatedComponent->GetComponentRotation().Yaw), 0.01f))
 	{
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("ROTATION FORCING CORRECTION! %f, %f"), ClientYaw, UpdatedComponent->GetComponentRotation().Yaw));
 		return true;
 	}
 
@@ -4364,8 +4364,6 @@ void UVRCharacterMovementComponent::ServerMoveHandleClientErrorVR(float ClientTi
 
 	if (ServerData->bForceClientUpdate || ServerCheckClientErrorVR(ClientTimeStamp, DeltaTime, Accel, ClientLoc, ClientYaw, RelativeClientLoc, ClientMovementBase, ClientBaseBoneName, ClientMovementMode))
 	{
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("SAW A CORRECTION! %f, %f"), ClientYaw, UpdatedComponent->GetComponentRotation().Yaw));
-
 		UPrimitiveComponent* MovementBase = CharacterOwner->GetMovementBase();
 		ServerData->PendingAdjustment.NewVel = Velocity;
 		ServerData->PendingAdjustment.NewBase = MovementBase;

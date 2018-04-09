@@ -61,7 +61,7 @@ public:
 
 	virtual bool IsWithinEdgeTolerance(const FVector& CapsuleLocation, const FVector& TestImpactPoint, const float CapsuleRadius) const override;
 
-	// When true will use the default engines behavior or setting rotation to match the clients instead of simulating rotations
+	// When true will use the default engines behavior of setting rotation to match the clients instead of simulating rotations, this is really only here for FPS test pawns
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRCharacterMovementComponent")
 		bool bUseClientControlRotation;
 
