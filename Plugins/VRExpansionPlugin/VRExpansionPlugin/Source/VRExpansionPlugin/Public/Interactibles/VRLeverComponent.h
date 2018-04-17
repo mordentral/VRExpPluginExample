@@ -245,6 +245,7 @@ class VREXPANSIONPLUGIN_API UVRLeverComponent : public UStaticMeshComponent, pub
 			{
 				MomentumAtDrop = 0.0f;
 				this->SetComponentTickEnabled(false);
+				bReplicateMovement = true;
 				return;
 			}
 			else
@@ -271,6 +272,7 @@ class VREXPANSIONPLUGIN_API UVRLeverComponent : public UStaticMeshComponent, pub
 		if (FMath::IsNearlyEqual(LerpedVal, TargetAngle))
 		{
 			this->SetComponentTickEnabled(false);
+			bReplicateMovement = true;
 			this->SetRelativeRotation((FTransform(SetAxisValue(TargetAngle, FRotator::ZeroRotator)) * InitialRelativeTransform).Rotator());
 		}
 		else

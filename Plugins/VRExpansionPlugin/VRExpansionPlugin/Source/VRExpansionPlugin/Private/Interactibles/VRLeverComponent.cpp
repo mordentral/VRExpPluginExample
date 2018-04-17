@@ -97,9 +97,8 @@ void UVRLeverComponent::BeginPlay()
 	Super::BeginPlay();
 
 	// If we are the server, or this component doesn't replicate then get the initial lever location
-	if (!bReplicates || GetNetMode() > ENetMode::NM_Client)
+	if (!bReplicates || GetNetMode() < ENetMode::NM_Client)
 	{
-		this->SetRelativeRotation(FRotator(0.f,0.f,45.f));
 		ResetInitialLeverLocation();
 	}
 }
@@ -131,6 +130,7 @@ void UVRLeverComponent::TickComponent(float DeltaTime, enum ELevelTick TickType,
 			if (LerpedRot.Equals(FRotator::ZeroRotator))
 			{
 				this->SetComponentTickEnabled(false);
+				bReplicateMovement = true;
 				this->SetRelativeRotation((FTransform::Identity * InitialRelativeTransform).Rotator());
 			}
 			else
@@ -324,9 +324,10 @@ void UVRLeverComponent::OnGripRelease_Implementation(UGripMotionControllerCompon
 		bIsLerping = true;
 	}
 	else
+	{
 		this->SetComponentTickEnabled(false);
-
-	bReplicateMovement = true;
+		bReplicateMovement = true;
+	}
 }
 
 void UVRLeverComponent::OnChildGrip_Implementation(UGripMotionControllerComponent * GrippingController, const FBPActorGripInformation & GripInformation) {}
