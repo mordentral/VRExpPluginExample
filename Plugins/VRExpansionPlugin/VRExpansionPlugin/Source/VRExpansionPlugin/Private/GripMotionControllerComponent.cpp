@@ -1566,7 +1566,7 @@ void UGripMotionControllerComponent::Drop_Implementation(const FBPActorGripInfor
 	UGripMotionControllerComponent * HoldingController = nullptr;
 	bool bIsHeld = false;
 
-	// Check if a differnt controller is holding it
+	// Check if a different controller is holding it
 	if(NewDrop.GrippedObject && NewDrop.GrippedObject->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
 		IVRGripInterface::Execute_IsHeld(NewDrop.GrippedObject, HoldingController, bIsHeld);
 
