@@ -542,7 +542,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "VRGrip", meta = (ExpandEnumAsExecs = "Result"))
 	void GetGripByObject(FBPActorGripInformation &Grip, UObject * ObjectToLookForGrip, EBPVRResultSwitch &Result);
 
-	// Gets a grip by its hash
+	// Gets a grip by its grip ID *NOTE*: Grip IDs are only unique to their controller, do NOT use them as cross controller identifiers
 	UFUNCTION(BlueprintCallable, Category = "VRGrip", meta = (ExpandEnumAsExecs = "Result"))
 	void GetGripByID(FBPActorGripInformation &Grip, uint8 IDToLookForGrip, EBPVRResultSwitch &Result);
 
