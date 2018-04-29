@@ -3268,7 +3268,7 @@ bool UGripMotionControllerComponent::SetUpPhysicsHandle(const FBPActorGripInform
 				USkeletalMeshComponent * skele = Cast<USkeletalMeshComponent>(root);
 				if (skele && skele->GetNumBones() > 0)
 				{
-					RootBoneRotation = FTransform(skele->GetBoneTransform(0, FTransform::Identity).GetRotation());
+					RootBoneRotation = FTransform(skele->GetBoneTransform(0, FTransform::Identity));
 					//trans = RootBoneRotation * trans;
 					HandleInfo->RootBoneRotation = RootBoneRotation;
 				}
