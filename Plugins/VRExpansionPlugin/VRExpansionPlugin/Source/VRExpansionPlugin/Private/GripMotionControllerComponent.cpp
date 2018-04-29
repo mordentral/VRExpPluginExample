@@ -3141,12 +3141,17 @@ bool UGripMotionControllerComponent::SetUpPhysicsHandle(const FBPActorGripInform
 
 			if (!NewGrip.AdvancedGripSettings.PhysicsSettings.bUsePhysicsSettings || (NewGrip.AdvancedGripSettings.PhysicsSettings.bUsePhysicsSettings && !NewGrip.AdvancedGripSettings.PhysicsSettings.bDoNotSetCOMToGripLocation))
 			{
-				FVector curCOMPosition = trans.InverseTransformPosition(rBodyInstance->GetCOMPosition());
+				
+				FVector curCOMPosition = P2UVector(Actor->getCMassLocalPose().p);
+				
+				// Trans is our physics location, and it has no scale
+				// Need the scale to get the correct COM position 
+				curCOMPosition /= WorldTransform.GetScale3D();
+
 				rBodyInstance->COMNudge = controllerTransform.GetRelativeTransform(WorldTransform).GetLocation() - curCOMPosition;
 				rBodyInstance->UpdateMassProperties();
 			}
 
-			//trans = P2UTransform(Actor->getGlobalPose());
 			trans.SetLocation(rBodyInstance->GetCOMPosition());
 			KinPose = U2PTransform(trans);
 		}
@@ -3478,8 +3483,9 @@ void UGripMotionControllerComponent::UpdatePhysicsHandleTransform(const FBPActor
 				//DrawDebugSphere(GetWorld(), terns.GetLocation(), 4, 32, FColor::Cyan, false);
 #endif*/
 		}
-		else
+		else		
 		{	
+			// Debug draw for COM movement with physics grips
 /*#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
 			UPrimitiveComponent * me = Cast<UPrimitiveComponent>(GrippedActor.GetGrippedActor()->GetRootComponent());
 			FVector curCOMPosition = me->GetBodyInstance(GrippedActor.GrippedBoneName)->GetCOMPosition();//rBodyInstance->GetUnrealWorldTransform().InverseTransformPosition(rBodyInstance->GetCOMPosition());
