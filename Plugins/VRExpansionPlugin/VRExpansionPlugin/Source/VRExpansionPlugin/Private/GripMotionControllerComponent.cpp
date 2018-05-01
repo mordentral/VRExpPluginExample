@@ -1556,6 +1556,12 @@ bool UGripMotionControllerComponent::NotifyGrip(FBPActorGripInformation &NewGrip
 
 	}
 
+	if (!bIsReInit)
+	{
+		// Broadcast a new grip
+		OnGrippedObject.Broadcast(NewGrip);
+	}
+
 	return true;
 }
 
@@ -1755,6 +1761,9 @@ void UGripMotionControllerComponent::Drop_Implementation(const FBPActorGripInfor
 				GrippedObjects[fIndex].bIsPaused = true; // Pause it instead of dropping, dropping can corrupt the array in rare cases
 		}
 	}
+
+	// Broadcast a new drop
+	OnDroppedObject.Broadcast(NewDrop);
 }
 
 bool UGripMotionControllerComponent::BP_HasGripAuthority(const FBPActorGripInformation &Grip)
