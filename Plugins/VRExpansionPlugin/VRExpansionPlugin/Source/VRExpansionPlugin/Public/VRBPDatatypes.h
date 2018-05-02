@@ -860,7 +860,7 @@ public:
 		USceneComponent * SecondaryAttachment;
 
 	UPROPERTY()
-		FVector_NetQuantize100 SecondaryRelativeLocation;
+		FTransform_NetQuantize SecondaryRelativeTransform;
 
 	UPROPERTY(BlueprintReadWrite, Category = "SecondaryGripInfo")
 		bool bIsSlotGrip;
@@ -884,7 +884,7 @@ public:
 	FBPSecondaryGripInfo():
 		bHasSecondaryAttachment(false),
 		SecondaryAttachment(nullptr),
-		SecondaryRelativeLocation(FVector::ZeroVector),
+		SecondaryRelativeTransform(FTransform::Identity),
 		bIsSlotGrip(false),
 		LerpToRate(0.0f),
 		SecondaryGripDistance(0.0f),
@@ -902,7 +902,7 @@ public:
 		
 		if (bHasSecondaryAttachment)
 		{
-			this->SecondaryRelativeLocation = Other.SecondaryRelativeLocation;
+			this->SecondaryRelativeTransform = Other.SecondaryRelativeTransform;
 			this->bIsSlotGrip = Other.bIsSlotGrip;
 		}
 
@@ -922,7 +922,7 @@ public:
 		{
 			Ar << SecondaryAttachment;
 			//Ar << SecondaryRelativeLocation;
-			SecondaryRelativeLocation.NetSerialize(Ar, Map, bOutSuccess);
+			SecondaryRelativeTransform.NetSerialize(Ar, Map, bOutSuccess);
 
 			//Ar << bIsSlotGrip;
 			Ar.SerializeBits(&bIsSlotGrip, 1);
@@ -1101,7 +1101,7 @@ public:
 	{
 		bool bWasInitiallyRepped;
 		bool bCachedHasSecondaryAttachment;
-		FVector CachedSecondaryRelativeLocation;
+		FTransform_NetQuantize CachedSecondaryRelativeTransform;
 		EGripCollisionType CachedGripCollisionType;
 		EGripMovementReplicationSettings CachedGripMovementReplicationSetting;
 		float CachedStiffness;
@@ -1112,7 +1112,7 @@ public:
 		FGripValueCache():
 			bWasInitiallyRepped(false),
 			bCachedHasSecondaryAttachment(false),
-			CachedSecondaryRelativeLocation(FVector::ZeroVector),
+			CachedSecondaryRelativeTransform(FTransform::Identity),
 			CachedGripCollisionType(EGripCollisionType::InteractiveCollisionWithSweep),
 			CachedGripMovementReplicationSetting(EGripMovementReplicationSettings::ForceClientSideMovement),
 			CachedStiffness(1500.0f),
