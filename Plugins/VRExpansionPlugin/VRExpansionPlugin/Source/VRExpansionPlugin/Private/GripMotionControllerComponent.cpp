@@ -1863,9 +1863,9 @@ bool UGripMotionControllerComponent::AddSecondaryAttachmentPoint(UObject * Gripp
 		}
 
 		if (bTransformIsAlreadyRelative)
-			GripToUse->SecondaryGripInfo.SecondaryRelativeLocation = OriginalTransform.GetLocation();
+			GripToUse->SecondaryGripInfo.SecondaryRelativeTransform = OriginalTransform;
 		else
-			GripToUse->SecondaryGripInfo.SecondaryRelativeLocation = OriginalTransform.GetRelativeTransform(root->GetComponentTransform()).GetLocation();
+			GripToUse->SecondaryGripInfo.SecondaryRelativeTransform = OriginalTransform.GetRelativeTransform(root->GetComponentTransform());
 
 		GripToUse->SecondaryGripInfo.SecondaryAttachment = SecondaryPointComponent;
 		GripToUse->SecondaryGripInfo.bHasSecondaryAttachment = true;
@@ -2461,7 +2461,7 @@ void UGripMotionControllerComponent::GetGripWorldTransform(float DeltaTime, FTra
 			// Ending lerp out of a multi grip
 			if (Grip.SecondaryGripInfo.GripLerpState == EGripLerpState::EndLerp)
 			{
-				frontLocOrig = (/*WorldTransform*/SecondaryTransform.TransformPosition(Grip.SecondaryGripInfo.SecondaryRelativeLocation)) - BasePoint;
+				frontLocOrig = (/*WorldTransform*/SecondaryTransform.TransformPosition(Grip.SecondaryGripInfo.SecondaryRelativeTransform.GetLocation())) - BasePoint;
 				frontLoc = Grip.SecondaryGripInfo.LastRelativeLocation;
 
 				frontLocOrig = FMath::Lerp(frontLoc, frontLocOrig, FMath::Clamp(Grip.SecondaryGripInfo.curLerp / Grip.SecondaryGripInfo.LerpToRate, 0.0f, 1.0f));
@@ -2492,7 +2492,7 @@ void UGripMotionControllerComponent::GetGripWorldTransform(float DeltaTime, FTra
 				if (!bPulledControllerLoc)
 					/*curLocation*/ frontLoc = Grip.SecondaryGripInfo.SecondaryAttachment->GetComponentLocation() - BasePoint;
 
-				frontLocOrig = (/*WorldTransform*/SecondaryTransform.TransformPosition(Grip.SecondaryGripInfo.SecondaryRelativeLocation)) - BasePoint;
+				frontLocOrig = (/*WorldTransform*/SecondaryTransform.TransformPosition(Grip.SecondaryGripInfo.SecondaryRelativeTransform.GetLocation())) - BasePoint;
 				//frontLoc = curLocation;// -BasePoint;
 
 				if (Grip.SecondaryGripInfo.GripLerpState == EGripLerpState::StartLerp) // Lerp into the new grip to smooth the transition
