@@ -1233,7 +1233,7 @@ struct VREXPANSIONPLUGIN_API FBPInterfaceProperties
 public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Instanced, Category = "VRGripInterface", meta = (editcondition = "bUseGripLogicScript"))
-		class UVRGripScriptBase * GripLogicScript;
+		TArray<class UVRGripScriptBase *> GripLogicScripts;
 		
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRGripInterface")
 		bool bDenyGripping;

@@ -9,3 +9,9 @@ UVRGripScriptBase::UVRGripScriptBase(const FObjectInitializer& ObjectInitializer
 //	PrimaryComponentTick.bStartWithTickEnabled = false;
 //	PrimaryComponentTick.TickGroup = ETickingGroup::TG_PrePhysics;
 }
+
+
+void UVRGripScriptBase::BeginPlay_Implementation() {}
+void UVRGripScriptBase::GetWorldTransform_PreStep_Implementation(FTransform & WorldTransform) {}
+void UVRGripScriptBase::GetWorldTransform_PostStep_Implementation(FTransform & WorldTransform) {}
+void UVRGripScriptBase::GetWorldTransform_Override_Implementation(FTransform & WorldTransform) {}
