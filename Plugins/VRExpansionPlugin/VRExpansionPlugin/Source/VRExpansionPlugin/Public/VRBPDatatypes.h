@@ -576,21 +576,6 @@ enum class EPhysicsGripConstraintType : uint8
 	ForceConstraint = 1
 };
 
-UENUM(Blueprintable)
-enum class EPhysicsGripCOMType : uint8
-{
-	/* Use the default setting for the specified grip type */
-	COM_Default = 0,
-	/* Don't grip at center of mass (generally unstable as it grips at actor zero)*/
-	COM_AtPivot = 1,
-	/* Set center of mass to grip location and grip there (default for interactible with physics) */
-	COM_SetAndGripAt = 2,
-	/* Grip at center of mass but do not set it */
-	COM_GripAt = 3,
-	/* Just grip at the controller location, but don't set COM (default for manipulation grips)*/
-	COM_GripAtControllerLoc = 4
-};
-
 USTRUCT(BlueprintType, Category = "VRExpansionLibrary")
 struct VREXPANSIONPLUGIN_API FBPAdvGripPhysicsSettings
 {
@@ -603,9 +588,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PhysicsSettings", meta = (editcondition = "bUsePhysicsSettings"))
 		EPhysicsGripConstraintType PhysicsConstraintType;
 
-	// Set how the grips handle center of mass
+	// Do not set the Center Of Mass to the grip location, use this if the default is buggy or you want a custom COM
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PhysicsSettings", meta = (editcondition = "bUsePhysicsSettings"))
-		EPhysicsGripCOMType PhysicsGripLocationSettings;
+		bool bDoNotSetCOMToGripLocation;
 
 	// Turn off gravity during the grip, resolves the slight downward offset of the object with normal constraint strengths.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PhysicsSettings", meta = (editcondition = "bUsePhysicsSettings"))
@@ -624,7 +609,7 @@ public:
 	FBPAdvGripPhysicsSettings():
 		bUsePhysicsSettings(false),
 		PhysicsConstraintType(EPhysicsGripConstraintType::AccelerationConstraint),
-		PhysicsGripLocationSettings(EPhysicsGripCOMType::COM_Default),
+		bDoNotSetCOMToGripLocation(false),
 		bTurnOffGravityDuringGrip(false),
 		bUseCustomAngularValues(false),
 		AngularStiffness(0.0f),
@@ -634,7 +619,7 @@ public:
 	FORCEINLINE bool operator==(const FBPAdvGripPhysicsSettings &Other) const
 	{
 		return (bUsePhysicsSettings == Other.bUsePhysicsSettings &&
-			PhysicsGripLocationSettings == Other.PhysicsGripLocationSettings &&
+			bDoNotSetCOMToGripLocation == Other.bDoNotSetCOMToGripLocation &&
 			bTurnOffGravityDuringGrip == Other.bTurnOffGravityDuringGrip &&
 			bUseCustomAngularValues == Other.bUseCustomAngularValues &&
 			FMath::IsNearlyEqual(AngularStiffness, Other.AngularStiffness) &&
@@ -645,7 +630,7 @@ public:
 	FORCEINLINE bool operator!=(const FBPAdvGripPhysicsSettings &Other) const
 	{
 		return (bUsePhysicsSettings != Other.bUsePhysicsSettings ||
-			PhysicsGripLocationSettings != Other.PhysicsGripLocationSettings ||
+			bDoNotSetCOMToGripLocation != Other.bDoNotSetCOMToGripLocation ||
 			bTurnOffGravityDuringGrip != Other.bTurnOffGravityDuringGrip ||
 			bUseCustomAngularValues != Other.bUseCustomAngularValues ||
 			!FMath::IsNearlyEqual(AngularStiffness, Other.AngularStiffness) ||
@@ -662,7 +647,7 @@ public:
 		if (bUsePhysicsSettings)
 		{
 			//Ar << bDoNotSetCOMToGripLocation;
-			Ar.SerializeBits(&PhysicsGripLocationSettings, 3); // This only has four elements
+			Ar.SerializeBits(&bDoNotSetCOMToGripLocation, 1);
 			
 			//Ar << PhysicsConstraintType;
 			Ar.SerializeBits(&PhysicsConstraintType, 1); // This only has two elements
@@ -1347,6 +1332,7 @@ public:
 	physx::PxRigidDynamic* KinActorData;
 
 	physx::PxTransform COMPosition;
+	FTransform RootBoneRotation;
 
 	FBPActorPhysicsHandleInformation()
 	{
@@ -1355,7 +1341,8 @@ public:
 		HandledObject = nullptr;
 		//Actor = nullptr;
 		//Component = nullptr;
-		COMPosition = U2PTransform(FTransform::Identity);
+		
+		RootBoneRotation = FTransform::Identity;
 	}
 
 	FORCEINLINE bool operator==(const FBPActorGripInformation & Other) const
