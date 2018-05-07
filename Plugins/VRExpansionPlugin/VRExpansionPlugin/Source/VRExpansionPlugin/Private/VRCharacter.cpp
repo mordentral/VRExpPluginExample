@@ -27,10 +27,6 @@ AVRCharacter::AVRCharacter(const FObjectInitializer& ObjectInitializer)
 	}
 }
 
-AVRCharacter_BareBones::AVRCharacter_BareBones(const FObjectInitializer& ObjectInitializer)
-	: Super(ObjectInitializer.DoNotCreateDefaultSubobject(AVRBaseCharacter::LeftMotionControllerComponentName).DoNotCreateDefaultSubobject(AVRBaseCharacter::RightMotionControllerComponentName).DoNotCreateDefaultSubobject(AVRBaseCharacter::ParentRelativeAttachmentComponentName))
-{}
-
 
 FVector AVRCharacter::GetTeleportLocation(FVector OriginalLocation)
 {

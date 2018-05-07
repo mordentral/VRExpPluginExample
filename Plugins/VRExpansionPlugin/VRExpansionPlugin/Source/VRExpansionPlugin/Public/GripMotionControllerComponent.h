@@ -168,9 +168,6 @@ public:
 		}
 	}
 
-	UFUNCTION(BlueprintCallable, Category = "GripMotionController")
-		void InitForVRCharacter();
-
 	// When possible I suggest that you use GetAllGrips/GetGrippedObjects instead of directly referencing this
 	UPROPERTY(BlueprintReadOnly, Replicated, Category = "GripMotionController", ReplicatedUsing = OnRep_GrippedObjects)
 	TArray<FBPActorGripInformation> GrippedObjects;

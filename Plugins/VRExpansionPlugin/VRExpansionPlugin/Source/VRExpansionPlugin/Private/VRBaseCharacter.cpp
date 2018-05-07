@@ -64,7 +64,6 @@ AVRBaseCharacter::AVRBaseCharacter(const FObjectInitializer& ObjectInitializer)
 		LeftMotionController->SetTrackingMotionSource(FXRMotionControllerBase::LeftHandSourceId);
 		//LeftMotionController->Hand = EControllerHand::Left;
 		LeftMotionController->bOffsetByHMD = false;
-
 		// Keep the controllers ticking after movement
 		LeftMotionController->AddTickPrerequisiteComponent(GetCharacterMovement());
 		LeftMotionController->OverrideSendTransform = &AVRBaseCharacter::Server_SendTransformLeftController;
@@ -78,7 +77,6 @@ AVRBaseCharacter::AVRBaseCharacter(const FObjectInitializer& ObjectInitializer)
 		RightMotionController->SetTrackingMotionSource(FXRMotionControllerBase::RightHandSourceId);
 		//RightMotionController->Hand = EControllerHand::Right;
 		RightMotionController->bOffsetByHMD = false;
-
 		// Keep the controllers ticking after movement
 		RightMotionController->AddTickPrerequisiteComponent(GetCharacterMovement());
 		RightMotionController->OverrideSendTransform = &AVRBaseCharacter::Server_SendTransformRightController;
