@@ -102,6 +102,15 @@ UGripMotionControllerComponent::~UGripMotionControllerComponent()
 	// Epic had it listed as a crash in the private bug tracker I guess.
 }
 
+void UGripMotionControllerComponent::InitForVRCharacter()
+{
+	if (AVRBaseCharacter * OwningVRChar = Cast<AVRBaseCharacter>(GetOwner()))
+	{
+		// Keep the controllers ticking after movement
+		AddTickPrerequisiteComponent(OwningVRChar->GetCharacterMovement());
+	}
+}
+
 void UGripMotionControllerComponent::OnUnregister()
 {
 	for (int i = 0; i < GrippedObjects.Num(); i++)
