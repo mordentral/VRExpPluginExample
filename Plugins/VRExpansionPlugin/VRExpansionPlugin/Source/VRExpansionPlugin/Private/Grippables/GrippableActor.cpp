@@ -13,9 +13,7 @@ AGrippableActor::AGrippableActor(const FObjectInitializer& ObjectInitializer)
 	VRGripInterfaceSettings.bSimulateOnDrop = true;
 	VRGripInterfaceSettings.SlotDefaultGripType = EGripCollisionType::InteractiveCollisionWithPhysics;
 	VRGripInterfaceSettings.FreeDefaultGripType = EGripCollisionType::InteractiveCollisionWithPhysics;
-	//VRGripInterfaceSettings.bCanHaveDoubleGrip = false;
 	VRGripInterfaceSettings.SecondaryGripType = ESecondaryGripType::SG_None;
-	//VRGripInterfaceSettings.GripTarget = EGripTargetType::ActorGrip;
 	VRGripInterfaceSettings.MovementReplicationType = EGripMovementReplicationSettings::ForceClientSideMovement;
 	VRGripInterfaceSettings.LateUpdateSetting = EGripLateUpdateSettings::NotWhenCollidingOrDoubleGripping;
 	VRGripInterfaceSettings.ConstraintStiffness = 1500.0f;
@@ -27,8 +25,6 @@ AGrippableActor::AGrippableActor(const FObjectInitializer& ObjectInitializer)
 
 	VRGripInterfaceSettings.bIsHeld = false;
 	VRGripInterfaceSettings.HoldingController = nullptr;
-
-	//this->SetMobility(EComponentMobility::Movable);
 
 	// Default replication on for multiplayer
 	this->bNetLoadOnClient = false;
