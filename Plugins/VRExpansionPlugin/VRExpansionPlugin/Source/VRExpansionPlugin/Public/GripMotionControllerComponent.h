@@ -306,7 +306,9 @@ public:
 
 			if (Grip.ValueCache.CachedGripCollisionType != Grip.GripCollisionType ||
 				Grip.ValueCache.CachedGripMovementReplicationSetting != Grip.GripMovementReplicationSetting ||
-				Grip.ValueCache.CachedBoneName != Grip.GrippedBoneName)
+				Grip.ValueCache.CachedBoneName != Grip.GrippedBoneName ||
+				Grip.ValueCache.CachedPhysicsSettings.bUsePhysicsSettings != Grip.AdvancedGripSettings.PhysicsSettings.bUsePhysicsSettings
+				)
 			{
 				ReCreateGrip(Grip); // Need to re-create grip
 			}
