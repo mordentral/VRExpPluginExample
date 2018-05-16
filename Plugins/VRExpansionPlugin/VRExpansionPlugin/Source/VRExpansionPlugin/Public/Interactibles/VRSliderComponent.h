@@ -56,6 +56,11 @@ class VREXPANSIONPLUGIN_API UVRSliderComponent : public UStaticMeshComponent, pu
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRSliderComponent")
 	bool bSlideDistanceIsInParentSpace;
 
+	// How far away from an event state before the slider allows throwing the same state again, default of 1.0 means it takes a full toggle
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "VRSliderComponent", meta = (ClampMin = "0.0", ClampMax = "1.0", UIMin = "0.0", UIMax = "1.0"))
+		float EventThrowThreshold;
+	bool bHitEventThreshold;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRSliderComponent")
 	int GripPriority;
 
@@ -125,13 +130,18 @@ class VREXPANSIONPLUGIN_API UVRSliderComponent : public UStaticMeshComponent, pu
 		}
 		else // Not a spline follow
 		{
+			// Doing it min+max because the clamp value subtracts the min value
 			FVector CalculatedLocation = FMath::Lerp(-MinSlideDistance, MaxSlideDistance, NewSliderProgress);
-			FVector ClampedLocation = ClampSlideVector(CalculatedLocation);
 
 			if (bSlideDistanceIsInParentSpace)
-				this->SetRelativeLocation(InitialRelativeTransform.TransformPositionNoScale(ClampedLocation));
-			else
-				this->SetRelativeLocation(InitialRelativeTransform.TransformPosition(ClampedLocation));
+				CalculatedLocation *= FVector(1.0f) / InitialRelativeTransform.GetScale3D();
+
+			FVector ClampedLocation = ClampSlideVector(CalculatedLocation);
+
+			//if (bSlideDistanceIsInParentSpace)
+			//	this->SetRelativeLocation(InitialRelativeTransform.TransformPositionNoScale(ClampedLocation));
+			//else
+			this->SetRelativeLocation(InitialRelativeTransform.TransformPosition(ClampedLocation));
 		}
 
 		CurrentSliderProgress = NewSliderProgress;
@@ -221,8 +231,10 @@ class VREXPANSIONPLUGIN_API UVRSliderComponent : public UStaticMeshComponent, pu
 		if (bSlideDistanceIsInParentSpace)
 			fScaleFactor = fScaleFactor / InitialRelativeTransform.GetScale3D();
 
-		FVector Dist = (-MinSlideDistance + MaxSlideDistance) * fScaleFactor;
-		FVector Progress = ValueToClamp / Dist;
+		FVector MinScale = MinSlideDistance * fScaleFactor;
+
+		FVector Dist = (MinSlideDistance + MaxSlideDistance) * fScaleFactor;
+		FVector Progress = (ValueToClamp - (-MinScale)) / Dist;
 			
 		if (bSliderUsesSnapPoints)
 		{
@@ -237,7 +249,7 @@ class VREXPANSIONPLUGIN_API UVRSliderComponent : public UStaticMeshComponent, pu
 			Progress.Z = FMath::Clamp(Progress.Z, 0.f, 1.f);
 		}
 		
-		return Progress * Dist;
+		return (Progress * Dist) - (MinScale);
 	}
 
 	// ------------------------------------------------
