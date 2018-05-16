@@ -834,13 +834,6 @@ public:
 		return UpdatePhysicsHandleTransform(GrippedActor, NewTransform);
 	}
 
-	// Set stiffness and damping of the handle
-	UFUNCTION(BlueprintCallable, Category = "GripMotionController|Custom", meta = (DisplayName = "SetGripConstraintStiffnessAndDamping"))
-	bool SetGripConstraintStiffnessAndDamping_BP(UPARAM(ref)const FBPActorGripInformation &Grip, bool bUseHybridMultiplier = false)
-	{
-		return SetGripConstraintStiffnessAndDamping(&Grip, bUseHybridMultiplier);
-	}
-
 	// Get the grip distance of either the physics handle if there is one, or the difference from the hand to the root component if there isn't
 	UFUNCTION(BlueprintCallable, Category = "GripMotionController|Custom", meta = (DisplayName = "GetGripDistance"))
 	bool GetGripDistance_BP(UPARAM(ref)FBPActorGripInformation &Grip, FVector ExpectedLocation, float & CurrentDistance)
