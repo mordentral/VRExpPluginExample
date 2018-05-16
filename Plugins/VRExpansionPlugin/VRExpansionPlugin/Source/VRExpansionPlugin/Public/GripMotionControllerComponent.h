@@ -888,6 +888,13 @@ public:
 		return bTracked;
 	}
 
+	/** Returns the first valid device ID for this motion controller (across enabled XR systems)
+	*
+	* If bCheckOpenVROnly is true, then it only checks for OpenVR IDs (for use with my openVR nodes).
+	*/
+	UFUNCTION(BlueprintCallable, Category = "GripMotionController", meta = (ExpandEnumAsExecs = "Result"))
+		void GetControllerDeviceID(FXRDeviceId & DeviceID, EBPVRResultSwitch &Result, bool bCheckOpenVROnly = false);
+
 	/** Whether or not this component has authority within the frame*/
 	bool bHasAuthority;
 
