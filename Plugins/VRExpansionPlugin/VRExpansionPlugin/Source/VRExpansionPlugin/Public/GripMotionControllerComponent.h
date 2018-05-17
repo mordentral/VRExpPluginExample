@@ -97,6 +97,10 @@ public:
 	bool bOffsetByHMD;
 	
 	FVector LastLocationForLateUpdate;
+
+	// If true will offset the tracked location of the controller by the controller profile that is currently loaded.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GripMotionController")
+		bool bOffsetByControllerProfile;
 private:
 
 	GENERATED_UCLASS_BODY()

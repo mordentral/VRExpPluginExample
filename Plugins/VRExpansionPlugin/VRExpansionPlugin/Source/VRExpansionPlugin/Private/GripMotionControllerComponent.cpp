@@ -3880,6 +3880,20 @@ bool UGripMotionControllerComponent::GripPollControllerState(FVector& Position, 
 					Position -= LastLocationForLateUpdate;
 				}
 
+				if (bOffsetByControllerProfile)
+				{
+					const UVRGlobalSettings& VRSettings = *GetDefault<UVRGlobalSettings>();
+					EControllerHand HandType;
+					this->GetHandType(HandType);
+
+					if (HandType == EControllerHand::Left || HandType == EControllerHand::Right || HandType == EControllerHand::AnyHand)
+					{
+						FTransform newTrnas = UVRGlobalSettings::AdjustTransformByControllerProfile(NAME_None, FTransform(Orientation, Position), HandType == EControllerHand::Right);
+						Orientation = newTrnas.GetRotation().Rotator();
+						Position = newTrnas.GetTranslation();
+					}
+				}
+
 				// Render thread also calls this, shouldn't be flagging this event in the render thread.
 				// Probably need to report this to epic
 				if (IsInGameThread())
