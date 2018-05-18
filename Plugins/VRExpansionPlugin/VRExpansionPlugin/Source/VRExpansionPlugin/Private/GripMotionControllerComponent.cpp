@@ -103,8 +103,64 @@ UGripMotionControllerComponent::~UGripMotionControllerComponent()
 	// Epic had it listed as a crash in the private bug tracker I guess.
 }
 
+void UGripMotionControllerComponent::NewControllerProfileLoaded()
+{
+	GetCurrentProfileTransform(false);
+}
+
+void UGripMotionControllerComponent::GetCurrentProfileTransform(bool bBindToNoticationDelegate)
+{
+	if (bOffsetByControllerProfile)
+	{
+		UVRGlobalSettings* VRSettings = const_cast<UVRGlobalSettings*>(GetDefault<UVRGlobalSettings>());
+
+		if (VRSettings == nullptr)
+			return;
+
+		EControllerHand HandType;
+		this->GetHandType(HandType);
+
+		if (HandType == EControllerHand::Left || HandType == EControllerHand::AnyHand || !VRSettings->bUseSeperateHandTransforms)
+		{
+			CurrentControllerProfileTransform = VRSettings->CurrentControllerProfileTransform;
+		}
+		else if (HandType == EControllerHand::Right)
+		{
+			CurrentControllerProfileTransform = VRSettings->CurrentControllerProfileTransformRight;
+		}
+		else
+		{
+			CurrentControllerProfileTransform = FTransform::Identity;
+		}
+
+		if (bBindToNoticationDelegate && !NewControllerProfileEvent_Handle.IsValid())
+		{
+			NewControllerProfileEvent_Handle = VRSettings->OnControllerProfileChangedEvent.AddUObject(this, &UGripMotionControllerComponent::NewControllerProfileLoaded);
+		}
+
+		// Auto adjust for FPS testing pawns
+		if (!bTracked && bUseWithoutTracking)
+		{
+			this->SetRelativeTransform(CurrentControllerProfileTransform * this->GetRelativeTransform());
+		}
+
+		if(!bBindToNoticationDelegate || (bBindToNoticationDelegate && !CurrentControllerProfileTransform.Equals(FTransform::Identity)))
+			OnControllerProfileTransformChanged.Broadcast(CurrentControllerProfileTransform);
+	}
+}
+
 void UGripMotionControllerComponent::OnUnregister()
 {
+
+	if (NewControllerProfileEvent_Handle.IsValid())
+	{
+		UVRGlobalSettings* VRSettings = const_cast<UVRGlobalSettings*>(GetDefault<UVRGlobalSettings>());
+		if (VRSettings != nullptr)
+		{
+			VRSettings->OnControllerProfileChangedEvent.Remove(NewControllerProfileEvent_Handle);
+		}
+	}
+
 	for (int i = 0; i < GrippedObjects.Num(); i++)
 	{
 		DestroyPhysicsHandle(GrippedObjects[i]);
@@ -148,10 +204,21 @@ void UGripMotionControllerComponent::BeginDestroy()
 	}
 }
 
+void UGripMotionControllerComponent::BeginPlay()
+{
+	if (IsLocallyControlled())
+	{
+		GetCurrentProfileTransform(true);
+	}
+
+	Super::BeginPlay();
+}
+
 void UGripMotionControllerComponent::SendRenderTransform_Concurrent()
 {
 	GripRenderThreadRelativeTransform = GetRelativeTransform();
 	GripRenderThreadComponentScale = GetComponentScale();
+	GripRenderThreadProfileTransform = CurrentControllerProfileTransform;
 
 	Super::SendRenderTransform_Concurrent();
 }
@@ -2333,7 +2400,6 @@ void UGripMotionControllerComponent::TickComponent(float DeltaTime, enum ELevelT
 
 		if (!bUseWithoutTracking)
 		{
-
 			if (!GripViewExtension.IsValid() && GEngine)
 			{
 				GripViewExtension = FSceneViewExtensions::NewExtension<FGripViewExtension>(this);
@@ -2345,6 +2411,7 @@ void UGripMotionControllerComponent::TickComponent(float DeltaTime, enum ELevelT
 
 			if (bNewTrackedState)
 			{
+				SetRelativeTransform(CurrentControllerProfileTransform * FTransform(Orientation, Position, this->RelativeScale3D));
 				SetRelativeLocationAndRotation(Position, Orientation);
 			}
 
@@ -3848,7 +3915,6 @@ bool UGripMotionControllerComponent::GripPollControllerState(FVector& Position, 
 		TArray<IMotionController*> MotionControllers = IModularFeatures::Get().GetModularFeatureImplementations<IMotionController>(IMotionController::GetModularFeatureName());
 		for (auto MotionController : MotionControllers)
 		{
-
 			if (MotionController == nullptr)
 			{
 				continue;
@@ -3877,21 +3943,25 @@ bool UGripMotionControllerComponent::GripPollControllerState(FVector& Position, 
 						}
 					}
 
+					// #TODO: This is technically unsafe, need to use a seperate value like the transforms for the render thread
+					// If I ever delete the simple char then this setup can just go away anyway though
 					Position -= LastLocationForLateUpdate;
 				}
 
 				if (bOffsetByControllerProfile)
 				{
-					const UVRGlobalSettings& VRSettings = *GetDefault<UVRGlobalSettings>();
-					EControllerHand HandType;
-					this->GetHandType(HandType);
-
-					if (HandType == EControllerHand::Left || HandType == EControllerHand::Right || HandType == EControllerHand::AnyHand)
+					FTransform FinalControllerTransform(Orientation,Position);
+					if (IsInGameThread())
 					{
-						FTransform newTrnas = UVRGlobalSettings::AdjustTransformByControllerProfile(NAME_None, FTransform(Orientation, Position), HandType == EControllerHand::Right);
-						Orientation = newTrnas.GetRotation().Rotator();
-						Position = newTrnas.GetTranslation();
+						FinalControllerTransform = CurrentControllerProfileTransform * FinalControllerTransform;
 					}
+					else
+					{
+						FinalControllerTransform = GripRenderThreadProfileTransform * FinalControllerTransform;
+					}
+					
+					Orientation = FinalControllerTransform.GetRotation().Rotator();
+					Position = FinalControllerTransform.GetTranslation();
 				}
 
 				// Render thread also calls this, shouldn't be flagging this event in the render thread.
@@ -3956,7 +4026,7 @@ void UGripMotionControllerComponent::FGripViewExtension::PreRenderViewFamily_Ren
 		}
 
 		OldTransform = MotionControllerComponent->GripRenderThreadRelativeTransform;
-		NewTransform = FTransform(Orientation, Position, MotionControllerComponent->GripRenderThreadComponentScale);
+		NewTransform = MotionControllerComponent->GripRenderThreadProfileTransform * FTransform(Orientation, Position, MotionControllerComponent->GripRenderThreadComponentScale);
 	} // Release lock on motion controller component
 
 	  // Tell the late update manager to apply the offset to the scene components
