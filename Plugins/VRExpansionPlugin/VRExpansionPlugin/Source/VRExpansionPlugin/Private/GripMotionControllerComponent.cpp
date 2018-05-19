@@ -120,17 +120,15 @@ void UGripMotionControllerComponent::GetCurrentProfileTransform(bool bBindToNoti
 		EControllerHand HandType;
 		this->GetHandType(HandType);
 
+		FTransform NewControllerProfileTransform = FTransform::Identity;
+
 		if (HandType == EControllerHand::Left || HandType == EControllerHand::AnyHand || !VRSettings->bUseSeperateHandTransforms)
 		{
-			CurrentControllerProfileTransform = VRSettings->CurrentControllerProfileTransform;
+			NewControllerProfileTransform = VRSettings->CurrentControllerProfileTransform;
 		}
 		else if (HandType == EControllerHand::Right)
 		{
-			CurrentControllerProfileTransform = VRSettings->CurrentControllerProfileTransformRight;
-		}
-		else
-		{
-			CurrentControllerProfileTransform = FTransform::Identity;
+			NewControllerProfileTransform = VRSettings->CurrentControllerProfileTransformRight;
 		}
 
 		if (bBindToNoticationDelegate && !NewControllerProfileEvent_Handle.IsValid())
@@ -138,14 +136,19 @@ void UGripMotionControllerComponent::GetCurrentProfileTransform(bool bBindToNoti
 			NewControllerProfileEvent_Handle = VRSettings->OnControllerProfileChangedEvent.AddUObject(this, &UGripMotionControllerComponent::NewControllerProfileLoaded);
 		}
 
-		// Auto adjust for FPS testing pawns
-		if (!bTracked && bUseWithoutTracking)
+		if (!NewControllerProfileTransform.Equals(CurrentControllerProfileTransform))
 		{
-			this->SetRelativeTransform(CurrentControllerProfileTransform * this->GetRelativeTransform());
-		}
+			FTransform OriginalControllerProfileTransform = CurrentControllerProfileTransform;
+			CurrentControllerProfileTransform = NewControllerProfileTransform;
 
-		if(!bBindToNoticationDelegate || (bBindToNoticationDelegate && !CurrentControllerProfileTransform.Equals(FTransform::Identity)))
-			OnControllerProfileTransformChanged.Broadcast(CurrentControllerProfileTransform);
+			// Auto adjust for FPS testing pawns
+			if (!bTracked && bUseWithoutTracking)
+			{
+				this->SetRelativeTransform(CurrentControllerProfileTransform * (OriginalControllerProfileTransform.Inverse() * this->GetRelativeTransform()));
+			}
+
+			OnControllerProfileTransformChanged.Broadcast(CurrentControllerProfileTransform.Inverse() * OriginalControllerProfileTransform, CurrentControllerProfileTransform);
+		}
 	}
 }
 
@@ -4026,7 +4029,7 @@ void UGripMotionControllerComponent::FGripViewExtension::PreRenderViewFamily_Ren
 		}
 
 		OldTransform = MotionControllerComponent->GripRenderThreadRelativeTransform;
-		NewTransform = MotionControllerComponent->GripRenderThreadProfileTransform * FTransform(Orientation, Position, MotionControllerComponent->GripRenderThreadComponentScale);
+		NewTransform = FTransform(Orientation, Position, MotionControllerComponent->GripRenderThreadComponentScale);
 	} // Release lock on motion controller component
 
 	  // Tell the late update manager to apply the offset to the scene components

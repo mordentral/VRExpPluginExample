@@ -33,7 +33,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FVRGripControllerOnGripSignature, co
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FVRGripControllerOnDropSignature, const FBPActorGripInformation &, GripInformation);
 
 /** Delegate for notification when the controller grips a new object. */
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FVRGripControllerOnProfileTransformChanged, const FTransform &, NewTransform);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FVRGripControllerOnProfileTransformChanged, const FTransform &, NewRelTransForProcComps, const FTransform &, NewProfileTransform);
 
 /**
 * Utility class for applying an offset to a hierarchy of components in the renderer thread.
