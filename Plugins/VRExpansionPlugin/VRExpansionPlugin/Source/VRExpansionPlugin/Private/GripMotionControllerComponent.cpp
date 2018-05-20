@@ -3915,6 +3915,7 @@ bool UGripMotionControllerComponent::GripPollControllerState(FVector& Position, 
 {
 	// Not calling PollControllerState from the parent because its private.......
 
+	bool bIsInGameThread = IsInGameThread();
 
 	if (bHasAuthority)
 	{
@@ -3932,7 +3933,7 @@ bool UGripMotionControllerComponent::GripPollControllerState(FVector& Position, 
 			{
 				if (bOffsetByHMD)
 				{
-					if (IsInGameThread())
+					if (bIsInGameThread)
 					{
 						if (GEngine->XRSystem.IsValid() && GEngine->XRSystem->IsHeadTrackingAllowed())
 						{
@@ -3952,13 +3953,14 @@ bool UGripMotionControllerComponent::GripPollControllerState(FVector& Position, 
 
 					// #TODO: This is technically unsafe, need to use a seperate value like the transforms for the render thread
 					// If I ever delete the simple char then this setup can just go away anyway though
+					// It has a data race condition right now though
 					Position -= LastLocationForLateUpdate;
 				}
 
 				if (bOffsetByControllerProfile)
 				{
 					FTransform FinalControllerTransform(Orientation,Position);
-					if (IsInGameThread())
+					if (bIsInGameThread)
 					{
 						FinalControllerTransform = CurrentControllerProfileTransform * FinalControllerTransform;
 					}
@@ -3972,8 +3974,7 @@ bool UGripMotionControllerComponent::GripPollControllerState(FVector& Position, 
 				}
 
 				// Render thread also calls this, shouldn't be flagging this event in the render thread.
-				// Probably need to report this to epic
-				if (IsInGameThread())
+				if (bIsInGameThread)
 				{
 					InUseMotionController = MotionController;
 					OnMotionControllerUpdated();
