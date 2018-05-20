@@ -2,6 +2,7 @@
 
 #include "GameFramework/PlayerInput.h"
 #include "GameFramework/InputSettings.h"
+#include "VRBPDatatypes.h"
 #include "VRGlobalSettings.generated.h"
 
 
@@ -9,7 +10,6 @@
 {
 	static const FTransform OculusTouchStaticOffset(FRotator(-70.f, 0.f, 0.f));
 }*/
-
 
 USTRUCT(BlueprintType, Category = "VRGlobalSettings")
 struct FAxisMappingDetails
@@ -46,32 +46,57 @@ public:
 
 	// Offset to use with this controller
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ControllerProfiles")
-		FTransform SocketOffsetTransform;
+		FTransform_NetQuantize SocketOffsetTransform;
+
+	// Offset to use with this controller
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ControllerProfiles")
+		bool bUseSeperateHandOffsetTransforms;
+
+	// Offset to use with this controller
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ControllerProfiles", meta = (editcondition = "bUseSeperateHandOffsetTransforms"))
+		FTransform_NetQuantize SocketOffsetTransformRightHand;
 
 	// Setting an axis value here with key bindings will override the equivalent bindings on profile load
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ControllerProfiles")
+	UPROPERTY(EditDefaultsOnly, NotReplicated, Category = "ControllerProfiles")
 	TMap<FName, FAxisMappingDetails> AxisOverrides;
 
 	// Setting action mappings here will override the equivalent bindings on profile load
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ControllerProfiles")
+	UPROPERTY(EditDefaultsOnly, NotReplicated, Category = "ControllerProfiles")
 	TMap<FName, FActionMappingDetails> ActionOverrides;
 
 
 	FBPVRControllerProfile() :
 		ControllerName(NAME_None),
-		SocketOffsetTransform(FTransform::Identity)
+		SocketOffsetTransform(FTransform::Identity),
+		bUseSeperateHandOffsetTransforms(false),
+		SocketOffsetTransformRightHand(FTransform::Identity)
 	{}
 
 	FBPVRControllerProfile(FName ControllerName) :
 		ControllerName(ControllerName),
-		SocketOffsetTransform(FTransform::Identity)
+		SocketOffsetTransform(FTransform::Identity),		
+		bUseSeperateHandOffsetTransforms(false),
+		SocketOffsetTransformRightHand(FTransform::Identity)
 	{}
 
 	FBPVRControllerProfile(FName ControllerName, const FTransform & Offset) :
 		ControllerName(ControllerName),
-		SocketOffsetTransform(Offset)
+		SocketOffsetTransform(Offset),
+		bUseSeperateHandOffsetTransforms(false),
+		SocketOffsetTransformRightHand(FTransform::Identity)
 	{}
 
+	FBPVRControllerProfile(FName ControllerName, const FTransform & Offset, const FTransform & OffsetRight) :
+		ControllerName(ControllerName),
+		SocketOffsetTransform(Offset),
+		bUseSeperateHandOffsetTransforms(true),
+		SocketOffsetTransformRightHand(OffsetRight)
+	{}
+
+	FORCEINLINE bool operator==(const FBPVRControllerProfile &Other) const
+	{
+		return this->ControllerName == Other.ControllerName;
+	}
 };
 
 UCLASS(config = Engine, defaultconfig)
@@ -81,6 +106,10 @@ class VREXPANSIONPLUGIN_API UVRGlobalSettings : public UObject
 
 public:
 
+	DECLARE_MULTICAST_DELEGATE(FVRControllerProfileChangedEvent);
+	/** Delegate for notification when the controller profile changes. */
+	FVRControllerProfileChangedEvent OnControllerProfileChangedEvent;
+
 	// Controller profiles to store related information on a per profile basis
 	UPROPERTY(config, EditAnywhere, Category = "ControllerProfiles")
 	TArray<FBPVRControllerProfile> ControllerProfiles;
@@ -88,6 +117,8 @@ public:
 	// Store these to save some processing when getting the transform after a profile is loaded
 	FName CurrentControllerProfileInUse;
 	FTransform CurrentControllerProfileTransform;
+	bool bUseSeperateHandTransforms;
+	FTransform CurrentControllerProfileTransformRight;
 
 	// Setting to use for the OneEuro smoothing low pass filter when double gripping something held with a hand
 	UPROPERTY(config, EditAnywhere, Category = "Secondary Grip 1Euro Settings")
@@ -103,8 +134,9 @@ public:
 
 	// Adjust the transform of a socket for a particular controller model, if a name is not sent in, it will use the currently loaded one
 	// If there is no currently loaded one, it will return the input transform as is.
+	// If bIsRightHand and the target profile uses seperate hand transforms it will use the right hand transform
 	UFUNCTION(BlueprintPure, Category = "VRControllerProfiles")
-	static FTransform AdjustTransformByControllerProfile(FName OptionalControllerProfileName, const FTransform & SocketTransform)
+	static FTransform AdjustTransformByControllerProfile(FName OptionalControllerProfileName, const FTransform & SocketTransform, bool bIsRightHand = false)
 	{
 		const UVRGlobalSettings& VRSettings = *GetDefault<UVRGlobalSettings>();
 
@@ -113,7 +145,7 @@ public:
 			if (VRSettings.CurrentControllerProfileInUse != NAME_None)
 			{
 				// Use currently loaded transform
-				return SocketTransform * VRSettings.CurrentControllerProfileTransform;
+				return SocketTransform * (((bIsRightHand && VRSettings.bUseSeperateHandTransforms) ? VRSettings.CurrentControllerProfileTransformRight : VRSettings.CurrentControllerProfileTransform));
 			}
 
 			// No override and no default, return base transform back
@@ -128,8 +160,21 @@ public:
 
 		if (FoundProfile)
 		{
-			return SocketTransform * FoundProfile->SocketOffsetTransform;
+			return SocketTransform * (((bIsRightHand && VRSettings.bUseSeperateHandTransforms) ? FoundProfile->SocketOffsetTransformRightHand : FoundProfile->SocketOffsetTransform));
 		}
+
+		// Couldn't find it, return base transform
+		return SocketTransform;
+	}
+
+	// Adjust the transform of a socket for a particular controller model
+	// If there is no currently loaded one, it will return the input transform as is.
+	// If bIsRightHand and the target profile uses seperate hand transforms it will use the right hand transform
+	UFUNCTION(BlueprintPure, Category = "VRControllerProfiles")
+		static FTransform AdjustTransformByGivenControllerProfile(UPARAM(ref) FBPVRControllerProfile & ControllerProfile, const FTransform & SocketTransform, bool bIsRightHand = false)
+	{
+		// Use currently loaded transform
+		return SocketTransform * (((bIsRightHand && ControllerProfile.bUseSeperateHandOffsetTransforms) ? ControllerProfile.SocketOffsetTransformRightHand : ControllerProfile.SocketOffsetTransform));
 
 		// Couldn't find it, return base transform
 		return SocketTransform;
@@ -204,11 +249,34 @@ public:
 
 	// Get name of currently loaded profile (if one is loaded)
 	UFUNCTION(BlueprintCallable, Category = "VRControllerProfiles")
-		static FName GetCurrentProfile()
+		static FName GetCurrentProfileName(bool & bHadLoadedProfile)
 	{
 		const UVRGlobalSettings& VRSettings = *GetDefault<UVRGlobalSettings>();
 
+		bHadLoadedProfile = VRSettings.CurrentControllerProfileInUse != NAME_None;	
 		return VRSettings.CurrentControllerProfileInUse;
+	}
+
+	// Get name of currently loaded profile (if one is loaded)
+	UFUNCTION(BlueprintCallable, Category = "VRControllerProfiles")
+		static FBPVRControllerProfile GetCurrentProfile(bool & bHadLoadedProfile)
+	{
+		const UVRGlobalSettings& VRSettings = *GetDefault<UVRGlobalSettings>();
+
+		FName ControllerProfileName = VRSettings.CurrentControllerProfileInUse;
+		const FBPVRControllerProfile * FoundProfile = VRSettings.ControllerProfiles.FindByPredicate([ControllerProfileName](const FBPVRControllerProfile & ArrayItem)
+		{
+			return ArrayItem.ControllerName == ControllerProfileName;
+		});
+
+		bHadLoadedProfile = FoundProfile != nullptr;
+
+		if (bHadLoadedProfile)
+		{
+			return *FoundProfile;
+		}
+		else
+			return FBPVRControllerProfile();
 	}
 
 	// Get a controller profile by name
@@ -266,73 +334,73 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "VRControllerProfiles")
 		static bool LoadControllerProfile(const FBPVRControllerProfile & ControllerProfile, bool bSetAsCurrentProfile = true)
 	{
-		if (ControllerProfile.ActionOverrides.Num() == 0 && ControllerProfile.AxisOverrides.Num() == 0)
-			return false;
+		//if (ControllerProfile.ActionOverrides.Num() == 0 && ControllerProfile.AxisOverrides.Num() == 0)
+			//return false;
 
 		UInputSettings* InputSettings = const_cast<UInputSettings*>(GetDefault<UInputSettings>());
-		if (!InputSettings)
-			return false;
-
-		// Load button mappings
-		for (auto& Elem : ControllerProfile.ActionOverrides)
+		if (InputSettings != nullptr)
 		{
-			FName ActionName = Elem.Key;
-			FActionMappingDetails Mapping = Elem.Value;
-
-			// We allow for 0 mapped actions here in case you want to delete one
-			if (ActionName == NAME_None /*|| Mapping.ActionMappings.Num() < 1*/)
-				continue;
-
-			// Clear all actions that use our action name first
-			for (int32 ActionIndex = InputSettings->ActionMappings.Num() - 1; ActionIndex >= 0; --ActionIndex)
+			// Load button mappings
+			for (auto& Elem : ControllerProfile.ActionOverrides)
 			{
-				if (InputSettings->ActionMappings[ActionIndex].ActionName == ActionName)
+				FName ActionName = Elem.Key;
+				FActionMappingDetails Mapping = Elem.Value;
+
+				// We allow for 0 mapped actions here in case you want to delete one
+				if (ActionName == NAME_None /*|| Mapping.ActionMappings.Num() < 1*/)
+					continue;
+
+				// Clear all actions that use our action name first
+				for (int32 ActionIndex = InputSettings->ActionMappings.Num() - 1; ActionIndex >= 0; --ActionIndex)
 				{
-					InputSettings->ActionMappings.RemoveAt(ActionIndex);
-					// we don't break because the mapping may have been in the array twice
+					if (InputSettings->ActionMappings[ActionIndex].ActionName == ActionName)
+					{
+						InputSettings->ActionMappings.RemoveAt(ActionIndex);
+						// we don't break because the mapping may have been in the array twice
+					}
+				}
+
+				// Then add the new bindings
+				for (FInputActionKeyMapping &KeyMapping : Mapping.ActionMappings)
+				{
+					// By default the key mappings don't have an action name, add them here
+					KeyMapping.ActionName = ActionName;
+					InputSettings->ActionMappings.Add(KeyMapping);
 				}
 			}
 
-			// Then add the new bindings
-			for (FInputActionKeyMapping &KeyMapping : Mapping.ActionMappings)
-			{			
-				// By default the key mappings don't have an action name, add them here
-				KeyMapping.ActionName = ActionName;
-				InputSettings->ActionMappings.Add(KeyMapping);
-			}
-		}
-
-		// Load axis mappings
-		for (auto& Elem : ControllerProfile.AxisOverrides)
-		{
-			FName AxisName = Elem.Key;
-			FAxisMappingDetails Mapping = Elem.Value;
-
-			// We allow for 0 mapped Axis's here in case you want to delete one
-			if (AxisName == NAME_None /*|| Mapping.AxisMappings.Num() < 1*/)
-				continue;
-
-			// Clear all Axis's that use our Axis name first
-			for (int32 AxisIndex = InputSettings->AxisMappings.Num() - 1; AxisIndex >= 0; --AxisIndex)
+			// Load axis mappings
+			for (auto& Elem : ControllerProfile.AxisOverrides)
 			{
-				if (InputSettings->AxisMappings[AxisIndex].AxisName == AxisName)
+				FName AxisName = Elem.Key;
+				FAxisMappingDetails Mapping = Elem.Value;
+
+				// We allow for 0 mapped Axis's here in case you want to delete one
+				if (AxisName == NAME_None /*|| Mapping.AxisMappings.Num() < 1*/)
+					continue;
+
+				// Clear all Axis's that use our Axis name first
+				for (int32 AxisIndex = InputSettings->AxisMappings.Num() - 1; AxisIndex >= 0; --AxisIndex)
 				{
-					InputSettings->AxisMappings.RemoveAt(AxisIndex);
-					// we don't break because the mapping may have been in the array twice
+					if (InputSettings->AxisMappings[AxisIndex].AxisName == AxisName)
+					{
+						InputSettings->AxisMappings.RemoveAt(AxisIndex);
+						// we don't break because the mapping may have been in the array twice
+					}
+				}
+
+				// Then add the new bindings
+				for (FInputAxisKeyMapping &KeyMapping : Mapping.AxisMappings)
+				{
+					// By default the key mappings don't have an Axis name, add them here
+					KeyMapping.AxisName = AxisName;
+					InputSettings->AxisMappings.Add(KeyMapping);
 				}
 			}
 
-			// Then add the new bindings
-			for (FInputAxisKeyMapping &KeyMapping : Mapping.AxisMappings)
-			{
-				// By default the key mappings don't have an Axis name, add them here
-				KeyMapping.AxisName = AxisName;
-				InputSettings->AxisMappings.Add(KeyMapping);
-			}
+			// Tell all players to use the new keymappings
+			InputSettings->ForceRebuildKeymaps();
 		}
-
-		// Tell all players to use the new keymappings
-		InputSettings->ForceRebuildKeymaps();
 
 		if (bSetAsCurrentProfile)
 		{
@@ -341,8 +409,14 @@ public:
 			{
 				VRSettings->CurrentControllerProfileInUse = ControllerProfile.ControllerName;
 				VRSettings->CurrentControllerProfileTransform = ControllerProfile.SocketOffsetTransform;
+				VRSettings->bUseSeperateHandTransforms = ControllerProfile.bUseSeperateHandOffsetTransforms;
+				VRSettings->CurrentControllerProfileTransformRight = ControllerProfile.SocketOffsetTransformRightHand;
+				VRSettings->OnControllerProfileChangedEvent.Broadcast();
 			}
+			else
+				return false;
 		}
+
 
 		// Not saving key mapping in purpose, app will revert to default on next load and profiles will load custom changes
 		return true;
