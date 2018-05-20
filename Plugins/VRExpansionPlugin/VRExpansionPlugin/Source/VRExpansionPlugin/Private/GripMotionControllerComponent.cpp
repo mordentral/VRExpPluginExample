@@ -94,6 +94,10 @@ UGripMotionControllerComponent::UGripMotionControllerComponent(const FObjectInit
 	bIsPostTeleport = false;
 
 	GripIDIncrementer = 0;
+
+	bOffsetByControllerProfile = true;
+	GripRenderThreadProfileTransform = FTransform::Identity;
+	CurrentControllerProfileTransform = FTransform::Identity;
 }
 
 //=============================================================================

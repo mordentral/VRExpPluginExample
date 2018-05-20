@@ -102,6 +102,9 @@ public:
 	FVector LastLocationForLateUpdate;
 
 	// If true will offset the tracked location of the controller by the controller profile that is currently loaded.
+	// Thows the event OnControllerProfileTransformChanged when it happens so that you can adjust specific components
+	// Like procedural ones for the offset (procedural meshes are already correctly offset for the controller and
+	// need rewound.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GripMotionController")
 		bool bOffsetByControllerProfile;
 
