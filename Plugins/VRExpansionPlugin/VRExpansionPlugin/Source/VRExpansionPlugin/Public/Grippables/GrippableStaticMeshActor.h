@@ -27,7 +27,6 @@ public:
 		bool bReplicateMovement;
 
 	virtual void PreReplication(IRepChangedPropertyTracker & ChangedPropertyTracker) override;
-
 };
 
 /**
@@ -55,8 +54,59 @@ class VREXPANSIONPLUGIN_API AGrippableStaticMeshActor : public AStaticMeshActor,
 		FGameplayTagContainer GameplayTags;
 
 	// End Gameplay Tag Interface
+	bool bLastAttachParent;
 
 	virtual void PreReplication(IRepChangedPropertyTracker & ChangedPropertyTracker) override;
+
+	virtual void OnRep_ReplicateMovement() override
+	{
+		if (RootComponent)
+		{
+			// This "fix" corrects the simulation state not replicating over correctly
+			// If you turn off movement replication, simulate an object, turn movement replication back on and un-simulate, it never knows the difference
+			// This change ensures that it is checking against the current state
+			if (RootComponent->IsSimulatingPhysics() != ReplicatedMovement.bRepPhysics)//SavedbRepPhysics != ReplicatedMovement.bRepPhysics)
+			{
+				// Turn on/off physics sim to match server.
+				SyncReplicatedPhysicsSimulation();
+			}
+			
+			if (ReplicatedMovement.bRepPhysics)
+			{
+				// Sync physics state
+				checkSlow(RootComponent->IsSimulatingPhysics());
+				// If we are welded we just want the parent's update to move us.
+				UPrimitiveComponent* RootPrimComp = Cast<UPrimitiveComponent>(RootComponent);
+				if (!RootPrimComp || !RootPrimComp->IsWelded())
+				{
+					PostNetReceivePhysicState();
+				}
+			}
+			else
+			{
+				// Attachment trumps global position updates, see GatherCurrentMovement().
+				if (!RootComponent->GetAttachParent())
+				{
+					if (Role == ROLE_SimulatedProxy)
+					{
+#if ENABLE_NAN_DIAGNOSTIC
+						if (ReplicatedMovement.Location.ContainsNaN())
+						{
+							logOrEnsureNanError(TEXT("AActor::OnRep_ReplicatedMovement found NaN in ReplicatedMovement.Location"));
+						}
+						if (ReplicatedMovement.Rotation.ContainsNaN())
+						{
+							logOrEnsureNanError(TEXT("AActor::OnRep_ReplicatedMovement found NaN in ReplicatedMovement.Rotation"));
+						}
+#endif
+
+						PostNetReceiveVelocity(ReplicatedMovement.LinearVelocity);
+						PostNetReceiveLocationAndRotation();
+					}
+				}
+			}
+		}
+	}
 
 	UPROPERTY(EditAnywhere, Replicated, BlueprintReadWrite, Category = "VRGripInterface")
 		bool bRepGripSettingsAndGameplayTags;
