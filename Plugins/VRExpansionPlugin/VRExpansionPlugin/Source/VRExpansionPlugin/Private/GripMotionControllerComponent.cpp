@@ -1606,7 +1606,6 @@ bool UGripMotionControllerComponent::NotifyGrip(FBPActorGripInformation &NewGrip
 	}
 
 	bool bHasMovementAuthority = HasGripMovementAuthority(NewGrip);
-	bool bHasGripAuthority = HasGripAuthority(NewGrip);
 
 	switch (NewGrip.GripCollisionType)
 	{
@@ -1624,11 +1623,8 @@ bool UGripMotionControllerComponent::NotifyGrip(FBPActorGripInformation &NewGrip
 	// Skip collision intersects with these types, they dont need it
 	case EGripCollisionType::CustomGrip:
 	{		
-		if (bHasGripAuthority || IsServer() || !pActor->GetIsReplicated())
-		{
-			if (root)
-				root->SetSimulatePhysics(false);
-		}
+		if (root)
+			root->SetSimulatePhysics(false);
 
 	} break;
 	case EGripCollisionType::PhysicsOnly:
@@ -1637,11 +1633,8 @@ bool UGripMotionControllerComponent::NotifyGrip(FBPActorGripInformation &NewGrip
 	case EGripCollisionType::InteractiveCollisionWithSweep:
 	default: 
 	{
-		if (bHasGripAuthority || IsServer() || !pActor->GetIsReplicated())
-		{
-			if (root)
-				root->SetSimulatePhysics(false);
-		}
+		if (root)
+			root->SetSimulatePhysics(false);
 
 		// Move it to the correct location automatically
 		if (bHasMovementAuthority)
@@ -1709,8 +1702,6 @@ void UGripMotionControllerComponent::Drop_Implementation(const FBPActorGripInfor
 
 	DestroyPhysicsHandle(NewDrop);
 
-	bool bHadGripAuthority = HasGripAuthority(NewDrop);
-
 	UPrimitiveComponent *root = NULL;
 	AActor * pActor = NULL;
 
@@ -1738,16 +1729,10 @@ void UGripMotionControllerComponent::Drop_Implementation(const FBPActorGripInfor
 				if (root)
 				{
 					root->IgnoreActorWhenMoving(this->GetOwner(), false);
-
-					if (bHadGripAuthority || IsServer() || !pActor->GetIsReplicated())
-					{
-						root->SetSimulatePhysics(bSimulate);
-						if (bSimulate)
-							root->WakeAllRigidBodies();
-					}
-
+					root->SetSimulatePhysics(bSimulate);
 					root->UpdateComponentToWorld(); // This fixes the late update offset
-
+					if (bSimulate)
+						root->WakeAllRigidBodies();
 
 					/*if (NewDrop.GrippedBoneName == NAME_None)
 					{
@@ -1815,15 +1800,11 @@ void UGripMotionControllerComponent::Drop_Implementation(const FBPActorGripInfor
 				}*/
 
 				root->IgnoreActorWhenMoving(this->GetOwner(), false);
-
-				if (bHadGripAuthority || IsServer() || !pActor->GetIsReplicated())
-				{
-					root->SetSimulatePhysics(bSimulate);
-					if (bSimulate)
-						root->WakeAllRigidBodies();
-				}
-
+				root->SetSimulatePhysics(bSimulate);
 				root->UpdateComponentToWorld(); // This fixes the late update offset
+
+				if (bSimulate)
+					root->WakeAllRigidBodies();
 
 				/*if (NewDrop.GrippedBoneName == NAME_None)
 				{
@@ -2781,7 +2762,12 @@ void UGripMotionControllerComponent::TickGrip(float DeltaTime)
 	SCOPE_CYCLE_COUNTER(STAT_TickGrip);
 
 	// Debug test that we aren't floating physics handles
-	check(PhysicsGrips.Num() <= (GrippedObjects.Num() + LocallyGrippedObjects.Num()));
+	if (PhysicsGrips.Num() > (GrippedObjects.Num() + LocallyGrippedObjects.Num()))
+	{
+		CleanUpBadPhysicsHandles();
+		UE_LOG(LogVRMotionController, Warning, TEXT("Something went wrong, there were too many physics handles for how many grips exist! Cleaned up bad handles."));
+	}
+	//check(PhysicsGrips.Num() <= (GrippedObjects.Num() + LocallyGrippedObjects.Num()));
 
 	FTransform ParentTransform = this->GetComponentTransform();
 
@@ -3280,8 +3266,6 @@ void UGripMotionControllerComponent::HandleGripArray(TArray<FBPActorGripInformat
 void UGripMotionControllerComponent::CleanUpBadGrip(TArray<FBPActorGripInformation> &GrippedObjectsArray, int GripIndex, bool bReplicatedArray)
 {
 	// Object has been destroyed without notification to plugin
-
-	// Doesn't work, uses the object as the search parameter which can now be null
 	if (!DestroyPhysicsHandle(GrippedObjectsArray[GripIndex]))
 	{
 		// Clean up tailing physics handles with null objects
@@ -3301,12 +3285,28 @@ void UGripMotionControllerComponent::CleanUpBadGrip(TArray<FBPActorGripInformati
 		DropGrip(GrippedObjectsArray[GripIndex], false);
 		UE_LOG(LogVRMotionController, Warning, TEXT("Gripped object was null or destroying, auto dropping it"));
 	}
+	else
+	{
+		GrippedObjectsArray[GripIndex].bIsPaused = true;
+	}
+}
 
-	//if (!bReplicatedArray || IsServer())
-	//{
-		
-		//GrippedObjectsArray.RemoveAt(GripIndex); // If it got garbage collected then just remove the pointer, won't happen with new uproperty use, but keeping it here anyway
-	//}
+void UGripMotionControllerComponent::CleanUpBadPhysicsHandles()
+{
+	// Clean up tailing physics handles with null objects
+	for (int g = PhysicsGrips.Num() - 1; g >= 0; --g)
+	{
+		FBPActorGripInformation * GripInfo = LocallyGrippedObjects.FindByKey(PhysicsGrips[g].GripID);
+		if(!GripInfo)
+			GrippedObjects.FindByKey(PhysicsGrips[g].GripID);
+
+		if (!GripInfo)
+		{
+			// Need to delete it from the physics thread
+			DestroyPhysicsHandle(PhysicsGrips[g].SceneIndex, &PhysicsGrips[g].HandleData, &PhysicsGrips[g].KinActorData);
+			PhysicsGrips.RemoveAt(g);
+		}
+	}
 }
 
 bool UGripMotionControllerComponent::DestroyPhysicsHandle(int32 SceneIndex, physx::PxD6Joint** HandleData, physx::PxRigidDynamic** KinActorData)
