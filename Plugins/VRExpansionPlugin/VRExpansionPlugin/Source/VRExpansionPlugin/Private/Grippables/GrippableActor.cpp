@@ -156,6 +156,16 @@ void AGrippableActor::SetHeld_Implementation(UGripMotionControllerComponent * Ho
 	VRGripInterfaceSettings.bIsHeld = bIsHeld;
 }
 
+void AGrippableActor::GetHolsteredState_Implementation(EGripHolsteredType & HolsteredState)
+{
+	HolsteredState = VRGripInterfaceSettings.HolsteredState;
+}
+
+void AGrippableActor::SetHolsteredState_Implementation(EGripHolsteredType HolsteredState)
+{
+	VRGripInterfaceSettings.HolsteredState = HolsteredState;
+}
+
 FBPInteractionSettings AGrippableActor::GetInteractionSettings_Implementation()
 {
 	return VRGripInterfaceSettings.InteractionSettings;

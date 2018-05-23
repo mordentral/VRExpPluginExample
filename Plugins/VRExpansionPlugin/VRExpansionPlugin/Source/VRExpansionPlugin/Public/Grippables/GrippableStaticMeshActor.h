@@ -6,6 +6,7 @@
 #include "Engine/StaticMeshActor.h"
 #include "VRBPDatatypes.h"
 #include "VRGripInterface.h"
+#include "GripMotionControllerComponent.h"
 #include "VRExpansionFunctionLibrary.h"
 #include "GameplayTagContainer.h"
 #include "GameplayTagAssetInterface.h"
@@ -54,12 +55,60 @@ class VREXPANSIONPLUGIN_API AGrippableStaticMeshActor : public AStaticMeshActor,
 		FGameplayTagContainer GameplayTags;
 
 	// End Gameplay Tag Interface
-	bool bLastAttachParent;
 
 	virtual void PreReplication(IRepChangedPropertyTracker & ChangedPropertyTracker) override;
 
+	virtual void OnRep_AttachmentReplication() override
+	{
+		// If we are a local grip and are the owner then we DON'T want to accept outside interference of our attachments
+		if (VRGripInterfaceSettings.HolsteredState == EGripHolsteredType::Holstered_OwnerOrServer)
+			return;
+		
+		if (
+			VRGripInterfaceSettings.bIsHeld &&
+			VRGripInterfaceSettings.HoldingController &&
+			VRGripInterfaceSettings.HoldingController->IsLocallyControlled() &&
+			(VRGripInterfaceSettings.MovementReplicationType == EGripMovementReplicationSettings::ClientSide_Authoritive || VRGripInterfaceSettings.MovementReplicationType == EGripMovementReplicationSettings::ClientSide_Authoritive_NoRep)
+			)
+		{
+			return;
+		}
+
+		// We don't want to skip the update, we aren't a local grip, now lets bypass some of the stupid stuff
+
+		const FRepAttachment ReplicationAttachment = GetAttachmentReplication();
+		if (!ReplicationAttachment.AttachParent)
+		{
+			DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+
+			// Handle the case where an object was both detached and moved on the server in the same frame.
+			// Calling this extraneously does not hurt but will properly fire events if the movement state changed while attached.
+			// This is needed because client side movement is ignored when attached
+			if(bReplicateMovement)
+				OnRep_ReplicatedMovement();
+
+			return;
+		}
+
+		// None of our overrides are required, lets just pass it on now
+		Super::OnRep_AttachmentReplication();
+	}
+
 	virtual void OnRep_ReplicateMovement() override
 	{
+		if (VRGripInterfaceSettings.HolsteredState == EGripHolsteredType::Holstered_OwnerOrServer)
+			return;
+
+		if (
+			VRGripInterfaceSettings.bIsHeld &&
+			VRGripInterfaceSettings.HoldingController &&
+			VRGripInterfaceSettings.HoldingController->IsLocallyControlled() &&
+			(VRGripInterfaceSettings.MovementReplicationType == EGripMovementReplicationSettings::ClientSide_Authoritive || VRGripInterfaceSettings.MovementReplicationType == EGripMovementReplicationSettings::ClientSide_Authoritive_NoRep)
+			)
+		{
+			return;
+		}
+
 		if (RootComponent)
 		{
 			// This "fix" corrects the simulation state not replicating over correctly
@@ -71,7 +120,7 @@ class VREXPANSIONPLUGIN_API AGrippableStaticMeshActor : public AStaticMeshActor,
 				SyncReplicatedPhysicsSimulation();
 			}
 
-			if(!bReplicateMovement)
+			/*if(!bReplicateMovement)
 			{
 				// Fake the actors movement replication to keep it from freaking out, it means that movement rep is already off and we are about to be gripped likely.
 				ReplicatedMovement.Location = FRepMovement::RebaseOntoZeroOrigin(RootComponent->GetComponentLocation(), this);
@@ -79,7 +128,7 @@ class VREXPANSIONPLUGIN_API AGrippableStaticMeshActor : public AStaticMeshActor,
 				ReplicatedMovement.LinearVelocity = GetVelocity();
 				ReplicatedMovement.AngularVelocity = FVector::ZeroVector;
 				return;
-			}
+			}*/
 
 			if (ReplicatedMovement.bRepPhysics)
 			{
@@ -181,6 +230,14 @@ class VREXPANSIONPLUGIN_API AGrippableStaticMeshActor : public AStaticMeshActor,
 	// Sets is held, used by the plugin
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "VRGripInterface")
 		void SetHeld(UGripMotionControllerComponent * HoldingController, bool bIsHeld);
+
+	// Gets the holstered state of the object, this is used to control some backend features, set this when dropping and attaching a grip to something
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "VRGripInterface")
+		void GetHolsteredState(EGripHolsteredType & HolsteredState);
+
+	// Sets the holstered state of the object, this is used to control some backend features, set this when dropping and attaching a grip to something
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "VRGripInterface")
+		void SetHolsteredState(EGripHolsteredType HolsteredState);
 
 	// Get interactable settings
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "VRGripInterface")

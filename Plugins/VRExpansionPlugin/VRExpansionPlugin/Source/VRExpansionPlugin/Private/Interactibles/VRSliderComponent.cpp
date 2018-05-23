@@ -268,6 +268,9 @@ void UVRSliderComponent::OnSecondaryUsed_Implementation() {}
 void UVRSliderComponent::OnEndSecondaryUsed_Implementation() {}
 void UVRSliderComponent::OnInput_Implementation(FKey Key, EInputEvent KeyEvent) {}
 
+void UVRSliderComponent::GetHolsteredState_Implementation(EGripHolsteredType & HolsteredState) { HolsteredState = EGripHolsteredType::None; }
+void UVRSliderComponent::SetHolsteredState_Implementation(EGripHolsteredType HolsteredState) {}
+
 bool UVRSliderComponent::DenyGripping_Implementation()
 {
 	return bDenyGripping;

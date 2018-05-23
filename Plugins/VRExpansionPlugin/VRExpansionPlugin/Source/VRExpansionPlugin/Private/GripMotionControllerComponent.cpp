@@ -1712,6 +1712,8 @@ void UGripMotionControllerComponent::Drop_Implementation(const FBPActorGripInfor
 
 	DestroyPhysicsHandle(NewDrop);
 
+	bool bHadGripAuthority = HasGripAuthority(NewDrop);
+
 	UPrimitiveComponent *root = NULL;
 	AActor * pActor = NULL;
 
@@ -1739,10 +1741,15 @@ void UGripMotionControllerComponent::Drop_Implementation(const FBPActorGripInfor
 				if (root)
 				{
 					root->IgnoreActorWhenMoving(this->GetOwner(), false);
-					root->SetSimulatePhysics(bSimulate);
+
+					if (IsServer() || bHadGripAuthority)
+					{
+						root->SetSimulatePhysics(bSimulate);
+						if (bSimulate)
+							root->WakeAllRigidBodies();
+					}
+
 					root->UpdateComponentToWorld(); // This fixes the late update offset
-					if (bSimulate)
-						root->WakeAllRigidBodies();
 
 					/*if (NewDrop.GrippedBoneName == NAME_None)
 					{
@@ -1810,11 +1817,15 @@ void UGripMotionControllerComponent::Drop_Implementation(const FBPActorGripInfor
 				}*/
 
 				root->IgnoreActorWhenMoving(this->GetOwner(), false);
-				root->SetSimulatePhysics(bSimulate);
-				root->UpdateComponentToWorld(); // This fixes the late update offset
 
-				if (bSimulate)
-					root->WakeAllRigidBodies();
+				if (IsServer() || bHadGripAuthority)
+				{
+					root->SetSimulatePhysics(bSimulate);
+					if (bSimulate)
+						root->WakeAllRigidBodies();
+				}
+
+				root->UpdateComponentToWorld(); // This fixes the late update offset
 
 				/*if (NewDrop.GrippedBoneName == NAME_None)
 				{

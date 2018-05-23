@@ -185,6 +185,15 @@ void AGrippableSkeletalMeshActor::SetHeld_Implementation(UGripMotionControllerCo
 	VRGripInterfaceSettings.bIsHeld = bIsHeld;
 }
 
+void AGrippableSkeletalMeshActor::GetHolsteredState_Implementation(EGripHolsteredType & HolsteredState)
+{
+	HolsteredState = VRGripInterfaceSettings.HolsteredState;
+}
+
+void AGrippableSkeletalMeshActor::SetHolsteredState_Implementation(EGripHolsteredType HolsteredState)
+{
+	VRGripInterfaceSettings.HolsteredState = HolsteredState;
+}
 
 FBPInteractionSettings AGrippableSkeletalMeshActor::GetInteractionSettings_Implementation()
 {

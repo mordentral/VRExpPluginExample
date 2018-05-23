@@ -281,7 +281,7 @@ public:
 			// Tick will keep checking from here on out locally
 			if (!Grip.ValueCache.bWasInitiallyRepped)
 			{
-				UE_LOG(LogVRMotionController, Warning, TEXT("Replicated grip Notify grip failed, was grip called before the object was replicated to the client?"));
+				//UE_LOG(LogVRMotionController, Warning, TEXT("Replicated grip Notify grip failed, was grip called before the object was replicated to the client?"));
 				return false;
 			}
 			//Grip.ValueCache.bWasInitiallyRepped = true; // Set has been initialized

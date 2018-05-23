@@ -420,6 +420,9 @@ void UVRMountComponent::OnSecondaryUsed_Implementation() {}
 void UVRMountComponent::OnEndSecondaryUsed_Implementation() {}
 void UVRMountComponent::OnInput_Implementation(FKey Key, EInputEvent KeyEvent) {}
 
+void UVRMountComponent::GetHolsteredState_Implementation(EGripHolsteredType & HolsteredState) { HolsteredState = EGripHolsteredType::None; }
+void UVRMountComponent::SetHolsteredState_Implementation(EGripHolsteredType HolsteredState) {}
+
 bool UVRMountComponent::DenyGripping_Implementation()
 {
 	return bDenyGripping;
