@@ -1591,14 +1591,6 @@ bool UGripMotionControllerComponent::NotifyGrip(FBPActorGripInformation &NewGrip
 			pActor->SetReplicateMovement(false);
 		}
 
-		if (/*!IsServer() && */NewGrip.GripMovementReplicationSetting != EGripMovementReplicationSettings::ForceServerSideMovement)
-		{
-			// Fake the actors movement replication to keep it from freaking out.
-			pActor->ReplicatedMovement.Location = FRepMovement::RebaseOntoZeroOrigin(root->GetComponentLocation(), this);
-			pActor->ReplicatedMovement.Rotation = root->GetComponentRotation();
-			pActor->ReplicatedMovement.LinearVelocity = pActor->GetVelocity();
-			pActor->ReplicatedMovement.AngularVelocity = FVector::ZeroVector;
-		}
 	}break;
 
 	case EGripMovementReplicationSettings::ForceServerSideMovement:
@@ -1656,6 +1648,15 @@ bool UGripMotionControllerComponent::NotifyGrip(FBPActorGripInformation &NewGrip
 	{
 		// Broadcast a new grip
 		OnGrippedObject.Broadcast(NewGrip);
+
+		if (pActor && root && NewGrip.GripMovementReplicationSetting != EGripMovementReplicationSettings::ForceServerSideMovement)
+		{
+			// Fake the actors movement replication to keep it from freaking out, it means that movement rep is already off and we are about to be gripped likely.
+			pActor->ReplicatedMovement.Location = FRepMovement::RebaseOntoZeroOrigin(root->GetComponentLocation(), this);
+			pActor->ReplicatedMovement.Rotation = root->GetComponentRotation();
+			pActor->ReplicatedMovement.LinearVelocity = pActor->GetVelocity();
+			pActor->ReplicatedMovement.AngularVelocity = FVector::ZeroVector;
+		}
 	}
 
 	return true;
@@ -3242,15 +3243,6 @@ void UGripMotionControllerComponent::HandleGripArray(TArray<FBPActorGripInformat
 
 					default:
 					{}break;
-				}
-
-				if (/*!IsServer() && */Grip->GripMovementReplicationSetting != EGripMovementReplicationSettings::ForceServerSideMovement)
-				{
-					// Fake the actors movement replication to keep it from freaking out.
-					actor->ReplicatedMovement.Location = FRepMovement::RebaseOntoZeroOrigin(root->GetComponentLocation(), this);
-					actor->ReplicatedMovement.Rotation = root->GetComponentRotation();
-					actor->ReplicatedMovement.LinearVelocity = actor->GetVelocity();
-					actor->ReplicatedMovement.AngularVelocity = FVector::ZeroVector;
 				}
 
 				// We only do this if specifically requested, it has a slight perf hit and isn't normally needed for non Custom Grip types

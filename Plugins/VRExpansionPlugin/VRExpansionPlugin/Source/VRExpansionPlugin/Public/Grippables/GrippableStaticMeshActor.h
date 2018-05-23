@@ -70,7 +70,17 @@ class VREXPANSIONPLUGIN_API AGrippableStaticMeshActor : public AStaticMeshActor,
 				// Turn on/off physics sim to match server.
 				SyncReplicatedPhysicsSimulation();
 			}
-			
+
+			if(!bReplicateMovement)
+			{
+				// Fake the actors movement replication to keep it from freaking out, it means that movement rep is already off and we are about to be gripped likely.
+				ReplicatedMovement.Location = FRepMovement::RebaseOntoZeroOrigin(RootComponent->GetComponentLocation(), this);
+				ReplicatedMovement.Rotation = RootComponent->GetComponentRotation();
+				ReplicatedMovement.LinearVelocity = GetVelocity();
+				ReplicatedMovement.AngularVelocity = FVector::ZeroVector;
+				return;
+			}
+
 			if (ReplicatedMovement.bRepPhysics)
 			{
 				// Sync physics state
