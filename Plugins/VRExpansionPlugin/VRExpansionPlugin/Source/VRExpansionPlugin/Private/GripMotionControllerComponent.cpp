@@ -1737,10 +1737,10 @@ void UGripMotionControllerComponent::DropAndSocket_Implementation(const FBPActor
 					root->SetEnableGravity(NewDrop.bOriginalGravity);
 			}
 
-			/*if (IsServer() && !bSkipFullDrop)
+			if (IsServer()) //&& !bSkipFullDrop)
 			{
 				pActor->SetReplicateMovement(NewDrop.bOriginalReplicatesMovement);
-			}*/
+			}
 
 			if (pActor->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
 			{
@@ -1772,12 +1772,12 @@ void UGripMotionControllerComponent::DropAndSocket_Implementation(const FBPActor
 
 			if (pActor)
 			{
-				/*if (IsServer() && root == pActor->GetRootComponent() && !bSkipFullDrop)
+				if (IsServer() && root == pActor->GetRootComponent()) //&& !bSkipFullDrop)
 				{
 					pActor->SetReplicateMovement(NewDrop.bOriginalReplicatesMovement);
 				}
 
-				if (pActor->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
+				/*if (pActor->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
 				{
 					IVRGripInterface::Execute_OnChildGripRelease(pActor, this, NewDrop);
 				}*/
