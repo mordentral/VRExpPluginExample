@@ -32,6 +32,7 @@ AGrippableActor::AGrippableActor(const FObjectInitializer& ObjectInitializer)
 	this->bReplicates = true;
 	
 	bRepGripSettingsAndGameplayTags = true;
+	bAllowIgnoringAttachOnOwner = true;
 
 	// Setting a minimum of every 3rd frame (VR 90fps) for replication consideration
 	// Otherwise we will get some massive slow downs if the replication is allowed to hit the 2 per second minimum default
@@ -43,6 +44,7 @@ void AGrippableActor::GetLifetimeReplicatedProps(TArray< class FLifetimeProperty
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(AGrippableActor, bRepGripSettingsAndGameplayTags);
+	DOREPLIFETIME(AGrippableActor, bAllowIgnoringAttachOnOwner);
 	DOREPLIFETIME_CONDITION(AGrippableActor, VRGripInterfaceSettings, COND_Custom);
 	DOREPLIFETIME_CONDITION(AGrippableActor, GameplayTags, COND_Custom);
 }
@@ -154,16 +156,6 @@ void AGrippableActor::SetHeld_Implementation(UGripMotionControllerComponent * Ho
 		VRGripInterfaceSettings.HoldingController = nullptr;
 
 	VRGripInterfaceSettings.bIsHeld = bIsHeld;
-}
-
-void AGrippableActor::GetHolsteredState_Implementation(EGripHolsteredType & HolsteredState)
-{
-	HolsteredState = VRGripInterfaceSettings.HolsteredState;
-}
-
-void AGrippableActor::SetHolsteredState_Implementation(EGripHolsteredType HolsteredState)
-{
-	VRGripInterfaceSettings.HolsteredState = HolsteredState;
 }
 
 FBPInteractionSettings AGrippableActor::GetInteractionSettings_Implementation()

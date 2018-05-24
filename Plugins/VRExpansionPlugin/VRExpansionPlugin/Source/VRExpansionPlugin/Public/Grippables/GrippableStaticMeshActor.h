@@ -58,18 +58,27 @@ class VREXPANSIONPLUGIN_API AGrippableStaticMeshActor : public AStaticMeshActor,
 
 	virtual void PreReplication(IRepChangedPropertyTracker & ChangedPropertyTracker) override;
 
+	// Skips the attachment replication if we are locally owned and our grip settings say that we are a client authed grip.
+	UPROPERTY(EditAnywhere, Replicated, BlueprintReadWrite, Category = "Replication")
+		bool bAllowIgnoringAttachOnOwner;
+
+	// Should we skip attachment replication (vr settings say we are a client auth grip and our owner is locally controlled)
+	inline bool ShouldWeSkipAttachmentReplication() const
+	{
+		if (VRGripInterfaceSettings.MovementReplicationType == EGripMovementReplicationSettings::ClientSide_Authoritive ||
+			VRGripInterfaceSettings.MovementReplicationType == EGripMovementReplicationSettings::ClientSide_Authoritive_NoRep)
+		{
+			const AActor* MyOwner = GetOwner();
+			const APawn* MyPawn = Cast<APawn>(MyOwner);
+			return (MyPawn ? MyPawn->IsLocallyControlled() : (MyOwner && MyOwner->Role == ENetRole::ROLE_Authority));
+		}
+		else
+			return false;
+	}
+
 	virtual void OnRep_AttachmentReplication() override
 	{
-		// If we are a local grip and are the owner then we DON'T want to accept outside interference of our attachments
-		if (VRGripInterfaceSettings.HolsteredState == EGripHolsteredType::Holstered_OwnerOrServer)
-			return;
-		
-		if (
-			VRGripInterfaceSettings.bIsHeld &&
-			VRGripInterfaceSettings.HoldingController &&
-			VRGripInterfaceSettings.HoldingController->IsLocallyControlled() &&
-			(VRGripInterfaceSettings.MovementReplicationType == EGripMovementReplicationSettings::ClientSide_Authoritive || VRGripInterfaceSettings.MovementReplicationType == EGripMovementReplicationSettings::ClientSide_Authoritive_NoRep)
-			)
+		if (bAllowIgnoringAttachOnOwner && ShouldWeSkipAttachmentReplication())
 		{
 			return;
 		}
@@ -96,15 +105,7 @@ class VREXPANSIONPLUGIN_API AGrippableStaticMeshActor : public AStaticMeshActor,
 
 	virtual void OnRep_ReplicateMovement() override
 	{
-		if (VRGripInterfaceSettings.HolsteredState == EGripHolsteredType::Holstered_OwnerOrServer)
-			return;
-
-		if (
-			VRGripInterfaceSettings.bIsHeld &&
-			VRGripInterfaceSettings.HoldingController &&
-			VRGripInterfaceSettings.HoldingController->IsLocallyControlled() &&
-			(VRGripInterfaceSettings.MovementReplicationType == EGripMovementReplicationSettings::ClientSide_Authoritive || VRGripInterfaceSettings.MovementReplicationType == EGripMovementReplicationSettings::ClientSide_Authoritive_NoRep)
-			)
+		if (bAllowIgnoringAttachOnOwner && ShouldWeSkipAttachmentReplication())
 		{
 			return;
 		}
@@ -118,53 +119,13 @@ class VREXPANSIONPLUGIN_API AGrippableStaticMeshActor : public AStaticMeshActor,
 			{
 				// Turn on/off physics sim to match server.
 				SyncReplicatedPhysicsSimulation();
+
+				// It doesn't really hurt to run it here, the super can call it again but it will fail out as they already match
 			}
 
-			/*if(!bReplicateMovement)
-			{
-				// Fake the actors movement replication to keep it from freaking out, it means that movement rep is already off and we are about to be gripped likely.
-				ReplicatedMovement.Location = FRepMovement::RebaseOntoZeroOrigin(RootComponent->GetComponentLocation(), this);
-				ReplicatedMovement.Rotation = RootComponent->GetComponentRotation();
-				ReplicatedMovement.LinearVelocity = GetVelocity();
-				ReplicatedMovement.AngularVelocity = FVector::ZeroVector;
-				return;
-			}*/
-
-			if (ReplicatedMovement.bRepPhysics)
-			{
-				// Sync physics state
-				checkSlow(RootComponent->IsSimulatingPhysics());
-				// If we are welded we just want the parent's update to move us.
-				UPrimitiveComponent* RootPrimComp = Cast<UPrimitiveComponent>(RootComponent);
-				if (!RootPrimComp || !RootPrimComp->IsWelded())
-				{
-					PostNetReceivePhysicState();
-				}
-			}
-			else
-			{
-				// Attachment trumps global position updates, see GatherCurrentMovement().
-				if (!RootComponent->GetAttachParent())
-				{
-					if (Role == ROLE_SimulatedProxy)
-					{
-#if ENABLE_NAN_DIAGNOSTIC
-						if (ReplicatedMovement.Location.ContainsNaN())
-						{
-							logOrEnsureNanError(TEXT("AActor::OnRep_ReplicatedMovement found NaN in ReplicatedMovement.Location"));
-						}
-						if (ReplicatedMovement.Rotation.ContainsNaN())
-						{
-							logOrEnsureNanError(TEXT("AActor::OnRep_ReplicatedMovement found NaN in ReplicatedMovement.Rotation"));
-						}
-#endif
-
-						PostNetReceiveVelocity(ReplicatedMovement.LinearVelocity);
-						PostNetReceiveLocationAndRotation();
-					}
-				}
-			}
 		}
+
+		Super::OnRep_ReplicateMovement();
 	}
 
 	UPROPERTY(EditAnywhere, Replicated, BlueprintReadWrite, Category = "VRGripInterface")
@@ -230,14 +191,6 @@ class VREXPANSIONPLUGIN_API AGrippableStaticMeshActor : public AStaticMeshActor,
 	// Sets is held, used by the plugin
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "VRGripInterface")
 		void SetHeld(UGripMotionControllerComponent * HoldingController, bool bIsHeld);
-
-	// Gets the holstered state of the object, this is used to control some backend features, set this when dropping and attaching a grip to something
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "VRGripInterface")
-		void GetHolsteredState(EGripHolsteredType & HolsteredState);
-
-	// Sets the holstered state of the object, this is used to control some backend features, set this when dropping and attaching a grip to something
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "VRGripInterface")
-		void SetHolsteredState(EGripHolsteredType HolsteredState);
 
 	// Get interactable settings
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "VRGripInterface")

@@ -155,16 +155,6 @@ void UGrippableSkeletalMeshComponent::SetHeld_Implementation(UGripMotionControll
 	VRGripInterfaceSettings.bIsHeld = bIsHeld;
 }
 
-void UGrippableSkeletalMeshComponent::GetHolsteredState_Implementation(EGripHolsteredType & HolsteredState)
-{
-	HolsteredState = VRGripInterfaceSettings.HolsteredState;
-}
-
-void UGrippableSkeletalMeshComponent::SetHolsteredState_Implementation(EGripHolsteredType HolsteredState)
-{
-	VRGripInterfaceSettings.HolsteredState = HolsteredState;
-}
-
 FBPInteractionSettings UGrippableSkeletalMeshComponent::GetInteractionSettings_Implementation()
 {
 	return VRGripInterfaceSettings.InteractionSettings;

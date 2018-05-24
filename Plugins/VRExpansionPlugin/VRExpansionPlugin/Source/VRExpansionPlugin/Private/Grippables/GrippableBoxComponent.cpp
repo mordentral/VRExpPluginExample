@@ -153,16 +153,6 @@ void UGrippableBoxComponent::SetHeld_Implementation(UGripMotionControllerCompone
 	VRGripInterfaceSettings.bIsHeld = bIsHeld;
 }
 
-void UGrippableBoxComponent::GetHolsteredState_Implementation(EGripHolsteredType & HolsteredState)
-{
-	HolsteredState = VRGripInterfaceSettings.HolsteredState;
-}
-
-void UGrippableBoxComponent::SetHolsteredState_Implementation(EGripHolsteredType HolsteredState)
-{
-	VRGripInterfaceSettings.HolsteredState = HolsteredState;
-}
-
 
 FBPInteractionSettings UGrippableBoxComponent::GetInteractionSettings_Implementation()
 {

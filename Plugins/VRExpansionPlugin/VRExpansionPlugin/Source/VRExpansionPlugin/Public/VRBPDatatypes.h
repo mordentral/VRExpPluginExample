@@ -569,15 +569,6 @@ enum class EGripInterfaceTeleportBehavior : uint8
 	DontTeleport
 };
 
-// Holstered state
-UENUM(Blueprintable)
-enum class EGripHolsteredType : uint8
-{
-	None,
-	Holstered_OwnerOrServer,
-	Holstered_RemoteClient
-};
-
 // Type of physics constraint to use
 UENUM(Blueprintable)
 enum class EPhysicsGripConstraintType : uint8
@@ -1350,9 +1341,6 @@ public:
 	UPROPERTY(BlueprintReadWrite, NotReplicated, Category = "VRGripInterface")
 		UGripMotionControllerComponent * HoldingController; // Set on grip notify, not net serializing
 
-	UPROPERTY(BlueprintReadWrite, NotReplicated, Category = "VRGripInterface")
-		EGripHolsteredType HolsteredState; // Set on grip notify, not net serializing
-
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRGripInterface", meta = (editcondition = "bIsInteractible"))
 		FBPInteractionSettings InteractionSettings;
 
@@ -1372,8 +1360,7 @@ public:
 		PrimarySlotRange(20.0f),
 		bIsInteractible(false),
 		bIsHeld(false),
-		HoldingController(nullptr),
-		HolsteredState(EGripHolsteredType::None)
+		HoldingController(nullptr)
 	{
 	}
 };

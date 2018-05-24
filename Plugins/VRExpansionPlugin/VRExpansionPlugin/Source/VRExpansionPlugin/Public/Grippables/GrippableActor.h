@@ -39,6 +39,76 @@ class VREXPANSIONPLUGIN_API AGrippableActor : public AActor, public IVRGripInter
 
 	virtual void PreReplication(IRepChangedPropertyTracker & ChangedPropertyTracker) override;
 
+	// Skips the attachment replication if we are locally owned and our grip settings say that we are a client authed grip.
+	UPROPERTY(EditAnywhere, Replicated, BlueprintReadWrite, Category = "Replication")
+		bool bAllowIgnoringAttachOnOwner;
+
+	// Should we skip attachment replication (vr settings say we are a client auth grip and our owner is locally controlled)
+	inline bool ShouldWeSkipAttachmentReplication() const
+	{
+		if (VRGripInterfaceSettings.MovementReplicationType == EGripMovementReplicationSettings::ClientSide_Authoritive ||
+			VRGripInterfaceSettings.MovementReplicationType == EGripMovementReplicationSettings::ClientSide_Authoritive_NoRep)
+		{
+			const AActor* MyOwner = GetOwner();
+			const APawn* MyPawn = Cast<APawn>(MyOwner);
+			return (MyPawn ? MyPawn->IsLocallyControlled() : (MyOwner && MyOwner->Role == ENetRole::ROLE_Authority));
+		}
+		else
+			return false;
+	}
+
+	virtual void OnRep_AttachmentReplication() override
+	{
+		if (bAllowIgnoringAttachOnOwner && ShouldWeSkipAttachmentReplication())
+		{
+			return;
+		}
+
+		// We don't want to skip the update, we aren't a local grip, now lets bypass some of the stupid stuff
+
+		const FRepAttachment ReplicationAttachment = GetAttachmentReplication();
+		if (!ReplicationAttachment.AttachParent)
+		{
+			DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+
+			// Handle the case where an object was both detached and moved on the server in the same frame.
+			// Calling this extraneously does not hurt but will properly fire events if the movement state changed while attached.
+			// This is needed because client side movement is ignored when attached
+			if (bReplicateMovement)
+				OnRep_ReplicatedMovement();
+
+			return;
+		}
+
+		// None of our overrides are required, lets just pass it on now
+		Super::OnRep_AttachmentReplication();
+	}
+
+	virtual void OnRep_ReplicateMovement() override
+	{
+		if (bAllowIgnoringAttachOnOwner && ShouldWeSkipAttachmentReplication())
+		{
+			return;
+		}
+
+		if (RootComponent)
+		{
+			// This "fix" corrects the simulation state not replicating over correctly
+			// If you turn off movement replication, simulate an object, turn movement replication back on and un-simulate, it never knows the difference
+			// This change ensures that it is checking against the current state
+			if (RootComponent->IsSimulatingPhysics() != ReplicatedMovement.bRepPhysics)//SavedbRepPhysics != ReplicatedMovement.bRepPhysics)
+			{
+				// Turn on/off physics sim to match server.
+				SyncReplicatedPhysicsSimulation();
+
+				// It doesn't really hurt to run it here, the super can call it again but it will fail out as they already match
+			}
+
+		}
+
+		Super::OnRep_ReplicateMovement();
+	}
+
 	UPROPERTY(EditAnywhere, Replicated, BlueprintReadWrite, Category = "VRGripInterface")
 		bool bRepGripSettingsAndGameplayTags;
 
@@ -102,14 +172,6 @@ class VREXPANSIONPLUGIN_API AGrippableActor : public AActor, public IVRGripInter
 	// Sets is held, used by the plugin
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "VRGripInterface")
 		void SetHeld(UGripMotionControllerComponent * HoldingController, bool bIsHeld);
-
-	// Gets the holstered state of the object, this is used to control some backend features, set this when dropping and attaching a grip to something
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "VRGripInterface")
-		void GetHolsteredState(EGripHolsteredType & HolsteredState);
-
-	// Sets the holstered state of the object, this is used to control some backend features, set this when dropping and attaching a grip to something
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "VRGripInterface")
-		void SetHolsteredState(EGripHolsteredType HolsteredState);
 
 	// Get interactable settings
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "VRGripInterface")

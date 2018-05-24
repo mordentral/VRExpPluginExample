@@ -228,14 +228,6 @@ class VREXPANSIONPLUGIN_API UVRMountComponent : public UStaticMeshComponent, pub
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "VRGripInterface")
 		void SetHeld(UGripMotionControllerComponent * NewHoldingController, bool bNewIsHeld);
 
-	// Gets the holstered state of the object, this is used to control some backend features, set this when dropping and attaching a grip to something
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "VRGripInterface")
-		void GetHolsteredState(EGripHolsteredType & HolsteredState);
-
-	// Sets the holstered state of the object, this is used to control some backend features, set this when dropping and attaching a grip to something
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "VRGripInterface")
-		void SetHolsteredState(EGripHolsteredType HolsteredState);
-
 	// Get interactable settings
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "VRGripInterface")
 		FBPInteractionSettings GetInteractionSettings();
