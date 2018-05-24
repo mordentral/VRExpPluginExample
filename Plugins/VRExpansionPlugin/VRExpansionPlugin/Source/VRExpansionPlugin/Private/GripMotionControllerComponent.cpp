@@ -1510,6 +1510,11 @@ bool UGripMotionControllerComponent::NotifyGrip(FBPActorGripInformation &NewGrip
 			if (APawn* OwningPawn = Cast<APawn>(GetOwner()))
 			{
 				OwningPawn->MoveIgnoreActorAdd(pActor);
+
+				// Now I am setting the owner to the owning pawn if we are one
+				// This makes sure that some special replication needs are taken care of
+				// Only doing this for actor grips
+				pActor->SetOwner(OwningPawn);
 			}
 
 			if (!bIsReInit && pActor->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
@@ -1586,7 +1591,7 @@ bool UGripMotionControllerComponent::NotifyGrip(FBPActorGripInformation &NewGrip
 	case EGripMovementReplicationSettings::ClientSide_Authoritive:
 	case EGripMovementReplicationSettings::ClientSide_Authoritive_NoRep:
 	{
-		if (IsServer() && pActor && (NewGrip.GripTargetType == EGripTargetType::ActorGrip || root == pActor->GetRootComponent()))
+		if (IsServer() && pActor && ((NewGrip.GripTargetType == EGripTargetType::ActorGrip) || (root && root == pActor->GetRootComponent())))
 		{
 			pActor->SetReplicateMovement(false);
 		}
@@ -1595,7 +1600,7 @@ bool UGripMotionControllerComponent::NotifyGrip(FBPActorGripInformation &NewGrip
 
 	case EGripMovementReplicationSettings::ForceServerSideMovement:
 	{
-		if (IsServer() && pActor && (NewGrip.GripTargetType == EGripTargetType::ActorGrip || root == pActor->GetRootComponent()))
+		if (IsServer() && pActor && ((NewGrip.GripTargetType == EGripTargetType::ActorGrip) || (root && root == pActor->GetRootComponent())))
 		{
 			pActor->SetReplicateMovement(true);
 		}

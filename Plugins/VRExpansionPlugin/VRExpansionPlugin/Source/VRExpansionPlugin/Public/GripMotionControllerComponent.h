@@ -456,6 +456,14 @@ public:
 		return false;
 	}
 
+	// Auto drop any uobject that is/root is a primitive component and has the VR Grip Interface	
+	UFUNCTION(BlueprintCallable, Category = "GripMotionController")
+		bool DropAndSocketObject(UObject * ObjectToDrop, USceneComponent * SocketingParent, UPARAM(ref) FTransform_NetQuantize & RelativeTransformToParent);
+
+	// Notify a client that their local grip was bad
+	UFUNCTION(Reliable, Server, WithValidation, Category = "GripMotionController")
+		void Server_NotifyDropAndSocketGrip(uint8 GripID, USceneComponent * SocketingParent, UPARAM(ref) FTransform_NetQuantize & RelativeTransformToParent);
+
 	/* Auto grip any uobject that is/root is a primitive component and has the VR Grip Interface
 	these are stored in a Tarray that will prevent destruction of the object, you MUST ungrip an actor if you want to kill it
 	The WorldOffset is the transform that it will remain away from the controller, if you use the world position of the actor then it will grab
