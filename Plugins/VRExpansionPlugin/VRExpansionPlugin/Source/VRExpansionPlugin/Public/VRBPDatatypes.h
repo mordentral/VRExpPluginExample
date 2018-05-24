@@ -13,7 +13,6 @@
 #include "VRBPDatatypes.generated.h"
 
 class UGripMotionControllerComponent;
-class UVRGripScriptBase;
 
 UENUM(Blueprintable)
 enum class EVRInteractibleAxis : uint8
@@ -1277,9 +1276,6 @@ struct VREXPANSIONPLUGIN_API FBPInterfaceProperties
 {
 	GENERATED_BODY()
 public:
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Instanced, Category = "VRGripInterface", meta = (editcondition = "bUseGripLogicScript"))
-		TArray<class UVRGripScriptBase *> GripLogicScripts;
 		
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRGripInterface")
 		bool bDenyGripping;
@@ -1335,10 +1331,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRGripInterface")
 		bool bIsInteractible;
 
-	UPROPERTY(BlueprintReadWrite, NotReplicated, Category = "VRGripInterface")
+	UPROPERTY(BlueprintReadOnly, NotReplicated, Category = "VRGripInterface")
 		bool bIsHeld; // Set on grip notify, not net serializing
 
-	UPROPERTY(BlueprintReadWrite, NotReplicated, Category = "VRGripInterface")
+	UPROPERTY(BlueprintReadOnly, NotReplicated, Category = "VRGripInterface")
 		UGripMotionControllerComponent * HoldingController; // Set on grip notify, not net serializing
 
 	UPROPERTY(BlueprintReadWrite, NotReplicated, Category = "VRGripInterface")
