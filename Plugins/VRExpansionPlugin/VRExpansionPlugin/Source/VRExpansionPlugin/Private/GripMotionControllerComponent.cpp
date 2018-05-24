@@ -988,7 +988,6 @@ bool UGripMotionControllerComponent::DropObjectByInterface(UObject * ObjectToDro
 	return false;
 }
 
-
 bool UGripMotionControllerComponent::GripActor(
 	AActor* ActorToGrip, 
 	const FTransform &WorldOffset, 
@@ -1409,7 +1408,6 @@ bool UGripMotionControllerComponent::DropComponent(UPrimitiveComponent * Compone
 
 bool UGripMotionControllerComponent::DropGrip(const FBPActorGripInformation &Grip, bool bSimulate, FVector OptionalAngularVelocity, FVector OptionalLinearVelocity)
 {
-
 	int FoundIndex = 0;
 	bool bWasLocalGrip = false;
 	if (!LocallyGrippedObjects.Find(Grip, FoundIndex)) // This auto checks if Actor and Component are valid in the == operator
@@ -1472,8 +1470,8 @@ bool UGripMotionControllerComponent::DropGrip(const FBPActorGripInformation &Gri
 	{
 		if (GetNetMode() == ENetMode::NM_Client)
 		{
-			Server_NotifyLocalGripRemoved(LocallyGrippedObjects[FoundIndex], OptionalAngularVelocity, OptionalLinearVelocity);
-				
+			Server_NotifyLocalGripRemoved(LocallyGrippedObjects[FoundIndex].GripID, OptionalAngularVelocity, OptionalLinearVelocity);
+
 			// Have to call this ourselves
 			Drop_Implementation(LocallyGrippedObjects[FoundIndex], bSimulate);
 		}
@@ -1487,6 +1485,176 @@ bool UGripMotionControllerComponent::DropGrip(const FBPActorGripInformation &Gri
 
 	//GrippedObjects.RemoveAt(FoundIndex);		
 	return true;
+}
+
+bool UGripMotionControllerComponent::DropAndSocketObject(UObject * ObjectToDrop, USceneComponent * SocketingParent, const FTransform_NetQuantize & RelativeTransformToParent, bool bRetainOwnership)
+{
+	if (!SocketingParent)
+	{
+		UE_LOG(LogVRMotionController, Warning, TEXT("VRGripMotionController drop and socket function was passed an invalid socketing parent"));
+		return false;
+	}
+
+	if (!ObjectToDrop)
+	{
+		UE_LOG(LogVRMotionController, Warning, TEXT("VRGripMotionController drop and socket function was passed an invalid object"));
+		return false;
+	}
+
+	bool bWasLocalGrip = false;
+	FBPActorGripInformation * GripInfo = nullptr;
+
+	GripInfo = LocallyGrippedObjects.FindByKey(ObjectToDrop);
+	if(GripInfo) // This auto checks if Actor and Component are valid in the == operator
+	{
+		bWasLocalGrip = true;
+	}
+	else
+	{
+		if (!IsServer())
+		{
+			UE_LOG(LogVRMotionController, Warning, TEXT("VRGripMotionController drop and socket function was called on the client side for a replicated grip"));
+			return false;
+		}
+
+		GripInfo = GrippedObjects.FindByKey(ObjectToDrop);
+
+		if(GripInfo) // This auto checks if Actor and Component are valid in the == operator
+		{
+			bWasLocalGrip = false;
+		}
+		else
+		{
+			UE_LOG(LogVRMotionController, Warning, TEXT("VRGripMotionController drop and socket function was passed an invalid drop"));
+			return false;
+		}
+	}
+
+	if(GripInfo)
+		return DropAndSocketGrip(*GripInfo, SocketingParent, RelativeTransformToParent, bRetainOwnership);
+	
+	return false;
+}
+
+bool UGripMotionControllerComponent::DropAndSocketGrip(FBPActorGripInformation & GripToDrop, USceneComponent * SocketingParent, const FTransform_NetQuantize & RelativeTransformToParent, bool bRetainOwnership)
+{
+	if (!SocketingParent)
+	{
+		UE_LOG(LogVRMotionController, Warning, TEXT("VRGripMotionController drop and socket function was passed an invalid socketing parent"));
+		return false;
+	}
+
+	bool bWasLocalGrip = false;
+	FBPActorGripInformation * GripInfo = nullptr;
+
+	GripInfo = LocallyGrippedObjects.FindByKey(GripToDrop);
+	if (GripInfo) // This auto checks if Actor and Component are valid in the == operator
+	{
+		bWasLocalGrip = true;
+	}
+	else
+	{
+		if (!IsServer())
+		{
+			UE_LOG(LogVRMotionController, Warning, TEXT("VRGripMotionController drop and socket function was called on the client side for a replicated grip"));
+			return false;
+		}
+
+		GripInfo = GrippedObjects.FindByKey(GripToDrop);
+
+		if (GripInfo) // This auto checks if Actor and Component are valid in the == operator
+		{
+			bWasLocalGrip = false;
+		}
+		else
+		{
+			UE_LOG(LogVRMotionController, Warning, TEXT("VRGripMotionController drop and socket function was passed an invalid drop"));
+			return false;
+		}
+	}
+
+	UPrimitiveComponent * PrimComp = nullptr;
+
+	AActor * pActor = nullptr;
+	if (bWasLocalGrip)
+	{
+		PrimComp = GripInfo->GetGrippedComponent();
+		pActor = GripInfo->GetGrippedActor();
+	}
+	else
+	{
+		PrimComp = GripInfo->GetGrippedComponent();
+		pActor = GripInfo->GetGrippedActor();
+	}
+
+	if (!PrimComp && pActor)
+		PrimComp = Cast<UPrimitiveComponent>(pActor->GetRootComponent());
+
+	if (!PrimComp)
+	{
+		UE_LOG(LogVRMotionController, Warning, TEXT("VRGripMotionController drop and socket function was passed an invalid drop or CleanUpBadGrip wascalled"));
+		//return false;
+	}
+
+	if (bWasLocalGrip)
+	{
+		if (GetNetMode() == ENetMode::NM_Client)
+		{
+			Server_NotifyDropAndSocketGrip(GripInfo->GripID, SocketingParent, RelativeTransformToParent, bRetainOwnership);
+
+			// Have to call this ourselves
+			DropAndSocket_Implementation(*GripInfo);
+		}
+		else // Server notifyDrop it
+		{
+			NotifyDropAndSocket(*GripInfo);
+		}
+	}
+	else
+		NotifyDropAndSocket(*GripInfo);
+
+	//GrippedObjects.RemoveAt(FoundIndex);		
+	return true;
+}
+
+bool UGripMotionControllerComponent::Server_NotifyDropAndSocketGrip_Validate(uint8 GripID, USceneComponent * SocketingParent, const FTransform_NetQuantize & RelativeTransformToParent, bool bRetainOwnership)
+{
+	return true;
+}
+
+void UGripMotionControllerComponent::Server_NotifyDropAndSocketGrip_Implementation(uint8 GripID, USceneComponent * SocketingParent, const FTransform_NetQuantize & RelativeTransformToParent, bool bRetainOwnership)
+{
+	FBPActorGripInformation FoundGrip;
+	EBPVRResultSwitch Result;
+	
+	GetGripByID(FoundGrip, GripID, Result);
+
+	if (Result == EBPVRResultSwitch::OnFailed)
+		return;
+
+	if (!DropAndSocketGrip(FoundGrip, SocketingParent, RelativeTransformToParent, bRetainOwnership))
+	{
+		DropGrip(FoundGrip, false);
+	}
+}
+
+void UGripMotionControllerComponent::NotifyDropAndSocket_Implementation(const FBPActorGripInformation &NewDrop)
+{
+	// Don't do this if we are the owning player on a local grip, there is no filter for multicast to not send to owner
+	if ((NewDrop.GripMovementReplicationSetting == EGripMovementReplicationSettings::ClientSide_Authoritive ||
+		NewDrop.GripMovementReplicationSetting == EGripMovementReplicationSettings::ClientSide_Authoritive_NoRep) &&
+		IsLocallyControlled() &&
+		GetNetMode() == ENetMode::NM_Client)
+	{
+		return;
+	}
+
+	DropAndSocket_Implementation(NewDrop);
+}
+
+void UGripMotionControllerComponent::DropAndSocket_Implementation(const FBPActorGripInformation &NewDrop)
+{
+
 }
 
 
@@ -1741,6 +1909,12 @@ void UGripMotionControllerComponent::Drop_Implementation(const FBPActorGripInfor
 				if (APawn* OwningPawn = Cast<APawn>(GetOwner()))
 				{
 					OwningPawn->MoveIgnoreActorRemove(pActor);
+
+					// Clearing owner out here
+					// Now I am setting the owner to the owning pawn if we are one
+					// This makes sure that some special replication needs are taken care of
+					// Only doing this for actor grips
+					pActor->SetOwner(nullptr);
 				}
 
 				if (root)
@@ -2055,7 +2229,7 @@ bool UGripMotionControllerComponent::AddSecondaryAttachmentPoint(UObject * Gripp
 
 		if (GripToUse->GripMovementReplicationSetting == EGripMovementReplicationSettings::ClientSide_Authoritive && GetNetMode() == ENetMode::NM_Client)
 		{
-			Server_NotifySecondaryAttachmentChanged(GripToUse->GrippedObject, GripToUse->SecondaryGripInfo);
+			Server_NotifySecondaryAttachmentChanged(GripToUse->GripID, GripToUse->SecondaryGripInfo);
 		}
 
 		GripToUse = nullptr;
@@ -2165,7 +2339,7 @@ bool UGripMotionControllerComponent::RemoveSecondaryAttachmentPoint(UObject * Gr
 
 		if (GripToUse->GripMovementReplicationSetting == EGripMovementReplicationSettings::ClientSide_Authoritive && GetNetMode() == ENetMode::NM_Client)
 		{
-			Server_NotifySecondaryAttachmentChanged(GripToUse->GrippedObject, GripToUse->SecondaryGripInfo);
+			Server_NotifySecondaryAttachmentChanged(GripToUse->GripID, GripToUse->SecondaryGripInfo);
 		}
 
 		GripToUse = nullptr;
@@ -4213,42 +4387,42 @@ void UGripMotionControllerComponent::Server_NotifyLocalGripAddedOrChanged_Implem
 }
 
 
-bool UGripMotionControllerComponent::Server_NotifyLocalGripRemoved_Validate(const FBPActorGripInformation & removeGrip, FVector_NetQuantize100 AngularVelocity, FVector_NetQuantize100 LinearVelocity)
+bool UGripMotionControllerComponent::Server_NotifyLocalGripRemoved_Validate(uint8 GripID, FVector_NetQuantize100 AngularVelocity, FVector_NetQuantize100 LinearVelocity)
 {
 	return true;
 }
 
-void UGripMotionControllerComponent::Server_NotifyLocalGripRemoved_Implementation(const FBPActorGripInformation & removeGrip, FVector_NetQuantize100 AngularVelocity, FVector_NetQuantize100 LinearVelocity)
+void UGripMotionControllerComponent::Server_NotifyLocalGripRemoved_Implementation(uint8 GripID, FVector_NetQuantize100 AngularVelocity, FVector_NetQuantize100 LinearVelocity)
 {
 	FBPActorGripInformation FoundGrip;
 	EBPVRResultSwitch Result;
-	GetGripByObject(FoundGrip, removeGrip.GrippedObject, Result);
+	GetGripByID(FoundGrip, GripID, Result);
 
 	if (Result == EBPVRResultSwitch::OnFailed)
 		return;
 
-	DropObjectByInterface(FoundGrip.GrippedObject, AngularVelocity, LinearVelocity);
+	if (!DropObjectByInterface(FoundGrip.GrippedObject, AngularVelocity, LinearVelocity))
+	{
+		DropGrip(FoundGrip, false, AngularVelocity, LinearVelocity);
+	}
 }
 
 
 bool UGripMotionControllerComponent::Server_NotifySecondaryAttachmentChanged_Validate(
-	UObject * GrippedObject,
+	uint8 GripID,
 	FBPSecondaryGripInfo SecondaryGripInfo)
 {
 	return true;
 }
 
 void UGripMotionControllerComponent::Server_NotifySecondaryAttachmentChanged_Implementation(
-	UObject * GrippedObject,
+	uint8 GripID,
 	FBPSecondaryGripInfo SecondaryGripInfo)
 {
 
-	if (!GrippedObject)
-		return;
-
 	for (FBPActorGripInformation & Grip : LocallyGrippedObjects)
 	{
-		if (Grip == GrippedObject)
+		if (Grip == GripID)
 		{
 			// I override the = operator now so that it won't set the lerp components
 			Grip.SecondaryGripInfo.RepCopy(SecondaryGripInfo);

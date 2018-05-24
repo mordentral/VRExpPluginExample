@@ -210,13 +210,13 @@ public:
 	// Notify the server that we changed some secondary attachment information
 	UFUNCTION(Reliable, Server, WithValidation)
 		void Server_NotifySecondaryAttachmentChanged(
-			UObject * GrippedObject,
+			uint8 GripID,
 			FBPSecondaryGripInfo SecondaryGripInfo);
 
 	// Notify change on relative position editing as well, make RPCS callable in blueprint
 	// Notify the server that we locally gripped something
 	UFUNCTION(Reliable, Server, WithValidation)
-	void Server_NotifyLocalGripRemoved(const FBPActorGripInformation & removeGrip, FVector_NetQuantize100 AngularVelocity, FVector_NetQuantize100 LinearVelocity);
+	void Server_NotifyLocalGripRemoved(uint8 GripID, FVector_NetQuantize100 AngularVelocity, FVector_NetQuantize100 LinearVelocity);
 	
 
 	// Enable this to send the TickGrip event every tick even for non custom grip types - has a slight performance hit
@@ -456,13 +456,22 @@ public:
 		return false;
 	}
 
-	// Auto drop any uobject that is/root is a primitive component and has the VR Grip Interface	
+	// Drops a gripped object and sockets it to the given component at the given relative transform.
+	// bRetainOwnership controls whether the Owner is reset to null or not.
 	UFUNCTION(BlueprintCallable, Category = "GripMotionController")
-		bool DropAndSocketObject(UObject * ObjectToDrop, USceneComponent * SocketingParent, UPARAM(ref) FTransform_NetQuantize & RelativeTransformToParent);
+		bool DropAndSocketObject(UObject * ObjectToDrop, USceneComponent * SocketingParent, const FTransform_NetQuantize & RelativeTransformToParent, bool bRetainOwnership = true);
+	
+	UFUNCTION(BlueprintCallable, Category = "GripMotionController")
+		bool DropAndSocketGrip(FBPActorGripInformation &GripToDrop, USceneComponent * SocketingParent, const FTransform_NetQuantize & RelativeTransformToParent, bool bRetainOwnership = true);
 
 	// Notify a client that their local grip was bad
 	UFUNCTION(Reliable, Server, WithValidation, Category = "GripMotionController")
-		void Server_NotifyDropAndSocketGrip(uint8 GripID, USceneComponent * SocketingParent, UPARAM(ref) FTransform_NetQuantize & RelativeTransformToParent);
+		void Server_NotifyDropAndSocketGrip(uint8 GripID, USceneComponent * SocketingParent, const FTransform_NetQuantize & RelativeTransformToParent, bool bRetainOwnership);
+
+	UFUNCTION(Reliable, NetMulticast)
+		void NotifyDropAndSocket(const FBPActorGripInformation &NewDrop);
+
+	void DropAndSocket_Implementation(const FBPActorGripInformation &NewDrop);
 
 	/* Auto grip any uobject that is/root is a primitive component and has the VR Grip Interface
 	these are stored in a Tarray that will prevent destruction of the object, you MUST ungrip an actor if you want to kill it
