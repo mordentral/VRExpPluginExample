@@ -73,7 +73,7 @@ class VREXPANSIONPLUGIN_API AGrippableActor : public AActor, public IVRGripInter
 
 			// Handle the case where an object was both detached and moved on the server in the same frame.
 			// Calling this extraneously does not hurt but will properly fire events if the movement state changed while attached.
-			// This is needed because client side movement is ignored when attached
+			// This is needed because client side movement is ignored when attached #TODO: Should I just delete this in the future?
 			if (bReplicateMovement)
 				OnRep_ReplicatedMovement();
 
