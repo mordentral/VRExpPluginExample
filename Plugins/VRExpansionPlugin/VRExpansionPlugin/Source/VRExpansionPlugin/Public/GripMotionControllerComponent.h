@@ -213,6 +213,13 @@ public:
 			uint8 GripID,
 			FBPSecondaryGripInfo SecondaryGripInfo);
 
+	// Notify the server that we changed some secondary attachment information
+	// This one specifically sends out the new relative location for a retain secondary grip
+	UFUNCTION(Reliable, Server, WithValidation)
+		void Server_NotifySecondaryAttachmentChanged_Retain(
+			uint8 GripID,
+			FBPSecondaryGripInfo SecondaryGripInfo, const FTransform_NetQuantize & NewRelativeTransform);
+
 	// Notify change on relative position editing as well, make RPCS callable in blueprint
 	// Notify the server that we locally gripped something
 	UFUNCTION(Reliable, Server, WithValidation)
@@ -472,6 +479,7 @@ public:
 		void NotifyDropAndSocket(const FBPActorGripInformation &NewDrop);
 
 	void DropAndSocket_Implementation(const FBPActorGripInformation &NewDrop);
+	void Socket_Implementation(UObject * ObjectToSocket, USceneComponent * SocketingParent, const FTransform_NetQuantize & RelativeTransformToParent, bool bRetainOwnership);
 
 	/* Auto grip any uobject that is/root is a primitive component and has the VR Grip Interface
 	these are stored in a Tarray that will prevent destruction of the object, you MUST ungrip an actor if you want to kill it

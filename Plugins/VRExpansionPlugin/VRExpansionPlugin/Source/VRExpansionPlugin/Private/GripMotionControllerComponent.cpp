@@ -1596,6 +1596,9 @@ bool UGripMotionControllerComponent::DropAndSocketGrip(FBPActorGripInformation &
 		//return false;
 	}
 
+
+	UObject * GrippedObject = GripInfo->GrippedObject;
+
 	if (bWasLocalGrip)
 	{
 		if (GetNetMode() == ENetMode::NM_Client)
@@ -1604,14 +1607,23 @@ bool UGripMotionControllerComponent::DropAndSocketGrip(FBPActorGripInformation &
 
 			// Have to call this ourselves
 			DropAndSocket_Implementation(*GripInfo);
+			if (GrippedObject)
+				Socket_Implementation(GrippedObject, SocketingParent, RelativeTransformToParent, bRetainOwnership);
+
 		}
 		else // Server notifyDrop it
 		{
 			NotifyDropAndSocket(*GripInfo);
+			if (GrippedObject)
+				Socket_Implementation(GrippedObject, SocketingParent, RelativeTransformToParent, bRetainOwnership);
 		}
 	}
 	else
+	{
 		NotifyDropAndSocket(*GripInfo);
+		if (GrippedObject)
+			Socket_Implementation(GrippedObject, SocketingParent, RelativeTransformToParent, bRetainOwnership);
+	}
 
 	//GrippedObjects.RemoveAt(FoundIndex);		
 	return true;
@@ -1636,6 +1648,30 @@ void UGripMotionControllerComponent::Server_NotifyDropAndSocketGrip_Implementati
 	{
 		DropGrip(FoundGrip, false);
 	}
+	
+	if (FoundGrip.GrippedObject)
+		Socket_Implementation(FoundGrip.GrippedObject, SocketingParent, RelativeTransformToParent, bRetainOwnership);
+}
+
+void UGripMotionControllerComponent::Socket_Implementation(UObject * ObjectToSocket, USceneComponent * SocketingParent, const FTransform_NetQuantize & RelativeTransformToParent, bool bRetainOwnership)
+{
+	// Check for valid objects
+	if (!ObjectToSocket || !SocketingParent)
+		return;
+
+	if (UPrimitiveComponent * root = Cast<UPrimitiveComponent>(ObjectToSocket))
+	{
+		root->AttachToComponent(SocketingParent, FAttachmentTransformRules::KeepWorldTransform);
+		root->SetRelativeTransform(RelativeTransformToParent);
+	}
+	else if (AActor * pActor = Cast<AActor>(ObjectToSocket))
+	{
+		pActor->AttachToComponent(SocketingParent, FAttachmentTransformRules::KeepWorldTransform);
+		pActor->SetActorRelativeTransform(RelativeTransformToParent);
+
+		if (!bRetainOwnership)
+			pActor->SetOwner(nullptr);
+	}
 }
 
 void UGripMotionControllerComponent::NotifyDropAndSocket_Implementation(const FBPActorGripInformation &NewDrop)
@@ -1654,7 +1690,144 @@ void UGripMotionControllerComponent::NotifyDropAndSocket_Implementation(const FB
 
 void UGripMotionControllerComponent::DropAndSocket_Implementation(const FBPActorGripInformation &NewDrop)
 {
+	UGripMotionControllerComponent * HoldingController = nullptr;
+	bool bIsHeld = false;
 
+	DestroyPhysicsHandle(NewDrop);
+
+	bool bHadGripAuthority = HasGripAuthority(NewDrop);
+
+	UPrimitiveComponent *root = NULL;
+	AActor * pActor = NULL;
+
+	switch (NewDrop.GripTargetType)
+	{
+	case EGripTargetType::ActorGrip:
+		//case EGripTargetType::InteractibleActorGrip:
+	{
+		pActor = NewDrop.GetGrippedActor();
+
+		if (pActor)
+		{
+			root = Cast<UPrimitiveComponent>(pActor->GetRootComponent());
+
+			pActor->RemoveTickPrerequisiteComponent(this);
+			//this->IgnoreActorWhenMoving(pActor, false);
+
+			if (APawn* OwningPawn = Cast<APawn>(GetOwner()))
+			{
+				OwningPawn->MoveIgnoreActorRemove(pActor);
+
+				// Clearing owner out here
+				// Now I am setting the owner to the owning pawn if we are one
+				// This makes sure that some special replication needs are taken care of
+				// Only doing this for actor grips
+				// #TODO: Add the removal back in?
+				//pActor->SetOwner(nullptr);
+			}
+
+			if (root)
+			{
+				root->IgnoreActorWhenMoving(this->GetOwner(), false);
+				root->UpdateComponentToWorld(); // This fixes the late update offset
+				root->SetSimulatePhysics(false);
+
+				if ((NewDrop.AdvancedGripSettings.PhysicsSettings.bUsePhysicsSettings && NewDrop.AdvancedGripSettings.PhysicsSettings.bTurnOffGravityDuringGrip) ||
+					(NewDrop.GripMovementReplicationSetting == EGripMovementReplicationSettings::ForceServerSideMovement && !IsServer()))
+					root->SetEnableGravity(NewDrop.bOriginalGravity);
+			}
+
+			/*if (IsServer() && !bSkipFullDrop)
+			{
+				pActor->SetReplicateMovement(NewDrop.bOriginalReplicatesMovement);
+			}*/
+
+			if (pActor->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
+			{
+				//if (NewDrop.SecondaryGripInfo.bHasSecondaryAttachment)
+				//	IVRGripInterface::Execute_OnSecondaryGripRelease(pActor, NewDrop.SecondaryGripInfo.SecondaryAttachment, NewDrop);
+
+				//IVRGripInterface::Execute_OnGripRelease(pActor, this, NewDrop);
+				IVRGripInterface::Execute_SetHeld(pActor, nullptr, false);
+			}
+		}
+	}break;
+
+	case EGripTargetType::ComponentGrip:
+		//case EGripTargetType::InteractibleComponentGrip:
+	{
+		root = NewDrop.GetGrippedComponent();
+		if (root)
+		{
+			pActor = root->GetOwner();
+
+			root->RemoveTickPrerequisiteComponent(this);
+			root->IgnoreActorWhenMoving(this->GetOwner(), false);
+			root->UpdateComponentToWorld();
+			root->SetSimulatePhysics(false);
+
+			if ((NewDrop.AdvancedGripSettings.PhysicsSettings.bUsePhysicsSettings && NewDrop.AdvancedGripSettings.PhysicsSettings.bTurnOffGravityDuringGrip) ||
+				(NewDrop.GripMovementReplicationSetting == EGripMovementReplicationSettings::ForceServerSideMovement && !IsServer()))
+				root->SetEnableGravity(NewDrop.bOriginalGravity);
+
+			if (pActor)
+			{
+				/*if (IsServer() && root == pActor->GetRootComponent() && !bSkipFullDrop)
+				{
+					pActor->SetReplicateMovement(NewDrop.bOriginalReplicatesMovement);
+				}
+
+				if (pActor->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
+				{
+					IVRGripInterface::Execute_OnChildGripRelease(pActor, this, NewDrop);
+				}*/
+			}
+
+			// Call on child grip release on attached parent component
+			if (root->GetAttachParent() && root->GetAttachParent()->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
+			{
+				IVRGripInterface::Execute_OnChildGripRelease(root->GetAttachParent(), this, NewDrop);
+			}
+
+			if (root->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
+			{
+				//if (NewDrop.SecondaryGripInfo.bHasSecondaryAttachment)
+				//	IVRGripInterface::Execute_OnSecondaryGripRelease(root, NewDrop.SecondaryGripInfo.SecondaryAttachment, NewDrop);
+
+				//IVRGripInterface::Execute_OnGripRelease(root, this, NewDrop);
+				IVRGripInterface::Execute_SetHeld(root, nullptr, false);
+			}
+		}
+	}break;
+	}
+
+
+	int fIndex = 0;
+	if (LocallyGrippedObjects.Find(NewDrop, fIndex))
+	{
+		if (HasGripAuthority(NewDrop) || GetNetMode() < ENetMode::NM_Client)
+		{
+			LocallyGrippedObjects.RemoveAt(fIndex);
+		}
+		else
+			LocallyGrippedObjects[fIndex].bIsPaused = true; // Pause it instead of dropping, dropping can corrupt the array in rare cases
+	}
+	else
+	{
+		fIndex = 0;
+		if (GrippedObjects.Find(NewDrop, fIndex))
+		{
+			if (HasGripAuthority(NewDrop) || GetNetMode() < ENetMode::NM_Client)
+			{
+				GrippedObjects.RemoveAt(fIndex);
+			}
+			else
+				GrippedObjects[fIndex].bIsPaused = true; // Pause it instead of dropping, dropping can corrupt the array in rare cases
+		}
+	}
+
+	// Broadcast a new drop
+	OnDroppedObject.Broadcast(NewDrop);
 }
 
 
@@ -1914,7 +2087,8 @@ void UGripMotionControllerComponent::Drop_Implementation(const FBPActorGripInfor
 					// Now I am setting the owner to the owning pawn if we are one
 					// This makes sure that some special replication needs are taken care of
 					// Only doing this for actor grips
-					pActor->SetOwner(nullptr);
+					// #TODO: Add the removal back in?
+					//pActor->SetOwner(nullptr);
 				}
 
 				if (root)
@@ -2263,7 +2437,7 @@ bool UGripMotionControllerComponent::RemoveSecondaryAttachmentPoint(UObject * Gr
 	}
 
 	// Handle the grip if it was found
-	if (GripToUse)
+	if (GripToUse && GripToUse->GrippedObject)
 	{
 		if (GripToUse->SecondaryGripInfo.GripLerpState == EGripLerpState::StartLerp)
 			LerpToTime = 0.0f;
@@ -2286,16 +2460,16 @@ bool UGripMotionControllerComponent::RemoveSecondaryAttachmentPoint(UObject * Gr
 		} break;
 		}
 
+		ESecondaryGripType SecondaryType = ESecondaryGripType::SG_None;
+		if (GripToUse->GrippedObject->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
+		{
+			SecondaryType = IVRGripInterface::Execute_SecondaryGripType(GripToUse->GrippedObject);
+			//else if (SecondaryType == ESecondaryGripType::SG_FreeWithScaling || SecondaryType == ESecondaryGripType::SG_SlotOnlyWithScaling)
+			//LerpToTime = 0.0f;
+		}
+
 		if (primComp)
 		{
-			ESecondaryGripType SecondaryType = ESecondaryGripType::SG_None;
-			if (GripToUse->GrippedObject->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
-			{
-				SecondaryType = IVRGripInterface::Execute_SecondaryGripType(GripToUse->GrippedObject);
-				//else if (SecondaryType == ESecondaryGripType::SG_FreeWithScaling || SecondaryType == ESecondaryGripType::SG_SlotOnlyWithScaling)
-				//LerpToTime = 0.0f;
-			}
-
 			switch (SecondaryType)
 			{
 			// All of these retain the position on release
@@ -2339,7 +2513,23 @@ bool UGripMotionControllerComponent::RemoveSecondaryAttachmentPoint(UObject * Gr
 
 		if (GripToUse->GripMovementReplicationSetting == EGripMovementReplicationSettings::ClientSide_Authoritive && GetNetMode() == ENetMode::NM_Client)
 		{
-			Server_NotifySecondaryAttachmentChanged(GripToUse->GripID, GripToUse->SecondaryGripInfo);
+			switch (SecondaryType)
+			{
+				// All of these retain the position on release
+			case ESecondaryGripType::SG_FreeWithScaling_Retain:
+			case ESecondaryGripType::SG_SlotOnlyWithScaling_Retain:
+			case ESecondaryGripType::SG_Free_Retain:
+			case ESecondaryGripType::SG_SlotOnly_Retain:
+			case ESecondaryGripType::SG_ScalingOnly:
+			{
+				Server_NotifySecondaryAttachmentChanged_Retain(GripToUse->GripID, GripToUse->SecondaryGripInfo, GripToUse->RelativeTransform);
+			}break;
+			default:
+			{
+				Server_NotifySecondaryAttachmentChanged(GripToUse->GripID, GripToUse->SecondaryGripInfo);
+			}break;
+			}
+
 		}
 
 		GripToUse = nullptr;
@@ -4435,6 +4625,33 @@ void UGripMotionControllerComponent::Server_NotifySecondaryAttachmentChanged_Imp
 
 }
 
+bool UGripMotionControllerComponent::Server_NotifySecondaryAttachmentChanged_Retain_Validate(
+	uint8 GripID,
+	FBPSecondaryGripInfo SecondaryGripInfo, const FTransform_NetQuantize & NewRelativeTransform)
+{
+	return true;
+}
+
+void UGripMotionControllerComponent::Server_NotifySecondaryAttachmentChanged_Retain_Implementation(
+	uint8 GripID,
+	FBPSecondaryGripInfo SecondaryGripInfo, const FTransform_NetQuantize & NewRelativeTransform)
+{
+
+	for (FBPActorGripInformation & Grip : LocallyGrippedObjects)
+	{
+		if (Grip == GripID)
+		{
+			// I override the = operator now so that it won't set the lerp components
+			Grip.SecondaryGripInfo.RepCopy(SecondaryGripInfo);
+			Grip.RelativeTransform = NewRelativeTransform;
+
+			// Initialize the differences, clients will do this themselves on the rep back
+			HandleGripReplication(Grip);
+			break;
+		}
+	}
+
+}
 void UGripMotionControllerComponent::GetControllerDeviceID(FXRDeviceId & DeviceID, EBPVRResultSwitch &Result, bool bCheckOpenVROnly)
 {
 	EControllerHand ControllerHandIndex;
