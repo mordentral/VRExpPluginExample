@@ -1995,15 +1995,6 @@ bool UGripMotionControllerComponent::NotifyGrip(FBPActorGripInformation &NewGrip
 	{
 		// Broadcast a new grip
 		OnGrippedObject.Broadcast(NewGrip);
-
-		if (pActor && root && NewGrip.GripMovementReplicationSetting != EGripMovementReplicationSettings::ForceServerSideMovement)
-		{
-			// Fake the actors movement replication to keep it from freaking out, it means that movement rep is already off and we are about to be gripped likely.
-			pActor->ReplicatedMovement.Location = FRepMovement::RebaseOntoZeroOrigin(root->GetComponentLocation(), this);
-			pActor->ReplicatedMovement.Rotation = root->GetComponentRotation();
-			pActor->ReplicatedMovement.LinearVelocity = pActor->GetVelocity();
-			pActor->ReplicatedMovement.AngularVelocity = FVector::ZeroVector;
-		}
 	}
 
 	return true;
