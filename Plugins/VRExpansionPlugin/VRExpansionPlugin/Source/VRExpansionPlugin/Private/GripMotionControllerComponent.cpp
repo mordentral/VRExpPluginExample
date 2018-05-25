@@ -1536,7 +1536,7 @@ bool UGripMotionControllerComponent::DropAndSocketObject(UObject * ObjectToDrop,
 	return false;
 }
 
-bool UGripMotionControllerComponent::DropAndSocketGrip(FBPActorGripInformation & GripToDrop, USceneComponent * SocketingParent, const FTransform_NetQuantize & RelativeTransformToParent, bool bRetainOwnership)
+bool UGripMotionControllerComponent::DropAndSocketGrip(const FBPActorGripInformation & GripToDrop, USceneComponent * SocketingParent, const FTransform_NetQuantize & RelativeTransformToParent, bool bRetainOwnership)
 {
 	if (!SocketingParent)
 	{
@@ -1744,10 +1744,11 @@ void UGripMotionControllerComponent::DropAndSocket_Implementation(const FBPActor
 
 			if (pActor->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
 			{
-				//if (NewDrop.SecondaryGripInfo.bHasSecondaryAttachment)
-				//	IVRGripInterface::Execute_OnSecondaryGripRelease(pActor, NewDrop.SecondaryGripInfo.SecondaryAttachment, NewDrop);
+				IVRGripInterface::Execute_SetIsSocketed(pActor, true);
+				if (NewDrop.SecondaryGripInfo.bHasSecondaryAttachment)
+					IVRGripInterface::Execute_OnSecondaryGripRelease(pActor, NewDrop.SecondaryGripInfo.SecondaryAttachment, NewDrop);
 
-				//IVRGripInterface::Execute_OnGripRelease(pActor, this, NewDrop);
+				IVRGripInterface::Execute_OnGripRelease(pActor, this, NewDrop, true);
 				IVRGripInterface::Execute_SetHeld(pActor, nullptr, false);
 			}
 		}
@@ -1777,24 +1778,25 @@ void UGripMotionControllerComponent::DropAndSocket_Implementation(const FBPActor
 					pActor->SetReplicateMovement(NewDrop.bOriginalReplicatesMovement);
 				}
 
-				/*if (pActor->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
+				if (pActor->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
 				{
-					IVRGripInterface::Execute_OnChildGripRelease(pActor, this, NewDrop);
-				}*/
+					IVRGripInterface::Execute_OnChildGripRelease(pActor, this, NewDrop, true);
+				}
 			}
 
 			// Call on child grip release on attached parent component
 			if (root->GetAttachParent() && root->GetAttachParent()->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
 			{
-				IVRGripInterface::Execute_OnChildGripRelease(root->GetAttachParent(), this, NewDrop);
+				IVRGripInterface::Execute_OnChildGripRelease(root->GetAttachParent(), this, NewDrop, true);
 			}
 
 			if (root->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
 			{
-				//if (NewDrop.SecondaryGripInfo.bHasSecondaryAttachment)
-				//	IVRGripInterface::Execute_OnSecondaryGripRelease(root, NewDrop.SecondaryGripInfo.SecondaryAttachment, NewDrop);
+				IVRGripInterface::Execute_SetIsSocketed(root, true);
+				if (NewDrop.SecondaryGripInfo.bHasSecondaryAttachment)
+					IVRGripInterface::Execute_OnSecondaryGripRelease(root, NewDrop.SecondaryGripInfo.SecondaryAttachment, NewDrop);
 
-				//IVRGripInterface::Execute_OnGripRelease(root, this, NewDrop);
+				IVRGripInterface::Execute_OnGripRelease(root, this, NewDrop, true);
 				IVRGripInterface::Execute_SetHeld(root, nullptr, false);
 			}
 		}
@@ -1858,10 +1860,18 @@ bool UGripMotionControllerComponent::NotifyGrip(FBPActorGripInformation &NewGrip
 				pActor->SetOwner(OwningPawn);
 			}
 
+			bool bWasSocketed = false;
 			if (!bIsReInit && pActor->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
 			{
+				IVRGripInterface::Execute_IsSocketed(pActor, bWasSocketed);
+				IVRGripInterface::Execute_SetIsSocketed(pActor, false);
 				IVRGripInterface::Execute_SetHeld(pActor, this, true);
-				IVRGripInterface::Execute_OnGrip(pActor, this, NewGrip);
+				IVRGripInterface::Execute_OnGrip(pActor, this, NewGrip, bWasSocketed);
+			}
+
+			if (bWasSocketed)
+			{
+				pActor->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
 			}
 
 			if (root)
@@ -1889,6 +1899,15 @@ bool UGripMotionControllerComponent::NotifyGrip(FBPActorGripInformation &NewGrip
 		{
 			pActor = root->GetOwner();
 
+			bool bWasSocketed = false;
+			if (!bIsReInit && root->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
+			{
+				IVRGripInterface::Execute_IsSocketed(pActor, bWasSocketed);
+				IVRGripInterface::Execute_SetIsSocketed(pActor, false);
+				IVRGripInterface::Execute_SetHeld(root, this, true);
+				IVRGripInterface::Execute_OnGrip(root, this, NewGrip, bWasSocketed);
+			}
+
 			if (pActor)
 			{
 				/*if (APawn* OwningPawn = Cast<APawn>(GetOwner()))
@@ -1898,7 +1917,7 @@ bool UGripMotionControllerComponent::NotifyGrip(FBPActorGripInformation &NewGrip
 
 				if (!bIsReInit && pActor->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
 				{
-					IVRGripInterface::Execute_OnChildGrip(pActor, this, NewGrip);
+					IVRGripInterface::Execute_OnChildGrip(pActor, this, NewGrip, bWasSocketed);
 				}
 
 			}
@@ -1906,13 +1925,7 @@ bool UGripMotionControllerComponent::NotifyGrip(FBPActorGripInformation &NewGrip
 			// Call OnChildGrip for attached grip parent
 			if (!bIsReInit && root->GetAttachParent() && root->GetAttachParent()->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
 			{
-				IVRGripInterface::Execute_OnChildGrip(root->GetAttachParent(), this, NewGrip);
-			}
-
-			if (!bIsReInit && root->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
-			{
-				IVRGripInterface::Execute_SetHeld(root, this, true);
-				IVRGripInterface::Execute_OnGrip(root, this, NewGrip);
+				IVRGripInterface::Execute_OnChildGrip(root->GetAttachParent(), this, NewGrip, bWasSocketed);
 			}
 
 			if ((NewGrip.AdvancedGripSettings.PhysicsSettings.bUsePhysicsSettings && NewGrip.AdvancedGripSettings.PhysicsSettings.bTurnOffGravityDuringGrip) ||
@@ -2144,7 +2157,7 @@ void UGripMotionControllerComponent::Drop_Implementation(const FBPActorGripInfor
 				if (NewDrop.SecondaryGripInfo.bHasSecondaryAttachment)
 					IVRGripInterface::Execute_OnSecondaryGripRelease(pActor, NewDrop.SecondaryGripInfo.SecondaryAttachment, NewDrop);
 
-				IVRGripInterface::Execute_OnGripRelease(pActor, this, NewDrop);
+				IVRGripInterface::Execute_OnGripRelease(pActor, this, NewDrop, false);
 
 				if(!bSkipFullDrop)
 					IVRGripInterface::Execute_SetHeld(pActor, nullptr, false);
@@ -2218,7 +2231,7 @@ void UGripMotionControllerComponent::Drop_Implementation(const FBPActorGripInfor
 
 				if (pActor->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
 				{
-					IVRGripInterface::Execute_OnChildGripRelease(pActor, this, NewDrop);
+					IVRGripInterface::Execute_OnChildGripRelease(pActor, this, NewDrop, false);
 				}
 
 			}
@@ -2226,7 +2239,7 @@ void UGripMotionControllerComponent::Drop_Implementation(const FBPActorGripInfor
 			// Call on child grip release on attached parent component
 			if (root->GetAttachParent() && root->GetAttachParent()->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
 			{
-				IVRGripInterface::Execute_OnChildGripRelease(root->GetAttachParent(), this, NewDrop);
+				IVRGripInterface::Execute_OnChildGripRelease(root->GetAttachParent(), this, NewDrop, false);
 			}
 
 			if (root->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
@@ -2234,7 +2247,7 @@ void UGripMotionControllerComponent::Drop_Implementation(const FBPActorGripInfor
 				if (NewDrop.SecondaryGripInfo.bHasSecondaryAttachment)
 					IVRGripInterface::Execute_OnSecondaryGripRelease(root, NewDrop.SecondaryGripInfo.SecondaryAttachment, NewDrop);
 
-				IVRGripInterface::Execute_OnGripRelease(root, this, NewDrop);
+				IVRGripInterface::Execute_OnGripRelease(root, this, NewDrop, false);
 
 				if(!bSkipFullDrop)
 					IVRGripInterface::Execute_SetHeld(root, nullptr, false);

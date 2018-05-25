@@ -352,7 +352,7 @@ void UVRMountComponent::TickGrip_Implementation(UGripMotionControllerComponent *
 	}
 }
 
-void UVRMountComponent::OnGrip_Implementation(UGripMotionControllerComponent * GrippingController, const FBPActorGripInformation & GripInformation)
+void UVRMountComponent::OnGrip_Implementation(UGripMotionControllerComponent * GrippingController, const FBPActorGripInformation & GripInformation, bool bWasSocketed)
 {	
 	FTransform CurrentRelativeTransform = InitialRelativeTransform * UVRInteractibleFunctionLibrary::Interactible_GetCurrentParentTransform(this);
 
@@ -405,13 +405,13 @@ void UVRMountComponent::OnGrip_Implementation(UGripMotionControllerComponent * G
 	this->SetComponentTickEnabled(true);
 }
 
-void UVRMountComponent::OnGripRelease_Implementation(UGripMotionControllerComponent * ReleasingController, const FBPActorGripInformation & GripInformation)
+void UVRMountComponent::OnGripRelease_Implementation(UGripMotionControllerComponent * ReleasingController, const FBPActorGripInformation & GripInformation, bool bWasSocketed)
 {
 		this->SetComponentTickEnabled(false);
 }
 
-void UVRMountComponent::OnChildGrip_Implementation(UGripMotionControllerComponent * GrippingController, const FBPActorGripInformation & GripInformation) {}
-void UVRMountComponent::OnChildGripRelease_Implementation(UGripMotionControllerComponent * ReleasingController, const FBPActorGripInformation & GripInformation) {}
+void UVRMountComponent::OnChildGrip_Implementation(UGripMotionControllerComponent * GrippingController, const FBPActorGripInformation & GripInformation, bool bWasSocketed) {}
+void UVRMountComponent::OnChildGripRelease_Implementation(UGripMotionControllerComponent * ReleasingController, const FBPActorGripInformation & GripInformation, bool bWasSocketed) {}
 void UVRMountComponent::OnSecondaryGrip_Implementation(USceneComponent * SecondaryGripComponent, const FBPActorGripInformation & GripInformation) {}
 void UVRMountComponent::OnSecondaryGripRelease_Implementation(USceneComponent * ReleasingSecondaryGripComponent, const FBPActorGripInformation & GripInformation) {}
 void UVRMountComponent::OnUsed_Implementation() {}
@@ -419,6 +419,9 @@ void UVRMountComponent::OnEndUsed_Implementation() {}
 void UVRMountComponent::OnSecondaryUsed_Implementation() {}
 void UVRMountComponent::OnEndSecondaryUsed_Implementation() {}
 void UVRMountComponent::OnInput_Implementation(FKey Key, EInputEvent KeyEvent) {}
+void UVRMountComponent::IsSocketed_Implementation(bool & bIsSocketed) { bIsSocketed = false; }
+void UVRMountComponent::SetIsSocketed_Implementation(bool bIsIsSocketed) { }
+bool UVRMountComponent::RequestsSocketing_Implementation(USceneComponent *& ParentToSocketTo, FTransform_NetQuantize & RelativeTransform, bool & bRetainOwner) { return false; }
 
 bool UVRMountComponent::DenyGripping_Implementation()
 {

@@ -62,10 +62,10 @@ UGrippableSphereComponent::~UGrippableSphereComponent()
 }
 
 void UGrippableSphereComponent::TickGrip_Implementation(UGripMotionControllerComponent * GrippingController, const FBPActorGripInformation & GripInformation, float DeltaTime) {}
-void UGrippableSphereComponent::OnGrip_Implementation(UGripMotionControllerComponent * GrippingController, const FBPActorGripInformation & GripInformation) {}
-void UGrippableSphereComponent::OnGripRelease_Implementation(UGripMotionControllerComponent * ReleasingController, const FBPActorGripInformation & GripInformation) {}
-void UGrippableSphereComponent::OnChildGrip_Implementation(UGripMotionControllerComponent * GrippingController, const FBPActorGripInformation & GripInformation) {}
-void UGrippableSphereComponent::OnChildGripRelease_Implementation(UGripMotionControllerComponent * ReleasingController, const FBPActorGripInformation & GripInformation) {}
+void UGrippableSphereComponent::OnGrip_Implementation(UGripMotionControllerComponent * GrippingController, const FBPActorGripInformation & GripInformation, bool bWasSocketed) {}
+void UGrippableSphereComponent::OnGripRelease_Implementation(UGripMotionControllerComponent * ReleasingController, const FBPActorGripInformation & GripInformation, bool bWasSocketed) {}
+void UGrippableSphereComponent::OnChildGrip_Implementation(UGripMotionControllerComponent * GrippingController, const FBPActorGripInformation & GripInformation, bool bWasSocketed) {}
+void UGrippableSphereComponent::OnChildGripRelease_Implementation(UGripMotionControllerComponent * ReleasingController, const FBPActorGripInformation & GripInformation, bool bWasSocketed) {}
 void UGrippableSphereComponent::OnSecondaryGrip_Implementation(USceneComponent * SecondaryGripComponent, const FBPActorGripInformation & GripInformation) {}
 void UGrippableSphereComponent::OnSecondaryGripRelease_Implementation(USceneComponent * ReleasingSecondaryGripComponent, const FBPActorGripInformation & GripInformation) {}
 void UGrippableSphereComponent::OnUsed_Implementation() {}
@@ -73,6 +73,7 @@ void UGrippableSphereComponent::OnEndUsed_Implementation() {}
 void UGrippableSphereComponent::OnSecondaryUsed_Implementation() {}
 void UGrippableSphereComponent::OnEndSecondaryUsed_Implementation() {}
 void UGrippableSphereComponent::OnInput_Implementation(FKey Key, EInputEvent KeyEvent) {}
+bool UGrippableSphereComponent::RequestsSocketing_Implementation(USceneComponent *& ParentToSocketTo, FTransform_NetQuantize & RelativeTransform, bool & bRetainOwner) { return false; }
 
 bool UGrippableSphereComponent::DenyGripping_Implementation()
 {
@@ -152,6 +153,16 @@ void UGrippableSphereComponent::SetHeld_Implementation(UGripMotionControllerComp
 		VRGripInterfaceSettings.HoldingController = nullptr;
 
 	VRGripInterfaceSettings.bIsHeld = bIsHeld;
+}
+
+void UGrippableSphereComponent::IsSocketed_Implementation(bool & bIsSocketed)
+{
+	bIsSocketed = VRGripInterfaceSettings.bIsSocketed;
+}
+
+void UGrippableSphereComponent::SetIsSocketed_Implementation(bool bIsIsSocketed)
+{
+	VRGripInterfaceSettings.bIsSocketed = bIsIsSocketed;
 }
 
 FBPInteractionSettings UGrippableSphereComponent::GetInteractionSettings_Implementation()

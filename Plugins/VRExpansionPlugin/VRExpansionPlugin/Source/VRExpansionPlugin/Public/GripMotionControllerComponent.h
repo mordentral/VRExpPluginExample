@@ -469,7 +469,7 @@ public:
 		bool DropAndSocketObject(UObject * ObjectToDrop, USceneComponent * SocketingParent, const FTransform_NetQuantize & RelativeTransformToParent, bool bRetainOwnership = true);
 	
 	UFUNCTION(BlueprintCallable, Category = "GripMotionController")
-		bool DropAndSocketGrip(FBPActorGripInformation &GripToDrop, USceneComponent * SocketingParent, const FTransform_NetQuantize & RelativeTransformToParent, bool bRetainOwnership = true);
+		bool DropAndSocketGrip(const FBPActorGripInformation &GripToDrop, USceneComponent * SocketingParent, const FTransform_NetQuantize & RelativeTransformToParent, bool bRetainOwnership = true);
 
 	// Notify a client that their local grip was bad
 	UFUNCTION(Reliable, Server, WithValidation, Category = "GripMotionController")

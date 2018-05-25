@@ -92,10 +92,10 @@ AGrippableStaticMeshActor::~AGrippableStaticMeshActor()
 }
 
 void AGrippableStaticMeshActor::TickGrip_Implementation(UGripMotionControllerComponent * GrippingController, const FBPActorGripInformation & GripInformation, float DeltaTime) {}
-void AGrippableStaticMeshActor::OnGrip_Implementation(UGripMotionControllerComponent * GrippingController, const FBPActorGripInformation & GripInformation) {}
-void AGrippableStaticMeshActor::OnGripRelease_Implementation(UGripMotionControllerComponent * ReleasingController, const FBPActorGripInformation & GripInformation) {}
-void AGrippableStaticMeshActor::OnChildGrip_Implementation(UGripMotionControllerComponent * GrippingController, const FBPActorGripInformation & GripInformation) {}
-void AGrippableStaticMeshActor::OnChildGripRelease_Implementation(UGripMotionControllerComponent * ReleasingController, const FBPActorGripInformation & GripInformation) {}
+void AGrippableStaticMeshActor::OnGrip_Implementation(UGripMotionControllerComponent * GrippingController, const FBPActorGripInformation & GripInformation, bool bWasSocketed) {}
+void AGrippableStaticMeshActor::OnGripRelease_Implementation(UGripMotionControllerComponent * ReleasingController, const FBPActorGripInformation & GripInformation, bool bWasSocketed) {}
+void AGrippableStaticMeshActor::OnChildGrip_Implementation(UGripMotionControllerComponent * GrippingController, const FBPActorGripInformation & GripInformation, bool bWasSocketed) {}
+void AGrippableStaticMeshActor::OnChildGripRelease_Implementation(UGripMotionControllerComponent * ReleasingController, const FBPActorGripInformation & GripInformation, bool bWasSocketed) {}
 void AGrippableStaticMeshActor::OnSecondaryGrip_Implementation(USceneComponent * SecondaryGripComponent, const FBPActorGripInformation & GripInformation) {}
 void AGrippableStaticMeshActor::OnSecondaryGripRelease_Implementation(USceneComponent * ReleasingSecondaryGripComponent, const FBPActorGripInformation & GripInformation) {}
 void AGrippableStaticMeshActor::OnUsed_Implementation() {}
@@ -103,6 +103,7 @@ void AGrippableStaticMeshActor::OnEndUsed_Implementation() {}
 void AGrippableStaticMeshActor::OnSecondaryUsed_Implementation() {}
 void AGrippableStaticMeshActor::OnEndSecondaryUsed_Implementation() {}
 void AGrippableStaticMeshActor::OnInput_Implementation(FKey Key, EInputEvent KeyEvent) {}
+bool AGrippableStaticMeshActor::RequestsSocketing_Implementation(USceneComponent *& ParentToSocketTo, FTransform_NetQuantize & RelativeTransform, bool & bRetainOwner) { return false; }
 
 bool AGrippableStaticMeshActor::DenyGripping_Implementation()
 {
@@ -183,6 +184,16 @@ void AGrippableStaticMeshActor::SetHeld_Implementation(UGripMotionControllerComp
 		VRGripInterfaceSettings.HoldingController = nullptr;
 
 	VRGripInterfaceSettings.bIsHeld = bIsHeld;
+}
+
+void AGrippableStaticMeshActor::IsSocketed_Implementation(bool & bIsSocketed)
+{
+	bIsSocketed = VRGripInterfaceSettings.bIsSocketed;
+}
+
+void AGrippableStaticMeshActor::SetIsSocketed_Implementation(bool bIsIsSocketed)
+{
+	VRGripInterfaceSettings.bIsSocketed = bIsIsSocketed;
 }
 
 FBPInteractionSettings AGrippableStaticMeshActor::GetInteractionSettings_Implementation()

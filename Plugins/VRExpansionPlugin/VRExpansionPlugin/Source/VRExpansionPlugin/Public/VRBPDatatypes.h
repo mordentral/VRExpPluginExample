@@ -1337,7 +1337,7 @@ public:
 	UPROPERTY(BlueprintReadOnly, NotReplicated, Category = "VRGripInterface")
 		UGripMotionControllerComponent * HoldingController; // Set on grip notify, not net serializing
 
-	UPROPERTY(BlueprintReadWrite, NotReplicated, Category = "VRGripInterface")
+	UPROPERTY(EditAnywhere, NotReplicated, Category = "VRGripInterface")
 		bool bIsSocketed; // Set on grip notify, not net serializing
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRGripInterface", meta = (editcondition = "bIsInteractible"))
