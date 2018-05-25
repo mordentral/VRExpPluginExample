@@ -850,6 +850,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AdvancedGripSettings")
 		uint8 GripPriority;
 
+	// If true, will set the owner of actor grips on grip
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AdvancedGripSettings")
+		bool bSetOwnerOnGrip;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AdvancedGripSettings")
 		FBPAdvGripPhysicsSettings PhysicsSettings;
 
@@ -858,11 +862,13 @@ public:
 
 
 	FBPAdvGripSettings() :
-		GripPriority(1)
+		GripPriority(1),
+		bSetOwnerOnGrip(1)
 	{}
 
 	FBPAdvGripSettings(int GripPrio) :
-		GripPriority(GripPrio)
+		GripPriority(GripPrio),
+		bSetOwnerOnGrip(1)
 	{}
 };
 
@@ -1337,9 +1343,6 @@ public:
 	UPROPERTY(BlueprintReadOnly, NotReplicated, Category = "VRGripInterface")
 		UGripMotionControllerComponent * HoldingController; // Set on grip notify, not net serializing
 
-	UPROPERTY(EditAnywhere, NotReplicated, Category = "VRGripInterface")
-		bool bIsSocketed; // Set on grip notify, not net serializing
-
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRGripInterface", meta = (editcondition = "bIsInteractible"))
 		FBPInteractionSettings InteractionSettings;
 
@@ -1359,8 +1362,7 @@ public:
 		PrimarySlotRange(20.0f),
 		bIsInteractible(false),
 		bIsHeld(false),
-		HoldingController(nullptr),
-		bIsSocketed(false)
+		HoldingController(nullptr)
 	{
 	}
 };

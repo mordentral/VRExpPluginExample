@@ -90,7 +90,7 @@ void UVRDialComponent::TickGrip_Implementation(UGripMotionControllerComponent * 
 	LastRotation = curRotation;
 }
 
-void UVRDialComponent::OnGrip_Implementation(UGripMotionControllerComponent * GrippingController, const FBPActorGripInformation & GripInformation, bool bWasSocketed) 
+void UVRDialComponent::OnGrip_Implementation(UGripMotionControllerComponent * GrippingController, const FBPActorGripInformation & GripInformation) 
 {
 	FTransform CurrentRelativeTransform = InitialRelativeTransform * UVRInteractibleFunctionLibrary::Interactible_GetCurrentParentTransform(this);
 
@@ -120,7 +120,7 @@ void UVRDialComponent::OnGripRelease_Implementation(UGripMotionControllerCompone
 	this->SetComponentTickEnabled(false);
 }
 
-void UVRDialComponent::OnChildGrip_Implementation(UGripMotionControllerComponent * GrippingController, const FBPActorGripInformation & GripInformation, bool bWasSocketed) {}
+void UVRDialComponent::OnChildGrip_Implementation(UGripMotionControllerComponent * GrippingController, const FBPActorGripInformation & GripInformation) {}
 void UVRDialComponent::OnChildGripRelease_Implementation(UGripMotionControllerComponent * ReleasingController, const FBPActorGripInformation & GripInformation, bool bWasSocketed) {}
 void UVRDialComponent::OnSecondaryGrip_Implementation(USceneComponent * SecondaryGripComponent, const FBPActorGripInformation & GripInformation) {}
 void UVRDialComponent::OnSecondaryGripRelease_Implementation(USceneComponent * ReleasingSecondaryGripComponent, const FBPActorGripInformation & GripInformation) {}
@@ -129,9 +129,7 @@ void UVRDialComponent::OnEndUsed_Implementation() {}
 void UVRDialComponent::OnSecondaryUsed_Implementation() {}
 void UVRDialComponent::OnEndSecondaryUsed_Implementation() {}
 void UVRDialComponent::OnInput_Implementation(FKey Key, EInputEvent KeyEvent) {}
-void UVRDialComponent::IsSocketed_Implementation(bool & bIsSocketed) { bIsSocketed = false; }
-void UVRDialComponent::SetIsSocketed_Implementation(bool bIsIsSocketed) { }
-bool UVRDialComponent::RequestsSocketing_Implementation(USceneComponent *& ParentToSocketTo, FTransform_NetQuantize & RelativeTransform, bool & bRetainOwner) { return false; }
+bool UVRDialComponent::RequestsSocketing_Implementation(USceneComponent *& ParentToSocketTo, FName & OptionalSocketName, FTransform_NetQuantize & RelativeTransform) { return false; }
 
 bool UVRDialComponent::DenyGripping_Implementation()
 {

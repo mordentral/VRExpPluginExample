@@ -1487,7 +1487,7 @@ bool UGripMotionControllerComponent::DropGrip(const FBPActorGripInformation &Gri
 	return true;
 }
 
-bool UGripMotionControllerComponent::DropAndSocketObject(UObject * ObjectToDrop, USceneComponent * SocketingParent, const FTransform_NetQuantize & RelativeTransformToParent, bool bRetainOwnership)
+bool UGripMotionControllerComponent::DropAndSocketObject(UObject * ObjectToDrop, USceneComponent * SocketingParent, FName OptionalSocketName, const FTransform_NetQuantize & RelativeTransformToParent)
 {
 	if (!SocketingParent)
 	{
@@ -1531,12 +1531,12 @@ bool UGripMotionControllerComponent::DropAndSocketObject(UObject * ObjectToDrop,
 	}
 
 	if(GripInfo)
-		return DropAndSocketGrip(*GripInfo, SocketingParent, RelativeTransformToParent, bRetainOwnership);
+		return DropAndSocketGrip(*GripInfo, SocketingParent, OptionalSocketName, RelativeTransformToParent);
 	
 	return false;
 }
 
-bool UGripMotionControllerComponent::DropAndSocketGrip(const FBPActorGripInformation & GripToDrop, USceneComponent * SocketingParent, const FTransform_NetQuantize & RelativeTransformToParent, bool bRetainOwnership)
+bool UGripMotionControllerComponent::DropAndSocketGrip(const FBPActorGripInformation & GripToDrop, USceneComponent * SocketingParent, FName OptionalSocketName, const FTransform_NetQuantize & RelativeTransformToParent)
 {
 	if (!SocketingParent)
 	{
@@ -1603,38 +1603,38 @@ bool UGripMotionControllerComponent::DropAndSocketGrip(const FBPActorGripInforma
 	{
 		if (GetNetMode() == ENetMode::NM_Client)
 		{
-			Server_NotifyDropAndSocketGrip(GripInfo->GripID, SocketingParent, RelativeTransformToParent, bRetainOwnership);
+			Server_NotifyDropAndSocketGrip(GripInfo->GripID, SocketingParent, OptionalSocketName, RelativeTransformToParent);
 
 			// Have to call this ourselves
 			DropAndSocket_Implementation(*GripInfo);
 			if (GrippedObject)
-				Socket_Implementation(GrippedObject, SocketingParent, RelativeTransformToParent, bRetainOwnership);
+				Socket_Implementation(GrippedObject, SocketingParent, OptionalSocketName, RelativeTransformToParent);
 
 		}
 		else // Server notifyDrop it
 		{
 			NotifyDropAndSocket(*GripInfo);
 			if (GrippedObject)
-				Socket_Implementation(GrippedObject, SocketingParent, RelativeTransformToParent, bRetainOwnership);
+				Socket_Implementation(GrippedObject, SocketingParent, OptionalSocketName, RelativeTransformToParent);
 		}
 	}
 	else
 	{
 		NotifyDropAndSocket(*GripInfo);
 		if (GrippedObject)
-			Socket_Implementation(GrippedObject, SocketingParent, RelativeTransformToParent, bRetainOwnership);
+			Socket_Implementation(GrippedObject, SocketingParent, OptionalSocketName, RelativeTransformToParent);
 	}
 
 	//GrippedObjects.RemoveAt(FoundIndex);		
 	return true;
 }
 
-bool UGripMotionControllerComponent::Server_NotifyDropAndSocketGrip_Validate(uint8 GripID, USceneComponent * SocketingParent, const FTransform_NetQuantize & RelativeTransformToParent, bool bRetainOwnership)
+bool UGripMotionControllerComponent::Server_NotifyDropAndSocketGrip_Validate(uint8 GripID, USceneComponent * SocketingParent, FName OptionalSocketName, const FTransform_NetQuantize & RelativeTransformToParent)
 {
 	return true;
 }
 
-void UGripMotionControllerComponent::Server_NotifyDropAndSocketGrip_Implementation(uint8 GripID, USceneComponent * SocketingParent, const FTransform_NetQuantize & RelativeTransformToParent, bool bRetainOwnership)
+void UGripMotionControllerComponent::Server_NotifyDropAndSocketGrip_Implementation(uint8 GripID, USceneComponent * SocketingParent, FName OptionalSocketName, const FTransform_NetQuantize & RelativeTransformToParent)
 {
 	FBPActorGripInformation FoundGrip;
 	EBPVRResultSwitch Result;
@@ -1644,16 +1644,16 @@ void UGripMotionControllerComponent::Server_NotifyDropAndSocketGrip_Implementati
 	if (Result == EBPVRResultSwitch::OnFailed)
 		return;
 
-	if (!DropAndSocketGrip(FoundGrip, SocketingParent, RelativeTransformToParent, bRetainOwnership))
+	if (!DropAndSocketGrip(FoundGrip, SocketingParent, OptionalSocketName, RelativeTransformToParent))
 	{
 		DropGrip(FoundGrip, false);
 	}
 	
 	if (FoundGrip.GrippedObject)
-		Socket_Implementation(FoundGrip.GrippedObject, SocketingParent, RelativeTransformToParent, bRetainOwnership);
+		Socket_Implementation(FoundGrip.GrippedObject, SocketingParent, OptionalSocketName, RelativeTransformToParent);
 }
 
-void UGripMotionControllerComponent::Socket_Implementation(UObject * ObjectToSocket, USceneComponent * SocketingParent, const FTransform_NetQuantize & RelativeTransformToParent, bool bRetainOwnership)
+void UGripMotionControllerComponent::Socket_Implementation(UObject * ObjectToSocket, USceneComponent * SocketingParent, FName OptionalSocketName, const FTransform_NetQuantize & RelativeTransformToParent)
 {
 	// Check for valid objects
 	if (!ObjectToSocket || !SocketingParent)
@@ -1661,16 +1661,16 @@ void UGripMotionControllerComponent::Socket_Implementation(UObject * ObjectToSoc
 
 	if (UPrimitiveComponent * root = Cast<UPrimitiveComponent>(ObjectToSocket))
 	{
-		root->AttachToComponent(SocketingParent, FAttachmentTransformRules::KeepWorldTransform);
+		root->AttachToComponent(SocketingParent, FAttachmentTransformRules::KeepWorldTransform, OptionalSocketName);
 		root->SetRelativeTransform(RelativeTransformToParent);
 	}
 	else if (AActor * pActor = Cast<AActor>(ObjectToSocket))
 	{
-		pActor->AttachToComponent(SocketingParent, FAttachmentTransformRules::KeepWorldTransform);
+		pActor->AttachToComponent(SocketingParent, FAttachmentTransformRules::KeepWorldTransform, OptionalSocketName);
 		pActor->SetActorRelativeTransform(RelativeTransformToParent);
 
-		if (!bRetainOwnership)
-			pActor->SetOwner(nullptr);
+		//if (!bRetainOwnership)
+			//pActor->SetOwner(nullptr);
 	}
 }
 
@@ -1744,7 +1744,6 @@ void UGripMotionControllerComponent::DropAndSocket_Implementation(const FBPActor
 
 			if (pActor->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
 			{
-				IVRGripInterface::Execute_SetIsSocketed(pActor, true);
 				if (NewDrop.SecondaryGripInfo.bHasSecondaryAttachment)
 					IVRGripInterface::Execute_OnSecondaryGripRelease(pActor, NewDrop.SecondaryGripInfo.SecondaryAttachment, NewDrop);
 
@@ -1792,7 +1791,6 @@ void UGripMotionControllerComponent::DropAndSocket_Implementation(const FBPActor
 
 			if (root->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
 			{
-				IVRGripInterface::Execute_SetIsSocketed(root, true);
 				if (NewDrop.SecondaryGripInfo.bHasSecondaryAttachment)
 					IVRGripInterface::Execute_OnSecondaryGripRelease(root, NewDrop.SecondaryGripInfo.SecondaryAttachment, NewDrop);
 
@@ -1857,21 +1855,14 @@ bool UGripMotionControllerComponent::NotifyGrip(FBPActorGripInformation &NewGrip
 				// Now I am setting the owner to the owning pawn if we are one
 				// This makes sure that some special replication needs are taken care of
 				// Only doing this for actor grips
-				pActor->SetOwner(OwningPawn);
+				if(NewGrip.AdvancedGripSettings.bSetOwnerOnGrip)
+					pActor->SetOwner(OwningPawn);
 			}
 
-			bool bWasSocketed = false;
 			if (!bIsReInit && pActor->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
 			{
-				IVRGripInterface::Execute_IsSocketed(pActor, bWasSocketed);
-				IVRGripInterface::Execute_SetIsSocketed(pActor, false);
 				IVRGripInterface::Execute_SetHeld(pActor, this, true);
-				IVRGripInterface::Execute_OnGrip(pActor, this, NewGrip, bWasSocketed);
-			}
-
-			if (bWasSocketed)
-			{
-				pActor->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+				IVRGripInterface::Execute_OnGrip(pActor, this, NewGrip);
 			}
 
 			if (root)
@@ -1899,13 +1890,10 @@ bool UGripMotionControllerComponent::NotifyGrip(FBPActorGripInformation &NewGrip
 		{
 			pActor = root->GetOwner();
 
-			bool bWasSocketed = false;
 			if (!bIsReInit && root->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
 			{
-				IVRGripInterface::Execute_IsSocketed(pActor, bWasSocketed);
-				IVRGripInterface::Execute_SetIsSocketed(pActor, false);
 				IVRGripInterface::Execute_SetHeld(root, this, true);
-				IVRGripInterface::Execute_OnGrip(root, this, NewGrip, bWasSocketed);
+				IVRGripInterface::Execute_OnGrip(root, this, NewGrip);
 			}
 
 			if (pActor)
@@ -1917,7 +1905,7 @@ bool UGripMotionControllerComponent::NotifyGrip(FBPActorGripInformation &NewGrip
 
 				if (!bIsReInit && pActor->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
 				{
-					IVRGripInterface::Execute_OnChildGrip(pActor, this, NewGrip, bWasSocketed);
+					IVRGripInterface::Execute_OnChildGrip(pActor, this, NewGrip);
 				}
 
 			}
@@ -1925,7 +1913,7 @@ bool UGripMotionControllerComponent::NotifyGrip(FBPActorGripInformation &NewGrip
 			// Call OnChildGrip for attached grip parent
 			if (!bIsReInit && root->GetAttachParent() && root->GetAttachParent()->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
 			{
-				IVRGripInterface::Execute_OnChildGrip(root->GetAttachParent(), this, NewGrip, bWasSocketed);
+				IVRGripInterface::Execute_OnChildGrip(root->GetAttachParent(), this, NewGrip);
 			}
 
 			if ((NewGrip.AdvancedGripSettings.PhysicsSettings.bUsePhysicsSettings && NewGrip.AdvancedGripSettings.PhysicsSettings.bTurnOffGravityDuringGrip) ||

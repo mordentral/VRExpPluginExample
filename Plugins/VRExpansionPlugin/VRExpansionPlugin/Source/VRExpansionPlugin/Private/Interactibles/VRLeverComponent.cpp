@@ -253,7 +253,7 @@ void UVRLeverComponent::TickGrip_Implementation(UGripMotionControllerComponent *
 	}
 }
 
-void UVRLeverComponent::OnGrip_Implementation(UGripMotionControllerComponent * GrippingController, const FBPActorGripInformation & GripInformation, bool bWasSocketed) 
+void UVRLeverComponent::OnGrip_Implementation(UGripMotionControllerComponent * GrippingController, const FBPActorGripInformation & GripInformation) 
 {
 	ParentComponent = this->GetAttachParent();
 
@@ -330,7 +330,7 @@ void UVRLeverComponent::OnGripRelease_Implementation(UGripMotionControllerCompon
 	}
 }
 
-void UVRLeverComponent::OnChildGrip_Implementation(UGripMotionControllerComponent * GrippingController, const FBPActorGripInformation & GripInformation, bool bWasSocketed) {}
+void UVRLeverComponent::OnChildGrip_Implementation(UGripMotionControllerComponent * GrippingController, const FBPActorGripInformation & GripInformation) {}
 void UVRLeverComponent::OnChildGripRelease_Implementation(UGripMotionControllerComponent * ReleasingController, const FBPActorGripInformation & GripInformation, bool bWasSocketed) {}
 void UVRLeverComponent::OnSecondaryGrip_Implementation(USceneComponent * SecondaryGripComponent, const FBPActorGripInformation & GripInformation) {}
 void UVRLeverComponent::OnSecondaryGripRelease_Implementation(USceneComponent * ReleasingSecondaryGripComponent, const FBPActorGripInformation & GripInformation) {}
@@ -339,9 +339,7 @@ void UVRLeverComponent::OnEndUsed_Implementation() {}
 void UVRLeverComponent::OnSecondaryUsed_Implementation() {}
 void UVRLeverComponent::OnEndSecondaryUsed_Implementation() {}
 void UVRLeverComponent::OnInput_Implementation(FKey Key, EInputEvent KeyEvent) {}
-void UVRLeverComponent::IsSocketed_Implementation(bool & bIsSocketed) { bIsSocketed = false; }
-void UVRLeverComponent::SetIsSocketed_Implementation(bool bIsIsSocketed) { }
-bool UVRLeverComponent::RequestsSocketing_Implementation(USceneComponent *& ParentToSocketTo, FTransform_NetQuantize & RelativeTransform, bool & bRetainOwner) { return false; }
+bool UVRLeverComponent::RequestsSocketing_Implementation(USceneComponent *& ParentToSocketTo, FName & OptionalSocketName, FTransform_NetQuantize & RelativeTransform) { return false; }
 
 bool UVRLeverComponent::DenyGripping_Implementation()
 {
