@@ -21,7 +21,8 @@ void AVRPlayerController::SpawnPlayerCameraManager()
 		PlayerCameraManager->bUseClientSideCameraUpdates = false;
 }
 
-void AVRPlayerController::InitNavigationControl(UPathFollowingComponent*& PathFollowingComp)
+// #TODO 4.20: This was removed, need to figure out where they override this now...
+/*void AVRPlayerController::InitNavigationControl(UPathFollowingComponent*& PathFollowingComp)
 {
 	PathFollowingComp = FindComponentByClass<UPathFollowingComponent>();
 	if (PathFollowingComp == NULL)
@@ -30,7 +31,7 @@ void AVRPlayerController::InitNavigationControl(UPathFollowingComponent*& PathFo
 		PathFollowingComp->RegisterComponentWithWorld(GetWorld());
 		PathFollowingComp->Initialize();
 	}
-}
+}*/
 
 void AVRPlayerController::PlayerTick(float DeltaTime)
 {

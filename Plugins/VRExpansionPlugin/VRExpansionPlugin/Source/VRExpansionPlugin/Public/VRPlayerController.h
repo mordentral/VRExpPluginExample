@@ -16,7 +16,24 @@ class VREXPANSIONPLUGIN_API AVRPlayerController : public APlayerController
 public:
 	AVRPlayerController(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
 
-	void InitNavigationControl(UPathFollowingComponent*& PathFollowingComp) override;
+	// #TODO 4.20: Removed for 4.20, need to figure out how to override now
+	//void InitNavigationControl(UPathFollowingComponent*& PathFollowingComp) override;
+	/*
+	appears to search component list on the actor now
+		IPathFollowingAgentInterface* FindPathFollowingAgentForActor(const AActor& Actor)
+	{
+		const TSet<UActorComponent*>& Components = Actor.GetComponents();
+		for (UActorComponent* Component : Components)
+		{
+			IPathFollowingAgentInterface* AsPFAgent = Cast<IPathFollowingAgentInterface>(Component);
+			if (AsPFAgent)
+			{
+				return AsPFAgent;
+			}
+		}
+		return nullptr;
+	}
+	*/
 
 	// Disable the ServerUpdateCamera function defaulted on in PlayerCameraManager
 	// We are manually replicating the camera position and rotation ourselves anyway

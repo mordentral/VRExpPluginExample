@@ -3,7 +3,7 @@
 #include "SteamRequestGroupOfficersCallbackProxy.h"
 #include "CoreOnline.h"
 #include "OnlineSubSystemHeader.h"
-#include "OnlineSubsystemSteamTypes.h"
+//#include "OnlineSubsystemSteamTypes.h"
 
 //////////////////////////////////////////////////////////////////////////
 // UEndSessionCallbackProxy
@@ -44,7 +44,7 @@ void USteamRequestGroupOfficersCallbackProxy::Activate()
 void USteamRequestGroupOfficersCallbackProxy::OnRequestGroupOfficerDetails(ClanOfficerListResponse_t *pResult, bool bIOFailure)
 {
 	TArray<FBPSteamGroupOfficer> OfficerArray;
-
+	/*
 #if PLATFORM_WINDOWS || PLATFORM_MAC || PLATFORM_LINUX
 
 	if (bIOFailure || !pResult || !pResult->m_bSuccess)
@@ -82,7 +82,7 @@ void USteamRequestGroupOfficersCallbackProxy::OnRequestGroupOfficerDetails(ClanO
 		return;
 	}
 #endif
-
+*/
 	OnFailure.Broadcast(OfficerArray);
 }
 
