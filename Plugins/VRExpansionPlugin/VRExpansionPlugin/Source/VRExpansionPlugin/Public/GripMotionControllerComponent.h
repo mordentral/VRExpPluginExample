@@ -448,7 +448,7 @@ public:
 	inline bool IsTornOff() const
 	{
 		const AActor* MyOwner = GetOwner();
-		return MyOwner ? MyOwner->GetTearOff() : false;
+		return MyOwner ? MyOwner->bTearOff : false;
 	}
 
 

@@ -11,9 +11,9 @@
 #include "IXRSystemAssets.h"
 #include "Components/StaticMeshComponent.h"
 #include "MotionDelayBuffer.h"
-#include "UObject/VRObjectVersion.h"
+#include "VRObjectVersion.h"
 #include "UObject/UObjectGlobals.h" // for FindObject<>
-#include "IXRTrackingSystem.h"
+#include "XRMotionControllerBase.h"
 #include "IXRSystemAssets.h"
 #include "DrawDebugHelpers.h"
 
@@ -310,7 +310,7 @@ void UGripMotionControllerComponent::FGripViewExtension::BeginRenderViewFamily(F
 	}
 
 	// Set up the late update state for the controller component
-	LateUpdate.Setup(MotionControllerComponent->CalcNewComponentToWorld(FTransform()), MotionControllerComponent, false);
+	LateUpdate.Setup(MotionControllerComponent->CalcNewComponentToWorld(FTransform()), MotionControllerComponent);
 }
 
 void UGripMotionControllerComponent::GetPhysicsVelocities(const FBPActorGripInformation &Grip, FVector &AngularVelocity, FVector &LinearVelocity)
@@ -4330,22 +4330,6 @@ bool UGripMotionControllerComponent::GripPollControllerState(FVector& Position, 
 				}
 							
 				return true;
-			}
-		}
-
-		// #NOTE: This was adding in 4.20, I presume to allow for HMDs as tracking sources for mixed reality.
-		// Skipping all of my special logic here for now
-		if (MotionSource == FXRMotionControllerBase::HMDSourceId)
-		{
-			IXRTrackingSystem* TrackingSys = GEngine->XRSystem.Get();
-			if (TrackingSys)
-			{
-				FQuat OrientationQuat;
-				if (TrackingSys->GetCurrentPose(IXRTrackingSystem::HMDDeviceId, OrientationQuat, Position))
-				{
-					Orientation = OrientationQuat.Rotator();
-					return true;
-				}
 			}
 		}
 	}

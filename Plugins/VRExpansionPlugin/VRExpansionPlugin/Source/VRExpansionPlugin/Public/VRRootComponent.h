@@ -68,7 +68,7 @@ protected:
 	virtual void OnUpdateTransform(EUpdateTransformFlags UpdateTransformFlags, ETeleportType Teleport = ETeleportType::None) override;
 
 	void SendPhysicsTransform(ETeleportType Teleport);
-	virtual bool UpdateOverlapsImpl(TArray<FOverlapInfo> const* NewPendingOverlaps = nullptr, bool bDoNotifies = true, const TArray<FOverlapInfo>* OverlapsAtEndLocation = nullptr) override;
+	virtual void UpdateOverlaps(TArray<FOverlapInfo> const* NewPendingOverlaps = nullptr, bool bDoNotifies = true, const TArray<FOverlapInfo>* OverlapsAtEndLocation = nullptr) override;
 
 	const TArray<FOverlapInfo>* ConvertRotationOverlapsToCurrentOverlaps(TArray<FOverlapInfo>& OverlapsAtEndLocation, const TArray<FOverlapInfo>& CurrentOverlaps);
 	const TArray<FOverlapInfo>* ConvertSweptOverlapsToCurrentOverlaps(

@@ -31,7 +31,7 @@ MSVC_PRAGMA(warning(pop))
 
 #include <steam/isteamapps.h>
 #include <steam/isteamapplist.h>
-//#include <OnlineSubsystemSteamTypes.h>
+#include <OnlineSubsystemSteamTypes.h>
 #pragma pop_macro("ARRAY_COUNT")
 
 #endif
@@ -97,7 +97,6 @@ DEFINE_LOG_CATEGORY(AdvancedSteamFriendsLog);
 
 void UAdvancedSteamFriendsLibrary::GetSteamGroups(TArray<FBPSteamGroupInfo> & SteamGroups)
 {
-	/*
 #if PLATFORM_WINDOWS || PLATFORM_MAC || PLATFORM_LINUX
 
 	if (SteamAPI_Init())
@@ -123,7 +122,6 @@ void UAdvancedSteamFriendsLibrary::GetSteamGroups(TArray<FBPSteamGroupInfo> & St
 		}
 	}
 #endif
-*/
 }
 
 void UAdvancedSteamFriendsLibrary::GetSteamFriendGamePlayed(const FBPUniqueNetId UniqueNetId, EBlueprintResultSwitch &Result, FString & GameName, int32 & AppID)
@@ -211,7 +209,7 @@ FString UAdvancedSteamFriendsLibrary::GetSteamPersonaName(const FBPUniqueNetId U
 FBPUniqueNetId UAdvancedSteamFriendsLibrary::CreateSteamIDFromString(const FString SteamID64)
 {
 	FBPUniqueNetId netId;
-	/*
+
 #if PLATFORM_WINDOWS || PLATFORM_MAC || PLATFORM_LINUX
 	if (!(SteamID64.Len() > 0))
 	{
@@ -229,7 +227,7 @@ FBPUniqueNetId UAdvancedSteamFriendsLibrary::CreateSteamIDFromString(const FStri
 		return netId;
 	}
 #endif
-*/
+
 	return netId;
 }
 
