@@ -2003,7 +2003,7 @@ void UGripMotionControllerComponent::Drop_Implementation(const FBPActorGripInfor
 
 					root->IgnoreActorWhenMoving(this->GetOwner(), false);
 
-					if (IsServer() || bHadGripAuthority)
+					if (IsServer() || bHadGripAuthority || !NewDrop.bOriginalReplicatesMovement)
 					{
 						root->SetSimulatePhysics(bSimulate);
 						if (bSimulate)
@@ -2082,7 +2082,7 @@ void UGripMotionControllerComponent::Drop_Implementation(const FBPActorGripInfor
 
 				root->IgnoreActorWhenMoving(this->GetOwner(), false);
 
-				if (IsServer() || bHadGripAuthority)
+				if (IsServer() || bHadGripAuthority || !NewDrop.bOriginalReplicatesMovement)
 				{
 					root->SetSimulatePhysics(bSimulate);
 					if (bSimulate)
