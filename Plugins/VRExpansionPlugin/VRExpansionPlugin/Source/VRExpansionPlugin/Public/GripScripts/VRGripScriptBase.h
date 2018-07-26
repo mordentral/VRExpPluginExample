@@ -41,6 +41,15 @@ public:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Settings")
 		bool bModifiesWorldTransform;
 
+	// Returns the current world transform of the owning object (or root comp of if it is an actor)
+	UFUNCTION(BlueprintPure, Category = "VRGripScript")
+	FTransform GetParentTransform()
+	{
+	// #TODO: Implement this full;
+
+		return FTransform::Identity;
+	}
+
 
 	// Implement VRGripInterface so that we can add functionality with it
 
