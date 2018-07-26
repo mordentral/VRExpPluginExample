@@ -73,7 +73,7 @@ public:
 	{}
 };
 
-UCLASS(Blueprintable, EditInlineNew, DefaultToInstanced, ClassGroup = (VRExpansionPlugin))
+UCLASS(Blueprintable, ClassGroup = (VRExpansionPlugin))
 class VREXPANSIONPLUGIN_API UGS_InteractibleSettings : public UVRGripScriptBase
 {
 	GENERATED_BODY()
@@ -91,7 +91,8 @@ public:
 	FBPGS_InteractionSettings InteractionSettings;
 
 
-	virtual void BeginPlay_Implementation() override;
-	virtual void GetWorldTransform_PreStep_Implementation(FTransform & WorldTransform) override;
-	virtual void GetWorldTransform_PostStep_Implementation(FTransform & WorldTransform) override;
+	//virtual void BeginPlay_Implementation() override;
+	virtual void ModifyWorldTransform_Implementation(float DeltaTime, FTransform & WorldTransform, const FTransform &ParentTransform, FBPActorGripInformation &Grip, AActor * actor, UPrimitiveComponent * root, bool bRootHasInterface, bool bActorHasInterface) override;
+	virtual void OnGrip_Implementation(UGripMotionControllerComponent * GrippingController, const FBPActorGripInformation & GripInformation) override;
+	virtual void OnGripRelease_Implementation(UGripMotionControllerComponent * ReleasingController, const FBPActorGripInformation & GripInformation, bool bWasSocketed = false) override;
 };
