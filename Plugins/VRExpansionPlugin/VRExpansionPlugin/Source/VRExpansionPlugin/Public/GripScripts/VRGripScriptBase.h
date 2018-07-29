@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "VRBPDatatypes.h"
 //#include "GripMotionControllerComponent.h"
 //#include "MotionControllerComponent.h"
 //#include "VRGripInterface.h"
