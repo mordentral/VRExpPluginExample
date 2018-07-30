@@ -9,7 +9,7 @@ public class VRExpPluginExampleEditorTarget : TargetRules
 	{
 		Type = TargetType.Editor;
         ExtraModuleNames.AddRange(new string[] { "VRExpPluginExample" });
-		//bUseUnityBuild = false;
+		bUseUnityBuild = false;
 		//bUsePCHFiles = false;
     }
 
