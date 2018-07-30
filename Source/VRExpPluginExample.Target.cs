@@ -10,7 +10,7 @@ public class VRExpPluginExampleTarget : TargetRules
         //bUseLoggingInShipping = true;
         Type = TargetType.Game;
         ExtraModuleNames.AddRange(new string[] { "VRExpPluginExample" });
-		bUsePCHFiles = false;
+		//bUsePCHFiles = false;
 		//bUseUnityBuild = false;
     }
 
