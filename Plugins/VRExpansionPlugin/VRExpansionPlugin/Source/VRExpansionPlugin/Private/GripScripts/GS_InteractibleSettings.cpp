@@ -1,7 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "GS_InteractibleSettings.h"
+#include "GripScripts/GS_InteractibleSettings.h"
 
 //void UGS_InteractibleSettings::BeginPlay_Implementation() {}
 void UGS_InteractibleSettings::ModifyWorldTransform_Implementation(float DeltaTime, FTransform & WorldTransform, const FTransform &ParentTransform, FBPActorGripInformation &Grip, AActor * actor, UPrimitiveComponent * root, bool bRootHasInterface, bool bActorHasInterface) {}
