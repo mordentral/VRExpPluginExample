@@ -1,6 +1,6 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 #include "OpenVRExpansionFunctionLibrary.h"
-#include "EngineMinimal.h"
+//#include "EngineMinimal.h"
 #include "Engine/Engine.h"
 #include "CoreMinimal.h"
 #include "IXRTrackingSystem.h"
