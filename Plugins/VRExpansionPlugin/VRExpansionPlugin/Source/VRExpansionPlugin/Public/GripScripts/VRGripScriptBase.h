@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "VRBPDatatypes.h"
-//#include "GripMotionControllerComponent.h"
+#include "GripMotionControllerComponent.h"
 //#include "MotionControllerComponent.h"
 //#include "VRGripInterface.h"
 //#include "GameplayTagContainer.h"
@@ -33,14 +33,23 @@ public:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Settings")
 	bool bIsActive;
 
-	// Returns if the script is going to override or modify the world transform of the grip
+	// Returns if the script is going to modify the world transform of the grip
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "VRGripScript")
-		bool ModifiesWorldTransform();
-		virtual bool ModifiesWorldTransform_Implementation();
+	bool ModifiesWorldTransform();
+	virtual bool ModifiesWorldTransform_Implementation();
 
 	// Is currently active helper variable, normally returned from IsScriptActive()
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Settings")
 		bool bModifiesWorldTransform;
+
+		// Returns if the script is going to override the world transform of the grip
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "VRGripScript")
+	bool OverridesWorldTransform();
+	virtual bool OverridesWorldTransform_Implementation();
+
+	// Is currently active helper variable, normally returned from IsScriptActive()
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Settings")
+		bool bOverridesWorldTransform;
 
 	// Returns the current world transform of the owning object (or root comp of if it is an actor)
 	UFUNCTION(BlueprintPure, Category = "VRGripScript")
@@ -62,9 +71,10 @@ public:
 		//void BeginPlay();
 		//virtual void BeginPlay_Implementation();
 
+	// Overrides or Modifies the world transform with this grip script
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "VRGripScript|Steps")
-		void ModifyWorldTransform(float DeltaTime, FTransform & WorldTransform, const FTransform &ParentTransform, FBPActorGripInformation &Grip, AActor * actor, UPrimitiveComponent * root, bool bRootHasInterface, bool bActorHasInterface);
-		virtual void ModifyWorldTransform_Implementation(float DeltaTime, FTransform & WorldTransform, const FTransform &ParentTransform, FBPActorGripInformation &Grip, AActor * actor, UPrimitiveComponent * root, bool bRootHasInterface, bool bActorHasInterface);
+		void GetWorldTransform(UGripMotionControllerComponent * OwningController, float DeltaTime, FTransform & WorldTransform, const FTransform &ParentTransform, FBPActorGripInformation &Grip, AActor * actor, UPrimitiveComponent * root, bool bRootHasInterface, bool bActorHasInterface);
+		virtual void GetWorldTransform_Implementation(UGripMotionControllerComponent * OwningController, float DeltaTime, FTransform & WorldTransform, const FTransform &ParentTransform, FBPActorGripInformation &Grip, AActor * actor, UPrimitiveComponent * root, bool bRootHasInterface, bool bActorHasInterface);
 
 	// Event triggered on the interfaced object when gripped
 	UFUNCTION(BlueprintNativeEvent, Category = "VRGripScript")

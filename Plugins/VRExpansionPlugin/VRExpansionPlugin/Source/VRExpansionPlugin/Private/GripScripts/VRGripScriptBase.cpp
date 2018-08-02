@@ -12,9 +12,10 @@ UVRGripScriptBase::UVRGripScriptBase(const FObjectInitializer& ObjectInitializer
 
 
 //void UVRGripScriptBase::BeginPlay_Implementation() {}
-void UVRGripScriptBase::ModifyWorldTransform_Implementation(float DeltaTime, FTransform & WorldTransform, const FTransform &ParentTransform, FBPActorGripInformation &Grip, AActor * actor, UPrimitiveComponent * root, bool bRootHasInterface, bool bActorHasInterface) {}
+void UVRGripScriptBase::GetWorldTransform_Implementation(UGripMotionControllerComponent* OwningController, float DeltaTime, FTransform & WorldTransform, const FTransform &ParentTransform, FBPActorGripInformation &Grip, AActor * actor, UPrimitiveComponent * root, bool bRootHasInterface, bool bActorHasInterface) {}
 void UVRGripScriptBase::OnGrip_Implementation(UGripMotionControllerComponent * GrippingController, const FBPActorGripInformation & GripInformation) {}
 void UVRGripScriptBase::OnGripRelease_Implementation(UGripMotionControllerComponent * ReleasingController, const FBPActorGripInformation & GripInformation, bool bWasSocketed) {}
 
 bool UVRGripScriptBase::ModifiesWorldTransform_Implementation() { return bModifiesWorldTransform; }
+bool UVRGripScriptBase::OverridesWorldTransform_Implementation() { return bOverridesWorldTransform; }
 bool UVRGripScriptBase::IsScriptActive_Implementation() { return bIsActive; }
