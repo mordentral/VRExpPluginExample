@@ -5,6 +5,10 @@
 #include "GameFramework/WorldSettings.h"
 #include "GS_Default.generated.h"
 
+
+/**
+* The default grip transform logic for the motion controllers
+*/
 UCLASS(Blueprintable, ClassGroup = (VRExpansionPlugin))
 class VREXPANSIONPLUGIN_API UGS_Default : public UVRGripScriptBase
 {
