@@ -21,6 +21,11 @@ public:
 		return true;
 	}
 
+	virtual bool IsScriptActive_Implementation() override
+	{
+		return true;
+	}
+
 	//virtual void BeginPlay_Implementation() override;
 	virtual void GetWorldTransform_Implementation(UGripMotionControllerComponent * OwningController, float DeltaTime, FTransform & WorldTransform, const FTransform &ParentTransform, FBPActorGripInformation &Grip, AActor * actor, UPrimitiveComponent * root, bool bRootHasInterface, bool bActorHasInterface) override
 	{
