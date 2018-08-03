@@ -33,6 +33,7 @@ public:
 	virtual void PreReplication(IRepChangedPropertyTracker & ChangedPropertyTracker) override;
 };
 
+
 /**
 *
 */
@@ -133,6 +134,21 @@ public:
 
 		Super::OnRep_ReplicateMovement();
 	}
+
+	/*virtual void OnRep_ReplicatedMovement() override
+	{
+
+		Super::OnRep_ReplicatedMovement();
+	}*/
+
+/*	void PostNetReceivePhysicState() override
+	{
+		if (VRGripInterfaceSettings.bIsHeld)
+			return;
+			
+
+		Super::PostNetReceivePhysicState();
+	}*/
 
 	UPROPERTY(EditAnywhere, Replicated, BlueprintReadWrite, Category = "VRGripInterface")
 		bool bRepGripSettingsAndGameplayTags;
