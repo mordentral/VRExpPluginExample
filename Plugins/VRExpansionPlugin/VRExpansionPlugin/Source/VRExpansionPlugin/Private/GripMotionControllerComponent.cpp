@@ -2879,7 +2879,7 @@ void UGripMotionControllerComponent::GetGripWorldTransform(TArray<UVRGripScriptB
 		// Get grip script world transform overrides (if there are any)
 		for (UVRGripScriptBase* Script: GripScripts)
 		{
-			if (Script && Script->IsScriptActive() && Script->OverridesWorldTransform())
+			if (Script && Script->IsScriptActive() && Script->GetWorldTransformOverrideType() == EGSTransformOverrideType::OverridesWorldTransform)
 			{
 				// One of the grip scripts overrides the default transform
 				bGetDefaultTransform = false;
@@ -2902,7 +2902,7 @@ void UGripMotionControllerComponent::GetGripWorldTransform(TArray<UVRGripScriptB
 		// Get grip script world transform modifiers (if there are any)
 		for (UVRGripScriptBase* Script : GripScripts)
 		{
-			if (Script && Script->IsScriptActive() && Script->ModifiesWorldTransform())
+			if (Script && Script->IsScriptActive() && Script->GetWorldTransformOverrideType() == EGSTransformOverrideType::ModifiesWorldTransform)
 			{
 				Script->GetWorldTransform(this, DeltaTime, WorldTransform, ParentTransform, Grip, actor, root, bRootHasInterface, bActorHasInterface);
 			}

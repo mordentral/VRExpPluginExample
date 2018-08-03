@@ -16,6 +16,20 @@
 #include "VRGripScriptBase.generated.h"
 
 
+UENUM(Blueprintable)
+enum class EGSTransformOverrideType : uint8
+{
+	/** Does not alter the world transform */
+	None,
+
+	/* Overrides the world transform */
+	OverridesWorldTransform,
+
+	/* Modifies the world transform*/
+	ModifiesWorldTransform
+};
+
+
 UCLASS(Blueprintable, EditInlineNew, DefaultToInstanced, Abstract, ClassGroup = (VRExpansionPlugin))
 class VREXPANSIONPLUGIN_API UVRGripScriptBase : public UObject
 {
@@ -35,21 +49,13 @@ public:
 
 	// Returns if the script is going to modify the world transform of the grip
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "VRGripScript")
-	bool ModifiesWorldTransform();
-	virtual bool ModifiesWorldTransform_Implementation();
+	EGSTransformOverrideType GetWorldTransformOverrideType();
+	virtual EGSTransformOverrideType GetWorldTransformOverrideType_Implementation();
 
-	// Is currently active helper variable, normally returned from IsScriptActive()
+	// Whether this script overrides or modifies the world transform
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Settings")
-		bool bModifiesWorldTransform;
+	EGSTransformOverrideType WorldTransformOverrideType;
 
-		// Returns if the script is going to override the world transform of the grip
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "VRGripScript")
-	bool OverridesWorldTransform();
-	virtual bool OverridesWorldTransform_Implementation();
-
-	// Is currently active helper variable, normally returned from IsScriptActive()
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Settings")
-		bool bOverridesWorldTransform;
 
 	// Overrides teleport / auto drop
 

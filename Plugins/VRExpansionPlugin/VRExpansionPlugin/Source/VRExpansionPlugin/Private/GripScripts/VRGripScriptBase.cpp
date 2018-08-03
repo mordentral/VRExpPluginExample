@@ -8,6 +8,8 @@ UVRGripScriptBase::UVRGripScriptBase(const FObjectInitializer& ObjectInitializer
 //	PrimaryComponentTick.bCanEverTick = false;
 //	PrimaryComponentTick.bStartWithTickEnabled = false;
 //	PrimaryComponentTick.TickGroup = ETickingGroup::TG_PrePhysics;
+
+	WorldTransformOverrideType = EGSTransformOverrideType::None;
 }
 
 
@@ -16,6 +18,6 @@ void UVRGripScriptBase::GetWorldTransform_Implementation(UGripMotionControllerCo
 void UVRGripScriptBase::OnGrip_Implementation(UGripMotionControllerComponent * GrippingController, const FBPActorGripInformation & GripInformation) {}
 void UVRGripScriptBase::OnGripRelease_Implementation(UGripMotionControllerComponent * ReleasingController, const FBPActorGripInformation & GripInformation, bool bWasSocketed) {}
 
-bool UVRGripScriptBase::ModifiesWorldTransform_Implementation() { return bModifiesWorldTransform; }
-bool UVRGripScriptBase::OverridesWorldTransform_Implementation() { return bOverridesWorldTransform; }
+ 
+EGSTransformOverrideType UVRGripScriptBase::GetWorldTransformOverrideType_Implementation() { return WorldTransformOverrideType; }
 bool UVRGripScriptBase::IsScriptActive_Implementation() { return bIsActive; }

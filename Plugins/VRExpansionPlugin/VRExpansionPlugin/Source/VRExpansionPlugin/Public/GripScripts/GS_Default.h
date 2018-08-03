@@ -16,9 +16,9 @@ class VREXPANSIONPLUGIN_API UGS_Default : public UVRGripScriptBase
 public:
 
 	// Force this to true
-	virtual bool OverridesWorldTransform_Implementation() override 
+	virtual EGSTransformOverrideType GetWorldTransformOverrideType_Implementation() override
 	{
-		return true;
+		return EGSTransformOverrideType::OverridesWorldTransform;
 	}
 
 	virtual bool IsScriptActive_Implementation() override
