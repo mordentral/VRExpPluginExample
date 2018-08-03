@@ -3,6 +3,25 @@
 #include "Grippables/GrippableStaticMeshActor.h"
 #include "Net/UnrealNetwork.h"
 
+#define DOREPLIFETIME_CHANGE_NOTIFY(c,v,rncond) \
+{ \
+	static UProperty* sp##v = GetReplicatedProperty(StaticClass(), c::StaticClass(),GET_MEMBER_NAME_CHECKED(c,v));	\
+	bool bFound = false;																							\
+	for ( int32 i = 0; i < OutLifetimeProps.Num(); i++ )															\
+	{																												\
+		if ( OutLifetimeProps[i].RepIndex == sp##v->RepIndex )														\
+		{																											\
+			for ( int32 j = 0; j < sp##v->ArrayDim; j++ )															\
+			{																										\
+				OutLifetimeProps[i + j].RepNotifyCondition = rncond;															\
+			}																										\
+			bFound = true;																							\
+			break;																									\
+		}																											\
+	}																												\
+	check( bFound );																								\
+}
+
 
 UOptionalRepStaticMeshComponent::UOptionalRepStaticMeshComponent(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
@@ -25,6 +44,9 @@ void UOptionalRepStaticMeshComponent::GetLifetimeReplicatedProps(TArray< class F
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(UOptionalRepStaticMeshComponent, bReplicateMovement);
+
+	DOREPLIFETIME_CHANGE_NOTIFY(AActor, ReplicatedMovement, REPNOTIFY_OnChanged);
+	//DOREPLIFETIME_CHANGE_NOTIFY(AActor, AttachmentReplication, REPNOTIFY_OnChanged);
 }
 
   //=============================================================================
