@@ -27,10 +27,10 @@ public:
 	}
 
 	//virtual void BeginPlay_Implementation() override;
-	virtual void GetWorldTransform_Implementation(UGripMotionControllerComponent * OwningController, float DeltaTime, FTransform & WorldTransform, const FTransform &ParentTransform, FBPActorGripInformation &Grip, AActor * actor, UPrimitiveComponent * root, bool bRootHasInterface, bool bActorHasInterface) override
+	virtual void GetWorldTransform_Implementation(UGripMotionControllerComponent * GrippingController, float DeltaTime, FTransform & WorldTransform, const FTransform &ParentTransform, FBPActorGripInformation &Grip, AActor * actor, UPrimitiveComponent * root, bool bRootHasInterface, bool bActorHasInterface) override
 	{
 
-		if (!OwningController)
+		if (!GrippingController)
 			return;
 
 		// Just simple transform setting
@@ -82,7 +82,7 @@ public:
 			if (SecondaryType != ESecondaryGripType::SG_Custom)
 			{
 				// Variables needed for multi grip transform
-				FVector BasePoint = OwningController->GetComponentLocation();
+				FVector BasePoint = GrippingController->GetComponentLocation();
 				const FTransform PivotToWorld = FTransform(FQuat::Identity, BasePoint);
 				const FTransform WorldToPivot = FTransform(FQuat::Identity, -BasePoint);
 
@@ -102,7 +102,7 @@ public:
 					//FVector curLocation; // Current location of the secondary grip
 
 					bool bPulledControllerLoc = false;
-					if (OwningController->bHasAuthority && Grip.SecondaryGripInfo.SecondaryAttachment->GetOwner() == OwningController->GetOwner())
+					if (GrippingController->bHasAuthority && Grip.SecondaryGripInfo.SecondaryAttachment->GetOwner() == GrippingController->GetOwner())
 					{
 						if (UGripMotionControllerComponent * OtherController = Cast<UGripMotionControllerComponent>(Grip.SecondaryGripInfo.SecondaryAttachment))
 						{

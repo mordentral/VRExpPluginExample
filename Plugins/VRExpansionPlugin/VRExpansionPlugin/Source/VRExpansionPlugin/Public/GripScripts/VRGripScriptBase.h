@@ -51,13 +51,31 @@ public:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Settings")
 		bool bOverridesWorldTransform;
 
+	// Overrides teleport / auto drop
+
 	// Returns the current world transform of the owning object (or root comp of if it is an actor)
 	UFUNCTION(BlueprintPure, Category = "VRGripScript")
 	FTransform GetParentTransform()
 	{
-	// #TODO: Implement this full;
+		UObject * ParentObj = this->GetOuter();
+
+		if (USceneComponent * PrimParent = Cast<USceneComponent>(ParentObj))
+		{
+			return PrimParent->GetComponentTransform();
+		}
+		else if (AActor * ParentActor = Cast<AActor>(ParentObj))
+		{
+			return ParentActor->GetActorTransform();
+		}
 
 		return FTransform::Identity;
+	}
+
+	// Returns the current world transform of the owning object (or root comp of if it is an actor)
+	UFUNCTION(BlueprintPure, Category = "VRGripScript")
+		UObject * GetParent()
+	{
+		return this->GetOuter();
 	}
 
 
@@ -73,7 +91,7 @@ public:
 
 	// Overrides or Modifies the world transform with this grip script
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "VRGripScript|Steps")
-		void GetWorldTransform(UGripMotionControllerComponent * OwningController, float DeltaTime, FTransform & WorldTransform, const FTransform &ParentTransform, FBPActorGripInformation &Grip, AActor * actor, UPrimitiveComponent * root, bool bRootHasInterface, bool bActorHasInterface);
+		void GetWorldTransform(UGripMotionControllerComponent * GrippingController, float DeltaTime, UPARAM(ref) FTransform & WorldTransform, const FTransform &ParentTransform, UPARAM(ref) FBPActorGripInformation &Grip, AActor * actor, UPrimitiveComponent * root, bool bRootHasInterface, bool bActorHasInterface);
 		virtual void GetWorldTransform_Implementation(UGripMotionControllerComponent * OwningController, float DeltaTime, FTransform & WorldTransform, const FTransform &ParentTransform, FBPActorGripInformation &Grip, AActor * actor, UPrimitiveComponent * root, bool bRootHasInterface, bool bActorHasInterface);
 
 	// Event triggered on the interfaced object when gripped

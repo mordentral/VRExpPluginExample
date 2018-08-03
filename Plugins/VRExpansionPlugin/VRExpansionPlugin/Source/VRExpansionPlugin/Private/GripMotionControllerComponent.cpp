@@ -2878,7 +2878,7 @@ void UGripMotionControllerComponent::GetGripWorldTransform(TArray<UVRGripScriptB
 		// Get grip script world transform overrides (if there are any)
 		for (UVRGripScriptBase* Script: GripScripts)
 		{
-			if (Script->IsScriptActive() && Script->OverridesWorldTransform())
+			if (Script && Script->IsScriptActive() && Script->OverridesWorldTransform())
 			{
 				// One of the grip scripts overrides the default transform
 				bGetDefaultTransform = false;
@@ -2895,15 +2895,15 @@ void UGripMotionControllerComponent::GetGripWorldTransform(TArray<UVRGripScriptB
 			if (!DefaultGripScript)
 				DefaultGripScript = GetMutableDefault<UGS_Default>();
 
-			DefaultGripScript->GetWorldTransform_Implementation(this, DeltaTime, WorldTransform, ParentTransform, Grip, actor, root, bRootHasInterface, bActorHasInterface);
+			DefaultGripScript->GetWorldTransform(this, DeltaTime, WorldTransform, ParentTransform, Grip, actor, root, bRootHasInterface, bActorHasInterface);
 		}
 
 		// Get grip script world transform modifiers (if there are any)
 		for (UVRGripScriptBase* Script : GripScripts)
 		{
-			if (Script->IsScriptActive() && Script->ModifiesWorldTransform())
+			if (Script && Script->IsScriptActive() && Script->ModifiesWorldTransform())
 			{
-				Script->GetWorldTransform_Implementation(this, DeltaTime, WorldTransform, ParentTransform, Grip, actor, root, bRootHasInterface, bActorHasInterface);
+				Script->GetWorldTransform(this, DeltaTime, WorldTransform, ParentTransform, Grip, actor, root, bRootHasInterface, bActorHasInterface);
 			}
 		}
 	}
@@ -2915,7 +2915,7 @@ void UGripMotionControllerComponent::GetGripWorldTransform(TArray<UVRGripScriptB
 		if (!DefaultGripScript)
 			DefaultGripScript = GetMutableDefault<UGS_Default>();
 
-		DefaultGripScript->GetWorldTransform_Implementation(this, DeltaTime, WorldTransform, ParentTransform, Grip, actor, root, bRootHasInterface, bActorHasInterface);
+		DefaultGripScript->GetWorldTransform(this, DeltaTime, WorldTransform, ParentTransform, Grip, actor, root, bRootHasInterface, bActorHasInterface);
 	}
 
 	return;
