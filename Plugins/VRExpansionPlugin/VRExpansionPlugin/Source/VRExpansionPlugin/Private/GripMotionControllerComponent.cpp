@@ -1883,6 +1883,9 @@ bool UGripMotionControllerComponent::NotifyGrip(FBPActorGripInformation &NewGrip
 		}
 		if (root)
 		{
+
+			// #TODO: This is a hack until Epic fixes their new physics replication code
+			//		  It forces the replication target to null on grip if we aren't repping movement.
 #if WITH_PHYSX
 			if (UWorld* World = GetWorld())
 			{
