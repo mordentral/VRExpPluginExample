@@ -134,21 +134,26 @@ public:
 
 		Super::OnRep_ReplicateMovement();
 	}
-
-	/*virtual void OnRep_ReplicatedMovement() override
+	/*
+	virtual void OnRep_ReplicatedMovement() override
 	{
+		if (VRGripInterfaceSettings.bIsHeld && bAllowIgnoringAttachOnOwner && ShouldWeSkipAttachmentReplication())
+		{
+			return;
+		}
 
 		Super::OnRep_ReplicatedMovement();
 	}*/
-
-/*	void PostNetReceivePhysicState() override
+	
+	void PostNetReceivePhysicState() override
 	{
-		if (VRGripInterfaceSettings.bIsHeld)
+		if (VRGripInterfaceSettings.bIsHeld && bAllowIgnoringAttachOnOwner && ShouldWeSkipAttachmentReplication())
+		{
 			return;
+		}
 			
-
 		Super::PostNetReceivePhysicState();
-	}*/
+	}
 
 	UPROPERTY(EditAnywhere, Replicated, BlueprintReadWrite, Category = "VRGripInterface")
 		bool bRepGripSettingsAndGameplayTags;

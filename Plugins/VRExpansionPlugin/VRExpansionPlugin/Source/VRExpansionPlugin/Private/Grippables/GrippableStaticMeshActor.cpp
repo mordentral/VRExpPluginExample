@@ -3,7 +3,8 @@
 #include "Grippables/GrippableStaticMeshActor.h"
 #include "Net/UnrealNetwork.h"
 
-#define DOREPLIFETIME_CHANGE_NOTIFY(c,v,rncond) \
+// #TODO: Pull request this? This macro could be very useful
+/*#define DOREPLIFETIME_CHANGE_NOTIFY(c,v,rncond) \
 { \
 	static UProperty* sp##v = GetReplicatedProperty(StaticClass(), c::StaticClass(),GET_MEMBER_NAME_CHECKED(c,v));	\
 	bool bFound = false;																							\
@@ -20,7 +21,7 @@
 		}																											\
 	}																												\
 	check( bFound );																								\
-}
+}*/
 
 
 UOptionalRepStaticMeshComponent::UOptionalRepStaticMeshComponent(const FObjectInitializer& ObjectInitializer)
@@ -44,9 +45,6 @@ void UOptionalRepStaticMeshComponent::GetLifetimeReplicatedProps(TArray< class F
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(UOptionalRepStaticMeshComponent, bReplicateMovement);
-
-	DOREPLIFETIME_CHANGE_NOTIFY(AActor, ReplicatedMovement, REPNOTIFY_OnChanged);
-	//DOREPLIFETIME_CHANGE_NOTIFY(AActor, AttachmentReplication, REPNOTIFY_OnChanged);
 }
 
   //=============================================================================
