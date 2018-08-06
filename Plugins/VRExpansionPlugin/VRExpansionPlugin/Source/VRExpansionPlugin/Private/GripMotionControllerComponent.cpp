@@ -946,7 +946,7 @@ bool UGripMotionControllerComponent::GripActor(
 
 	FBPAdvGripSettings AdvancedGripSettings;
 	UObject * ObjectToCheck = NULL; // Used if having to calculate the transform
-	bool bIgnoreHandRotation = false;
+	//bool bIgnoreHandRotation = false;
 
 	if (root->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
 	{
@@ -1040,7 +1040,7 @@ bool UGripMotionControllerComponent::GripActor(
 	}
 	else if (bWorldOffsetIsRelative)
 	{
-		FTransform FinalOffset = WorldOffset;
+		/*FTransform FinalOffset = WorldOffset;
 		if (bIgnoreHandRotation)
 		{
 			// Reconstitute the controller transform relative to the object, then remove the rotation and set it back to relative to controller
@@ -1052,15 +1052,16 @@ bool UGripMotionControllerComponent::GripActor(
 
 			FinalOffset = compTrans.GetRelativeTransform(FinalOffset); // Set back to relative
 		}
-		newActorGrip.RelativeTransform = FinalOffset;
+		newActorGrip.RelativeTransform = FinalOffset;*/
+		newActorGrip.RelativeTransform = WorldOffset;
 	}
 	else
 	{
 		FTransform controllerTrans = this->GetComponentTransform();
-		if (bIgnoreHandRotation)
+		/*if (bIgnoreHandRotation)
 		{
 			controllerTrans.SetRotation(FQuat::Identity);
-		}
+		}*/
 		newActorGrip.RelativeTransform = WorldOffset.GetRelativeTransform(controllerTrans);
 	}
 
@@ -1154,7 +1155,7 @@ bool UGripMotionControllerComponent::GripComponent(
 
 	FBPAdvGripSettings AdvancedGripSettings;
 	UObject * ObjectToCheck = NULL;
-	bool bIgnoreHandRotation = false;
+	//bool bIgnoreHandRotation = false;
 
 	if (ComponentToGrip->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
 	{
@@ -1241,7 +1242,7 @@ bool UGripMotionControllerComponent::GripComponent(
 	}
 	else if (bWorldOffsetIsRelative)
 	{
-		FTransform FinalOffset = WorldOffset;
+	/*	FTransform FinalOffset = WorldOffset;
 		if (bIgnoreHandRotation)
 		{
 			// Reconstitute the controller transform relative to the object, then remove the rotation and set it back to relative to controller
@@ -1253,15 +1254,16 @@ bool UGripMotionControllerComponent::GripComponent(
 
 			FinalOffset = compTrans.GetRelativeTransform(FinalOffset); // Set back to relative
 		}
-		newActorGrip.RelativeTransform = FinalOffset;
+		newActorGrip.RelativeTransform = FinalOffset;*/
+		newActorGrip.RelativeTransform = WorldOffset;
 	}
 	else
 	{
 		FTransform controllerTrans = this->GetComponentTransform();
-		if (bIgnoreHandRotation)
+		/*if (bIgnoreHandRotation)
 		{
 			controllerTrans.SetRotation(FQuat::Identity);
-		}
+		}*/
 		newActorGrip.RelativeTransform = WorldOffset.GetRelativeTransform(controllerTrans);
 	}
 
@@ -2926,7 +2928,7 @@ void UGripMotionControllerComponent::GetGripWorldTransform(TArray<UVRGripScriptB
 		// Get grip script world transform modifiers (if there are any)
 		for (UVRGripScriptBase* Script : GripScripts)
 		{
-			if (Script && Script->IsScriptActive() && Script->GetWorldTransformOverrideType() == EGSTransformOverrideType::ModifiesWorldTransform)
+			if (Script && Script->IsScriptActive()/* && Script->GetWorldTransformOverrideType() == EGSTransformOverrideType::ModifiesWorldTransform*/)
 			{
 				Script->GetWorldTransform(this, DeltaTime, WorldTransform, ParentTransform, Grip, actor, root, bRootHasInterface, bActorHasInterface);
 			}

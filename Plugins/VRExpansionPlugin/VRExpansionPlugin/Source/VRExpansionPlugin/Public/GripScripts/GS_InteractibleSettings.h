@@ -79,6 +79,8 @@ class VREXPANSIONPLUGIN_API UGS_InteractibleSettings : public UVRGripScriptBase
 	GENERATED_BODY()
 public:
 
+	UGS_InteractibleSettings(const FObjectInitializer& ObjectInitializer);
+
 		// Need to add TICK and BeginPlay implementations
 
 		// Implement VRGripInterface so that we can add functionality with it
@@ -89,7 +91,6 @@ public:
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)// Category = "InteractionSettings")
 	FBPGS_InteractionSettings InteractionSettings;
-
 
 	//virtual void BeginPlay_Implementation() override;
 	virtual void GetWorldTransform_Implementation(UGripMotionControllerComponent * GrippingController, float DeltaTime, FTransform & WorldTransform, const FTransform &ParentTransform, FBPActorGripInformation &Grip, AActor * actor, UPrimitiveComponent * root, bool bRootHasInterface, bool bActorHasInterface) override;

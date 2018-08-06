@@ -44,7 +44,7 @@ public:
 	virtual bool IsScriptActive_Implementation();
 
 	// Is currently active helper variable, normally returned from IsScriptActive()
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Settings")
+	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "DefaultSettings")
 	bool bIsActive;
 
 	// Returns if the script is going to modify the world transform of the grip
@@ -53,7 +53,7 @@ public:
 	virtual EGSTransformOverrideType GetWorldTransformOverrideType_Implementation();
 
 	// Whether this script overrides or modifies the world transform
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Settings")
+	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "DefaultSettings")
 	EGSTransformOverrideType WorldTransformOverrideType;
 
 
