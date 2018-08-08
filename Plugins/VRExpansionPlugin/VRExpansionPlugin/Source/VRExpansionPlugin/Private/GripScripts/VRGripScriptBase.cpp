@@ -8,10 +8,14 @@ UVRGripScriptBase::UVRGripScriptBase(const FObjectInitializer& ObjectInitializer
 //	PrimaryComponentTick.bCanEverTick = false;
 //	PrimaryComponentTick.bStartWithTickEnabled = false;
 //	PrimaryComponentTick.TickGroup = ETickingGroup::TG_PrePhysics;
-
 	WorldTransformOverrideType = EGSTransformOverrideType::None;
 }
 
+/*void UVRGripScriptBase::GetLifetimeReplicatedProps(TArray< class FLifetimeProperty > & OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(UVRGripScriptBase, bIsActive);
+}*/
 
 
 void UVRGripScriptBase::OnBeginPlay_Implementation(UObject * CallingOwner) {};

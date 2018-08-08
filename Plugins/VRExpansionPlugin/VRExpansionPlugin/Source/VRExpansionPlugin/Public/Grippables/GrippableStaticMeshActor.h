@@ -10,6 +10,8 @@
 #include "VRExpansionFunctionLibrary.h"
 #include "GameplayTagContainer.h"
 #include "GameplayTagAssetInterface.h"
+#include "GripScripts/VRGripScriptBase.h"
+#include "Engine/ActorChannel.h"
 #include "GrippableStaticMeshActor.generated.h"
 
 
@@ -48,6 +50,24 @@ public:
 
 	~AGrippableStaticMeshActor();
 	virtual void BeginPlay() override;
+
+	/*UPROPERTY(EditAnywhere, Replicated, BlueprintReadWrite, Instanced, Category = "VRGripInterface")
+		TArray<class UVRGripScriptBase *> GripLogicScripts;
+
+	bool ReplicateSubobjects(UActorChannel* Channel, class FOutBunch *Bunch, FReplicationFlags *RepFlags) override
+	{
+		bool WroteSomething = Super::ReplicateSubobjects(Channel, Bunch, RepFlags);
+
+		for (UVRGripScriptBase* Script : GripLogicScripts)
+		{
+			if (Script && !Script->IsPendingKill())
+			{
+				WroteSomething |= Channel->ReplicateSubobject(Script, *Bunch, *RepFlags);
+			}
+		}
+
+		return WroteSomething;
+	}*/
 
 	// ------------------------------------------------
 	// Gameplay tag interface

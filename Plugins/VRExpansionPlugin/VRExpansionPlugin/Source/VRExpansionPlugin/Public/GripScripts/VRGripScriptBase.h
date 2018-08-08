@@ -37,6 +37,33 @@ class VREXPANSIONPLUGIN_API UVRGripScriptBase : public UObject
 public:
 	UVRGripScriptBase(const FObjectInitializer& ObjectInitializer);
 
+	/*bool IsSupportedForNetworking() const override
+	{
+		return false;// true;
+	}*/
+
+	/*
+	// RPC support....if i want to add it
+	 bool UMyObject::CallRemoteFunction(UFunction * Function, void * Parms, FOutParmRec * OutParms, FFrame * Stack)
+	 {
+		 AActor* Owner = Cast<AActor>(GetOuter());
+		 if (!Owner) return false;
+		 UNetDriver* NetDriver = Owner->GetNetDriver();
+		 if (!NetDriver) return false;
+
+		 NetDriver->ProcessRemoteFunction(Owner, Function, Parms, OutParms, Stack, this);
+
+		 return true;
+	 }
+
+	 int32 UMyObject::GetFunctionCallspace(UFunction * Function, void * Parameters, FFrame * Stack)
+	 {
+		 AActor* Owner = Cast<AActor>(GetOuter());
+		 return (Owner ? Owner->GetFunctionCallspace(Function, Parameters, Stack) : FunctionCallspace::Local);
+	 }
+	
+	*/
+
 	// Returns if the script is currently active and should be used
 	UFUNCTION(BlueprintNativeEvent, Category = "VRGripScript")
 		bool IsScriptActive();
