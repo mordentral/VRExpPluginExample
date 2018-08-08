@@ -25,6 +25,7 @@ public:
 
 
 	~UGrippableCapsuleComponent();
+	virtual void BeginPlay() override;
 
 	// ------------------------------------------------
 	// Gameplay tag interface

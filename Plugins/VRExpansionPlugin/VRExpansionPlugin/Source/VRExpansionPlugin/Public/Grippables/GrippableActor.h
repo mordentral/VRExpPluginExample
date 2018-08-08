@@ -24,6 +24,7 @@ public:
 
 
 	~AGrippableActor();
+	virtual void BeginPlay() override;
 
 	// ------------------------------------------------
 	// Gameplay tag interface

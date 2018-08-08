@@ -25,6 +25,7 @@ public:
 
 
 	~UGrippableSphereComponent();
+	virtual void BeginPlay() override;
 
 	// ------------------------------------------------
 	// Gameplay tag interface

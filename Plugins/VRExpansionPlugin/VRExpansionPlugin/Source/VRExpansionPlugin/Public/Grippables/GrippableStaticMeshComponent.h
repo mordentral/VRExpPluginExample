@@ -24,6 +24,7 @@ public:
 
 
 	~UGrippableStaticMeshComponent();
+	virtual void BeginPlay() override;
 
 	// ------------------------------------------------
 	// Gameplay tag interface

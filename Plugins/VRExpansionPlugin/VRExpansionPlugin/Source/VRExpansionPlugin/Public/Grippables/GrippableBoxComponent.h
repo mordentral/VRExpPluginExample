@@ -25,6 +25,7 @@ public:
 
 
 	~UGrippableBoxComponent();
+	virtual void BeginPlay() override;
 
 	// ------------------------------------------------
 	// Gameplay tag interface

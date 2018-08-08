@@ -47,6 +47,7 @@ public:
 
 
 	~AGrippableSkeletalMeshActor();
+	virtual void BeginPlay() override;
 
 	// ------------------------------------------------
 	// Gameplay tag interface
