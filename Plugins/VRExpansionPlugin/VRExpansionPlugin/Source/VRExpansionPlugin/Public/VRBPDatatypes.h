@@ -1247,8 +1247,8 @@ struct VREXPANSIONPLUGIN_API FBPInterfaceProperties
 	GENERATED_BODY()
 public:
 
-	UPROPERTY(EditAnywhere, NotReplicated, BlueprintReadWrite, Instanced, Category = "VRGripInterface")
-		TArray<class UVRGripScriptBase *> GripLogicScripts;
+	//UPROPERTY(EditAnywhere, NotReplicated, BlueprintReadWrite, Instanced, Category = "VRGripInterface")
+		//TArray<class UVRGripScriptBase *> GripLogicScripts;
 		
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRGripInterface")
 		bool bDenyGripping;

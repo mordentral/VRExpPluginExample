@@ -41,6 +41,7 @@ void UGrippableBoxComponent::GetLifetimeReplicatedProps(TArray< class FLifetimeP
 {
 	 Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
+	 DOREPLIFETIME/*_CONDITION*/(UGrippableBoxComponent, GripLogicScripts);// , COND_Custom);
 	DOREPLIFETIME(UGrippableBoxComponent, bRepGripSettingsAndGameplayTags);
 	DOREPLIFETIME(UGrippableBoxComponent, bReplicateMovement);
 	DOREPLIFETIME_CONDITION(UGrippableBoxComponent, VRGripInterfaceSettings, COND_Custom);
@@ -60,6 +61,21 @@ void UGrippableBoxComponent::PreReplication(IRepChangedPropertyTracker & Changed
 	DOREPLIFETIME_ACTIVE_OVERRIDE(USceneComponent, RelativeScale3D, bReplicateMovement);
 }
 
+bool UGrippableBoxComponent::ReplicateSubobjects(UActorChannel* Channel, class FOutBunch *Bunch, FReplicationFlags *RepFlags)
+{
+	bool WroteSomething = Super::ReplicateSubobjects(Channel, Bunch, RepFlags);
+
+	for (UVRGripScriptBase* Script : GripLogicScripts)
+	{
+		if (Script && Script->bRequiresReplicationSupport && !Script->IsPendingKill())
+		{
+			WroteSomething |= Channel->ReplicateSubobject(Script, *Bunch, *RepFlags);
+		}
+	}
+
+	return WroteSomething;
+}
+
 
 void UGrippableBoxComponent::BeginPlay()
 {
@@ -67,7 +83,7 @@ void UGrippableBoxComponent::BeginPlay()
 	Super::BeginPlay();
 
 	// Call all grip scripts begin play events so they can perform any needed logic
-	for (UVRGripScriptBase* Script : VRGripInterfaceSettings.GripLogicScripts)
+	for (UVRGripScriptBase* Script : GripLogicScripts)
 	{
 		if (Script)
 		{
@@ -177,5 +193,10 @@ void UGrippableBoxComponent::SetHeld_Implementation(UGripMotionControllerCompone
 
 TArray<UVRGripScriptBase*> UGrippableBoxComponent::GetGripScripts_Implementation()
 {
-	return VRGripInterfaceSettings.GripLogicScripts;
+	return GripLogicScripts;
+}
+
+bool UGrippableBoxComponent::HasGripScripts_Implementation()
+{
+	return GripLogicScripts.Num() > 0;
 }

@@ -36,6 +36,7 @@ void UGrippableSphereComponent::GetLifetimeReplicatedProps(TArray< class FLifeti
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	
+	DOREPLIFETIME/*_CONDITION*/(UGrippableSphereComponent, GripLogicScripts);// , COND_Custom);
 	DOREPLIFETIME(UGrippableSphereComponent, bRepGripSettingsAndGameplayTags);
 	DOREPLIFETIME(UGrippableSphereComponent, bReplicateMovement);
 	DOREPLIFETIME_CONDITION(UGrippableSphereComponent, VRGripInterfaceSettings, COND_Custom);
@@ -55,6 +56,20 @@ void UGrippableSphereComponent::PreReplication(IRepChangedPropertyTracker & Chan
 	DOREPLIFETIME_ACTIVE_OVERRIDE(USceneComponent, RelativeScale3D, bReplicateMovement);
 }
 
+bool UGrippableSphereComponent::ReplicateSubobjects(UActorChannel* Channel, class FOutBunch *Bunch, FReplicationFlags *RepFlags)
+{
+	bool WroteSomething = Super::ReplicateSubobjects(Channel, Bunch, RepFlags);
+
+	for (UVRGripScriptBase* Script : GripLogicScripts)
+	{
+		if (Script && Script->bRequiresReplicationSupport && !Script->IsPendingKill())
+		{
+			WroteSomething |= Channel->ReplicateSubobject(Script, *Bunch, *RepFlags);
+		}
+	}
+
+	return WroteSomething;
+}
 
 //=============================================================================
 UGrippableSphereComponent::~UGrippableSphereComponent()
@@ -67,7 +82,7 @@ void UGrippableSphereComponent::BeginPlay()
 	Super::BeginPlay();
 
 	// Call all grip scripts begin play events so they can perform any needed logic
-	for (UVRGripScriptBase* Script : VRGripInterfaceSettings.GripLogicScripts)
+	for (UVRGripScriptBase* Script : GripLogicScripts)
 	{
 		if (Script)
 		{
@@ -175,7 +190,13 @@ void UGrippableSphereComponent::SetHeld_Implementation(UGripMotionControllerComp
 	return VRGripInterfaceSettings.InteractionSettings;
 }*/
 
+
 TArray<UVRGripScriptBase*> UGrippableSphereComponent::GetGripScripts_Implementation()
 {
-	return VRGripInterfaceSettings.GripLogicScripts;
+	return GripLogicScripts;
+}
+
+bool UGrippableSphereComponent::HasGripScripts_Implementation()
+{
+	return GripLogicScripts.Num() > 0;
 }

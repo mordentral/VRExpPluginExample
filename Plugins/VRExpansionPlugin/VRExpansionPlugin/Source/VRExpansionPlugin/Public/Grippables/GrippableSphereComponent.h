@@ -9,6 +9,7 @@
 #include "GameplayTagContainer.h"
 #include "GameplayTagAssetInterface.h"
 #include "Components/SphereComponent.h"
+#include "GripScripts/VRGripScriptBase.h"
 #include "GrippableSphereComponent.generated.h"
 
 /**
@@ -26,6 +27,11 @@ public:
 
 	~UGrippableSphereComponent();
 	virtual void BeginPlay() override;
+
+	UPROPERTY(EditAnywhere, Replicated, BlueprintReadOnly, Instanced, Category = "VRGripInterface")
+		TArray<class UVRGripScriptBase *> GripLogicScripts;
+
+	bool ReplicateSubobjects(UActorChannel* Channel, class FOutBunch *Bunch, FReplicationFlags *RepFlags) override;
 
 	// ------------------------------------------------
 	// Gameplay tag interface
@@ -120,6 +126,10 @@ public:
 	// Get interactable settings
 	//UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "VRGripInterface")
 		//FBPInteractionSettings GetInteractionSettings();
+
+		// Has Grip Scripts
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "VRGripInterface")
+		bool HasGripScripts();
 
 	// Get grip scripts
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "VRGripInterface")

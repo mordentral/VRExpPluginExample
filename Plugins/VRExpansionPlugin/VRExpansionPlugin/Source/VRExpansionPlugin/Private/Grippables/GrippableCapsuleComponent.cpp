@@ -36,7 +36,8 @@ UGrippableCapsuleComponent::UGrippableCapsuleComponent(const FObjectInitializer&
 void UGrippableCapsuleComponent::GetLifetimeReplicatedProps(TArray< class FLifetimeProperty > & OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-
+	
+	DOREPLIFETIME/*_CONDITION*/(UGrippableCapsuleComponent, GripLogicScripts);// , COND_Custom);
 	DOREPLIFETIME(UGrippableCapsuleComponent, bRepGripSettingsAndGameplayTags);
 	DOREPLIFETIME(UGrippableCapsuleComponent, bReplicateMovement);
 	DOREPLIFETIME_CONDITION(UGrippableCapsuleComponent, VRGripInterfaceSettings, COND_Custom);
@@ -56,6 +57,20 @@ void UGrippableCapsuleComponent::PreReplication(IRepChangedPropertyTracker & Cha
 	DOREPLIFETIME_ACTIVE_OVERRIDE(USceneComponent, RelativeScale3D, bReplicateMovement);
 }
 
+bool UGrippableCapsuleComponent::ReplicateSubobjects(UActorChannel* Channel, class FOutBunch *Bunch, FReplicationFlags *RepFlags)
+{
+	bool WroteSomething = Super::ReplicateSubobjects(Channel, Bunch, RepFlags);
+
+	for (UVRGripScriptBase* Script : GripLogicScripts)
+	{
+		if (Script && Script->bRequiresReplicationSupport && !Script->IsPendingKill())
+		{
+			WroteSomething |= Channel->ReplicateSubobject(Script, *Bunch, *RepFlags);
+		}
+	}
+
+	return WroteSomething;
+}
 
 //=============================================================================
 UGrippableCapsuleComponent::~UGrippableCapsuleComponent()
@@ -68,7 +83,7 @@ void UGrippableCapsuleComponent::BeginPlay()
 	Super::BeginPlay();
 
 	// Call all grip scripts begin play events so they can perform any needed logic
-	for (UVRGripScriptBase* Script : VRGripInterfaceSettings.GripLogicScripts)
+	for (UVRGripScriptBase* Script : GripLogicScripts)
 	{
 		if (Script)
 		{
@@ -179,5 +194,10 @@ void UGrippableCapsuleComponent::SetHeld_Implementation(UGripMotionControllerCom
 
 TArray<UVRGripScriptBase*> UGrippableCapsuleComponent::GetGripScripts_Implementation()
 {
-	return VRGripInterfaceSettings.GripLogicScripts;
+	return GripLogicScripts;
+}
+
+bool UGrippableCapsuleComponent::HasGripScripts_Implementation()
+{
+	return GripLogicScripts.Num() > 0;
 }

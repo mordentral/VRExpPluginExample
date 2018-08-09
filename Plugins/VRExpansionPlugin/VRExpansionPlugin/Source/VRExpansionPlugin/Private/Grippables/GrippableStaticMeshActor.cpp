@@ -89,7 +89,8 @@ AGrippableStaticMeshActor::AGrippableStaticMeshActor(const FObjectInitializer& O
 void AGrippableStaticMeshActor::GetLifetimeReplicatedProps(TArray< class FLifetimeProperty > & OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-	//DOREPLIFETIME(AGrippableStaticMeshActor, GripLogicScripts);
+	
+	DOREPLIFETIME/*_CONDITION*/(AGrippableStaticMeshActor, GripLogicScripts);// , COND_Custom);
 	DOREPLIFETIME(AGrippableStaticMeshActor, bRepGripSettingsAndGameplayTags);
 	DOREPLIFETIME(AGrippableStaticMeshActor, bAllowIgnoringAttachOnOwner);
 	DOREPLIFETIME_CONDITION(AGrippableStaticMeshActor, VRGripInterfaceSettings, COND_Custom);
@@ -99,12 +100,41 @@ void AGrippableStaticMeshActor::GetLifetimeReplicatedProps(TArray< class FLifeti
 void AGrippableStaticMeshActor::PreReplication(IRepChangedPropertyTracker & ChangedPropertyTracker)
 {
 	Super::PreReplication(ChangedPropertyTracker);
-
+	
 	// Don't replicate if set to not do it
+	/*bool bReplicateLogicScripts = (GripLogicScripts.Num() == 0); 
+
+	if (!bReplicateLogicScripts)
+	{
+		for (UVRGripScriptBase* Script : GripLogicScripts)
+		{
+			if (Script && Script->bRequiresReplicationSupport)
+			{
+				bReplicateLogicScripts = true;
+				break;
+			}
+		}
+	}*/
+
+	//DOREPLIFETIME_ACTIVE_OVERRIDE(AGrippableStaticMeshActor, GripLogicScripts, bReplicateLogicScripts);
 	DOREPLIFETIME_ACTIVE_OVERRIDE(AGrippableStaticMeshActor, VRGripInterfaceSettings, bRepGripSettingsAndGameplayTags);
 	DOREPLIFETIME_ACTIVE_OVERRIDE(AGrippableStaticMeshActor, GameplayTags, bRepGripSettingsAndGameplayTags);
 }
 
+bool AGrippableStaticMeshActor::ReplicateSubobjects(UActorChannel* Channel, class FOutBunch *Bunch, FReplicationFlags *RepFlags)
+{
+	bool WroteSomething = Super::ReplicateSubobjects(Channel, Bunch, RepFlags);
+
+	for (UVRGripScriptBase* Script : GripLogicScripts)
+	{
+		if (Script && Script->bRequiresReplicationSupport && !Script->IsPendingKill())
+		{
+			WroteSomething |= Channel->ReplicateSubobject(Script, *Bunch, *RepFlags);
+		}
+	}
+
+	return WroteSomething;
+}
 
 //=============================================================================
 AGrippableStaticMeshActor::~AGrippableStaticMeshActor()
@@ -117,7 +147,7 @@ void AGrippableStaticMeshActor::BeginPlay()
 	Super::BeginPlay();
 
 	// Call all grip scripts begin play events so they can perform any needed logic
-	for (UVRGripScriptBase* Script : VRGripInterfaceSettings.GripLogicScripts)
+	for (UVRGripScriptBase* Script : GripLogicScripts)
 	{
 		if (Script)
 		{
@@ -228,5 +258,10 @@ void AGrippableStaticMeshActor::SetHeld_Implementation(UGripMotionControllerComp
 
 TArray<UVRGripScriptBase*> AGrippableStaticMeshActor::GetGripScripts_Implementation()
 {
-	return VRGripInterfaceSettings.GripLogicScripts;
+	return GripLogicScripts;
+}
+
+bool AGrippableStaticMeshActor::HasGripScripts_Implementation()
+{
+	return GripLogicScripts.Num() > 0;
 }

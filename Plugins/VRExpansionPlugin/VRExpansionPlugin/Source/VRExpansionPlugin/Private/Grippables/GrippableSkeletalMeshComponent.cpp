@@ -36,7 +36,8 @@ UGrippableSkeletalMeshComponent::UGrippableSkeletalMeshComponent(const FObjectIn
 void UGrippableSkeletalMeshComponent::GetLifetimeReplicatedProps(TArray< class FLifetimeProperty > & OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-
+	
+	DOREPLIFETIME/*_CONDITION*/(UGrippableSkeletalMeshComponent, GripLogicScripts);// , COND_Custom);
 	DOREPLIFETIME(UGrippableSkeletalMeshComponent, bRepGripSettingsAndGameplayTags);
 	DOREPLIFETIME(UGrippableSkeletalMeshComponent, bReplicateMovement);
 	DOREPLIFETIME_CONDITION(UGrippableSkeletalMeshComponent, VRGripInterfaceSettings, COND_Custom);
@@ -56,6 +57,20 @@ void UGrippableSkeletalMeshComponent::PreReplication(IRepChangedPropertyTracker 
 	DOREPLIFETIME_ACTIVE_OVERRIDE(USceneComponent, RelativeScale3D, bReplicateMovement);
 }
 
+bool UGrippableSkeletalMeshComponent::ReplicateSubobjects(UActorChannel* Channel, class FOutBunch *Bunch, FReplicationFlags *RepFlags)
+{
+	bool WroteSomething = Super::ReplicateSubobjects(Channel, Bunch, RepFlags);
+
+	for (UVRGripScriptBase* Script : GripLogicScripts)
+	{
+		if (Script && Script->bRequiresReplicationSupport && !Script->IsPendingKill())
+		{
+			WroteSomething |= Channel->ReplicateSubobject(Script, *Bunch, *RepFlags);
+		}
+	}
+
+	return WroteSomething;
+}
 
 //=============================================================================
 UGrippableSkeletalMeshComponent::~UGrippableSkeletalMeshComponent()
@@ -68,7 +83,7 @@ void UGrippableSkeletalMeshComponent::BeginPlay()
 	Super::BeginPlay();
 
 	// Call all grip scripts begin play events so they can perform any needed logic
-	for (UVRGripScriptBase* Script : VRGripInterfaceSettings.GripLogicScripts)
+	for (UVRGripScriptBase* Script : GripLogicScripts)
 	{
 		if (Script)
 		{
@@ -178,5 +193,10 @@ void UGrippableSkeletalMeshComponent::SetHeld_Implementation(UGripMotionControll
 
 TArray<UVRGripScriptBase*> UGrippableSkeletalMeshComponent::GetGripScripts_Implementation()
 {
-	return VRGripInterfaceSettings.GripLogicScripts;
+	return GripLogicScripts;
+}
+
+bool UGrippableSkeletalMeshComponent::HasGripScripts_Implementation()
+{
+	return GripLogicScripts.Num() > 0;
 }
