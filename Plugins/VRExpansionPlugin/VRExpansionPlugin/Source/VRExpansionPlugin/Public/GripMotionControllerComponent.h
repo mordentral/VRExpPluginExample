@@ -105,6 +105,8 @@ class VREXPANSIONPLUGIN_API UGripMotionControllerComponent : public UMotionContr
 
 public:
 
+	UVRGripScriptBase * DefaultGripScript;
+
 	// If true will subtract the HMD's location from the position, useful for if the actors base is set to the HMD location always (simple character).
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GripMotionController")
 	bool bOffsetByHMD;
