@@ -219,6 +219,10 @@ void UGripMotionControllerComponent::BeginDestroy()
 void UGripMotionControllerComponent::BeginPlay()
 {
 	Super::BeginPlay();
+
+	// Pre-fill it here
+	if (!DefaultGripLogicScript)
+		DefaultGripLogicScript = GetMutableDefault<UGS_Default>();
 }
 
 void UGripMotionControllerComponent::CreateRenderState_Concurrent()
@@ -955,14 +959,6 @@ bool UGripMotionControllerComponent::GripActor(
 
 		AdvancedGripSettings = IVRGripInterface::Execute_AdvancedGripSettings(root);
 		ObjectToCheck = root;
-
-		// Removed in 4.20
-		/*if (IVRGripInterface::Execute_IsInteractible(root))
-		{
-			UE_LOG(LogVRMotionController, Warning, TEXT("Gripping an object with bIsInteractible set, this functionality will soon be deprecated. Please use custom grips or interactible components instead."));
-			FBPInteractionSettings IntSettings = IVRGripInterface::Execute_GetInteractionSettings(root);
-			bIgnoreHandRotation = IntSettings.bIgnoreHandRotation;
-		}*/
 	}
 	else if (ActorToGrip->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
 	{
@@ -971,14 +967,6 @@ bool UGripMotionControllerComponent::GripActor(
 
 		AdvancedGripSettings = IVRGripInterface::Execute_AdvancedGripSettings(ActorToGrip);
 		ObjectToCheck = ActorToGrip;
-
-		// Removed in 4.20
-		/*if (IVRGripInterface::Execute_IsInteractible(ActorToGrip))
-		{
-			UE_LOG(LogVRMotionController, Warning, TEXT("Gripping an object with bIsInteractible set, this functionality will soon be deprecated. Please use custom grips or interactible components instead."));
-			FBPInteractionSettings IntSettings = IVRGripInterface::Execute_GetInteractionSettings(ActorToGrip);
-			bIgnoreHandRotation = IntSettings.bIgnoreHandRotation;
-		}*/
 	}
 
 	// So that events caused by sweep and the like will trigger correctly
@@ -1164,14 +1152,6 @@ bool UGripMotionControllerComponent::GripComponent(
 
 		AdvancedGripSettings = IVRGripInterface::Execute_AdvancedGripSettings(ComponentToGrip);
 		ObjectToCheck = ComponentToGrip;
-
-		// Removed in 4.20
-		/*if (IVRGripInterface::Execute_IsInteractible(ComponentToGrip))
-		{
-			UE_LOG(LogVRMotionController, Warning, TEXT("Gripping an object with bIsInteractible set, this functionality will soon be deprecated. Please use custom grips or interactible components instead."));
-			FBPInteractionSettings IntSettings = IVRGripInterface::Execute_GetInteractionSettings(ComponentToGrip);
-			bIgnoreHandRotation = IntSettings.bIgnoreHandRotation;
-		}*/
 	}
 
 	//ComponentToGrip->IgnoreActorWhenMoving(this->GetOwner(), true);
@@ -1698,6 +1678,9 @@ void UGripMotionControllerComponent::DropAndSocket_Implementation(const FBPActor
 					{
 						if (Script)
 						{
+							if (NewDrop.SecondaryGripInfo.bHasSecondaryAttachment)
+								Script->OnSecondaryGripRelease(this, NewDrop.SecondaryGripInfo.SecondaryAttachment, NewDrop);
+
 							Script->OnGripRelease(this, NewDrop, true);
 						}
 					}
@@ -1759,6 +1742,9 @@ void UGripMotionControllerComponent::DropAndSocket_Implementation(const FBPActor
 					{
 						if (Script)
 						{
+							if (NewDrop.SecondaryGripInfo.bHasSecondaryAttachment)
+								Script->OnSecondaryGripRelease(this, NewDrop.SecondaryGripInfo.SecondaryAttachment, NewDrop);
+
 							Script->OnGripRelease(this, NewDrop, true);
 						}
 					}
@@ -2181,6 +2167,9 @@ void UGripMotionControllerComponent::Drop_Implementation(const FBPActorGripInfor
 					{
 						if (Script)
 						{
+							if (NewDrop.SecondaryGripInfo.bHasSecondaryAttachment)
+								Script->OnSecondaryGripRelease(this, NewDrop.SecondaryGripInfo.SecondaryAttachment, NewDrop);
+
 							Script->OnGripRelease(this, NewDrop, false);
 						}
 					}
@@ -2287,6 +2276,9 @@ void UGripMotionControllerComponent::Drop_Implementation(const FBPActorGripInfor
 					{
 						if (Script)
 						{
+							if (NewDrop.SecondaryGripInfo.bHasSecondaryAttachment)
+								Script->OnSecondaryGripRelease(this, NewDrop.SecondaryGripInfo.SecondaryAttachment, NewDrop);
+
 							Script->OnGripRelease(this, NewDrop, false);
 						}
 					}
@@ -2457,6 +2449,18 @@ bool UGripMotionControllerComponent::AddSecondaryAttachmentPoint(UObject * Gripp
 		if (GrippedObjectToAddAttachment->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
 		{
 			IVRGripInterface::Execute_OnSecondaryGrip(GrippedObjectToAddAttachment, SecondaryPointComponent, *GripToUse);
+
+			if (IVRGripInterface::Execute_HasGripScripts(GrippedObjectToAddAttachment))
+			{
+				TArray<UVRGripScriptBase*> GripScripts = IVRGripInterface::Execute_GetGripScripts(GrippedObjectToAddAttachment);
+				for (UVRGripScriptBase* Script : GripScripts)
+				{
+					if (Script)
+					{
+						Script->OnSecondaryGrip(this, SecondaryPointComponent, *GripToUse);
+					}
+				}
+			}
 		}
 
 		if (GripToUse->GripMovementReplicationSetting == EGripMovementReplicationSettings::ClientSide_Authoritive && GetNetMode() == ENetMode::NM_Client && !IsTornOff())
@@ -2564,6 +2568,18 @@ bool UGripMotionControllerComponent::RemoveSecondaryAttachmentPoint(UObject * Gr
 		if (GrippedObjectToRemoveAttachment->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
 		{
 			IVRGripInterface::Execute_OnSecondaryGripRelease(GrippedObjectToRemoveAttachment, GripToUse->SecondaryGripInfo.SecondaryAttachment, *GripToUse);
+
+			if (IVRGripInterface::Execute_HasGripScripts(GrippedObjectToRemoveAttachment))
+			{
+				TArray<UVRGripScriptBase*> GripScripts = IVRGripInterface::Execute_GetGripScripts(GrippedObjectToRemoveAttachment);
+				for (UVRGripScriptBase* Script : GripScripts)
+				{
+					if (Script)
+					{
+						Script->OnSecondaryGripRelease(this, GripToUse->SecondaryGripInfo.SecondaryAttachment, *GripToUse);
+					}
+				}
+			}
 		}
 
 		GripToUse->SecondaryGripInfo.SecondaryAttachment = nullptr;
@@ -2976,11 +2992,9 @@ void UGripMotionControllerComponent::TickComponent(float DeltaTime, enum ELevelT
 
 void UGripMotionControllerComponent::GetGripWorldTransform(TArray<UVRGripScriptBase*>& GripScripts, float DeltaTime, FTransform & WorldTransform, const FTransform &ParentTransform, FBPActorGripInformation &Grip, AActor * actor, UPrimitiveComponent * root, bool bRootHasInterface, bool bActorHasInterface)
 {
-
 	bool bGetDefaultTransform = true;
-	uint32 numScripts = GripScripts.Num();
 
-	if (numScripts > 0)
+	if (GripScripts.Num())
 	{
 		// Get grip script world transform overrides (if there are any)
 		for (UVRGripScriptBase* Script: GripScripts)
@@ -2995,20 +3009,15 @@ void UGripMotionControllerComponent::GetGripWorldTransform(TArray<UVRGripScriptB
 
 		// If none of the scripts override the base transform
 		if (bGetDefaultTransform)
-		{
-			//UVRGripScriptBase * DefaultGripScript = OverrideDefaultGripLogicScript;//(UVRGripScriptBase*)DefaultGripLogicScript->GetDefaultObject();
-			
-			// If our default was none, fall back to the default script
-			if (!DefaultGripLogicScript)
-				DefaultGripLogicScript = GetMutableDefault<UGS_Default>();
-
-			DefaultGripLogicScript->GetWorldTransform(this, DeltaTime, WorldTransform, ParentTransform, Grip, actor, root, bRootHasInterface, bActorHasInterface);
+		{			
+			if (DefaultGripLogicScript)
+				DefaultGripLogicScript->GetWorldTransform(this, DeltaTime, WorldTransform, ParentTransform, Grip, actor, root, bRootHasInterface, bActorHasInterface);
 		}
 
 		// Get grip script world transform modifiers (if there are any)
 		for (UVRGripScriptBase* Script : GripScripts)
 		{
-			if (Script && Script->IsScriptActive()/* && Script->GetWorldTransformOverrideType() == EGSTransformOverrideType::ModifiesWorldTransform*/)
+			if (Script && Script->IsScriptActive() && Script->GetWorldTransformOverrideType() != EGSTransformOverrideType::None)
 			{
 				Script->GetWorldTransform(this, DeltaTime, WorldTransform, ParentTransform, Grip, actor, root, bRootHasInterface, bActorHasInterface);
 			}
@@ -3016,80 +3025,12 @@ void UGripMotionControllerComponent::GetGripWorldTransform(TArray<UVRGripScriptB
 	}
 	else
 	{
-		//UVRGripScriptBase * DefaultGripScript = OverrideDefaultGripLogicScript;//(UVRGripScriptBase*)DefaultGripLogicScript->GetDefaultObject();
-
-		// If our default was none, fall back to the default script
-		if (!DefaultGripLogicScript)
-			DefaultGripLogicScript = GetMutableDefault<UGS_Default>();
-
-		DefaultGripLogicScript->GetWorldTransform(this, DeltaTime, WorldTransform, ParentTransform, Grip, actor, root, bRootHasInterface, bActorHasInterface);
+		if (DefaultGripLogicScript)
+			DefaultGripLogicScript->GetWorldTransform(this, DeltaTime, WorldTransform, ParentTransform, Grip, actor, root, bRootHasInterface, bActorHasInterface);
 	}
 
 	return;
 }
-
-// Removed in 4.20
-/*
-FTransform UGripMotionControllerComponent::HandleInteractionSettings(float DeltaTime, const FTransform & ParentTransform, UPrimitiveComponent * root, FBPInteractionSettings InteractionSettings, FBPActorGripInformation & GripInfo)
-{
-	FTransform LocalTransform = GripInfo.RelativeTransform * GripInfo.AdditionTransform;
-	FTransform WorldTransform;
-
-	if (InteractionSettings.bIgnoreHandRotation)
-	{
-		FTransform RotationalessTransform = ParentTransform;
-		RotationalessTransform.SetRotation(FQuat::Identity);
-
-		WorldTransform = LocalTransform * RotationalessTransform;
-	}
-	else
-		WorldTransform = LocalTransform * ParentTransform;
-
-	if (InteractionSettings.bLimitsInLocalSpace)
-	{
-		if (USceneComponent * parent = root->GetAttachParent())
-			LocalTransform = parent->GetComponentTransform();
-		else
-			LocalTransform = FTransform::Identity;
-
-		WorldTransform = WorldTransform.GetRelativeTransform(LocalTransform);
-	}
-
-	FVector componentLoc = WorldTransform.GetLocation();
-
-	// Translation settings
-	if (InteractionSettings.bLimitX)
-		componentLoc.X = FMath::Clamp(componentLoc.X, InteractionSettings.InitialLinearTranslation.X + InteractionSettings.MinLinearTranslation.X, InteractionSettings.InitialLinearTranslation.X + InteractionSettings.MaxLinearTranslation.X);
-
-	if (InteractionSettings.bLimitY)
-		componentLoc.Y = FMath::Clamp(componentLoc.Y, InteractionSettings.InitialLinearTranslation.Y + InteractionSettings.MinLinearTranslation.Y, InteractionSettings.InitialLinearTranslation.Y + InteractionSettings.MaxLinearTranslation.Y);
-
-	if (InteractionSettings.bLimitZ)
-		componentLoc.Z = FMath::Clamp(componentLoc.Z, InteractionSettings.InitialLinearTranslation.Z + InteractionSettings.MinLinearTranslation.Z, InteractionSettings.InitialLinearTranslation.Z + InteractionSettings.MaxLinearTranslation.Z);
-
-	WorldTransform.SetLocation(componentLoc);
-
-	FRotator componentRot = WorldTransform.GetRotation().Rotator();
-
-	// Rotation Settings
-	if (InteractionSettings.bLimitPitch)
-		componentRot.Pitch = FMath::Clamp(componentRot.Pitch, InteractionSettings.InitialAngularTranslation.Pitch + InteractionSettings.MinAngularTranslation.Pitch, InteractionSettings.InitialAngularTranslation.Pitch + InteractionSettings.MaxAngularTranslation.Pitch);
-
-	if (InteractionSettings.bLimitYaw)
-		componentRot.Yaw = FMath::Clamp(componentRot.Yaw, InteractionSettings.InitialAngularTranslation.Yaw + InteractionSettings.MinAngularTranslation.Yaw, InteractionSettings.InitialAngularTranslation.Yaw + InteractionSettings.MaxAngularTranslation.Yaw);
-
-	if (InteractionSettings.bLimitRoll)
-		componentRot.Roll = FMath::Clamp(componentRot.Roll, InteractionSettings.InitialAngularTranslation.Roll + InteractionSettings.MinAngularTranslation.Roll, InteractionSettings.InitialAngularTranslation.Roll + InteractionSettings.MaxAngularTranslation.Roll);
-
-	WorldTransform.SetRotation(componentRot.Quaternion());
-
-	if (InteractionSettings.bLimitsInLocalSpace)
-	{
-		WorldTransform = WorldTransform * LocalTransform;
-	}
-
-	return WorldTransform;
-}*/
 
 void UGripMotionControllerComponent::TickGrip(float DeltaTime)
 {

@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "VRBPDatatypes.h"
-#include "GripMotionControllerComponent.h"
+//#include "GripMotionControllerComponent.h"
 //#include "MotionControllerComponent.h"
 //#include "VRGripInterface.h"
 //#include "GameplayTagContainer.h"
@@ -15,6 +15,7 @@
 
 #include "VRGripScriptBase.generated.h"
 
+class UGripMotionControllerComponent;
 
 UENUM(Blueprintable)
 enum class EGSTransformOverrideType : uint8
@@ -147,7 +148,17 @@ public:
 
 	// Event triggered on the interfaced object when grip is released
 	UFUNCTION(BlueprintNativeEvent, Category = "VRGripScript")
-		void OnGripRelease(UGripMotionControllerComponent * ReleasingController, const FBPActorGripInformation & GripInformation, bool bWasSocketed = false);
-		virtual void OnGripRelease_Implementation(UGripMotionControllerComponent * ReleasingController, const FBPActorGripInformation & GripInformation, bool bWasSocketed = false);
+	void OnGripRelease(UGripMotionControllerComponent * ReleasingController, const FBPActorGripInformation & GripInformation, bool bWasSocketed = false);
+	virtual void OnGripRelease_Implementation(UGripMotionControllerComponent * ReleasingController, const FBPActorGripInformation & GripInformation, bool bWasSocketed = false);
 
+	// Event triggered on the interfaced object when secondary gripped
+	UFUNCTION(BlueprintNativeEvent, Category = "VRGripInterface")
+	void OnSecondaryGrip(UGripMotionControllerComponent * Controller, USceneComponent * SecondaryGripComponent, const FBPActorGripInformation & GripInformation);
+	virtual void OnSecondaryGrip_Implementation(UGripMotionControllerComponent * Controller, USceneComponent * SecondaryGripComponent, const FBPActorGripInformation & GripInformation);
+
+	// Event triggered on the interfaced object when secondary grip is released
+	UFUNCTION(BlueprintNativeEvent, Category = "VRGripInterface")
+	void OnSecondaryGripRelease(UGripMotionControllerComponent * Controller, USceneComponent * ReleasingSecondaryGripComponent, const FBPActorGripInformation & GripInformation);
+	virtual void OnSecondaryGripRelease_Implementation(UGripMotionControllerComponent * Controller, USceneComponent * ReleasingSecondaryGripComponent, const FBPActorGripInformation & GripInformation);
+	
 };
