@@ -37,6 +37,7 @@
 DEFINE_LOG_CATEGORY(LogVRMotionController);
 //For UE4 Profiler ~ Stat
 DECLARE_CYCLE_STAT(TEXT("TickGrip ~ TickingGrip"), STAT_TickGrip, STATGROUP_TickGrip);
+DECLARE_CYCLE_STAT(TEXT("GetGripWorldTransform ~ GettingTransform"), STAT_GetGripTransform, STATGROUP_TickGrip);
 
 // MAGIC NUMBERS
 // Constraint multipliers for angular, to avoid having to have two sets of stiffness/damping variables
@@ -101,8 +102,6 @@ UGripMotionControllerComponent::UGripMotionControllerComponent(const FObjectInit
 	bOffsetByControllerProfile = true;
 	GripRenderThreadProfileTransform = FTransform::Identity;
 	CurrentControllerProfileTransform = FTransform::Identity;
-
-	DefaultGripLogicScript = nullptr;//UGS_Default::StaticClass();
 }
 
 //=============================================================================
@@ -219,10 +218,6 @@ void UGripMotionControllerComponent::BeginDestroy()
 void UGripMotionControllerComponent::BeginPlay()
 {
 	Super::BeginPlay();
-
-	// Pre-fill it here
-	if (!DefaultGripLogicScript)
-		DefaultGripLogicScript = GetMutableDefault<UGS_Default>();
 }
 
 void UGripMotionControllerComponent::CreateRenderState_Concurrent()
@@ -1671,9 +1666,9 @@ void UGripMotionControllerComponent::DropAndSocket_Implementation(const FBPActor
 				if (NewDrop.SecondaryGripInfo.bHasSecondaryAttachment)
 					IVRGripInterface::Execute_OnSecondaryGripRelease(pActor, NewDrop.SecondaryGripInfo.SecondaryAttachment, NewDrop);
 
-				if (IVRGripInterface::Execute_HasGripScripts(pActor))
+				TArray<UVRGripScriptBase*> GripScripts;
+				if (IVRGripInterface::Execute_GetGripScripts(pActor, GripScripts))
 				{
-					TArray<UVRGripScriptBase*> GripScripts = IVRGripInterface::Execute_GetGripScripts(pActor);
 					for (UVRGripScriptBase* Script : GripScripts)
 					{
 						if (Script)
@@ -1735,9 +1730,9 @@ void UGripMotionControllerComponent::DropAndSocket_Implementation(const FBPActor
 				if (NewDrop.SecondaryGripInfo.bHasSecondaryAttachment)
 					IVRGripInterface::Execute_OnSecondaryGripRelease(root, NewDrop.SecondaryGripInfo.SecondaryAttachment, NewDrop);
 
-				if (IVRGripInterface::Execute_HasGripScripts(root))
+				TArray<UVRGripScriptBase*> GripScripts;
+				if (IVRGripInterface::Execute_GetGripScripts(root, GripScripts))
 				{
-					TArray<UVRGripScriptBase*> GripScripts = IVRGripInterface::Execute_GetGripScripts(root);
 					for (UVRGripScriptBase* Script : GripScripts)
 					{
 						if (Script)
@@ -1819,9 +1814,9 @@ bool UGripMotionControllerComponent::NotifyGrip(FBPActorGripInformation &NewGrip
 			{
 				IVRGripInterface::Execute_SetHeld(pActor, this, true);
 
-				if (IVRGripInterface::Execute_HasGripScripts(pActor))
+				TArray<UVRGripScriptBase*> GripScripts;
+				if (IVRGripInterface::Execute_GetGripScripts(pActor, GripScripts))
 				{
-					TArray<UVRGripScriptBase*> GripScripts = IVRGripInterface::Execute_GetGripScripts(pActor);
 					for (UVRGripScriptBase* Script : GripScripts)
 					{
 						if (Script)
@@ -1863,9 +1858,9 @@ bool UGripMotionControllerComponent::NotifyGrip(FBPActorGripInformation &NewGrip
 			{
 				IVRGripInterface::Execute_SetHeld(root, this, true);
 
-				if (IVRGripInterface::Execute_HasGripScripts(root))
+				TArray<UVRGripScriptBase*> GripScripts;
+				if (IVRGripInterface::Execute_GetGripScripts(root, GripScripts))
 				{
-					TArray<UVRGripScriptBase*> GripScripts = IVRGripInterface::Execute_GetGripScripts(root);
 					for (UVRGripScriptBase* Script : GripScripts)
 					{
 						if (Script)
@@ -2160,9 +2155,9 @@ void UGripMotionControllerComponent::Drop_Implementation(const FBPActorGripInfor
 				if (NewDrop.SecondaryGripInfo.bHasSecondaryAttachment)
 					IVRGripInterface::Execute_OnSecondaryGripRelease(pActor, NewDrop.SecondaryGripInfo.SecondaryAttachment, NewDrop);
 
-				if (IVRGripInterface::Execute_HasGripScripts(pActor))
+				TArray<UVRGripScriptBase*> GripScripts;
+				if (IVRGripInterface::Execute_GetGripScripts(pActor, GripScripts))
 				{
-					TArray<UVRGripScriptBase*> GripScripts = IVRGripInterface::Execute_GetGripScripts(pActor);
 					for (UVRGripScriptBase* Script : GripScripts)
 					{
 						if (Script)
@@ -2269,9 +2264,9 @@ void UGripMotionControllerComponent::Drop_Implementation(const FBPActorGripInfor
 				if (NewDrop.SecondaryGripInfo.bHasSecondaryAttachment)
 					IVRGripInterface::Execute_OnSecondaryGripRelease(root, NewDrop.SecondaryGripInfo.SecondaryAttachment, NewDrop);
 
-				if (IVRGripInterface::Execute_HasGripScripts(root))
+				TArray<UVRGripScriptBase*> GripScripts;
+				if (IVRGripInterface::Execute_GetGripScripts(root, GripScripts))
 				{
-					TArray<UVRGripScriptBase*> GripScripts = IVRGripInterface::Execute_GetGripScripts(root);
 					for (UVRGripScriptBase* Script : GripScripts)
 					{
 						if (Script)
@@ -2450,9 +2445,9 @@ bool UGripMotionControllerComponent::AddSecondaryAttachmentPoint(UObject * Gripp
 		{
 			IVRGripInterface::Execute_OnSecondaryGrip(GrippedObjectToAddAttachment, SecondaryPointComponent, *GripToUse);
 
-			if (IVRGripInterface::Execute_HasGripScripts(GrippedObjectToAddAttachment))
+			TArray<UVRGripScriptBase*> GripScripts;
+			if (IVRGripInterface::Execute_GetGripScripts(GrippedObjectToAddAttachment, GripScripts))
 			{
-				TArray<UVRGripScriptBase*> GripScripts = IVRGripInterface::Execute_GetGripScripts(GrippedObjectToAddAttachment);
 				for (UVRGripScriptBase* Script : GripScripts)
 				{
 					if (Script)
@@ -2569,9 +2564,9 @@ bool UGripMotionControllerComponent::RemoveSecondaryAttachmentPoint(UObject * Gr
 		{
 			IVRGripInterface::Execute_OnSecondaryGripRelease(GrippedObjectToRemoveAttachment, GripToUse->SecondaryGripInfo.SecondaryAttachment, *GripToUse);
 
-			if (IVRGripInterface::Execute_HasGripScripts(GrippedObjectToRemoveAttachment))
+			TArray<UVRGripScriptBase*> GripScripts;
+			if (IVRGripInterface::Execute_GetGripScripts(GrippedObjectToRemoveAttachment, GripScripts))
 			{
-				TArray<UVRGripScriptBase*> GripScripts = IVRGripInterface::Execute_GetGripScripts(GrippedObjectToRemoveAttachment);
 				for (UVRGripScriptBase* Script : GripScripts)
 				{
 					if (Script)
@@ -2783,13 +2778,11 @@ bool UGripMotionControllerComponent::TeleportMoveGrip_Impl(FBPActorGripInformati
 
 		if (bRootHasInterface)
 		{
-			if (IVRGripInterface::Execute_HasGripScripts(PrimComp))
-				Scripts = IVRGripInterface::Execute_GetGripScripts(PrimComp);
+			IVRGripInterface::Execute_GetGripScripts(PrimComp, Scripts);
 		}
 		else if (bActorHasInterface)
 		{
-			if (IVRGripInterface::Execute_HasGripScripts(actor))
-				Scripts = IVRGripInterface::Execute_GetGripScripts(actor);
+			IVRGripInterface::Execute_GetGripScripts(actor, Scripts);
 		}
 
 		GetGripWorldTransform(Scripts, 0.0f, WorldTransform, ParentTransform, copyGrip, actor, PrimComp, bRootHasInterface, bActorHasInterface/*, bRescalePhysicsGrips*/);
@@ -2992,10 +2985,12 @@ void UGripMotionControllerComponent::TickComponent(float DeltaTime, enum ELevelT
 
 void UGripMotionControllerComponent::GetGripWorldTransform(TArray<UVRGripScriptBase*>& GripScripts, float DeltaTime, FTransform & WorldTransform, const FTransform &ParentTransform, FBPActorGripInformation &Grip, AActor * actor, UPrimitiveComponent * root, bool bRootHasInterface, bool bActorHasInterface)
 {
-	bool bGetDefaultTransform = true;
+	SCOPE_CYCLE_COUNTER(STAT_GetGripTransform);
 
 	if (GripScripts.Num())
 	{
+		bool bGetDefaultTransform = true;
+
 		// Get grip script world transform overrides (if there are any)
 		for (UVRGripScriptBase* Script: GripScripts)
 		{
@@ -3010,8 +3005,7 @@ void UGripMotionControllerComponent::GetGripWorldTransform(TArray<UVRGripScriptB
 		// If none of the scripts override the base transform
 		if (bGetDefaultTransform)
 		{			
-			if (DefaultGripLogicScript)
-				DefaultGripLogicScript->GetWorldTransform(this, DeltaTime, WorldTransform, ParentTransform, Grip, actor, root, bRootHasInterface, bActorHasInterface);
+			GetDefaultGripTransform(DeltaTime, WorldTransform, ParentTransform, Grip, actor, root, bRootHasInterface, bActorHasInterface);
 		}
 
 		// Get grip script world transform modifiers (if there are any)
@@ -3025,11 +3019,193 @@ void UGripMotionControllerComponent::GetGripWorldTransform(TArray<UVRGripScriptB
 	}
 	else
 	{
-		if (DefaultGripLogicScript)
-			DefaultGripLogicScript->GetWorldTransform(this, DeltaTime, WorldTransform, ParentTransform, Grip, actor, root, bRootHasInterface, bActorHasInterface);
+		// Get hard coded defaults instead
+		GetDefaultGripTransform(DeltaTime, WorldTransform, ParentTransform, Grip, actor, root, bRootHasInterface, bActorHasInterface);
 	}
 
 	return;
+}
+
+void UGripMotionControllerComponent::GetDefaultGripTransform(float DeltaTime, FTransform & WorldTransform, const FTransform &ParentTransform, FBPActorGripInformation &Grip, AActor * actor, UPrimitiveComponent * root, bool bRootHasInterface, bool bActorHasInterface)
+{
+	{
+		// Just simple transform setting
+		WorldTransform = Grip.RelativeTransform * Grip.AdditionTransform * ParentTransform;
+	}
+
+	// Check the grip lerp state, this it ouside of the secondary attach check below because it can change the result of it
+	if ((Grip.SecondaryGripInfo.bHasSecondaryAttachment && Grip.SecondaryGripInfo.SecondaryAttachment) || Grip.SecondaryGripInfo.GripLerpState == EGripLerpState::EndLerp)
+	{
+		switch (Grip.SecondaryGripInfo.GripLerpState)
+		{
+		case EGripLerpState::StartLerp:
+		case EGripLerpState::EndLerp:
+		{
+			if (Grip.SecondaryGripInfo.curLerp > 0.01f)
+				Grip.SecondaryGripInfo.curLerp -= DeltaTime;
+			else
+			{
+				if (Grip.SecondaryGripInfo.bHasSecondaryAttachment &&
+					Grip.AdvancedGripSettings.SecondaryGripSettings.bUseSecondaryGripSettings &&
+					Grip.AdvancedGripSettings.SecondaryGripSettings.SecondaryGripScaler < 1.0f)
+				{
+					Grip.SecondaryGripInfo.GripLerpState = EGripLerpState::ConstantLerp;
+				}
+				else
+					Grip.SecondaryGripInfo.GripLerpState = EGripLerpState::NotLerping;
+			}
+
+		}break;
+		case EGripLerpState::ConstantLerp:
+		case EGripLerpState::NotLerping:
+		default:break;
+		}
+	}
+
+	// Handle the interp and multi grip situations, re-checking the grip situation here as it may have changed in the switch above.
+	if ((Grip.SecondaryGripInfo.bHasSecondaryAttachment && Grip.SecondaryGripInfo.SecondaryAttachment) || Grip.SecondaryGripInfo.GripLerpState == EGripLerpState::EndLerp)
+	{
+		FTransform SecondaryTransform = Grip.RelativeTransform * ParentTransform;
+
+		// Checking secondary grip type for the scaling setting
+		ESecondaryGripType SecondaryType = ESecondaryGripType::SG_None;
+
+		if (bRootHasInterface)
+			SecondaryType = IVRGripInterface::Execute_SecondaryGripType(root);
+		else if (bActorHasInterface)
+			SecondaryType = IVRGripInterface::Execute_SecondaryGripType(actor);
+
+		// If the grip is a custom one, skip all of this logic we won't be changing anything
+		if (SecondaryType != ESecondaryGripType::SG_Custom)
+		{
+			// Variables needed for multi grip transform
+			FVector BasePoint = this->GetComponentLocation();
+			const FTransform PivotToWorld = FTransform(FQuat::Identity, BasePoint);
+			const FTransform WorldToPivot = FTransform(FQuat::Identity, -BasePoint);
+
+			FVector frontLocOrig;
+			FVector frontLoc;
+
+			// Ending lerp out of a multi grip
+			if (Grip.SecondaryGripInfo.GripLerpState == EGripLerpState::EndLerp)
+			{
+				frontLocOrig = (/*WorldTransform*/SecondaryTransform.TransformPosition(Grip.SecondaryGripInfo.SecondaryRelativeTransform.GetLocation())) - BasePoint;
+				frontLoc = Grip.SecondaryGripInfo.LastRelativeLocation;
+
+				frontLocOrig = FMath::Lerp(frontLoc, frontLocOrig, FMath::Clamp(Grip.SecondaryGripInfo.curLerp / Grip.SecondaryGripInfo.LerpToRate, 0.0f, 1.0f));
+			}
+			else // Is in a multi grip, might be lerping into it as well.
+			{
+				//FVector curLocation; // Current location of the secondary grip
+
+				bool bPulledControllerLoc = false;
+				if (bHasAuthority && Grip.SecondaryGripInfo.SecondaryAttachment->GetOwner() == this->GetOwner())
+				{
+					if (UGripMotionControllerComponent * OtherController = Cast<UGripMotionControllerComponent>(Grip.SecondaryGripInfo.SecondaryAttachment))
+					{
+						if (!OtherController->bUseWithoutTracking)
+						{
+							FVector Position;
+							FRotator Orientation;
+							float WorldToMeters = GetWorld() ? GetWorld()->GetWorldSettings()->WorldToMeters : 100.0f;
+							if (OtherController->GripPollControllerState(Position, Orientation, WorldToMeters))
+							{
+								/*curLocation*/ frontLoc = OtherController->CalcNewComponentToWorld(FTransform(Orientation, Position)).GetLocation() - BasePoint;
+								bPulledControllerLoc = true;
+							}
+						}
+					}
+				}
+
+				if (!bPulledControllerLoc)
+					/*curLocation*/ frontLoc = Grip.SecondaryGripInfo.SecondaryAttachment->GetComponentLocation() - BasePoint;
+
+				frontLocOrig = (/*WorldTransform*/SecondaryTransform.TransformPosition(Grip.SecondaryGripInfo.SecondaryRelativeTransform.GetLocation())) - BasePoint;
+				//frontLoc = curLocation;// -BasePoint;
+
+				if (Grip.SecondaryGripInfo.GripLerpState == EGripLerpState::StartLerp) // Lerp into the new grip to smooth the transition
+				{
+					if (Grip.AdvancedGripSettings.SecondaryGripSettings.SecondaryGripScaler < 1.0f)
+					{
+						FVector SmoothedValue = Grip.AdvancedGripSettings.SecondaryGripSettings.SmoothingOneEuro.RunFilterSmoothing(frontLoc, DeltaTime);
+
+						frontLoc = FMath::Lerp(SmoothedValue, frontLoc, Grip.AdvancedGripSettings.SecondaryGripSettings.SecondaryGripScaler);
+					}
+
+					frontLocOrig = FMath::Lerp(frontLocOrig, frontLoc, FMath::Clamp(Grip.SecondaryGripInfo.curLerp / Grip.SecondaryGripInfo.LerpToRate, 0.0f, 1.0f));
+				}
+				else if (Grip.SecondaryGripInfo.GripLerpState == EGripLerpState::ConstantLerp) // If there is a frame by frame lerp
+				{
+					FVector SmoothedValue = Grip.AdvancedGripSettings.SecondaryGripSettings.SmoothingOneEuro.RunFilterSmoothing(frontLoc, DeltaTime);
+
+					frontLoc = FMath::Lerp(SmoothedValue, frontLoc, Grip.AdvancedGripSettings.SecondaryGripSettings.SecondaryGripScaler);
+					//frontLoc = FMath::Lerp(Grip.SecondaryGripInfo.LastRelativeLocation, frontLoc, Grip.AdvancedGripSettings.SecondaryGripSettings.SecondaryGripScaler);
+				}
+
+				Grip.SecondaryGripInfo.LastRelativeLocation = frontLoc;
+			}
+
+			FVector Scaler = FVector(1.0f);
+			if (Grip.SecondaryGripInfo.GripLerpState != EGripLerpState::EndLerp)
+			{
+
+				//float Scaler = 1.0f;
+				if (SecondaryType == ESecondaryGripType::SG_FreeWithScaling_Retain || SecondaryType == ESecondaryGripType::SG_SlotOnlyWithScaling_Retain || SecondaryType == ESecondaryGripType::SG_ScalingOnly)
+				{
+					/*Grip.SecondaryScaler*/ Scaler = FVector(frontLoc.Size() / frontLocOrig.Size());
+					//bRescalePhysicsGrips = true; // This is for the physics grips
+
+					if (Grip.AdvancedGripSettings.SecondaryGripSettings.bUseSecondaryGripSettings && Grip.AdvancedGripSettings.SecondaryGripSettings.bLimitGripScaling)
+					{
+						// Get the total scale after modification
+						// #TODO: convert back to singular float version? Can get Min() & Max() to convert the float to a range...think about it
+						FVector WorldScale = /*WorldTransform*/SecondaryTransform.GetScale3D();
+						FVector CombinedScale = WorldScale * Scaler;
+
+						// Clamp to the minimum and maximum values
+						CombinedScale.X = FMath::Clamp(CombinedScale.X, Grip.AdvancedGripSettings.SecondaryGripSettings.MinimumGripScaling.X, Grip.AdvancedGripSettings.SecondaryGripSettings.MaximumGripScaling.X);
+						CombinedScale.Y = FMath::Clamp(CombinedScale.Y, Grip.AdvancedGripSettings.SecondaryGripSettings.MinimumGripScaling.Y, Grip.AdvancedGripSettings.SecondaryGripSettings.MaximumGripScaling.Y);
+						CombinedScale.Z = FMath::Clamp(CombinedScale.Z, Grip.AdvancedGripSettings.SecondaryGripSettings.MinimumGripScaling.Z, Grip.AdvancedGripSettings.SecondaryGripSettings.MaximumGripScaling.Z);
+
+						// Recreate in scaler form so that the transform chain below works as normal
+						Scaler = CombinedScale / WorldScale;
+					}
+					//Scaler = Grip.SecondaryScaler;
+				}
+			}
+
+			Grip.SecondaryGripInfo.SecondaryGripDistance = FVector::Dist(frontLocOrig, frontLoc);
+
+			if (Grip.AdvancedGripSettings.SecondaryGripSettings.bUseSecondaryGripSettings && Grip.AdvancedGripSettings.SecondaryGripSettings.bUseSecondaryGripDistanceInfluence)
+			{
+				//  If this is true it will treat the deadzone value as a constant value to apply instead
+				/*if (Grip.AdvancedGripSettings.SecondaryGripSettings.bUseGripInfluenceDeadZoneAsConstant)
+				{
+				frontLoc = FMath::Lerp(frontLocOrig, frontLoc, FMath::Clamp(Grip.AdvancedGripSettings.SecondaryGripSettings.GripInfluenceDeadZone, 0.0f, 1.0f));
+				}
+				else
+				{*/
+				float rotScaler = 1.0f - FMath::Clamp((Grip.SecondaryGripInfo.SecondaryGripDistance - Grip.AdvancedGripSettings.SecondaryGripSettings.GripInfluenceDeadZone) / FMath::Max(Grip.AdvancedGripSettings.SecondaryGripSettings.GripInfluenceDistanceToZero, 1.0f), 0.0f, 1.0f);
+				frontLoc = FMath::Lerp(frontLocOrig, frontLoc, rotScaler);
+				//}
+			}
+
+			// Skip rot val for scaling only
+			if (SecondaryType != ESecondaryGripType::SG_ScalingOnly)
+			{
+				// Get the rotation difference from the initial second grip
+				FQuat rotVal = FQuat::FindBetweenVectors(frontLocOrig, frontLoc);
+
+				// Rebase the world transform to the pivot point, add the rotation, remove the pivot point rebase
+				WorldTransform = WorldTransform * WorldToPivot * FTransform(rotVal, FVector::ZeroVector, Scaler) * PivotToWorld;
+			}
+			else
+			{
+				// Rebase the world transform to the pivot point, add the scaler, remove the pivot point rebase
+				WorldTransform = WorldTransform * WorldToPivot * FTransform(FQuat::Identity, FVector::ZeroVector, Scaler) * PivotToWorld;
+			}
+		}
+	}
 }
 
 void UGripMotionControllerComponent::TickGrip(float DeltaTime)
@@ -3141,13 +3317,11 @@ void UGripMotionControllerComponent::HandleGripArray(TArray<FBPActorGripInformat
 
 				if (bRootHasInterface)
 				{
-					if(IVRGripInterface::Execute_HasGripScripts(root))
-						GripScripts = IVRGripInterface::Execute_GetGripScripts(root);
+					IVRGripInterface::Execute_GetGripScripts(root, GripScripts);
 				}
 				else if (bActorHasInterface)
 				{
-					if (IVRGripInterface::Execute_HasGripScripts(actor))
-						GripScripts = IVRGripInterface::Execute_GetGripScripts(actor);
+					IVRGripInterface::Execute_GetGripScripts(actor, GripScripts);
 				}
 
 				// Get the world transform for this grip after handling secondary grips and interaction differences
