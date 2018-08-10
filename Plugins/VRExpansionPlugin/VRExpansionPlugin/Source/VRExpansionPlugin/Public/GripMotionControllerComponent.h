@@ -796,7 +796,6 @@ public:
 
 	// Gets the world transform of a grip, modified by secondary grips
 	void GetGripWorldTransform(TArray<UVRGripScriptBase*>& GripScripts, float DeltaTime,FTransform & WorldTransform, const FTransform &ParentTransform, FBPActorGripInformation &Grip, AActor * actor, UPrimitiveComponent * root, bool bRootHasInterface, bool bActorHasInterface/*, bool & bRescalePhysicsGrips*/);
-	inline void GetDefaultGripTransform(float DeltaTime, FTransform & WorldTransform, const FTransform &ParentTransform, FBPActorGripInformation &Grip, AActor * actor, UPrimitiveComponent * root, bool bRootHasInterface, bool bActorHasInterface);
 
 	// Calculate component to world without the protected tag, doesn't set it, just returns it
 	inline FTransform CalcControllerComponentToWorld(FRotator Orientation, FVector Position)
