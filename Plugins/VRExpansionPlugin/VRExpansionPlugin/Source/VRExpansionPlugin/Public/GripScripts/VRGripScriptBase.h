@@ -30,7 +30,7 @@ enum class EGSTransformOverrideType : uint8
 	ModifiesWorldTransform
 };
 
-UCLASS(Blueprintable, EditInlineNew, DefaultToInstanced, Abstract, ClassGroup = (VRExpansionPlugin))
+UCLASS(NotBlueprintable, EditInlineNew, DefaultToInstanced, Abstract, ClassGroup = (VRExpansionPlugin))
 class VREXPANSIONPLUGIN_API UVRGripScriptBase : public UObject
 {
 	GENERATED_BODY()
@@ -128,7 +128,6 @@ public:
 		return false;
 	}
 
-
 	// Not all scripts will require this function, specific ones that use things like Lever logic however will. Best to call it.
 	// Grippables will automatically call this, however if you manually spawn a grip script during play or you make your own
 	// Interfaced grip object and give it grippables, YOU will be required to call this event on them.
@@ -161,4 +160,55 @@ public:
 	void OnSecondaryGripRelease(UGripMotionControllerComponent * Controller, USceneComponent * ReleasingSecondaryGripComponent, const FBPActorGripInformation & GripInformation);
 	virtual void OnSecondaryGripRelease_Implementation(UGripMotionControllerComponent * Controller, USceneComponent * ReleasingSecondaryGripComponent, const FBPActorGripInformation & GripInformation);
 	
+
+	// Begin virtual funcs
+
+	virtual void CallCorrect_GetWorldTransform(UGripMotionControllerComponent * OwningController, float DeltaTime, FTransform & WorldTransform, const FTransform &ParentTransform, FBPActorGripInformation &Grip, AActor * actor, UPrimitiveComponent * root, bool bRootHasInterface, bool bActorHasInterface)
+	{
+		GetWorldTransform_Implementation(OwningController, DeltaTime, WorldTransform, ParentTransform, Grip, actor, root, bRootHasInterface, bActorHasInterface);
+	}
+
+	virtual bool CallCorrect_Wants_DenyAutoDrop()
+	{
+		return Wants_DenyAutoDrop_Implementation();
+	}
+
+	virtual bool CallCorrect_IsScriptActive()
+	{
+		return IsScriptActive_Implementation();
+	}
+
+	virtual EGSTransformOverrideType CallCorrect_GetWorldTransformOverrideType()
+	{
+		return GetWorldTransformOverrideType_Implementation();
+	}
+};
+
+
+UCLASS(Blueprintable, EditInlineNew, DefaultToInstanced, Abstract, ClassGroup = (VRExpansionPlugin))
+class VREXPANSIONPLUGIN_API UVRGripScriptBaseBP : public UVRGripScriptBase
+{
+	GENERATED_BODY()
+public:
+
+	virtual void CallCorrect_GetWorldTransform(UGripMotionControllerComponent * OwningController, float DeltaTime, FTransform & WorldTransform, const FTransform &ParentTransform, FBPActorGripInformation &Grip, AActor * actor, UPrimitiveComponent * root, bool bRootHasInterface, bool bActorHasInterface) override
+	{
+		GetWorldTransform(OwningController, DeltaTime, WorldTransform, ParentTransform, Grip, actor, root, bRootHasInterface, bActorHasInterface);
+	}
+
+	virtual bool CallCorrect_Wants_DenyAutoDrop() override
+	{
+		return Wants_DenyAutoDrop();
+	}
+
+	virtual bool CallCorrect_IsScriptActive() override
+	{
+		return IsScriptActive();
+	}
+
+	virtual EGSTransformOverrideType CallCorrect_GetWorldTransformOverrideType() override
+	{
+		return GetWorldTransformOverrideType();
+	}
+
 };

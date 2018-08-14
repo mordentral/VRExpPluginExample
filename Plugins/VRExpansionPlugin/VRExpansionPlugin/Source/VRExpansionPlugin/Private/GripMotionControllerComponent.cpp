@@ -2999,7 +2999,7 @@ void UGripMotionControllerComponent::GetGripWorldTransform(TArray<UVRGripScriptB
 		// Get grip script world transform overrides (if there are any)
 		for (UVRGripScriptBase* Script: GripScripts)
 		{
-			if (Script && Script->IsScriptActive() && Script->GetWorldTransformOverrideType() == EGSTransformOverrideType::OverridesWorldTransform)
+			if (Script && Script->CallCorrect_IsScriptActive() && Script->CallCorrect_GetWorldTransformOverrideType() == EGSTransformOverrideType::OverridesWorldTransform)
 			{
 				// One of the grip scripts overrides the default transform
 				bGetDefaultTransform = false;
@@ -3008,30 +3008,17 @@ void UGripMotionControllerComponent::GetGripWorldTransform(TArray<UVRGripScriptB
 		}
 
 		// If none of the scripts override the base transform
-		if (bGetDefaultTransform)
+		if (bGetDefaultTransform && DefaultGripScript)
 		{		
-			if (DefaultGripScript)
-			{
-				if (UBlueprintGeneratedClass* BPClass = Cast<UBlueprintGeneratedClass>(DefaultGripScript->GetClass()))
-				{
-					DefaultGripScript->GetWorldTransform(this, DeltaTime, WorldTransform, ParentTransform, Grip, actor, root, bRootHasInterface, bActorHasInterface);
-				}
-				else
-					DefaultGripScript->GetWorldTransform_Implementation(this, DeltaTime, WorldTransform, ParentTransform, Grip, actor, root, bRootHasInterface, bActorHasInterface);
-			}
+			DefaultGripScript->CallCorrect_GetWorldTransform(this, DeltaTime, WorldTransform, ParentTransform, Grip, actor, root, bRootHasInterface, bActorHasInterface);
 		}
 
 		// Get grip script world transform modifiers (if there are any)
 		for (UVRGripScriptBase* Script : GripScripts)
 		{
-			if (Script && Script->IsScriptActive() && Script->GetWorldTransformOverrideType() != EGSTransformOverrideType::None)
+			if (Script && Script->CallCorrect_IsScriptActive() && Script->CallCorrect_GetWorldTransformOverrideType() != EGSTransformOverrideType::None)
 			{
-				if (UBlueprintGeneratedClass* BPClass = Cast<UBlueprintGeneratedClass>(Script->GetClass()))
-				{
-					Script->GetWorldTransform(this, DeltaTime, WorldTransform, ParentTransform, Grip, actor, root, bRootHasInterface, bActorHasInterface);
-				}
-				else
-					Script->GetWorldTransform_Implementation(this, DeltaTime, WorldTransform, ParentTransform, Grip, actor, root, bRootHasInterface, bActorHasInterface);
+				Script->CallCorrect_GetWorldTransform(this, DeltaTime, WorldTransform, ParentTransform, Grip, actor, root, bRootHasInterface, bActorHasInterface);
 			}
 		}
 	}
@@ -3039,12 +3026,7 @@ void UGripMotionControllerComponent::GetGripWorldTransform(TArray<UVRGripScriptB
 	{
 		if (DefaultGripScript)
 		{
-			if (UBlueprintGeneratedClass* BPClass = Cast<UBlueprintGeneratedClass>(DefaultGripScript->GetClass()))
-			{
-				DefaultGripScript->GetWorldTransform(this, DeltaTime, WorldTransform, ParentTransform, Grip, actor, root, bRootHasInterface, bActorHasInterface);
-			}
-			else
-				DefaultGripScript->GetWorldTransform_Implementation(this, DeltaTime, WorldTransform, ParentTransform, Grip, actor, root, bRootHasInterface, bActorHasInterface);
+			DefaultGripScript->CallCorrect_GetWorldTransform(this, DeltaTime, WorldTransform, ParentTransform, Grip, actor, root, bRootHasInterface, bActorHasInterface);
 		}
 	}
 
