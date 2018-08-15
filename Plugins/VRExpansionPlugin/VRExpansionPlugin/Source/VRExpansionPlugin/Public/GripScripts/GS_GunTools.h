@@ -14,6 +14,7 @@ public:
 
 	// Shoulder Attachment component
 	// Shoulder attachment transform
+	// Pivot offset transform for when not shoulder mounted
 
 	// Recoil max magnitude
 	// Recoil falloff
