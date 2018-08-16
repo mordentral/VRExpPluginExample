@@ -104,6 +104,7 @@ UGripMotionControllerComponent::UGripMotionControllerComponent(const FObjectInit
 	CurrentControllerProfileTransform = FTransform::Identity;
 
 	DefaultGripScript = nullptr;
+	DefaultGripScriptClass = UGS_Default::StaticClass();
 }
 
 //=============================================================================
@@ -222,7 +223,9 @@ void UGripMotionControllerComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if (!DefaultGripScript)
+	if (!DefaultGripScript && DefaultGripScriptClass)
+		DefaultGripScript = DefaultGripScriptClass.GetDefaultObject();
+	else
 		DefaultGripScript = GetMutableDefault<UGS_Default>();
 }
 

@@ -7,7 +7,7 @@
 #include "GS_GunTools.generated.h"
 
 UCLASS(NotBlueprintable, ClassGroup = (VRExpansionPlugin))
-class VREXPANSIONPLUGIN_API UGS_GunTools : public UVRGripScriptBase
+class VREXPANSIONPLUGIN_API UGS_GunTools : public UGS_Default
 {
 	GENERATED_BODY()
 public:
