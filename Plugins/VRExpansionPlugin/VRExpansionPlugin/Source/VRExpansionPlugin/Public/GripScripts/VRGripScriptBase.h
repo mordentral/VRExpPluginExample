@@ -86,7 +86,7 @@ public:
 
 	// Returns the expected grip transform (relative * controller + addition)
 	UFUNCTION(BlueprintPure, Category = "VRGripScript")
-	FTransform GetGripTransform(UPARAM(ref)FBPActorGripInformation &Grip, UPARAM(ref)FTransform & ParentTransform)
+	FTransform GetGripTransform(const FBPActorGripInformation &Grip, const FTransform & ParentTransform)
 	{
 		return Grip.RelativeTransform * Grip.AdditionTransform * ParentTransform;
 	}
