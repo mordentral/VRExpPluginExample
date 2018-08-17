@@ -84,6 +84,13 @@ public:
 	virtual bool CallRemoteFunction(UFunction * Function, void * Parms, FOutParmRec * OutParms, FFrame * Stack) override;
 	virtual int32 GetFunctionCallspace(UFunction * Function, void * Parameters, FFrame * Stack) override;
 
+	// Returns the expected grip transform (relative * controller + addition)
+	UFUNCTION(BlueprintPure, Category = "VRGripScript")
+	FTransform GetGripTransform(UPARAM(ref)FBPActorGripInformation &Grip, UPARAM(ref)FTransform & ParentTransform)
+	{
+		return Grip.RelativeTransform * Grip.AdditionTransform * ParentTransform;
+	}
+
 	// Returns the current world transform of the owning object (or root comp of if it is an actor)
 	UFUNCTION(BlueprintPure, Category = "VRGripScript")
 	FTransform GetParentTransform(bool bGetWorldTransform = true)
