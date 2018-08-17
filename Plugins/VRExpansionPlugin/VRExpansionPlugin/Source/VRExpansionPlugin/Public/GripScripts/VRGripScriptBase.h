@@ -40,10 +40,10 @@ public:
 
 	UVRGripScriptBase(const FObjectInitializer& ObjectInitializer);
 
-	/*bool IsSupportedForNetworking() const override
+	bool IsSupportedForNetworking() const override
 	{
-		return bRequiresReplicationSupport || IsNameStableForNetworking();
-	}*/
+		return true;//bRequiresReplicationSupport || IsNameStableForNetworking();
+	}
 	// I don't need to do this, there should be no dynamic script spawning and they are all name stable by default
 	
 	// Returns if the script is currently active and should be used
@@ -75,8 +75,7 @@ public:
 	virtual bool Wants_DenyTeleport_Implementation();*/
 	
 
-	// If true then this will tell the owning grippable that it needs to be replicated, forcing all other attached scripts to also be replicated
-	// If the other scripts don't replicate any variables then they will have minimal overhead.
+	// If true then this will tell the owning grippable that it needs to be replicated, this saves some perf when false
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "DefaultSettings")
 		bool bRequiresReplicationSupport;
 
