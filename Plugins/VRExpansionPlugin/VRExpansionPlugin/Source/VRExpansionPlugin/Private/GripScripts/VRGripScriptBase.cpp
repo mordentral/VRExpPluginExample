@@ -12,7 +12,6 @@ UVRGripScriptBase::UVRGripScriptBase(const FObjectInitializer& ObjectInitializer
 //	PrimaryComponentTick.bStartWithTickEnabled = false;
 //	PrimaryComponentTick.TickGroup = ETickingGroup::TG_PrePhysics;
 	WorldTransformOverrideType = EGSTransformOverrideType::None;
-	bRequiresReplicationSupport = false;
 }
 
 
@@ -37,22 +36,15 @@ void UVRGripScriptBase::GetLifetimeReplicatedProps(TArray< class FLifetimeProper
 	//Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	// Replicate here if required
-	if (bRequiresReplicationSupport)
+	UBlueprintGeneratedClass* BPClass = Cast<UBlueprintGeneratedClass>(GetClass());
+	if (BPClass != NULL)
 	{
-		UBlueprintGeneratedClass* BPClass = Cast<UBlueprintGeneratedClass>(GetClass());
-		if (BPClass != NULL)
-		{
-			BPClass->GetLifetimeBlueprintReplicationList(OutLifetimeProps);
-		}
+		BPClass->GetLifetimeBlueprintReplicationList(OutLifetimeProps);
 	}
 }
 
 bool UVRGripScriptBase::CallRemoteFunction(UFunction * Function, void * Parms, FOutParmRec * OutParms, FFrame * Stack)
 {
-	// If required then replicate
-	if (!bRequiresReplicationSupport)
-		return false;
-
 	AActor* Owner = Cast<AActor>(GetOuter());
 	if (Owner)
 	{
