@@ -45,7 +45,7 @@ void UVRGripScriptBase::GetLifetimeReplicatedProps(TArray< class FLifetimeProper
 
 bool UVRGripScriptBase::CallRemoteFunction(UFunction * Function, void * Parms, FOutParmRec * OutParms, FFrame * Stack)
 {
-	AActor* Owner = Cast<AActor>(GetOuter());
+	AActor* Owner = GetOwner();//Cast<AActor>(GetOuter());
 	if (Owner)
 	{
 		UNetDriver* NetDriver = Owner->GetNetDriver();
@@ -61,6 +61,6 @@ bool UVRGripScriptBase::CallRemoteFunction(UFunction * Function, void * Parms, F
 
 int32 UVRGripScriptBase::GetFunctionCallspace(UFunction * Function, void * Parameters, FFrame * Stack)
 {
-	AActor* Owner = Cast<AActor>(GetOuter());
+	AActor* Owner = GetOwner();// Cast<AActor>(GetOuter());
 	return (Owner ? Owner->GetFunctionCallspace(Function, Parameters, Stack) : FunctionCallspace::Local);
 }
