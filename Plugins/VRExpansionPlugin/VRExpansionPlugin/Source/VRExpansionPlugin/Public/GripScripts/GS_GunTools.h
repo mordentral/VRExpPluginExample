@@ -14,7 +14,8 @@ public:
 
 	// Shoulder Attachment component
 	// Shoulder attachment transform
-	// Pivot offset transform for when not shoulder mounted
+	// Pivot offset transform for when not shoulder mounted -Offset location
+	// FVector PivotOffset; // Offset to apply to the pivot (good for centering pivot into the palm ect).
 
 	// Recoil max magnitude
 	// Recoil falloff
