@@ -10,6 +10,7 @@
 #include "GameplayTagAssetInterface.h"
 #include "Components/SphereComponent.h"
 #include "GripScripts/VRGripScriptBase.h"
+#include "Engine/ActorChannel.h"
 #include "GrippableSphereComponent.generated.h"
 
 /**
