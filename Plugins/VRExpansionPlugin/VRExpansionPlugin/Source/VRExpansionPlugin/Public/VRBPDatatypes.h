@@ -1090,6 +1090,8 @@ public:
 	{}
 };*/
 
+#define INVALID_VRGRIP_ID 0
+
 USTRUCT(BlueprintType, Category = "VRExpansionLibrary")
 struct VREXPANSIONPLUGIN_API FBPActorGripInformation
 {
@@ -1186,7 +1188,7 @@ public:
 			CachedStiffness(1500.0f),
 			CachedDamping(200.0f),
 			CachedBoneName(NAME_None),
-			CachedGripID(0)
+			CachedGripID(INVALID_VRGRIP_ID)
 		{}
 
 	}ValueCache;
@@ -1245,7 +1247,7 @@ public:
 	//This is here for the Find() function from TArray
 	FORCEINLINE bool operator==(const FBPActorGripInformation &Other) const
 	{
-		if (GripID == Other.GripID)
+		if ((GripID != INVALID_VRGRIP_ID) && (GripID == Other.GripID) )
 			return true;
 			//if (GrippedObject && GrippedObject == Other.GrippedObject)
 			//return true;
@@ -1279,14 +1281,14 @@ public:
 
 	FORCEINLINE bool operator==(const uint8& Other) const
 	{
-		if (GripID == Other)
+		if ((GripID != INVALID_VRGRIP_ID) && (GripID == Other))
 			return true;
 
 		return false;
 	}
 
 	FBPActorGripInformation() :
-		GripID(0),
+		GripID(INVALID_VRGRIP_ID),
 		GripTargetType(EGripTargetType::ActorGrip),
 		GrippedObject(nullptr),
 		GripCollisionType(EGripCollisionType::InteractiveCollisionWithPhysics),
@@ -1434,14 +1436,14 @@ public:
 		//Actor = nullptr;
 		//Component = nullptr;
 		COMPosition = U2PTransform(FTransform::Identity);
-		GripID = 0;
+		GripID = INVALID_VRGRIP_ID;
 		RootBoneRotation = FTransform::Identity;
 		bSetCOM = false;
 	}
 
 	FORCEINLINE bool operator==(const FBPActorGripInformation & Other) const
 	{
-		return (GripID == Other.GripID);
+		return ((GripID != INVALID_VRGRIP_ID) && (GripID == Other.GripID));
 	}
 
 };
