@@ -775,14 +775,7 @@ bool UGripMotionControllerComponent::DropObject(
 			return DropGrip(*GripInfo, bSimulate, OptionalAngularVelocity, OptionalLinearVelocity);
 		}
 	}
-	/*if (UPrimitiveComponent * PrimComp = Cast<UPrimitiveComponent>(ObjectToDrop))
-	{
-		return DropComponent(PrimComp, GripIDToDrop, bSimulate, OptionalAngularVelocity, OptionalLinearVelocity);
-	}
-	else if (AActor * Actor = Cast<AActor>(ObjectToDrop))
-	{
-		return DropActor(Actor, GripIDToDrop, bSimulate, OptionalAngularVelocity, OptionalLinearVelocity);
-	}*/
+
 	return false;
 }
 
@@ -944,22 +937,16 @@ bool UGripMotionControllerComponent::DropObjectByInterface(UObject * ObjectToDro
 
 		if (root->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
 		{
-			// #TODO: Is this valid? Dropping with roots interface on an actor grip?
-			// It allows for the root comp to be gripped separately, but it should never have been an actor grip then...
-
 			return DropGrip(*GripInfo, IVRGripInterface::Execute_SimulateOnDrop(root), OptionalAngularVelocity, OptionalLinearVelocity);
-			//return DropActor(Actor, GripIDToDrop, IVRGripInterface::Execute_SimulateOnDrop(root), OptionalAngularVelocity, OptionalLinearVelocity);
 		}
 		else if (Actor->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
 		{
 			return DropGrip(*GripInfo, IVRGripInterface::Execute_SimulateOnDrop(Actor), OptionalAngularVelocity, OptionalLinearVelocity);
-			//return DropActor(Actor, GripIDToDrop, IVRGripInterface::Execute_SimulateOnDrop(Actor), OptionalAngularVelocity, OptionalLinearVelocity);
 		}
 		else
 		{
 			// Failsafe drop here
 			return DropGrip(*GripInfo, true, OptionalAngularVelocity, OptionalLinearVelocity);
-			//return DropActor(Actor, GripIDToDrop, true, OptionalAngularVelocity, OptionalLinearVelocity);
 		}
 	}
 
@@ -1346,14 +1333,6 @@ bool UGripMotionControllerComponent::DropComponent(UPrimitiveComponent * Compone
 		return DropGrip(*GripInfo, bSimulate, OptionalAngularVelocity, OptionalLinearVelocity);
 	}
 
-	/*for (int i = LocallyGrippedObjects.Num() - 1; i >= 0; --i)
-	{
-		if (LocallyGrippedObjects[i] == ComponentToDrop)
-		{
-			return DropGrip(LocallyGrippedObjects[i], bSimulate, OptionalAngularVelocity, OptionalLinearVelocity);
-		}
-	}*/
-
 	// If we aren't the server then fail out
 	if (!IsServer())
 	{
@@ -1374,13 +1353,6 @@ bool UGripMotionControllerComponent::DropComponent(UPrimitiveComponent * Compone
 		return false;
 	}
 
-	/*for (int i = GrippedObjects.Num() - 1; i >= 0; --i)
-	{
-		if (GrippedObjects[i] == ComponentToDrop)
-		{
-			return DropGrip(GrippedObjects[i], bSimulate,OptionalAngularVelocity, OptionalLinearVelocity);
-		}
-	}*/
 	//return false;
 }
 
