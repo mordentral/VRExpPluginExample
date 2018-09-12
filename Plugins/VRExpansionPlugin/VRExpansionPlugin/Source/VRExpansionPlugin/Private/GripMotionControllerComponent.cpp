@@ -4589,17 +4589,14 @@ void UGripMotionControllerComponent::Server_NotifySecondaryAttachmentChanged_Imp
 	const FBPSecondaryGripInfo& SecondaryGripInfo)
 {
 
-	for (FBPActorGripInformation & Grip : LocallyGrippedObjects)
+	FBPActorGripInformation * GripInfo = LocallyGrippedObjects.FindByKey(GripID);
+	if (GripInfo != nullptr)
 	{
-		if (Grip == GripID)
-		{
-			// I override the = operator now so that it won't set the lerp components
-			Grip.SecondaryGripInfo.RepCopy(SecondaryGripInfo);
+		// I override the = operator now so that it won't set the lerp components
+		GripInfo->SecondaryGripInfo.RepCopy(SecondaryGripInfo);
 
-			// Initialize the differences, clients will do this themselves on the rep back
-			HandleGripReplication(Grip);
-			break;
-		}
+		// Initialize the differences, clients will do this themselves on the rep back
+		HandleGripReplication(*GripInfo);
 	}
 
 }
@@ -4616,18 +4613,15 @@ void UGripMotionControllerComponent::Server_NotifySecondaryAttachmentChanged_Ret
 	const FBPSecondaryGripInfo& SecondaryGripInfo, const FTransform_NetQuantize & NewRelativeTransform)
 {
 
-	for (FBPActorGripInformation & Grip : LocallyGrippedObjects)
+	FBPActorGripInformation * GripInfo = LocallyGrippedObjects.FindByKey(GripID);
+	if (GripInfo != nullptr)
 	{
-		if (Grip == GripID)
-		{
-			// I override the = operator now so that it won't set the lerp components
-			Grip.SecondaryGripInfo.RepCopy(SecondaryGripInfo);
-			Grip.RelativeTransform = NewRelativeTransform;
+		// I override the = operator now so that it won't set the lerp components
+		GripInfo->SecondaryGripInfo.RepCopy(SecondaryGripInfo);
+		GripInfo->RelativeTransform = NewRelativeTransform;
 
-			// Initialize the differences, clients will do this themselves on the rep back
-			HandleGripReplication(Grip);
-			break;
-		}
+		// Initialize the differences, clients will do this themselves on the rep back
+		HandleGripReplication(*GripInfo);
 	}
 
 }
@@ -4757,6 +4751,7 @@ void FExpandedLateUpdateManager::GatherLateUpdatePrimitives(USceneComponent* Par
 	ParentComponent->GetChildrenComponents(true, Components);
 	for (USceneComponent* Component : Components)
 	{	
+		if (Component != nullptr)
 		if (Component != nullptr)
 			CacheSceneInfo(Component);
 	}
