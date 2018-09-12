@@ -940,8 +940,6 @@ public:
 	bool TeleportMoveGrip_Impl(FBPActorGripInformation &Grip, bool bTeleportPhysicsGrips, bool bIsForPostTeleport, FTransform & OptionalTransform);
 
 	// Adds a secondary attachment point to the grip
-	// If the GrippedObjectToAddAttachment is empty then it will try to execute on the GripID
-	// Otherwise pass in INVALID_VRGRIP_ID to it
 	UFUNCTION(BlueprintCallable, Category = "GripMotionController")
 	bool AddSecondaryAttachmentPoint(UObject * GrippedObjectToAddAttachment, USceneComponent * SecondaryPointComponent, const FTransform &OriginalTransform, bool bTransformIsAlreadyRelative = false, float LerpToTime = 0.25f, bool bIsSlotGrip = false);
 

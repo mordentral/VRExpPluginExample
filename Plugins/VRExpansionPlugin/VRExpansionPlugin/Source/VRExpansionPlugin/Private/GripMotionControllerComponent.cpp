@@ -2458,14 +2458,16 @@ bool UGripMotionControllerComponent::AddSecondaryAttachmentPoint(UObject * Gripp
 
 	FBPActorGripInformation * GripToUse = nullptr;
 
-	for (int i = LocallyGrippedObjects.Num() - 1; i >= 0; --i)
+	GripToUse = LocallyGrippedObjects.FindByKey(GrippedObjectToAddAttachment);
+
+	/*for (int i = LocallyGrippedObjects.Num() - 1; i >= 0; --i)
 	{
 		if (LocallyGrippedObjects[i].GrippedObject == GrippedObjectToAddAttachment)
 		{
 			GripToUse = &LocallyGrippedObjects[i];
 			break;
 		}
-	}
+	}*/
 
 	// Search replicated grips if not found in local
 	if (!GripToUse)
@@ -2477,14 +2479,15 @@ bool UGripMotionControllerComponent::AddSecondaryAttachmentPoint(UObject * Gripp
 			return false;
 		}
 
-		for (int i = GrippedObjects.Num() - 1; i >= 0; --i)
+		GripToUse = GrippedObjects.FindByKey(GrippedObjectToAddAttachment);
+		/*for (int i = GrippedObjects.Num() - 1; i >= 0; --i)
 		{
 			if (GrippedObjects[i].GrippedObject == GrippedObjectToAddAttachment)
 			{
 				GripToUse = &GrippedObjects[i];
 				break;
 			}
-		}
+		}*/
 	}
 
 	if (GripToUse)
@@ -4600,8 +4603,9 @@ void UGripMotionControllerComponent::Server_NotifyLocalGripAddedOrChanged_Implem
 
 	if (!LocallyGrippedObjects.Contains(newGrip))
 	{
-		LocallyGrippedObjects.Add(newGrip);
+		int32 NewIndex = LocallyGrippedObjects.Add(newGrip);
 
+		HandleGripReplication(LocallyGrippedObjects[NewIndex]);
 		// Initialize the differences, clients will do this themselves on the rep back, this sets up the cache
 		//HandleGripReplication(LocallyGrippedObjects[LocallyGrippedObjects.Num() - 1]);
 	}
@@ -4611,11 +4615,12 @@ void UGripMotionControllerComponent::Server_NotifyLocalGripAddedOrChanged_Implem
 		if (LocallyGrippedObjects.Find(newGrip, IndexFound))
 		{
 			LocallyGrippedObjects[IndexFound].RepCopy(newGrip);
+			HandleGripReplication(LocallyGrippedObjects[IndexFound]);
 		}
 	}
 
 	// Server has to call this themselves
-	OnRep_LocallyGrippedObjects();
+	//OnRep_LocallyGrippedObjects();
 }
 
 
