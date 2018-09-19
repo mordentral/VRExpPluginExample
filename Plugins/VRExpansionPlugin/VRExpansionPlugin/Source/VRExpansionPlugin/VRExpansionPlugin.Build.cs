@@ -90,7 +90,8 @@ public class VRExpansionPlugin : ModuleRules
                 "AIModule",
                 "UMG",
                 "GameplayTags",
-                "PhysXVehicles"
+                "PhysXVehicles",
+                "GameplayDebugger"
 
                 //"Renderer",
                // "UtilityShaders"
