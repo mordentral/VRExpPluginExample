@@ -1,9 +1,8 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-#include "GS_GunTools.h"
+#include "GripScripts/GS_GunTools.h"
 #include "VRGripInterface.h"
 #include "GripMotionControllerComponent.h"
-#include "GripScripts/GS_GunTools.h"
 
 UGS_GunTools::UGS_GunTools(const FObjectInitializer& ObjectInitializer) :
 	Super(ObjectInitializer)
