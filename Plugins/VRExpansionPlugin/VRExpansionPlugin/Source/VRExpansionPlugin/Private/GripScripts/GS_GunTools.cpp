@@ -22,7 +22,7 @@ UGS_GunTools::UGS_GunTools(const FObjectInitializer& ObjectInitializer) :
 	MaxRecoil = FTransform::Identity;
 	DecayRate = 1.f;
 
-	FTransform BackEndRecoilStorage;
+	BackEndRecoilStorage;
 }
 
 bool UGS_GunTools::GetWorldTransform_Implementation
