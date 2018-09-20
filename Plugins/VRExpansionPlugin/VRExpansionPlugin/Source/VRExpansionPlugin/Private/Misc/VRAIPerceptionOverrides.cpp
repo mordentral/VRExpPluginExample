@@ -13,8 +13,8 @@
 #include "Perception/AIPerceptionSystem.h"
 
 #if WITH_GAMEPLAY_DEBUGGER
-#include "GameplayDebugger/Public/GameplayDebuggerTypes.h"
-#include "GameplayDebugger/Public/GameplayDebuggerCategory.h"
+#include "GameplayDebuggerTypes.h"
+#include "GameplayDebuggerCategory.h"
 #endif
 DEFINE_LOG_CATEGORY(LogAIPerception);
 
