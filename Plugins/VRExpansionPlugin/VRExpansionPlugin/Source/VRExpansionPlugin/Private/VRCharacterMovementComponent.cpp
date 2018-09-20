@@ -2620,7 +2620,7 @@ float UVRCharacterMovementComponent::ImmersionDepth() const
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
 	FVector TopOfCapsule;
 	if (VRRootCapsule)
-		TopOfCapsule = VRRootCapsule->GetVRLocation_Impl();
+		TopOfCapsule = VRRootCapsule->GetVRLocation_Inline();
 	else
 		TopOfCapsule = GetActorLocation();
 
