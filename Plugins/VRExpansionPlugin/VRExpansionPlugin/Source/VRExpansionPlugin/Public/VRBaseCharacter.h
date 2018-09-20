@@ -271,10 +271,14 @@ public:
 	{
 		return OffsetComponentToWorld.GetRotation().Rotator();
 	}
-
 	// Gets the location of the HMD, if the camera is missing then it just returns waist location instead
-	UFUNCTION(BlueprintPure, Category = "BaseVRCharacter|VRLocations")
-		FVector GetVRHeadLocation() const
+	UFUNCTION(BlueprintPure, Category = "BaseVRCharacter|VRLocations", meta = (DisplayName = "GetVRHeadLocation", ScriptName = "GetVRHeadLocation", Keywords = "position"))
+		FVector K2_GetVRHeadLocation() const
+	{
+		GetVRHeadLocation();
+	}
+
+	inline FVector GetVRHeadLocation() const
 	{
 		return VRReplicatedCamera != nullptr ? VRReplicatedCamera->GetComponentLocation() : OffsetComponentToWorld.GetLocation();
 	}
