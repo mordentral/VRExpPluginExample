@@ -268,7 +268,7 @@ public:
 	UFUNCTION(BlueprintPure, Category = "BaseVRCharacter|VRLocations", meta = (DisplayName = "GetVRHeadLocation", ScriptName = "GetVRHeadLocation", Keywords = "position"))
 		FVector K2_GetVRHeadLocation() const
 	{
-		GetVRHeadLocation();
+		return GetVRHeadLocation();
 	}
 
 	inline FVector GetVRHeadLocation() const
