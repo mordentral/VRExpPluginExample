@@ -26,6 +26,14 @@
 		{
 			"Name": "OpenVRExpansionPlugin",
 			"Enabled": true
+		},
+		{
+			"Name": "KantanDocGen",
+			"Enabled": true
+		},
+		{
+			"Name": "KnucklesPlugin",
+			"Enabled": true
 		}
 	],
 	"TargetPlatforms": [
