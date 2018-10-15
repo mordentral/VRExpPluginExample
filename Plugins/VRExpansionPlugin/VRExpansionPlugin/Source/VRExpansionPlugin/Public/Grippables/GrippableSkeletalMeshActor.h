@@ -12,6 +12,7 @@
 #include "GameplayTagAssetInterface.h"
 #include "GripScripts/VRGripScriptBase.h"
 #include "Engine/ActorChannel.h"
+#include "DrawDebugHelpers.h"
 #include "GrippableSkeletalMeshActor.generated.h"
 
 /**
@@ -133,7 +134,8 @@ public:
 		}
 
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-		if (CVarDrawDebugRepMovement->GetInt() > 0)
+		static const auto CVarDrawDebugRepMovement = IConsoleManager::Get().FindTConsoleVariableDataInt(TEXT("Net.RepMovement.DrawDebug"));
+		if (CVarDrawDebugRepMovement->GetValueOnGameThread() > 0)
 		{
 			DrawDebugCapsule(GetWorld(), ReplicatedMovement.Location, GetSimpleCollisionHalfHeight(), GetSimpleCollisionRadius(), ReplicatedMovement.Rotation.Quaternion(), FColor(100, 255, 100), true, 1.f);
 		}

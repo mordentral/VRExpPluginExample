@@ -1416,18 +1416,21 @@ void UVRCharacterMovementComponent::ReplicateMoveToServer(float DeltaTime, const
 		bool bSendServerMove = true;
 
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+
 		// Testing options: Simulated packet loss to server
 		const float TimeSinceLossStart = (MyWorld->RealTimeSeconds - ClientData->DebugForcedPacketLossTimerStart);
-		if (ClientData->DebugForcedPacketLossTimerStart > 0.f && (TimeSinceLossStart < CharacterMovementCVars::NetForceClientServerMoveLossDuration))
+		static const auto CVarNetForceClientServerMoveLossDuration = IConsoleManager::Get().FindTConsoleVariableDataFloat(TEXT("p.NetForceClientServerMoveLossDuration"));
+		static const auto CVarNetForceClientServerMoveLossPercent = IConsoleManager::Get().FindTConsoleVariableDataFloat(TEXT("p.NetForceClientServerMoveLossPercent"));
+		if (ClientData->DebugForcedPacketLossTimerStart > 0.f && (TimeSinceLossStart < CVarNetForceClientServerMoveLossDuration->GetValueOnGameThread()))
 		{
 			bSendServerMove = false;
-			UE_LOG(LogVRCharacterMovement, Log, TEXT("Drop ServerMove, %.2f time remains"), CharacterMovementCVars::NetForceClientServerMoveLossDuration - TimeSinceLossStart);
+			UE_LOG(LogVRCharacterMovement, Log, TEXT("Drop ServerMove, %.2f time remains"), CVarNetForceClientServerMoveLossDuration->GetValueOnGameThread() - TimeSinceLossStart);
 		}
-		else if (CharacterMovementCVars::NetForceClientServerMoveLossPercent != 0.f && (FMath::SRand() < CharacterMovementCVars::NetForceClientServerMoveLossPercent))
+		else if (CVarNetForceClientServerMoveLossPercent->GetValueOnGameThread() != 0.f && (FMath::SRand() < CVarNetForceClientServerMoveLossPercent->GetValueOnGameThread()))
 		{
 			bSendServerMove = false;
-			ClientData->DebugForcedPacketLossTimerStart = (CharacterMovementCVars::NetForceClientServerMoveLossDuration > 0) ? MyWorld->RealTimeSeconds : 0.0f;
-			UE_LOG(LogVRCharacterMovement, Log, TEXT("Drop ServerMove, %.2f time remains"), CharacterMovementCVars::NetForceClientServerMoveLossDuration);
+			ClientData->DebugForcedPacketLossTimerStart = (CVarNetForceClientServerMoveLossDuration->GetValueOnGameThread() > 0) ? MyWorld->RealTimeSeconds : 0.0f;
+			UE_LOG(LogVRCharacterMovement, Log, TEXT("Drop ServerMove, %.2f time remains"), CVarNetForceClientServerMoveLossDuration->GetValueOnGameThread());
 		}
 		else
 		{
