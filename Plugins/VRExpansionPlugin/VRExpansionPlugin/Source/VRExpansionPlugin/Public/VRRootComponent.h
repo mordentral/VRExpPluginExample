@@ -167,7 +167,7 @@ public:
 #endif // WITH_EDITOR
 	// End UObject interface
 
-	virtual FBoxSphereBounds CalcBounds(const FTransform& LocalToWorld) const override
+	virtual FBoxSphereBounds CalcBounds(const FTransform& LocalToWorld) const override;
 
 	private:
 		friend class FVRCharacterScopedMovementUpdate;
