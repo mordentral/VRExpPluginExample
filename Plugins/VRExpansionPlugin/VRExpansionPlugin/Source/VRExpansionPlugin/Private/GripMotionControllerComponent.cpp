@@ -2141,21 +2141,21 @@ bool UGripMotionControllerComponent::NotifyGrip(FBPActorGripInformation &NewGrip
 			// #TODO: This is a hack until Epic fixes their new physics replication code
 			//		  It forces the replication target to null on grip if we aren't repping movement.
 #if WITH_PHYSX
-			if (UWorld* World = GetWorld())
-			{
-				if (FPhysScene* PhysScene = World->GetPhysicsScene())
+				if (UWorld* World = GetWorld())
 				{
-					if (FPhysicsReplication* PhysicsReplication = PhysScene->GetPhysicsReplication())
+					if (FPhysScene* PhysScene = World->GetPhysicsScene())
 					{
-						FBodyInstance* BI = root->GetBodyInstance(NewGrip.GrippedBoneName);
-						if (BI && BI->IsInstanceSimulatingPhysics())
+						if (FPhysicsReplication* PhysicsReplication = PhysScene->GetPhysicsReplication())
 						{
-							PhysicsReplication->RemoveReplicatedTarget(root);
-							//PhysicsReplication->SetReplicatedTarget(this, BoneName, UpdatedState);
+							FBodyInstance* BI = root->GetBodyInstance(NewGrip.GrippedBoneName);
+							if (BI && BI->IsInstanceSimulatingPhysics())
+							{
+								PhysicsReplication->RemoveReplicatedTarget(root);
+								//PhysicsReplication->SetReplicatedTarget(this, BoneName, UpdatedState);
+							}
 						}
 					}
 				}
-			}
 #endif
 		}
 
@@ -3427,7 +3427,10 @@ void UGripMotionControllerComponent::HandleGripArray(TArray<FBPActorGripInformat
 				{
 					if (HasGripAuthority(*Grip))
 					{
-						DropObjectByInterface(Grip->GrippedObject);
+						if (bRootHasInterface)
+							DropGrip(*Grip, IVRGripInterface::Execute_SimulateOnDrop(root));
+						else
+							DropGrip(*Grip, IVRGripInterface::Execute_SimulateOnDrop(actor));
 					}
 
 					continue;
