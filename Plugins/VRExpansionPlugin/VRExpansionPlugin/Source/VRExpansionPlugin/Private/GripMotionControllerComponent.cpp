@@ -3429,8 +3429,10 @@ void UGripMotionControllerComponent::HandleGripArray(TArray<FBPActorGripInformat
 					{
 						if (bRootHasInterface)
 							DropGrip(*Grip, IVRGripInterface::Execute_SimulateOnDrop(root));
-						else
+						else if (bActorHasInterface)
 							DropGrip(*Grip, IVRGripInterface::Execute_SimulateOnDrop(actor));
+						else
+							DropGrip(*Grip, true);
 					}
 
 					continue;
