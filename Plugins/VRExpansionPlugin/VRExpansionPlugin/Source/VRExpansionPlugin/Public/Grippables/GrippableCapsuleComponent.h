@@ -86,21 +86,31 @@ public:
 	}
 
 	// This one is for components to clean up
-	/*virtual void OnComponentDestroyed(bool bDestroyingHierarchy) override
+	virtual void OnComponentDestroyed(bool bDestroyingHierarchy) override
 	{
-	for (int32 i = 0; i < GripLogicScripts.Num(); i++)
-	{
-	if (UObject *SubObject = GripLogicScripts[i])
-	{
-	SubObject->MarkPendingKill();
-	}
-	}
+		// Call the super at the end, after we've done what we needed to do
+		Super::OnComponentDestroyed(bDestroyingHierarchy);
 
-	GripLogicScripts.Empty();
+		// Don't set these in editor preview window and the like, it causes saving issues
+		if (UWorld * World = GetWorld())
+		{
+			EWorldType::Type WorldType = World->WorldType;
+			if (WorldType == EWorldType::Editor || WorldType == EWorldType::EditorPreview)
+			{
+				return;
+			}
+		}
 
-	// Call the super at the end, after we've done what we needed to do
-	Super::OnComponentDestroyed(bDestroyingHierarchy);
-	}*/
+		for (int32 i = 0; i < GripLogicScripts.Num(); i++)
+		{
+			if (UObject *SubObject = GripLogicScripts[i])
+			{
+				SubObject->MarkPendingKill();
+			}
+		}
+
+		GripLogicScripts.Empty();
+	}
 
 	// Requires bReplicates to be true for the component
 	UPROPERTY(EditAnywhere, Replicated, BlueprintReadWrite, Category = "VRGripInterface|Replication")
