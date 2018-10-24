@@ -74,22 +74,33 @@ public:
 		GripLogicScripts.Empty();
 	}
 
-	// This one is for components to clean up
-	virtual void OnComponentDestroyed(bool bDestroyingHierarchy) override
+	virtual void GetSubobjectsWithStableNamesForNetworking(TArray<UObject*> &ObjList) override
 	{
-		for (int32 i = 0; i < GripLogicScripts.Num(); i++)
+		for (int32 i = 0; i < GripLogicScripts.Num(); ++i)
 		{
 			if (UObject *SubObject = GripLogicScripts[i])
 			{
-				SubObject->MarkPendingKill();
+				ObjList.Add(SubObject);
 			}
 		}
-
-		GripLogicScripts.Empty();
-
-		// Call the super at the end, after we've done what we needed to do
-		Super::OnComponentDestroyed(bDestroyingHierarchy);
 	}
+
+	// This one is for components to clean up
+	/*virtual void OnComponentDestroyed(bool bDestroyingHierarchy) override
+	{
+	for (int32 i = 0; i < GripLogicScripts.Num(); i++)
+	{
+	if (UObject *SubObject = GripLogicScripts[i])
+	{
+	SubObject->MarkPendingKill();
+	}
+	}
+
+	GripLogicScripts.Empty();
+
+	// Call the super at the end, after we've done what we needed to do
+	Super::OnComponentDestroyed(bDestroyingHierarchy);
+	}*/
 
 	// Requires bReplicates to be true for the component
 	UPROPERTY(EditAnywhere, Replicated, BlueprintReadWrite, Category = "VRGripInterface|Replication")
