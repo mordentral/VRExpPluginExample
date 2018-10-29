@@ -26,10 +26,6 @@
 		{
 			"Name": "OpenVRExpansionPlugin",
 			"Enabled": true
-		},
-		{
-			"Name": "KnucklesPlugin",
-			"Enabled": true
 		}
 	],
 	"TargetPlatforms": [
