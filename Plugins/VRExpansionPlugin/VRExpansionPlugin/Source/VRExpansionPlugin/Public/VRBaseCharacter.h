@@ -53,6 +53,8 @@ public:
 
 	void Clear()
 	{
+		bSitting = false;
+		bIsOverThreshold = false;
 		bWasOverLimit = false;
 		bZeroToHead = true;
 		StoredLocation = FVector::ZeroVector;
