@@ -6,6 +6,9 @@ public class VRExpPluginExample : ModuleRules
 {
 	public VRExpPluginExample(ReadOnlyTargetRules Target) : base(Target)
     {
+        PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
+       // PrivatePCHHeaderFile = "Private/WindowsMixedRealityPrecompiled.h";
+
         PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "AdvancedSessions", "VRExpansionPlugin" });
 
 		PrivateDependencyModuleNames.AddRange(new string[] {  });
