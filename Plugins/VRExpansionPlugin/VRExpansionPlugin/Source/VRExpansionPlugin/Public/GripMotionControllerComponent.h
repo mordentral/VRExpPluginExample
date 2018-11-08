@@ -283,7 +283,7 @@ public:
 	}
 
 	// Handles variable state changes and specific actions on a grip replication
-	inline bool UGripMotionControllerComponent::HandleGripReplication(FBPActorGripInformation & Grip)
+	inline bool HandleGripReplication(FBPActorGripInformation & Grip)
 	{
 		if (Grip.ValueCache.bWasInitiallyRepped && Grip.GripID != Grip.ValueCache.CachedGripID)
 		{
