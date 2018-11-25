@@ -83,8 +83,8 @@ void UVRButtonComponent::TickComponent(float DeltaTime, enum ELevelTick TickType
 					LastToggleTime = WorldTime;
 					bToggledThisTouch = true;
 					bButtonState = !bButtonState;
-					ReceiveButtonStateChanged(bButtonState, LastInteractingActor.Get(), InteractingComponent.Get());
-					OnButtonStateChanged.Broadcast(bButtonState, LastInteractingActor.Get(), InteractingComponent.Get());
+					ReceiveButtonStateChanged(bButtonState, LastInteractingActor.Get(), LastInteractingComponent.Get());
+					OnButtonStateChanged.Broadcast(bButtonState, LastInteractingActor.Get(), LastInteractingComponent.Get());
 				}
 			}
 		}
@@ -95,7 +95,12 @@ void UVRButtonComponent::TickComponent(float DeltaTime, enum ELevelTick TickType
 		if (this->RelativeLocation.Equals(GetTargetRelativeLocation()))
 		{
 			this->SetComponentTickEnabled(false);
+
+			OnButtonEndInteraction.Broadcast(LastInteractingActor.Get(), LastInteractingComponent.Get());
+			ReceiveButtonEndInteraction(LastInteractingActor.Get(), LastInteractingComponent.Get());
+
 			InteractingComponent.Reset(); // Just reset it here so it only does it once
+			LastInteractingComponent.Reset();
 		}
 		else
 			this->SetRelativeLocation(FMath::VInterpConstantTo(this->RelativeLocation, GetTargetRelativeLocation(), DeltaTime, DepressSpeed), false);
@@ -112,8 +117,8 @@ void UVRButtonComponent::TickComponent(float DeltaTime, enum ELevelTick TickType
 		{
 			LastToggleTime = WorldTime;
 			bButtonState = bCheckState;
-			ReceiveButtonStateChanged(bButtonState, LastInteractingActor.Get(), InteractingComponent.Get());
-			OnButtonStateChanged.Broadcast(bButtonState, LastInteractingActor.Get(), InteractingComponent.Get());
+			ReceiveButtonStateChanged(bButtonState, LastInteractingActor.Get(), LastInteractingComponent.Get());
+			OnButtonStateChanged.Broadcast(bButtonState, LastInteractingActor.Get(), LastInteractingComponent.Get());
 		}
 	}
 
@@ -167,8 +172,11 @@ void UVRButtonComponent::SetLastInteractingActor()
 	if (!InteractingComponent.IsValid() || InteractingComponent == GetAttachParent() || InteractingComponent->GetAttachParent() == GetAttachParent())
 	{
 		LastInteractingActor.Reset();
+		LastInteractingComponent.Reset();
 		return;
 	}
+
+	LastInteractingComponent = InteractingComponent;
 
 	// Should return faster checking for owning character
 	AActor * OverlapOwner = InteractingComponent->GetOwner();
@@ -183,7 +191,7 @@ void UVRButtonComponent::SetLastInteractingActor()
 	{
 		UGripMotionControllerComponent *Controller;
 		bool bIsHeld;
-		IVRGripInterface::Execute_IsHeld(InteractingComponent.Get(), Controller, bIsHeld);
+		IVRGripInterface::Execute_IsHeld(LastInteractingComponent.Get(), Controller, bIsHeld);
 
 		if (bIsHeld && Controller && Controller->GetOwner())
 		{
@@ -222,8 +230,6 @@ void UVRButtonComponent::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AAc
 	{
 		InteractingComponent = OtherComp;
 
-		SetLastInteractingActor();
-
 		FTransform OriginalBaseTransform = CalcNewComponentToWorld(InitialRelativeTransform);
 		FVector loc = InteractingComponent->GetComponentLocation();
 		InitialLocation = OriginalBaseTransform.InverseTransformPosition(InteractingComponent->GetComponentLocation());
@@ -232,8 +238,12 @@ void UVRButtonComponent::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AAc
 
 		this->SetComponentTickEnabled(true);
 
-		OnButtonBeginInteraction.Broadcast(LastInteractingActor.Get(), InteractingComponent.Get());
-		ReceiveButtonBeginInteraction(LastInteractingActor.Get(), InteractingComponent.Get());
+		if (InteractingComponent != LastInteractingComponent.Get())
+		{
+			SetLastInteractingActor();
+			OnButtonBeginInteraction.Broadcast(LastInteractingActor.Get(), LastInteractingComponent.Get());
+			ReceiveButtonBeginInteraction(LastInteractingActor.Get(), LastInteractingComponent.Get());
+		}
 	}
 }
 
@@ -241,9 +251,6 @@ void UVRButtonComponent::OnOverlapEnd(UPrimitiveComponent* OverlappedComp, AActo
 {
 	if (InteractingComponent.IsValid() && OtherComp == InteractingComponent)
 	{
-		OnButtonEndInteraction.Broadcast(LastInteractingActor.Get(), InteractingComponent.Get());
-		ReceiveButtonEndInteraction(LastInteractingActor.Get(), InteractingComponent.Get());
-
 		InteractingComponent.Reset();
 	}
 }
