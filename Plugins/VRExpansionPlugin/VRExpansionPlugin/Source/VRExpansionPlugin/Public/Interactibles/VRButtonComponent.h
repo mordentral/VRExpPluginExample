@@ -77,8 +77,8 @@ public:
 
 		if (bCallButtonChangedEvent)
 		{
-			ReceiveButtonStateChanged(bButtonState, LastInteractingActor.Get(), InteractingComponent.Get());
-			OnButtonStateChanged.Broadcast(bButtonState, LastInteractingActor.Get(), InteractingComponent.Get());
+			ReceiveButtonStateChanged(bButtonState, LastInteractingActor.Get(), LastInteractingComponent.Get());
+			OnButtonStateChanged.Broadcast(bButtonState, LastInteractingActor.Get(), LastInteractingComponent.Get());
 		}
 	}
 
@@ -145,6 +145,8 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = "VRButtonComponent")
 		TWeakObjectPtr<AActor> LastInteractingActor;
 
+	UPROPERTY(BlueprintReadOnly, Category = "VRButtonComponent")
+		TWeakObjectPtr<UPrimitiveComponent> LastInteractingComponent;
 
 	// Whether the button is enabled or not (can be interacted with)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRButtonComponent")
