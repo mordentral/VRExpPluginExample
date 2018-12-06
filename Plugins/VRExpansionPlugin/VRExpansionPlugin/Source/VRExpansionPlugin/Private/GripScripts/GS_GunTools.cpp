@@ -11,8 +11,7 @@ UGS_GunTools::UGS_GunTools(const FObjectInitializer& ObjectInitializer) :
 	WorldTransformOverrideType = EGSTransformOverrideType::OverridesWorldTransform;
 
 	PivotOffset = FVector::ZeroVector;
-	OverridePivotComponent = nullptr;
-	bUseOverridePivotAsShoulderMount = false;
+	ShoulderMountComponent = nullptr;
 	ShoulderMountRelativeTransform = FTransform::Identity;
 	ShoulderMountSocketOverride = NAME_None;
 
@@ -22,6 +21,9 @@ UGS_GunTools::UGS_GunTools(const FObjectInitializer& ObjectInitializer) :
 	DecayRate = 1.f;
 
 	BackEndRecoilStorage = FTransform::Identity;
+
+	ShoulderSnapDistance = 100.f;
+	bUseDistanceBasedShoulderSnapping = true;
 }
 
 bool UGS_GunTools::GetWorldTransform_Implementation
@@ -95,15 +97,17 @@ bool UGS_GunTools::GetWorldTransform_Implementation
 			FVector BasePoint;
 			FVector Pivot;
 
-			if (OverridePivotComponent != nullptr)
+			if (ShoulderMountComponent.IsValid())
 			{
-				BasePoint = OverridePivotComponent->GetComponentTransform().GetLocation();
-				Pivot = (FTransform(PivotOffset) * OverridePivotComponent->GetComponentTransform()).GetLocation();
+				BasePoint = ShoulderMountComponent->GetComponentTransform().GetLocation();
+				Pivot = (FTransform(PivotOffset) * ShoulderMountComponent->GetComponentTransform()).GetLocation();
+				SecondaryTransform = FTransform(PivotOffset) * SecondaryTransform;
 			}
 			else
 			{
 				BasePoint = ParentTransform.GetLocation();
 				Pivot = (FTransform(PivotOffset) * ParentTransform).GetLocation();
+				SecondaryTransform = FTransform(PivotOffset) * SecondaryTransform;
 			}
 				
 			const FTransform PivotToWorld = FTransform(FQuat::Identity, Pivot);//BasePoint);

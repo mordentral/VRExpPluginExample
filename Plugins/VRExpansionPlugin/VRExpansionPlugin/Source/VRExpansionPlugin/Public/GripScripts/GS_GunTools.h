@@ -22,11 +22,21 @@ public:
 
 	// Overrides the pivot location to be at this component instead
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GunSettings")
-		USceneComponent * OverridePivotComponent;
+		TWeakObjectPtr<USceneComponent> ShoulderMountComponent;
 
-	// Causes the override pivot component to act like a shoulder mount location
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GunSettings|ShoulderMount")
-		bool bUseOverridePivotAsShoulderMount;
+	// Should we auto snap to the shoulder mount by a set distance
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GunSettings")
+		bool bUseDistanceBasedShoulderSnapping;
+
+	// The distance before snapping to the shoulder / unsnapping
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GunSettings")
+	 float ShoulderSnapDistance;
+	
+	UFUNCTION(BlueprintCallable, Category = "GunTools|Pivot")
+	void SetShoulderMountComponent(USceneComponent * NewShoulderComponent, bool bShouldBeUsedAsShoulderMount)
+	{
+		ShoulderMountComponent = NewShoulderComponent;
+	}
 
 	// Relative transform on the gripped object to keep to the shoulder mount
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GunSettings|ShoulderMount")
