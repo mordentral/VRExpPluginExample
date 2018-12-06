@@ -93,18 +93,21 @@ bool UGS_GunTools::GetWorldTransform_Implementation
 		{
 			// Variables needed for multi grip transform
 			FVector BasePoint;
+			FVector Pivot;
 
 			if (OverridePivotComponent != nullptr)
 			{
-				BasePoint = (OverridePivotComponent->GetComponentTransform() * FTransform(PivotOffset)).GetLocation();
+				BasePoint = OverridePivotComponent->GetComponentTransform().GetLocation();
+				Pivot = (FTransform(PivotOffset) * OverridePivotComponent->GetComponentTransform()).GetLocation();
 			}
 			else
 			{
-				BasePoint = (ParentTransform * FTransform(PivotOffset)).GetLocation();
+				BasePoint = ParentTransform.GetLocation();
+				Pivot = (FTransform(PivotOffset) * ParentTransform).GetLocation();
 			}
 				
-			const FTransform PivotToWorld = FTransform(FQuat::Identity, BasePoint);
-			const FTransform WorldToPivot = FTransform(FQuat::Identity, -BasePoint);
+			const FTransform PivotToWorld = FTransform(FQuat::Identity, Pivot);//BasePoint);
+			const FTransform WorldToPivot = FTransform(FQuat::Identity, -Pivot);//-BasePoint);
 
 			FVector frontLocOrig;
 			FVector frontLoc;
