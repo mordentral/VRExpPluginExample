@@ -53,7 +53,13 @@ public:
 
 	// Maximum recoil addition
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GunSettings|Recoil", meta = (editcondition = "bHasRecoil"))
-		FTransform_NetQuantize MaxRecoil;
+		FVector MaxRecoilTranslation;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GunSettings|Recoil", meta = (editcondition = "bHasRecoil"))
+		FVector MaxRecoilRotation;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GunSettings|Recoil", meta = (editcondition = "bHasRecoil"))
+		FVector MaxRecoilScale;
 
 	// Recoil decay rate, how fast it decays back to baseline
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GunSettings|Recoil", meta = (editcondition = "bHasRecoil"))
