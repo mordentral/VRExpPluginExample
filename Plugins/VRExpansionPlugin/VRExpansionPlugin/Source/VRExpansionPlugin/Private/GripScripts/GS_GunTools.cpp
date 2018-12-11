@@ -19,8 +19,10 @@ UGS_GunTools::UGS_GunTools(const FObjectInitializer& ObjectInitializer) :
 	bHasRecoil = false;
 	MaxRecoilTranslation = FVector::ZeroVector;
 	MaxRecoilRotation = FVector::ZeroVector;
-	MaxRecoilScale = FVector::ZeroVector;
-	DecayRate = 1.f;
+	MaxRecoilScale = FVector(1.f);
+	bHasActiveRecoil = false;
+	DecayRate = 20.f;
+	LerpRate = 30.f;
 
 	BackEndRecoilStorage = FTransform::Identity;
 
@@ -45,11 +47,23 @@ bool UGS_GunTools::GetWorldTransform_Implementation
 		return false;
 
 	// Just simple transform setting
-	if (bHasRecoil)
+	if (bHasRecoil && bHasActiveRecoil)
 	{
 		BackEndRecoilStorage.Blend(BackEndRecoilStorage, BackEndRecoilTarget, FMath::Clamp(LerpRate * DeltaTime, 0.f, 1.f));
 		BackEndRecoilTarget.Blend(BackEndRecoilTarget, FTransform::Identity, FMath::Clamp(DecayRate * DeltaTime, 0.f, 1.f));
-		WorldTransform = Grip.RelativeTransform * Grip.AdditionTransform * BackEndRecoilStorage * ParentTransform;
+		bHasActiveRecoil = !BackEndRecoilTarget.Equals(FTransform::Identity);
+
+		if (!bHasActiveRecoil)
+		{
+			BackEndRecoilStorage.SetIdentity();
+			BackEndRecoilTarget.SetIdentity();
+		}		
+	}
+
+	if (bHasActiveRecoil)
+	{
+		// Eventually may want to adjust the pivot of the recoil rotation by the PivotOffset vector...
+		WorldTransform = BackEndRecoilStorage * Grip.RelativeTransform * Grip.AdditionTransform * ParentTransform;
 	}
 	else
 		WorldTransform = Grip.RelativeTransform * Grip.AdditionTransform * ParentTransform;
@@ -107,13 +121,13 @@ bool UGS_GunTools::GetWorldTransform_Implementation
 			{
 				BasePoint = ShoulderMountComponent->GetComponentTransform().GetLocation();
 				Pivot = (FTransform(PivotOffset) * ShoulderMountComponent->GetComponentTransform()).GetLocation();
-				SecondaryTransform = FTransform(PivotOffset) * SecondaryTransform;
+				//SecondaryTransform = FTransform(PivotOffset) * SecondaryTransform;
 			}
 			else
 			{
 				BasePoint = ParentTransform.GetLocation();
 				Pivot = (FTransform(PivotOffset) * ParentTransform).GetLocation();
-				SecondaryTransform = FTransform(PivotOffset) * SecondaryTransform;
+				//SecondaryTransform = FTransform(PivotOffset) * SecondaryTransform;
 			}
 				
 			const FTransform PivotToWorld = FTransform(FQuat::Identity, Pivot);//BasePoint);
@@ -208,8 +222,6 @@ void UGS_GunTools::AddRecoilInstance(const FTransform & RecoilAddition)
 		return;
 
 	BackEndRecoilTarget += RecoilAddition;
-	// Clamp to max recoil, and + is wrong need to combine.
-
 
 	FVector CurVec = BackEndRecoilTarget.GetTranslation();
 
@@ -233,4 +245,6 @@ void UGS_GunTools::AddRecoilInstance(const FTransform & RecoilAddition)
 	curRot.Roll = FMath::Clamp(curRot.Roll, FMath::Min(0.f, MaxRecoilRotation.X), FMath::Max(MaxRecoilRotation.X, 0.f));
 
 	BackEndRecoilTarget.SetRotation(curRot.Quaternion());
+
+	bHasActiveRecoil = !BackEndRecoilTarget.Equals(FTransform::Identity);
 }

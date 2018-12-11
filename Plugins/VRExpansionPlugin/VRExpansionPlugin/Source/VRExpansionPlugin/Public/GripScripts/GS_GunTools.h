@@ -74,6 +74,8 @@ public:
 
 	// Stores the target amount of recoil
 	FTransform BackEndRecoilTarget;
+
+	bool bHasActiveRecoil;
 	
 	UFUNCTION(BlueprintCallable, Category = "GunTools|Recoil")
 		void AddRecoilInstance(const FTransform & RecoilAddition);
