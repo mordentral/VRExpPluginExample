@@ -2893,6 +2893,7 @@ bool UGripMotionControllerComponent::TeleportMoveGrip_Impl(FBPActorGripInformati
 	FTransform physicsTrans = WorldTransform;
 	if (TeleportBehavior == EGripInterfaceTeleportBehavior::DeltaTeleportation && !Grip.LastTransform.Equals(FTransform::Identity))
 	{
+		// #TODO: If the last trans is empty should we go current trans to new linear only or just the snap to that it currently uses...
 		WorldTransform = PrimComp->GetComponentTransform() * FTransform(WorldTransform.GetLocation() - Grip.LastTransform.GetLocation());
 	}
 
