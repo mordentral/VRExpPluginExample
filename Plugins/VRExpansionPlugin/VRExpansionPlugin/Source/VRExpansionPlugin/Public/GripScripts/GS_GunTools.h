@@ -14,29 +14,47 @@ class VREXPANSIONPLUGIN_API UGS_GunTools : public UGS_Default
 	GENERATED_BODY()
 public:
 
+	// TODO: shoulder model based on forward of hands from anchor point.
+	// Range from anchor to attach too in X/Y/Z axis, larger Y for shoulder span.
+	// Consider the anchor point below the head generally?
+
+
 	UGS_GunTools(const FObjectInitializer& ObjectInitializer);
 	
 	// Offset to apply to the pivot (good for centering pivot into the palm ect).
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GunSettings")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GunSettings|Pivot")
 		FVector PivotOffset;
 
-	// Overrides the pivot location to be at this component instead
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GunSettings")
-		TWeakObjectPtr<USceneComponent> ShoulderMountComponent;
-
-	// Should we auto snap to the shoulder mount by a set distance
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GunSettings")
-		bool bUseDistanceBasedShoulderSnapping;
-
-	// The distance before snapping to the shoulder / unsnapping
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GunSettings")
-	 float ShoulderSnapDistance;
-	
-	UFUNCTION(BlueprintCallable, Category = "GunTools|Pivot")
-	void SetShoulderMountComponent(USceneComponent * NewShoulderComponent, bool bShouldBeUsedAsShoulderMount)
+	UFUNCTION(BlueprintCallable, Category = "GunTools|ShoulderMount")
+		void SetShoulderMountComponent(USceneComponent * NewShoulderComponent)
 	{
 		ShoulderMountComponent = NewShoulderComponent;
 	}
+
+	UFUNCTION(BlueprintCallable, Category = "GunTools|ShoulderMount")
+		void SetShoulderMounting(bool bAllowShoulderMounting)
+	{
+		bUseShoulderMounting = bAllowShoulderMounting;
+	}
+
+	// Overrides the pivot location to be at this component instead
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GunSettings|ShoulderMount")
+		bool bUseShoulderMounting;
+
+	FTransform MountWorldTransform;
+	bool bIsMounted;
+
+	// Overrides the default behavior of using the HMD location for the mount and uses this component instead
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GunSettings|ShoulderMount")
+		TWeakObjectPtr<USceneComponent> ShoulderMountComponent;
+
+	// Should we auto snap to the shoulder mount by a set distance
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GunSettings|ShoulderMount")
+		bool bUseDistanceBasedShoulderSnapping;
+
+	// The distance before snapping to the shoulder / unsnapping
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GunSettings|ShoulderMount")
+	 float ShoulderSnapDistance;
 
 	// Relative transform on the gripped object to keep to the shoulder mount
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GunSettings|ShoulderMount")
@@ -45,7 +63,6 @@ public:
 	// Overrides the relative transform and uses this socket location instead
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GunSettings|ShoulderMount")
 		FName ShoulderMountSocketOverride;
-
 
 	// If this gun has recoil
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GunSettings|Recoil")

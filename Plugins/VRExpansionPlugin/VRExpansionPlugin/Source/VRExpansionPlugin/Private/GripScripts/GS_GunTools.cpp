@@ -3,6 +3,7 @@
 #include "GripScripts/GS_GunTools.h"
 #include "VRGripInterface.h"
 #include "GripMotionControllerComponent.h"
+#include "IXRTrackingSystem.h"
 
 UGS_GunTools::UGS_GunTools(const FObjectInitializer& ObjectInitializer) :
 	Super(ObjectInitializer)
@@ -14,6 +15,8 @@ UGS_GunTools::UGS_GunTools(const FObjectInitializer& ObjectInitializer) :
 	ShoulderMountComponent = nullptr;
 	ShoulderMountRelativeTransform = FTransform::Identity;
 	ShoulderMountSocketOverride = NAME_None;
+	MountWorldTransform = FTransform::Identity;
+	bIsMounted = false;
 
 
 	bHasRecoil = false;
@@ -60,13 +63,50 @@ bool UGS_GunTools::GetWorldTransform_Implementation
 		}		
 	}
 
+	FTransform currentParentTransform = ParentTransform;
+	if (bUseShoulderMounting)
+	{
+		if (ShoulderMountComponent.IsValid())
+		{
+			MountWorldTransform = ShoulderMountComponent->GetComponentTransform();
+		}
+		else
+		{
+			if (GEngine->XRSystem.IsValid() && GEngine->XRSystem->IsHeadTrackingAllowed())
+			{
+				FQuat curRot;
+				FVector curLoc;
+				if (GEngine->XRSystem->GetCurrentPose(IXRTrackingSystem::HMDDeviceId, curRot, curLoc))
+				{
+					// Translate hmd offset by the gripping controllers parent component, this should be in the same space
+					MountWorldTransform = FTransform(curRot, curLoc) * GrippingController->GetAttachParent()->GetComponentTransform();
+
+				}
+			}
+		}
+
+		if (FVector::DistSquared(ParentTransform.GetTranslation(), MountWorldTransform.GetTranslation()) <= FMath::Square(ShoulderSnapDistance))
+		{
+			// Mount up
+			currentParentTransform = MountWorldTransform;
+			bIsMounted = true;
+			bDenyLateUpdates = true;
+		}
+		else
+		{
+			bIsMounted = false;
+			bDenyLateUpdates = false;
+		}
+	}
+
+
 	if (bHasActiveRecoil)
 	{
 		// Eventually may want to adjust the pivot of the recoil rotation by the PivotOffset vector...
-		WorldTransform = BackEndRecoilStorage * Grip.RelativeTransform * Grip.AdditionTransform * ParentTransform;
+		WorldTransform = BackEndRecoilStorage * Grip.RelativeTransform * Grip.AdditionTransform * currentParentTransform;
 	}
 	else
-		WorldTransform = Grip.RelativeTransform * Grip.AdditionTransform * ParentTransform;
+		WorldTransform = Grip.RelativeTransform * Grip.AdditionTransform * currentParentTransform;
 
 	// Check the grip lerp state, this it ouside of the secondary attach check below because it can change the result of it
 	if ((Grip.SecondaryGripInfo.bHasSecondaryAttachment && Grip.SecondaryGripInfo.SecondaryAttachment) || Grip.SecondaryGripInfo.GripLerpState == EGripLerpState::EndLerp)
@@ -100,7 +140,7 @@ bool UGS_GunTools::GetWorldTransform_Implementation
 	// Handle the interp and multi grip situations, re-checking the grip situation here as it may have changed in the switch above.
 	if ((Grip.SecondaryGripInfo.bHasSecondaryAttachment && Grip.SecondaryGripInfo.SecondaryAttachment) || Grip.SecondaryGripInfo.GripLerpState == EGripLerpState::EndLerp)
 	{
-		FTransform SecondaryTransform = Grip.RelativeTransform * ParentTransform;
+		FTransform SecondaryTransform = Grip.RelativeTransform * currentParentTransform;
 
 		// Checking secondary grip type for the scaling setting
 		ESecondaryGripType SecondaryType = ESecondaryGripType::SG_None;
@@ -117,16 +157,15 @@ bool UGS_GunTools::GetWorldTransform_Implementation
 			FVector BasePoint;
 			FVector Pivot;
 
-			if (ShoulderMountComponent.IsValid())
+			if (bUseShoulderMounting && bIsMounted)
 			{
-				BasePoint = ShoulderMountComponent->GetComponentTransform().GetLocation();
-				Pivot = (FTransform(PivotOffset) * ShoulderMountComponent->GetComponentTransform()).GetLocation();
-				//SecondaryTransform = FTransform(PivotOffset) * SecondaryTransform;
+				BasePoint = currentParentTransform.GetTranslation();
+				Pivot = currentParentTransform.GetTranslation();
 			}
 			else
 			{
-				BasePoint = ParentTransform.GetLocation();
-				Pivot = (FTransform(PivotOffset) * ParentTransform).GetLocation();
+				BasePoint = currentParentTransform.GetLocation();
+				Pivot = (FTransform(PivotOffset) * currentParentTransform).GetLocation();
 				//SecondaryTransform = FTransform(PivotOffset) * SecondaryTransform;
 			}
 				
