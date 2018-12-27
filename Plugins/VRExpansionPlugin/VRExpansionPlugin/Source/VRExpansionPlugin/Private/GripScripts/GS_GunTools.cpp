@@ -3,6 +3,7 @@
 #include "GripScripts/GS_GunTools.h"
 #include "VRGripInterface.h"
 #include "GripMotionControllerComponent.h"
+#include "VRExpansionFunctionLibrary.h"
 #include "IXRTrackingSystem.h"
 
 UGS_GunTools::UGS_GunTools(const FObjectInitializer& ObjectInitializer) :
@@ -13,9 +14,8 @@ UGS_GunTools::UGS_GunTools(const FObjectInitializer& ObjectInitializer) :
 
 	PivotOffset = FVector::ZeroVector;
 	ShoulderMountComponent = nullptr;
-	ShoulderMountRelativeTransform = FTransform::Identity;
-	ShoulderMountSocketOverride = NAME_None;
 	MountWorldTransform = FTransform::Identity;
+	ShoulderSnapOffset = FVector(0.f, 0.f, -10.f);
 	bIsMounted = false;
 
 
@@ -63,54 +63,49 @@ bool UGS_GunTools::GetWorldTransform_Implementation
 		}		
 	}
 
-	FTransform currentParentTransform = ParentTransform;
-	if (bUseShoulderMounting)
-	{
-		if (ShoulderMountComponent.IsValid())
-		{
-			MountWorldTransform = ShoulderMountComponent->GetComponentTransform();
-		}
-		else
-		{
-			if (GEngine->XRSystem.IsValid() && GEngine->XRSystem->IsHeadTrackingAllowed())
-			{
-				FQuat curRot;
-				FVector curLoc;
-				if (GEngine->XRSystem->GetCurrentPose(IXRTrackingSystem::HMDDeviceId, curRot, curLoc))
-				{
-					// Translate hmd offset by the gripping controllers parent component, this should be in the same space
-					MountWorldTransform = FTransform(curRot, curLoc) * GrippingController->GetAttachParent()->GetComponentTransform();
-
-				}
-			}
-		}
-
-		if (FVector::DistSquared(ParentTransform.GetTranslation(), MountWorldTransform.GetTranslation()) <= FMath::Square(ShoulderSnapDistance))
-		{
-			// Mount up
-			currentParentTransform = MountWorldTransform;
-			bIsMounted = true;
-			bDenyLateUpdates = true;
-		}
-		else
-		{
-			bIsMounted = false;
-			bDenyLateUpdates = false;
-		}
-	}
-
-
 	if (bHasActiveRecoil)
 	{
 		// Eventually may want to adjust the pivot of the recoil rotation by the PivotOffset vector...
-		WorldTransform = BackEndRecoilStorage * Grip.RelativeTransform * Grip.AdditionTransform * currentParentTransform;
+		WorldTransform = BackEndRecoilStorage * Grip.RelativeTransform * Grip.AdditionTransform * ParentTransform;
 	}
 	else
-		WorldTransform = Grip.RelativeTransform * Grip.AdditionTransform * currentParentTransform;
+		WorldTransform = Grip.RelativeTransform * Grip.AdditionTransform * ParentTransform;
 
 	// Check the grip lerp state, this it ouside of the secondary attach check below because it can change the result of it
 	if ((Grip.SecondaryGripInfo.bHasSecondaryAttachment && Grip.SecondaryGripInfo.SecondaryAttachment) || Grip.SecondaryGripInfo.GripLerpState == EGripLerpState::EndLerp)
 	{
+		if (bUseShoulderMounting)
+		{
+			if (ShoulderMountComponent.IsValid())
+			{
+				MountWorldTransform = ShoulderMountComponent->GetComponentTransform();
+			}
+			else
+			{
+				if (GEngine->XRSystem.IsValid() && GEngine->XRSystem->IsHeadTrackingAllowed())
+				{
+					FQuat curRot;
+					FVector curLoc;
+					if (GEngine->XRSystem->GetCurrentPose(IXRTrackingSystem::HMDDeviceId, curRot, curLoc))
+					{
+						// Translate hmd offset by the gripping controllers parent component, this should be in the same space
+						FRotator PureYaw = UVRExpansionFunctionLibrary::GetHMDPureYaw_I(curRot.Rotator());
+						MountWorldTransform = FTransform(FQuat::Identity, curLoc + PureYaw.RotateVector(ShoulderSnapOffset)) * GrippingController->GetAttachParent()->GetComponentTransform();
+					}
+				}
+			}
+
+			if (FVector::DistSquared(ParentTransform.GetTranslation(), MountWorldTransform.GetTranslation()) <= FMath::Square(ShoulderSnapDistance))
+			{
+				// Mount up
+				bIsMounted = true;
+			}
+			else
+			{
+				bIsMounted = false;
+			}
+		}
+
 		switch (Grip.SecondaryGripInfo.GripLerpState)
 		{
 		case EGripLerpState::StartLerp:
@@ -136,11 +131,15 @@ bool UGS_GunTools::GetWorldTransform_Implementation
 		default:break;
 		}
 	}
+	else
+	{
+		bIsMounted = false;
+	}
 
 	// Handle the interp and multi grip situations, re-checking the grip situation here as it may have changed in the switch above.
 	if ((Grip.SecondaryGripInfo.bHasSecondaryAttachment && Grip.SecondaryGripInfo.SecondaryAttachment) || Grip.SecondaryGripInfo.GripLerpState == EGripLerpState::EndLerp)
 	{
-		FTransform SecondaryTransform = Grip.RelativeTransform * currentParentTransform;
+		FTransform SecondaryTransform = Grip.RelativeTransform * ParentTransform;
 
 		// Checking secondary grip type for the scaling setting
 		ESecondaryGripType SecondaryType = ESecondaryGripType::SG_None;
@@ -154,20 +153,8 @@ bool UGS_GunTools::GetWorldTransform_Implementation
 		if (SecondaryType != ESecondaryGripType::SG_Custom)
 		{
 			// Variables needed for multi grip transform
-			FVector BasePoint;
-			FVector Pivot;
-
-			if (bUseShoulderMounting && bIsMounted)
-			{
-				BasePoint = currentParentTransform.GetTranslation();
-				Pivot = currentParentTransform.GetTranslation();
-			}
-			else
-			{
-				BasePoint = currentParentTransform.GetLocation();
-				Pivot = (FTransform(PivotOffset) * currentParentTransform).GetLocation();
-				//SecondaryTransform = FTransform(PivotOffset) * SecondaryTransform;
-			}
+			FVector BasePoint = ParentTransform.GetLocation();
+			FVector Pivot = (FTransform(PivotOffset) * ParentTransform).GetLocation();
 				
 			const FTransform PivotToWorld = FTransform(FQuat::Identity, Pivot);//BasePoint);
 			const FTransform WorldToPivot = FTransform(FQuat::Identity, -Pivot);//-BasePoint);
@@ -233,16 +220,41 @@ bool UGS_GunTools::GetWorldTransform_Implementation
 			// Skip rot val for scaling only
 			if (SecondaryType != ESecondaryGripType::SG_ScalingOnly)
 			{
-				// Get the rotation difference from the initial second grip
-				FQuat rotVal = FQuat::FindBetweenVectors(frontLocOrig, frontLoc);
+				// Get shoulder mount addition rotation
+				if (bUseShoulderMounting && bIsMounted)
+				{
+					// Get the rotation difference from the initial second grip
+					FQuat rotVal = FQuat::FindBetweenVectors(GrippingController->GetPivotLocation() - MountWorldTransform.GetTranslation(), (frontLoc + BasePoint) - MountWorldTransform.GetTranslation());
+					FQuat MountAdditionRotation = FQuat::FindBetweenVectors(frontLocOrig, GrippingController->GetPivotLocation() - MountWorldTransform.GetTranslation());
 
-				// Rebase the world transform to the pivot point, add the rotation, remove the pivot point rebase
-				WorldTransform = WorldTransform * WorldToPivot * FTransform(rotVal, FVector::ZeroVector, Scaler) * PivotToWorld;
+					// Rebase the world transform to the pivot point, add the rotation, remove the pivot point rebase
+					WorldTransform = WorldTransform * WorldToPivot * MountAdditionRotation * FTransform(rotVal, FVector::ZeroVector, Scaler) * PivotToWorld;
+				}
+				else
+				{
+					// Get the rotation difference from the initial second grip
+					FQuat rotVal = FQuat::FindBetweenVectors(frontLocOrig, frontLoc);
+
+					// Rebase the world transform to the pivot point, add the rotation, remove the pivot point rebase
+					WorldTransform = WorldTransform * WorldToPivot * FTransform(rotVal, FVector::ZeroVector, Scaler) * PivotToWorld;
+				}
 			}
 			else
 			{
-				// Rebase the world transform to the pivot point, add the scaler, remove the pivot point rebase
-				WorldTransform = WorldTransform * WorldToPivot * FTransform(FQuat::Identity, FVector::ZeroVector, Scaler) * PivotToWorld;
+
+				// Get shoulder mount addition rotation
+				if (bUseShoulderMounting && bIsMounted)
+				{
+					FQuat MountAdditionRotation = FQuat::FindBetweenVectors(frontLocOrig, GrippingController->GetPivotLocation() - MountWorldTransform.GetTranslation());
+
+					// Rebase the world transform to the pivot point, add the scaler, remove the pivot point rebase
+					WorldTransform = WorldTransform * WorldToPivot * MountAdditionRotation * FTransform(FQuat::Identity, FVector::ZeroVector, Scaler) * PivotToWorld;
+				}
+				else
+				{
+					// Rebase the world transform to the pivot point, add the scaler, remove the pivot point rebase
+					WorldTransform = WorldTransform * WorldToPivot * FTransform(FQuat::Identity, FVector::ZeroVector, Scaler) * PivotToWorld;
+				}
 			}
 		}
 	}

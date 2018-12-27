@@ -56,13 +56,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GunSettings|ShoulderMount")
 	 float ShoulderSnapDistance;
 
-	// Relative transform on the gripped object to keep to the shoulder mount
+	// An offset to apply to the HMD location to be considered the neck / mount pivot 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GunSettings|ShoulderMount")
-		FTransform_NetQuantize ShoulderMountRelativeTransform;
-
-	// Overrides the relative transform and uses this socket location instead
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GunSettings|ShoulderMount")
-		FName ShoulderMountSocketOverride;
+		FVector ShoulderSnapOffset;
 
 	// If this gun has recoil
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GunSettings|Recoil")
