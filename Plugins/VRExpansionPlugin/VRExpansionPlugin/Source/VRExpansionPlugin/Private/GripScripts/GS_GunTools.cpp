@@ -29,7 +29,7 @@ UGS_GunTools::UGS_GunTools(const FObjectInitializer& ObjectInitializer) :
 
 	BackEndRecoilStorage = FTransform::Identity;
 
-	ShoulderSnapDistance = 100.f;
+	ShoulderSnapDistance = 25.f;
 	bUseDistanceBasedShoulderSnapping = true;
 }
 
