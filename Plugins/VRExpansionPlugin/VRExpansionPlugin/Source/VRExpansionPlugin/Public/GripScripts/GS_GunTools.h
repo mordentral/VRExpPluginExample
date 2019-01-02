@@ -7,6 +7,56 @@
 #include "GripScripts/GS_Default.h"
 #include "GS_GunTools.generated.h"
 
+USTRUCT(BlueprintType, Category = "VRExpansionLibrary")
+struct VREXPANSIONPLUGIN_API FGunTools_AdvSecondarySettings
+{
+	GENERATED_BODY()
+public:
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AdvSecondarySettings")
+		bool bUseAdvancedSecondarySettings;
+
+	// Used to smooth filter the secondary influence
+	FBPEuroLowPassFilter SmoothingOneEuro;
+
+	// Scaler used for handling the smoothing amount, 0.0f is full smoothing, 1.0f is smoothing off
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AdvSecondarySettings", meta = (editcondition = "bUseAdvancedSecondarySettings", ClampMin = "0.00", UIMin = "0.00", ClampMax = "1.00", UIMax = "1.00"))
+		float SecondaryGripScaler;
+
+	// If true we will constantly be lerping with the grip scaler instead of only sometimes.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AdvSecondarySettings", meta = (editcondition = "bUseAdvancedSecondarySettings"))
+		bool bUseConstantGripScaler;
+
+	// Whether to scale the secondary hand influence off of distance from grip point
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AdvSecondarySettings", meta = (editcondition = "bUseAdvancedSecondarySettings"))
+		bool bUseSecondaryGripDistanceInfluence;
+
+	// If true, will use the GripInfluenceDeadZone as a constant value instead of calculating the distance and lerping, lets you define a static influence amount.
+	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SecondaryGripSettings", meta = (editcondition = "bUseSecondaryGripDistanceInfluence"))
+	//	bool bUseGripInfluenceDeadZoneAsConstant;
+
+	// Distance from grip point in local space where there is 100% influence
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AdvSecondarySettings", meta = (editcondition = "bUseSecondaryGripDistanceInfluence", ClampMin = "0.00", UIMin = "0.00", ClampMax = "256.00", UIMax = "256.00"))
+		float GripInfluenceDeadZone;
+
+	// Distance from grip point in local space before all influence is lost on the secondary grip (1.0f - 0.0f influence over this range)
+	// this comes into effect outside of the deadzone
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AdvSecondarySettings", meta = (editcondition = "bUseSecondaryGripDistanceInfluence", ClampMin = "1.00", UIMin = "1.00", ClampMax = "256.00", UIMax = "256.00"))
+		float GripInfluenceDistanceToZero;
+
+	FGunTools_AdvSecondarySettings()
+	{
+		bUseAdvancedSecondarySettings = false;
+		SecondaryGripScaler = 1.0f;
+		bUseSecondaryGripDistanceInfluence = false;
+		//bUseGripInfluenceDeadZoneAsConstant(false),
+		GripInfluenceDeadZone = 50.0f;
+		GripInfluenceDistanceToZero = 100.0f;
+		bUseConstantGripScaler = false;
+	}
+};
+
+
 // This class is currently under development, DO NOT USE
 UCLASS(NotBlueprintable, ClassGroup = (VRExpansionPlugin))
 class VREXPANSIONPLUGIN_API UGS_GunTools : public UGS_Default
@@ -20,10 +70,14 @@ public:
 
 
 	UGS_GunTools(const FObjectInitializer& ObjectInitializer);
-	
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GunSettings")
+	FGunTools_AdvSecondarySettings AdvSecondarySettings;
+
+
 	// Offset to apply to the pivot (good for centering pivot into the palm ect).
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GunSettings|Pivot")
-		FVector PivotOffset;
+		FVector_NetQuantize100 PivotOffset;
 
 	UFUNCTION(BlueprintCallable, Category = "GunTools|ShoulderMount")
 		void SetShoulderMountComponent(USceneComponent * NewShoulderComponent)
@@ -58,7 +112,7 @@ public:
 
 	// An offset to apply to the HMD location to be considered the neck / mount pivot 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GunSettings|ShoulderMount")
-		FVector ShoulderSnapOffset;
+		FVector_NetQuantize100 ShoulderSnapOffset;
 
 	// If this gun has recoil
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GunSettings|Recoil")
@@ -66,13 +120,13 @@ public:
 
 	// Maximum recoil addition
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GunSettings|Recoil", meta = (editcondition = "bHasRecoil"))
-		FVector MaxRecoilTranslation;
+		FVector_NetQuantize100 MaxRecoilTranslation;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GunSettings|Recoil", meta = (editcondition = "bHasRecoil"))
-		FVector MaxRecoilRotation;
+		FVector_NetQuantize100 MaxRecoilRotation;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GunSettings|Recoil", meta = (editcondition = "bHasRecoil"))
-		FVector MaxRecoilScale;
+		FVector_NetQuantize100 MaxRecoilScale;
 
 	// Recoil decay rate, how fast it decays back to baseline
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GunSettings|Recoil", meta = (editcondition = "bHasRecoil"))
@@ -97,4 +151,7 @@ public:
 		void ResetRecoil();
 
 	virtual bool GetWorldTransform_Implementation(UGripMotionControllerComponent * GrippingController, float DeltaTime, FTransform & WorldTransform, const FTransform &ParentTransform, FBPActorGripInformation &Grip, AActor * actor, UPrimitiveComponent * root, bool bRootHasInterface, bool bActorHasInterface, bool bIsForTeleport) override;
+
+	inline void GunTools_ApplySmoothingAndLerp(FBPActorGripInformation & Grip, FVector &frontLoc, FVector & frontLocOrig, float DeltaTime);
 };
+

@@ -11,7 +11,6 @@ UGS_GunTools::UGS_GunTools(const FObjectInitializer& ObjectInitializer) :
 {
 	bIsActive = true;
 	WorldTransformOverrideType = EGSTransformOverrideType::OverridesWorldTransform;
-
 	PivotOffset = FVector::ZeroVector;
 	ShoulderMountComponent = nullptr;
 	MountWorldTransform = FTransform::Identity;
@@ -31,7 +30,37 @@ UGS_GunTools::UGS_GunTools(const FObjectInitializer& ObjectInitializer) :
 
 	ShoulderSnapDistance = 25.f;
 	bUseDistanceBasedShoulderSnapping = true;
+
 }
+
+//=============================================================================
+/*void UGS_GunTools::GetLifetimeReplicatedProps(TArray< class FLifetimeProperty > & OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(UGS_GunTools, bUseAdvancedSecondarySettings);
+
+	DOREPLIFETIME_CONDITION(UGS_GunTools, SecondaryGripScaler, COND_Custom);
+	DOREPLIFETIME_CONDITION(UGS_GunTools, bUseConstantGripScaler, COND_Custom);
+	DOREPLIFETIME_CONDITION(UGS_GunTools, bUseSecondaryGripDistanceInfluence, COND_Custom);
+	DOREPLIFETIME_CONDITION(UGS_GunTools, GripInfluenceDeadZone, COND_Custom);
+	DOREPLIFETIME_CONDITION(UGS_GunTools, GripInfluenceDistanceToZero, COND_Custom);
+
+	DOREPLIFETIME(UGS_GunTools, PivotOffset);
+
+	DOREPLIFETIME(UGS_GunTools, bUseShoulderMounting);
+	DOREPLIFETIME_CONDITION(UGS_GunTools, ShoulderMountComponent, COND_Custom);
+	DOREPLIFETIME_CONDITION(UGS_GunTools, bUseDistanceBasedShoulderSnapping, COND_Custom);
+	DOREPLIFETIME_CONDITION(UGS_GunTools, ShoulderSnapDistance, COND_Custom);
+	DOREPLIFETIME_CONDITION(UGS_GunTools, ShoulderSnapOffset, COND_Custom);
+
+	DOREPLIFETIME(UGS_GunTools, bHasRecoil);
+	DOREPLIFETIME_CONDITION(UGS_GunTools, MaxRecoilTranslation, COND_Custom);
+	DOREPLIFETIME_CONDITION(UGS_GunTools, MaxRecoilRotation, COND_Custom);
+	DOREPLIFETIME_CONDITION(UGS_GunTools, MaxRecoilScale, COND_Custom);
+	DOREPLIFETIME_CONDITION(UGS_GunTools, DecayRate, COND_Custom);
+	DOREPLIFETIME_CONDITION(UGS_GunTools, LerpRate, COND_Custom);
+}*/
 
 bool UGS_GunTools::GetWorldTransform_Implementation
 (
@@ -115,18 +144,10 @@ bool UGS_GunTools::GetWorldTransform_Implementation
 				Grip.SecondaryGripInfo.curLerp -= DeltaTime;
 			else
 			{
-				if (Grip.SecondaryGripInfo.bHasSecondaryAttachment &&
-					Grip.AdvancedGripSettings.SecondaryGripSettings.bUseSecondaryGripSettings &&
-					Grip.AdvancedGripSettings.SecondaryGripSettings.SecondaryGripScaler < 1.0f)
-				{
-					Grip.SecondaryGripInfo.GripLerpState = EGripLerpState::ConstantLerp;
-				}
-				else
-					Grip.SecondaryGripInfo.GripLerpState = EGripLerpState::NotLerping;
+				Grip.SecondaryGripInfo.GripLerpState = EGripLerpState::NotLerping;
 			}
 
 		}break;
-		case EGripLerpState::ConstantLerp:
 		case EGripLerpState::NotLerping:
 		default:break;
 		}
@@ -200,7 +221,7 @@ bool UGS_GunTools::GetWorldTransform_Implementation
 				frontLocOrig = (/*WorldTransform*/SecondaryTransform.TransformPosition(Grip.SecondaryGripInfo.SecondaryRelativeTransform.GetLocation())) - BasePoint;
 
 				// Apply any smoothing settings and lerping in / constant lerping
-				Default_ApplySmoothingAndLerp(Grip, frontLoc, frontLocOrig, DeltaTime);
+				GunTools_ApplySmoothingAndLerp(Grip, frontLoc, frontLocOrig, DeltaTime);
 
 				Grip.SecondaryGripInfo.LastRelativeLocation = frontLoc;
 			}
@@ -211,9 +232,9 @@ bool UGS_GunTools::GetWorldTransform_Implementation
 
 			Grip.SecondaryGripInfo.SecondaryGripDistance = FVector::Dist(frontLocOrig, frontLoc);
 
-			if (Grip.AdvancedGripSettings.SecondaryGripSettings.bUseSecondaryGripSettings && Grip.AdvancedGripSettings.SecondaryGripSettings.bUseSecondaryGripDistanceInfluence)
+			if (AdvSecondarySettings.bUseAdvancedSecondarySettings && AdvSecondarySettings.bUseSecondaryGripDistanceInfluence)
 			{
-				float rotScaler = 1.0f - FMath::Clamp((Grip.SecondaryGripInfo.SecondaryGripDistance - Grip.AdvancedGripSettings.SecondaryGripSettings.GripInfluenceDeadZone) / FMath::Max(Grip.AdvancedGripSettings.SecondaryGripSettings.GripInfluenceDistanceToZero, 1.0f), 0.0f, 1.0f);
+				float rotScaler = 1.0f - FMath::Clamp((Grip.SecondaryGripInfo.SecondaryGripDistance - AdvSecondarySettings.GripInfluenceDeadZone) / FMath::Max(AdvSecondarySettings.GripInfluenceDistanceToZero, 1.0f), 0.0f, 1.0f);
 				frontLoc = FMath::Lerp(frontLocOrig, frontLoc, rotScaler);
 			}
 
@@ -298,4 +319,25 @@ void UGS_GunTools::AddRecoilInstance(const FTransform & RecoilAddition)
 	BackEndRecoilTarget.SetRotation(curRot.Quaternion());
 
 	bHasActiveRecoil = !BackEndRecoilTarget.Equals(FTransform::Identity);
+}
+
+void UGS_GunTools::GunTools_ApplySmoothingAndLerp(FBPActorGripInformation & Grip, FVector &frontLoc, FVector & frontLocOrig, float DeltaTime)
+{
+	if (Grip.SecondaryGripInfo.GripLerpState == EGripLerpState::StartLerp) // Lerp into the new grip to smooth the transition
+	{
+		if (AdvSecondarySettings.SecondaryGripScaler < 1.0f)
+		{
+			FVector SmoothedValue = AdvSecondarySettings.SmoothingOneEuro.RunFilterSmoothing(frontLoc, DeltaTime);
+
+			frontLoc = FMath::Lerp(SmoothedValue, frontLoc, AdvSecondarySettings.SecondaryGripScaler);
+		}
+
+		Default_ApplySmoothingAndLerp(Grip, frontLoc, frontLocOrig, DeltaTime);
+	}
+	else if (AdvSecondarySettings.bUseAdvancedSecondarySettings && AdvSecondarySettings.bUseConstantGripScaler) // If there is a frame by frame lerp
+	{
+		FVector SmoothedValue = AdvSecondarySettings.SmoothingOneEuro.RunFilterSmoothing(frontLoc, DeltaTime);
+
+		frontLoc = FMath::Lerp(SmoothedValue, frontLoc, AdvSecondarySettings.SecondaryGripScaler);
+	}
 }
