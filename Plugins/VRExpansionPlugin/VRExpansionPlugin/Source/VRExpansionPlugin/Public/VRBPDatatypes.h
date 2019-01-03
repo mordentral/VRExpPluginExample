@@ -182,12 +182,18 @@ public:
 		DeltaCutoff(InDeltaCutoff)
 	{}
 
+	// The smaller the value the less jitter and the more lag with micro movements
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "FilterSettings")
 		float MinCutoff;
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "FilterSettings")
-		float CutoffSlope;
+
+	// If latency is too high with fast movements increase this value
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "FilterSettings")
 		float DeltaCutoff;
+
+	// This is the magnitude of adjustment
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "FilterSettings")
+		float CutoffSlope;
+
 
 	void ResetSmoothingFilter()
 	{
@@ -778,11 +784,11 @@ public:
 		FVector_NetQuantize100 MaximumGripScaling;
 
 	// Used to smooth filter the secondary influence
-	FBPEuroLowPassFilter SmoothingOneEuro;
+	//FBPEuroLowPassFilter SecondarySmoothing;
 
 	void ClearNonReppedItems()
 	{
-		SmoothingOneEuro.ResetSmoothingFilter();
+		//SecondarySmoothing.ResetSmoothingFilter();
 	}
 
 	FBPAdvSecondaryGripSettings() :

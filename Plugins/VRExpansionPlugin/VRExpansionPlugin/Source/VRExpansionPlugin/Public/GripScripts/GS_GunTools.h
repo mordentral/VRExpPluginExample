@@ -7,6 +7,8 @@
 #include "GripScripts/GS_Default.h"
 #include "GS_GunTools.generated.h"
 
+class UGripMotionControllerComponent;
+
 USTRUCT(BlueprintType, Category = "VRExpansionLibrary")
 struct VREXPANSIONPLUGIN_API FGunTools_AdvSecondarySettings
 {
@@ -16,19 +18,24 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AdvSecondarySettings")
 		bool bUseAdvancedSecondarySettings;
 
-	// Used to smooth filter the secondary influence
-	FBPEuroLowPassFilter SmoothingOneEuro;
-
 	// Scaler used for handling the smoothing amount, 0.0f is full smoothing, 1.0f is smoothing off
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AdvSecondarySettings", meta = (editcondition = "bUseAdvancedSecondarySettings", ClampMin = "0.00", UIMin = "0.00", ClampMax = "1.00", UIMax = "1.00"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AdvSecondarySettings|Smoothing", meta = (editcondition = "bUseAdvancedSecondarySettings", ClampMin = "0.00", UIMin = "0.00", ClampMax = "1.00", UIMax = "1.00"))
 		float SecondaryGripScaler;
 
 	// If true we will constantly be lerping with the grip scaler instead of only sometimes.
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AdvSecondarySettings", meta = (editcondition = "bUseAdvancedSecondarySettings"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AdvSecondarySettings|Smoothing", meta = (editcondition = "bUseAdvancedSecondarySettings"))
 		bool bUseConstantGripScaler;
 
+	// If true will override custom settings for the smoothing values with the global settings in VRSettings
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AdvSecondarySettings|Smoothing", meta = (editcondition = "bUseAdvancedSecondarySettings"))
+		bool bUseGlobalSmoothingSettings;
+
+	// Used to smooth filter the secondary influence
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AdvSecondarySettings|Smoothing")
+		FBPEuroLowPassFilter SecondarySmoothing;
+
 	// Whether to scale the secondary hand influence off of distance from grip point
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AdvSecondarySettings", meta = (editcondition = "bUseAdvancedSecondarySettings"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AdvSecondarySettings|DistanceInfluence", meta = (editcondition = "bUseAdvancedSecondarySettings"))
 		bool bUseSecondaryGripDistanceInfluence;
 
 	// If true, will use the GripInfluenceDeadZone as a constant value instead of calculating the distance and lerping, lets you define a static influence amount.
@@ -36,18 +43,19 @@ public:
 	//	bool bUseGripInfluenceDeadZoneAsConstant;
 
 	// Distance from grip point in local space where there is 100% influence
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AdvSecondarySettings", meta = (editcondition = "bUseSecondaryGripDistanceInfluence", ClampMin = "0.00", UIMin = "0.00", ClampMax = "256.00", UIMax = "256.00"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AdvSecondarySettings|DistanceInfluence", meta = (editcondition = "bUseSecondaryGripDistanceInfluence", ClampMin = "0.00", UIMin = "0.00", ClampMax = "256.00", UIMax = "256.00"))
 		float GripInfluenceDeadZone;
 
 	// Distance from grip point in local space before all influence is lost on the secondary grip (1.0f - 0.0f influence over this range)
 	// this comes into effect outside of the deadzone
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AdvSecondarySettings", meta = (editcondition = "bUseSecondaryGripDistanceInfluence", ClampMin = "1.00", UIMin = "1.00", ClampMax = "256.00", UIMax = "256.00"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AdvSecondarySettings|DistanceInfluence", meta = (editcondition = "bUseSecondaryGripDistanceInfluence", ClampMin = "1.00", UIMin = "1.00", ClampMax = "256.00", UIMax = "256.00"))
 		float GripInfluenceDistanceToZero;
 
 	FGunTools_AdvSecondarySettings()
 	{
 		bUseAdvancedSecondarySettings = false;
 		SecondaryGripScaler = 1.0f;
+		bUseGlobalSmoothingSettings = true;
 		bUseSecondaryGripDistanceInfluence = false;
 		//bUseGripInfluenceDeadZoneAsConstant(false),
 		GripInfluenceDeadZone = 50.0f;
@@ -64,55 +72,79 @@ class VREXPANSIONPLUGIN_API UGS_GunTools : public UGS_Default
 	GENERATED_BODY()
 public:
 
-	// TODO: shoulder model based on forward of hands from anchor point.
-	// Range from anchor to attach too in X/Y/Z axis, larger Y for shoulder span.
-	// Consider the anchor point below the head generally?
-
-
 	UGS_GunTools(const FObjectInitializer& ObjectInitializer);
+
+	virtual void OnGrip_Implementation(UGripMotionControllerComponent * GrippingController, const FBPActorGripInformation & GripInformation) override;
+	virtual void OnSecondaryGrip_Implementation(UGripMotionControllerComponent * Controller, USceneComponent * SecondaryGripComponent, const FBPActorGripInformation & GripInformation) override;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GunSettings")
 	FGunTools_AdvSecondarySettings AdvSecondarySettings;
-
 
 	// Offset to apply to the pivot (good for centering pivot into the palm ect).
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GunSettings|Pivot")
 		FVector_NetQuantize100 PivotOffset;
 
 	UFUNCTION(BlueprintCallable, Category = "GunTools|ShoulderMount")
-		void SetShoulderMountComponent(USceneComponent * NewShoulderComponent)
+		void SetVirtualStockComponent(USceneComponent * NewStockComponent)
 	{
-		ShoulderMountComponent = NewShoulderComponent;
+		VirtualStockComponent = NewStockComponent;
 	}
 
 	UFUNCTION(BlueprintCallable, Category = "GunTools|ShoulderMount")
-		void SetShoulderMounting(bool bAllowShoulderMounting)
+		void SetVirtualStockEnabled(bool bAllowVirtualStock)
 	{
-		bUseShoulderMounting = bAllowShoulderMounting;
+		if (!bUseVirtualStock && bAllowVirtualStock)
+			ResetStockVariables();
+
+		bUseVirtualStock = bAllowVirtualStock;
 	}
 
+	void ResetStockVariables()
+	{
+		StockHandSmoothing.ResetSmoothingFilter();
+	}
+
+	void GetVirtualStockTarget(UGripMotionControllerComponent * GrippingController);
+
 	// Overrides the pivot location to be at this component instead
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GunSettings|ShoulderMount")
-		bool bUseShoulderMounting;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GunSettings|VirtualStock")
+		bool bUseVirtualStock;
+
+	// Draw debug elements showing the virtual stock location and angles to interacting components
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GunSettings|VirtualStock")
+		bool bDebugDrawVirtualStock;
 
 	FTransform MountWorldTransform;
 	bool bIsMounted;
+	TWeakObjectPtr<USceneComponent> CameraComponent;
 
-	// Overrides the default behavior of using the HMD location for the mount and uses this component instead
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GunSettings|ShoulderMount")
-		TWeakObjectPtr<USceneComponent> ShoulderMountComponent;
+	// Overrides the default behavior of using the HMD location for the stock and uses this component instead
+	UPROPERTY(BlueprintReadWrite)
+		TWeakObjectPtr<USceneComponent> VirtualStockComponent;
 
-	// Should we auto snap to the shoulder mount by a set distance
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GunSettings|ShoulderMount")
-		bool bUseDistanceBasedShoulderSnapping;
+	// Should we auto snap to the virtual stock by a set distance
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GunSettings|VirtualStock")
+		bool bUseDistanceBasedStockSnapping;
 
-	// The distance before snapping to the shoulder / unsnapping
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GunSettings|ShoulderMount")
-	 float ShoulderSnapDistance;
+	// The distance before snapping to the stock / unsnapping
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GunSettings|VirtualStock")
+	 float StockSnapDistance;
 
 	// An offset to apply to the HMD location to be considered the neck / mount pivot 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GunSettings|ShoulderMount")
-		FVector_NetQuantize100 ShoulderSnapOffset;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GunSettings|VirtualStock")
+		FVector_NetQuantize100 StockSnapOffset;
+
+	// Overrides the pivot location to be at this component instead
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GunSettings|VirtualStock|Smoothing")
+		bool bSmoothStockHand;
+
+	// How much influence the virtual stock smoothing should have
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GunSettings|VirtualStock|Smoothing", meta = (editcondition = "bSmoothStockHand", ClampMin = "0.00", UIMin = "0.00", ClampMax = "1.00", UIMax = "1.00"))
+		float SmoothingValueForStock;
+
+	// Used to smooth filter the virtual stocks primary hand location
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GunSettings|VirtualStock|Smoothing")
+	FBPEuroLowPassFilter StockHandSmoothing;
 
 	// If this gun has recoil
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GunSettings|Recoil")
@@ -151,7 +183,6 @@ public:
 		void ResetRecoil();
 
 	virtual bool GetWorldTransform_Implementation(UGripMotionControllerComponent * GrippingController, float DeltaTime, FTransform & WorldTransform, const FTransform &ParentTransform, FBPActorGripInformation &Grip, AActor * actor, UPrimitiveComponent * root, bool bRootHasInterface, bool bActorHasInterface, bool bIsForTeleport) override;
-
 	inline void GunTools_ApplySmoothingAndLerp(FBPActorGripInformation & Grip, FVector &frontLoc, FVector & frontLocOrig, float DeltaTime);
 };
 

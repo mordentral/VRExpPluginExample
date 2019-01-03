@@ -194,7 +194,7 @@ void UGS_Default::Default_ApplySmoothingAndLerp(FBPActorGripInformation & Grip, 
 	{
 		/*if (Grip.AdvancedGripSettings.SecondaryGripSettings.SecondaryGripScaler_DEPRECATED < 1.0f)
 		{
-			FVector SmoothedValue = Grip.AdvancedGripSettings.SecondaryGripSettings.SmoothingOneEuro.RunFilterSmoothing(frontLoc, DeltaTime);
+			FVector SmoothedValue = Grip.AdvancedGripSettings.SecondaryGripSettings.SecondarySmoothing.RunFilterSmoothing(frontLoc, DeltaTime);
 
 			frontLoc = FMath::Lerp(SmoothedValue, frontLoc, Grip.AdvancedGripSettings.SecondaryGripSettings.SecondaryGripScaler_DEPRECATED);
 		}*/
@@ -203,7 +203,7 @@ void UGS_Default::Default_ApplySmoothingAndLerp(FBPActorGripInformation & Grip, 
 	}
 	/*else if (Grip.SecondaryGripInfo.GripLerpState == EGripLerpState::ConstantLerp_DEPRECATED) // If there is a frame by frame lerp
 	{
-		FVector SmoothedValue = Grip.AdvancedGripSettings.SecondaryGripSettings.SmoothingOneEuro.RunFilterSmoothing(frontLoc, DeltaTime);
+		FVector SmoothedValue = Grip.AdvancedGripSettings.SecondaryGripSettings.SecondarySmoothing.RunFilterSmoothing(frontLoc, DeltaTime);
 
 		frontLoc = FMath::Lerp(SmoothedValue, frontLoc, Grip.AdvancedGripSettings.SecondaryGripSettings.SecondaryGripScaler_DEPRECATED);
 	}*/
