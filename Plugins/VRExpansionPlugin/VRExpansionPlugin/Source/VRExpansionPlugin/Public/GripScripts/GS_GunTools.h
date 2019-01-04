@@ -18,7 +18,8 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AdvSecondarySettings")
 		bool bUseAdvancedSecondarySettings;
 
-	// Scaler used for handling the smoothing amount, 0.0f is full smoothing, 1.0f is smoothing off
+	// Scaler used for handling the smoothing amount, 0.0f is zero smoothing, 1.0f is full smoothing, you should test with full smoothing to get the amount you
+	// want and then set the smoothing value up until it feels right between the fully smoothed and unsmoothed values.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AdvSecondarySettings|Smoothing", meta = (editcondition = "bUseAdvancedSecondarySettings", ClampMin = "0.00", UIMin = "0.00", ClampMax = "1.00", UIMax = "1.00"))
 		float SecondaryGripScaler;
 
@@ -54,7 +55,7 @@ public:
 	FGunTools_AdvSecondarySettings()
 	{
 		bUseAdvancedSecondarySettings = false;
-		SecondaryGripScaler = 1.0f;
+		SecondaryGripScaler = 0.0f;
 		bUseGlobalSmoothingSettings = true;
 		bUseSecondaryGripDistanceInfluence = false;
 		//bUseGripInfluenceDeadZoneAsConstant(false),
@@ -76,6 +77,10 @@ public:
 
 	virtual void OnGrip_Implementation(UGripMotionControllerComponent * GrippingController, const FBPActorGripInformation & GripInformation) override;
 	virtual void OnSecondaryGrip_Implementation(UGripMotionControllerComponent * Controller, USceneComponent * SecondaryGripComponent, const FBPActorGripInformation & GripInformation) override;
+
+	// (default false) If true will run through the entire simulation that the owning client uses for the gun. If false, does a lighter and more performant approximation.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "GunSettings")
+		bool bUseHighQualityRemoteSimulation;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GunSettings")
 	FGunTools_AdvSecondarySettings AdvSecondarySettings;
@@ -111,7 +116,7 @@ public:
 		bool bUseVirtualStock;
 
 	// Draw debug elements showing the virtual stock location and angles to interacting components
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GunSettings|VirtualStock")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GunSettings|VirtualStock|Debug")
 		bool bDebugDrawVirtualStock;
 
 	FTransform MountWorldTransform;
@@ -134,11 +139,16 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GunSettings|VirtualStock")
 		FVector_NetQuantize100 StockSnapOffset;
 
+	// Attaches the grip location to the virtual stock location (locationally).
+	/*UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GunSettings|VirtualStock")
+		bool bAttachGripToStockLocation;*/
+
 	// Overrides the pivot location to be at this component instead
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GunSettings|VirtualStock|Smoothing")
 		bool bSmoothStockHand;
 
-	// How much influence the virtual stock smoothing should have
+	// How much influence the virtual stock smoothing should have, 0.0f is zero smoothing, 1.0f is full smoothing, you should test with full smoothing to get the amount you
+	// want and then set the smoothing value up until it feels right between the fully smoothed and unsmoothed values.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GunSettings|VirtualStock|Smoothing", meta = (editcondition = "bSmoothStockHand", ClampMin = "0.00", UIMin = "0.00", ClampMax = "1.00", UIMax = "1.00"))
 		float SmoothingValueForStock;
 
@@ -183,6 +193,6 @@ public:
 		void ResetRecoil();
 
 	virtual bool GetWorldTransform_Implementation(UGripMotionControllerComponent * GrippingController, float DeltaTime, FTransform & WorldTransform, const FTransform &ParentTransform, FBPActorGripInformation &Grip, AActor * actor, UPrimitiveComponent * root, bool bRootHasInterface, bool bActorHasInterface, bool bIsForTeleport) override;
-	inline void GunTools_ApplySmoothingAndLerp(FBPActorGripInformation & Grip, FVector &frontLoc, FVector & frontLocOrig, float DeltaTime);
+	inline void GunTools_ApplySmoothingAndLerp(FBPActorGripInformation & Grip, FVector &frontLoc, FVector & frontLocOrig, float DeltaTime, bool bSkipHighQualitySimulations);
 };
 
