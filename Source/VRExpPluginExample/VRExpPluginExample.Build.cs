@@ -6,6 +6,8 @@ public class VRExpPluginExample : ModuleRules
 {
 	public VRExpPluginExample(ReadOnlyTargetRules Target) : base(Target)
     {
+        PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
+
         PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "AdvancedSessions", "VRExpansionPlugin" });
 
 		PrivateDependencyModuleNames.AddRange(new string[] {  });
