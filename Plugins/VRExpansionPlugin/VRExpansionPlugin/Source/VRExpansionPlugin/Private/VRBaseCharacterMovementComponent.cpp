@@ -12,8 +12,6 @@
 #include "VRPlayerController.h"
 #include "GameFramework/PhysicsVolume.h"
 
-DECLARE_CYCLE_STAT(TEXT("ClimbingTick ~ Climbing"), STAT_TickClimb, STATGROUP_TickClimb);
-
 UVRBaseCharacterMovementComponent::UVRBaseCharacterMovementComponent(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {
@@ -693,8 +691,6 @@ void UVRBaseCharacterMovementComponent::PhysCustom_Climbing(float deltaTime, int
 	{
 		return;
 	}
-
-	SCOPE_CYCLE_COUNTER(STAT_TickClimb);
 
 	// Allow the player to run updates on the climb logic for CustomVRInputVector
 	if (AVRBaseCharacter * characterOwner = Cast<AVRBaseCharacter>(CharacterOwner))
