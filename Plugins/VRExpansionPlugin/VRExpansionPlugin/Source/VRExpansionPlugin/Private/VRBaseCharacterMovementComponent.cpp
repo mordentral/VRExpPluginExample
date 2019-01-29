@@ -12,9 +12,6 @@
 #include "VRPlayerController.h"
 #include "GameFramework/PhysicsVolume.h"
 
-DECLARE_CYCLE_STAT(TEXT("ClimbingTick ~ Climbing"), STAT_TickClimb, STATGROUP_TickClimb);
-DECLARE_CYCLE_STAT(TEXT("ClimbingTick ~ ClimbingNative"), STAT_TickClimbNative, STATGROUP_TickClimb);
-
 UVRBaseCharacterMovementComponent::UVRBaseCharacterMovementComponent(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {
