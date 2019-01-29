@@ -11,7 +11,6 @@
 #include "Components/SkeletalMeshComponent.h"
 #include "VRBaseCharacterMovementComponent.generated.h"
 
-DECLARE_STATS_GROUP(TEXT("TICKClimb"), STATGROUP_TickClimb, STATCAT_Advanced);
 
 /** Delegate for notification when to handle a climbing step up, will override default step up logic if is bound to. */
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FVROnPerformClimbingStepUp, FVector, FinalStepUpLocation);
