@@ -7,6 +7,7 @@
 #include "UObject/Object.h"
 #include "Engine/Texture.h"
 #include "Engine/EngineTypes.h"
+#include "RHI.h"
 //#include "EngineMinimal.h"
 #include "IMotionController.h"
 //#include "VRBPDatatypes.h"
