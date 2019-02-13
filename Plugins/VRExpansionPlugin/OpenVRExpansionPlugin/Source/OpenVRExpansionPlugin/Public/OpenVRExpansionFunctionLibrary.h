@@ -655,17 +655,29 @@ public:
 		else
 			VRTexture.handle = NULL;
 
-#if PLATFORM_LINUX
-#if STEAMVR_USE_VULKAN_RHI
-		VRTexture.eType = vr::TextureType_Vulkan;
-#else
-		VRTexture.eType = vr::TextureType_OpenGL;
-#endif
-#else
-		VRTexture.eType = vr::TextureType_DirectX;
-#endif
-		VRTexture.eColorSpace = vr::ColorSpace_Auto;
 
+		VRTexture.eType = vr::ETextureType::TextureType_OpenGL;
+#if PLATFORM_MAC
+		VRTexture.eType = vr::ETextureType::TextureType_IOSurface;
+#else
+		if (IsPCPlatform(GMaxRHIShaderPlatform))
+		{
+			if (IsVulkanPlatform(GMaxRHIShaderPlatform))
+			{
+				VRTexture.eType = vr::ETextureType::TextureType_Vulkan;
+			}
+			else if (IsOpenGLPlatform(GMaxRHIShaderPlatform))
+			{
+				VRTexture.eType = vr::ETextureType::TextureType_OpenGL;
+			}
+#if PLATFORM_WINDOWS
+			else
+			{
+				VRTexture.eType = vr::ETextureType::TextureType_DirectX;
+			}
+#endif
+		}
+#endif
 		return VRTexture;
 	}
 };	
