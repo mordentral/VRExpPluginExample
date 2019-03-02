@@ -1374,8 +1374,7 @@ void UVRBaseCharacterMovementComponent::SmoothCorrection(const FVector& OldLocat
 				if (NewLocation != OldLocation)
 				{
 					const FScopedPreventAttachedComponentMove PreventMeshMove(Basechar->NetSmoother);
-					//UpdatedComponent->SetWorldLocation(NewLocation, false, nullptr, GetTeleportType());
-					UpdatedComponent->SetWorldLocationAndRotation(NewLocation, NewRotation, false, nullptr, GetTeleportType());
+					UpdatedComponent->SetWorldLocation(NewLocation, false, nullptr, GetTeleportType());
 				}
 			}
 		}
