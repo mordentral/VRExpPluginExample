@@ -656,6 +656,7 @@ public:
 		else
 			VRTexture.handle = NULL;
 
+		VRTexture.eColorSpace = vr::EColorSpace::ColorSpace_Auto;
 
 		VRTexture.eType = vr::ETextureType::TextureType_OpenGL;
 #if PLATFORM_MAC
