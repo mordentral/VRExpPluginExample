@@ -487,7 +487,7 @@ void UVRLeverComponent::SetHeld_Implementation(UGripMotionControllerComponent * 
 		HoldingController = NewHoldingController;
 		if (MovementReplicationSetting != EGripMovementReplicationSettings::ForceServerSideMovement)
 		{
-			if (!bIsHeld)
+			if (!bIsHeld && !bIsLerping)
 				bOriginalReplicatesMovement = bReplicateMovement;
 			bReplicateMovement = false;
 		}
