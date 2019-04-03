@@ -175,7 +175,7 @@ void UVRSliderComponent::TickComponent(float DeltaTime, enum ELevelTick TickType
 			ReceiveSliderFinishedLerping(CurrentSliderProgress);
 
 			this->SetComponentTickEnabled(false);
-			bReplicateMovement = true;
+			bReplicateMovement = bOriginalReplicatesMovement;
 		}
 		
 		// Check for the hit point always
@@ -373,11 +373,14 @@ void UVRSliderComponent::OnGripRelease_Implementation(UGripMotionControllerCompo
 	{
 		bIsLerping = true;
 		this->SetComponentTickEnabled(true);
+
+		if(MovementReplicationSetting != EGripMovementReplicationSettings::ForceServerSideMovement)
+			bReplicateMovement = false;
 	}
 	else
 	{
 		this->SetComponentTickEnabled(false);
-		bReplicateMovement = true;
+		bReplicateMovement = bOriginalReplicatesMovement;
 	}
 }
 
