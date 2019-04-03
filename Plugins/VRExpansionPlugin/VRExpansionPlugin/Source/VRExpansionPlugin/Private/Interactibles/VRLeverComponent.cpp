@@ -93,9 +93,9 @@ void UVRLeverComponent::PreReplication(IRepChangedPropertyTracker & ChangedPrope
 	DOREPLIFETIME_ACTIVE_OVERRIDE(USceneComponent, RelativeScale3D, bReplicateMovement);
 }
 
-void UVRLeverComponent::PostInitProperties()
+void UVRLeverComponent::OnRegister()
 {
-	Super::PostInitProperties();
+	Super::OnRegister();
 	ResetInitialLeverLocation(); // Load the original lever location
 }
 

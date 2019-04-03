@@ -92,27 +92,25 @@ void UVRSliderComponent::PreReplication(IRepChangedPropertyTracker & ChangedProp
 	DOREPLIFETIME_ACTIVE_OVERRIDE(USceneComponent, RelativeScale3D, bReplicateMovement);
 }
 
-void UVRSliderComponent::PostInitProperties()
+void UVRSliderComponent::OnRegister()
 {
-	Super::PostInitProperties();
+	Super::OnRegister();
 
-	ResetInitialSliderLocation();
-
+	// Init the slider settings
+	if (USplineComponent * ParentSpline = Cast<USplineComponent>(GetAttachParent()))
+	{
+		SetSplineComponentToFollow(ParentSpline);
+	}
+	else
+	{
+		ResetInitialSliderLocation();
+	}
 }
 
 void UVRSliderComponent::BeginPlay()
 {
 	// Call the base class 
 	Super::BeginPlay();
-
-
-	// If we have a parent spline that we are auto setting then we need to clamp to it in begin play
-	// It isn't setup outside of this yet.
-	if (USplineComponent * ParentSpline = Cast<USplineComponent>(GetAttachParent()))
-	{
-		if(SplineComponentToFollow == nullptr)
-			SetSplineComponentToFollow(ParentSpline);
-	}
 
 	CalculateSliderProgress();
 
