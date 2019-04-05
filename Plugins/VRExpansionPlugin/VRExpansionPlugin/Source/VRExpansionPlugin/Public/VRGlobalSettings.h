@@ -3,7 +3,6 @@
 #include "GameFramework/PlayerInput.h"
 #include "GameFramework/InputSettings.h"
 #include "VRBPDatatypes.h"
-#include "EngineSubsystem.h"
 #include "GripScripts/GS_GunTools.h"
 #include "VRGlobalSettings.generated.h"
 
@@ -102,12 +101,12 @@ public:
 };
 
 UCLASS(config = Engine, defaultconfig)
-class VREXPANSIONPLUGIN_API UVRGlobalSettings : public UEngineSubsystem
+class VREXPANSIONPLUGIN_API UVRGlobalSettings : public UObject
 {
 	GENERATED_BODY()
 
 public:
-	UVRGlobalSettings(/*const FObjectInitializer& ObjectInitializer*/);
+	UVRGlobalSettings(const FObjectInitializer& ObjectInitializer);
 
 	UPROPERTY(config, EditAnywhere, Category = "GunSettings")
 		FBPVirtualStockSettings VirtualStockSettings;
@@ -128,7 +127,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "GunSettings|VirtualStock")
 		static void GetVirtualStockGlobalSettings(FBPVirtualStockSettings & OutVirtualStockSettings)
 	{
-		const UVRGlobalSettings& VRSettings = *GEngine->GetEngineSubsystem<UVRGlobalSettings>();
+		const UVRGlobalSettings& VRSettings = *GetDefault<UVRGlobalSettings>();
 
 		OutVirtualStockSettings.bUseDistanceBasedStockSnapping = VRSettings.VirtualStockSettings.bUseDistanceBasedStockSnapping;
 		OutVirtualStockSettings.StockSnapDistance = VRSettings.VirtualStockSettings.StockSnapDistance;
@@ -141,7 +140,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "GunSettings|VirtualStock")
 		static void SaveVirtualStockGlobalSettings(FBPVirtualStockSettings NewVirtualStockSettings)
 	{
-		UVRGlobalSettings& VRSettings = *GEngine->GetEngineSubsystem<UVRGlobalSettings>();
+		UVRGlobalSettings& VRSettings = *GetMutableDefault<UVRGlobalSettings>();
 		VRSettings.VirtualStockSettings = NewVirtualStockSettings;
 
 		VRSettings.SaveConfig();
@@ -168,7 +167,7 @@ public:
 	UFUNCTION(BlueprintPure, Category = "VRControllerProfiles")
 	static FTransform AdjustTransformByControllerProfile(FName OptionalControllerProfileName, const FTransform & SocketTransform, bool bIsRightHand = false)
 	{
-		const UVRGlobalSettings& VRSettings = *GEngine->GetEngineSubsystem<UVRGlobalSettings>();
+		const UVRGlobalSettings& VRSettings = *GetDefault<UVRGlobalSettings>();
 
 		if (OptionalControllerProfileName == NAME_None)
 		{
@@ -214,7 +213,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "VRControllerProfiles")
 		static TArray<FBPVRControllerProfile> GetControllerProfiles()
 	{
-		const UVRGlobalSettings& VRSettings = *GEngine->GetEngineSubsystem<UVRGlobalSettings>();
+		const UVRGlobalSettings& VRSettings = *GetDefault<UVRGlobalSettings>();
 		
 		return VRSettings.ControllerProfiles;
 	}
@@ -223,7 +222,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "VRControllerProfiles|Operations")
 		static void OverwriteControllerProfile(UPARAM(ref)FBPVRControllerProfile &OverwritingProfile, bool bSaveOutToConfig = true)
 	{
-		UVRGlobalSettings& VRSettings = *GEngine->GetEngineSubsystem<UVRGlobalSettings>();
+		UVRGlobalSettings& VRSettings = *GetMutableDefault<UVRGlobalSettings>();
 
 		for (int i = 0; i < VRSettings.ControllerProfiles.Num(); ++i)
 		{
@@ -241,7 +240,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "VRControllerProfiles|Operations")
 		static void AddControllerProfile(UPARAM(ref)FBPVRControllerProfile &NewProfile, bool bSaveOutToConfig = true)
 	{
-		UVRGlobalSettings& VRSettings = *GEngine->GetEngineSubsystem<UVRGlobalSettings>();
+		UVRGlobalSettings& VRSettings = *GetMutableDefault<UVRGlobalSettings>();
 
 		VRSettings.ControllerProfiles.Add(NewProfile);
 
@@ -253,7 +252,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "VRControllerProfiles|Operations")
 		static void DeleteControllerProfile(FName ControllerProfileName, bool bSaveOutToConfig = true)
 	{
-		UVRGlobalSettings& VRSettings = *GEngine->GetEngineSubsystem<UVRGlobalSettings>();
+		UVRGlobalSettings& VRSettings = *GetMutableDefault<UVRGlobalSettings>();
 
 		for (int i = VRSettings.ControllerProfiles.Num() - 1; i >= 0; --i)
 		{
@@ -271,7 +270,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "VRControllerProfiles|Operations")
 		static void SaveControllerProfiles()
 	{
-		UVRGlobalSettings& VRSettings = *GEngine->GetEngineSubsystem<UVRGlobalSettings>();
+		UVRGlobalSettings& VRSettings = *GetMutableDefault<UVRGlobalSettings>();
 		VRSettings.SaveConfig();
 
 		//VRSettings.SaveConfig(CPF_Config, *VRSettings.GetGlobalUserConfigFilename());//VRSettings.GetDefaultConfigFilename());
@@ -282,7 +281,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "VRControllerProfiles")
 		static FName GetCurrentProfileName(bool & bHadLoadedProfile)
 	{
-		const UVRGlobalSettings& VRSettings = *GEngine->GetEngineSubsystem<UVRGlobalSettings>();
+		const UVRGlobalSettings& VRSettings = *GetDefault<UVRGlobalSettings>();
 
 		bHadLoadedProfile = VRSettings.CurrentControllerProfileInUse != NAME_None;	
 		return VRSettings.CurrentControllerProfileInUse;
@@ -292,7 +291,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "VRControllerProfiles")
 		static FBPVRControllerProfile GetCurrentProfile(bool & bHadLoadedProfile)
 	{
-		const UVRGlobalSettings& VRSettings = *GEngine->GetEngineSubsystem<UVRGlobalSettings>();
+		const UVRGlobalSettings& VRSettings = *GetDefault<UVRGlobalSettings>();
 
 		FName ControllerProfileName = VRSettings.CurrentControllerProfileInUse;
 		const FBPVRControllerProfile * FoundProfile = VRSettings.ControllerProfiles.FindByPredicate([ControllerProfileName](const FBPVRControllerProfile & ArrayItem)
@@ -314,7 +313,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "VRControllerProfiles")
 		static bool GetControllerProfile(FName ControllerProfileName, FBPVRControllerProfile & OutProfile)
 	{
-		const UVRGlobalSettings& VRSettings = *GEngine->GetEngineSubsystem<UVRGlobalSettings>();
+		const UVRGlobalSettings& VRSettings = *GetDefault<UVRGlobalSettings>();
 
 		const FBPVRControllerProfile * FoundProfile = VRSettings.ControllerProfiles.FindByPredicate([ControllerProfileName](const FBPVRControllerProfile & ArrayItem)
 		{
@@ -340,7 +339,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "VRControllerProfiles")
 	static bool LoadControllerProfileByName(FName ControllerProfileName, bool bSetAsCurrentProfile = true)
 	{
-		const UVRGlobalSettings& VRSettings = *GEngine->GetEngineSubsystem<UVRGlobalSettings>();
+		const UVRGlobalSettings& VRSettings = *GetDefault<UVRGlobalSettings>();
 
 		const FBPVRControllerProfile * FoundProfile = VRSettings.ControllerProfiles.FindByPredicate([ControllerProfileName](const FBPVRControllerProfile & ArrayItem)
 		{
@@ -442,14 +441,19 @@ public:
 
 		if (bSetAsCurrentProfile)
 		{
-			UVRGlobalSettings& VRSettings = *GEngine->GetEngineSubsystem<UVRGlobalSettings>();
-			VRSettings.CurrentControllerProfileInUse = ControllerProfile.ControllerName;
-			VRSettings.CurrentControllerProfileTransform = ControllerProfile.SocketOffsetTransform;
-			ensure(!VRSettings.CurrentControllerProfileTransform.ContainsNaN());
-			VRSettings.bUseSeperateHandTransforms = ControllerProfile.bUseSeperateHandOffsetTransforms;
-			VRSettings.CurrentControllerProfileTransformRight = ControllerProfile.SocketOffsetTransformRightHand;
-			ensure(!VRSettings.CurrentControllerProfileTransformRight.ContainsNaN());
-			VRSettings.OnControllerProfileChangedEvent.Broadcast();
+			UVRGlobalSettings* VRSettings = GetMutableDefault<UVRGlobalSettings>();
+			if (VRSettings)
+			{
+				VRSettings->CurrentControllerProfileInUse = ControllerProfile.ControllerName;
+				VRSettings->CurrentControllerProfileTransform = ControllerProfile.SocketOffsetTransform;
+				ensure(!VRSettings->CurrentControllerProfileTransform.ContainsNaN());
+				VRSettings->bUseSeperateHandTransforms = ControllerProfile.bUseSeperateHandOffsetTransforms;
+				VRSettings->CurrentControllerProfileTransformRight = ControllerProfile.SocketOffsetTransformRightHand;
+				ensure(!VRSettings->CurrentControllerProfileTransformRight.ContainsNaN());
+				VRSettings->OnControllerProfileChangedEvent.Broadcast();
+			}
+			else
+				return false;
 		}
 
 
