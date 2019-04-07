@@ -108,6 +108,10 @@ public:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Tick Settings")
 		bool bAllowTicking;
 
+	// Set whether the grip script can tick or not
+	UFUNCTION(BlueprintCallable, Category = "Tick Settings")
+		void SetTickEnabled(bool bTickEnabled);
+
 	/**
 	 * Function called every frame on this GripScript. Override this function to implement custom logic to be executed every frame.
 	 * Only executes if bCanEverTick is true and bAllowTicking is true
@@ -121,6 +125,7 @@ public:
 	virtual bool IsTickableWhenPaused() const override;
 	virtual ETickableTickType GetTickableTickType() const;
 	virtual TStatId GetStatId() const override;
+
 	// End tickable object information
 
 

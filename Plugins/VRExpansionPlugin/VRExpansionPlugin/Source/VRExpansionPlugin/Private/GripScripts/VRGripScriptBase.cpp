@@ -91,6 +91,11 @@ TStatId UVRGripScriptBase::GetStatId() const
 	RETURN_QUICK_DECLARE_CYCLE_STAT(UVRGripScriptBase, STATGROUP_Tickables);
 }
 
+void UVRGripScriptBase::SetTickEnabled(bool bTickEnabled)
+{
+	bAllowTicking = bTickEnabled;
+}
+
 
 // Not currently compiling in editor builds....not entirely sure why...
 /*
