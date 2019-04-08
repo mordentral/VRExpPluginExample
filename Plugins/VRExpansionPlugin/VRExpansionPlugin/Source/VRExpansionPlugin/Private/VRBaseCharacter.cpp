@@ -126,26 +126,27 @@ USkeletalMeshComponent* AVRBaseCharacter::GetIKMesh_Implementation() const
 	return nullptr;
 }
 
-bool AVRBaseCharacter::Server_SetSeatedMode_Validate(USceneComponent * SeatParent, bool bSetSeatedMode, FVector_NetQuantize100 TargetLoc, float TargetYaw, float AllowedRadius, float AllowedRadiusThreshold, bool bZeroToHead, EVRConjoinedMovementModes PostSeatedMovementMode)
+bool AVRBaseCharacter::Server_SetSeatedMode_Validate(USceneComponent * SeatParent, bool bSetSeatedMode, FTransform_NetQuantize TargetTransform, FVector_NetQuantize100 InitialCameraLoc, float AllowedRadius, float AllowedRadiusThreshold, bool bZeroToHead, EVRConjoinedMovementModes PostSeatedMovementMode)
 {
 	return true;
 }
 
-void AVRBaseCharacter::Server_SetSeatedMode_Implementation(USceneComponent * SeatParent, bool bSetSeatedMode, FVector_NetQuantize100 TargetLoc, float TargetYaw, float AllowedRadius, float AllowedRadiusThreshold, bool bZeroToHead, EVRConjoinedMovementModes PostSeatedMovementMode)
+void AVRBaseCharacter::Server_SetSeatedMode_Implementation(USceneComponent * SeatParent, bool bSetSeatedMode, FTransform_NetQuantize TargetTransform, FVector_NetQuantize100 InitialCameraLoc, float AllowedRadius, float AllowedRadiusThreshold, bool bZeroToHead, EVRConjoinedMovementModes PostSeatedMovementMode)
 {
-	SetSeatedMode(SeatParent, bSetSeatedMode, TargetLoc, TargetYaw, AllowedRadius, AllowedRadiusThreshold, bZeroToHead, PostSeatedMovementMode);
+	SetSeatedMode(SeatParent, bSetSeatedMode, TargetTransform, InitialCameraLoc, AllowedRadius, AllowedRadiusThreshold, bZeroToHead, PostSeatedMovementMode);
 }
 
-void AVRBaseCharacter::Server_ReZeroSeating_Implementation(FVector_NetQuantize100 NewRelativeHeadLoc, float NewRelativeHeadYaw, bool bZeroToHead)
+void AVRBaseCharacter::Server_ReZeroSeating_Implementation(FTransform_NetQuantize NewTargetTransform, FVector_NetQuantize100 NewInitialCameraLoc, bool bZeroToHead)
 {
-	if (FMath::IsNearlyEqual(SeatInformation.StoredYaw, NewRelativeHeadYaw) && SeatInformation.StoredLocation.Equals(NewRelativeHeadLoc))
-		return;
+//	if (FMath::IsNearlyEqual(SeatInformation.StoredYaw, NewRelativeHeadYaw) && SeatInformation.StoredLocation.Equals(NewRelativeHeadLoc))
+	//	return;
 
-	SeatInformation.StoredYaw = NewRelativeHeadYaw;
-	SeatInformation.StoredLocation = NewRelativeHeadLoc;
+	SeatInformation.StoredTargetTransform = NewTargetTransform;
+	//SeatInformation.StoredYaw = NewTargetTransform.//NewRelativeHeadYaw;
+	SeatInformation.StoredLocation = NewInitialCameraLoc;
 
 
-	SeatInformation.StoredYaw = FMath::RoundToFloat(SeatInformation.StoredYaw * 100.f) / 100.f;
+	//SeatInformation.StoredYaw = FMath::RoundToFloat(SeatInformation.StoredYaw * 100.f) / 100.f;
 
 	SeatInformation.StoredLocation.X = FMath::RoundToFloat(SeatInformation.StoredLocation.X * 100.f) / 100.f;
 	SeatInformation.StoredLocation.Y = FMath::RoundToFloat(SeatInformation.StoredLocation.Y * 100.f) / 100.f;
@@ -159,7 +160,7 @@ void AVRBaseCharacter::Server_ReZeroSeating_Implementation(FVector_NetQuantize10
 	OnRep_SeatedCharInfo();
 }
 
-bool AVRBaseCharacter::Server_ReZeroSeating_Validate(FVector_NetQuantize100 NewLoc, float NewYaw, bool bZeroToHead = true)
+bool AVRBaseCharacter::Server_ReZeroSeating_Validate(FTransform_NetQuantize NewTargetTransform, FVector_NetQuantize100 NewInitialCameraLoc, bool bZeroToHead)
 {
 	return true;
 }
@@ -380,7 +381,7 @@ void AVRBaseCharacter::InitSeatedModeTransition()
 
 				bUseControllerRotationYaw = SeatInformation.bOriginalControlRotation;
 
-				SetActorLocationAndRotationVR(SeatInformation.StoredLocation, FRotator(0.0f, SeatInformation.StoredYaw, 0.0f), true, true, true);
+				SetActorLocationAndRotationVR(SeatInformation.StoredTargetTransform.GetTranslation(), SeatInformation.StoredTargetTransform.Rotator(), true, true, true);
 				LeftMotionController->PostTeleportMoveGrippedObjects();
 				RightMotionController->PostTeleportMoveGrippedObjects();
 
@@ -428,7 +429,8 @@ void AVRBaseCharacter::InitSeatedModeTransition()
 				bUseControllerRotationYaw = SeatInformation.bOriginalControlRotation;
 
 				// Re-purposing them for the new location and rotations
-				SetActorLocationAndRotationVR(SeatInformation.StoredLocation, FRotator(0.0f, SeatInformation.StoredYaw, 0.0f), true, true, true);
+				SetActorLocationAndRotationVR(SeatInformation.StoredTargetTransform.GetTranslation(), SeatInformation.StoredTargetTransform.Rotator(), true, true, true);
+				//SetActorLocationAndRotationVR(SeatInformation.StoredLocation, FRotator(0.0f, SeatInformation.StoredYaw, 0.0f), true, true, true);
 				LeftMotionController->PostTeleportMoveGrippedObjects();
 				RightMotionController->PostTeleportMoveGrippedObjects();
 
@@ -454,6 +456,8 @@ void AVRBaseCharacter::TickSeatInformation(float DeltaTime)
 
 	float AbsDistance = FMath::Abs(FVector::Dist(SeatInformation.StoredLocation, NewLoc));
 
+	FTransform newTrans = SeatInformation.StoredTargetTransform * SeatInformation.SeatParent->GetComponentTransform();
+
 	// If over the allowed distance
 	if (AbsDistance > SeatInformation.AllowedRadius)
 	{
@@ -462,13 +466,15 @@ void AVRBaseCharacter::TickSeatInformation(float DeltaTime)
 		diff.Normalize();
 		diff = (-diff * (AbsDistance - SeatInformation.AllowedRadius));
 
-		FRotator Rot = FRotator(0.0f, -SeatInformation.StoredYaw, 0.0f);
-		SetSeatRelativeLocationAndRotationVR(SeatInformation.StoredLocation, (-SeatInformation.StoredLocation) + Rot.RotateVector(diff), Rot, true);
+		//FRotator Rot = FRotator(0.0f, -SeatInformation.StoredYaw, 0.0f);
+		SetActorLocationAndRotationVR(newTrans.GetTranslation() + newTrans.Rotator().RotateVector(diff), newTrans.Rotator(), false, true, true);
+		//SetSeatRelativeLocationAndRotationVR(SeatInformation.StoredLocation, (-SeatInformation.StoredLocation) + Rot.RotateVector(diff), Rot, true);
 		SeatInformation.bWasOverLimit = true;
 	}
 	else if (SeatInformation.bWasOverLimit) // Make sure we are in the zero point otherwise
 	{
-		SetSeatRelativeLocationAndRotationVR(SeatInformation.StoredLocation, -SeatInformation.StoredLocation, FRotator(0.0f, -SeatInformation.StoredYaw, 0.0f), true);
+		SetActorLocationAndRotationVR(newTrans.GetTranslation(), newTrans.Rotator(), false, true, true);
+		//SetSeatRelativeLocationAndRotationVR(SeatInformation.StoredLocation, -SeatInformation.StoredLocation, FRotator(0.0f, -SeatInformation.StoredYaw, 0.0f), true);
 		SeatInformation.bWasOverLimit = false;
 	}
 
@@ -486,7 +492,7 @@ void AVRBaseCharacter::TickSeatInformation(float DeltaTime)
 	}
 }
 
-bool AVRBaseCharacter::SetSeatedMode(USceneComponent * SeatParent, bool bSetSeatedMode, FVector TargetLoc, float TargetYaw, float AllowedRadius, float AllowedRadiusThreshold, bool bZeroToHead, EVRConjoinedMovementModes PostSeatedMovementMode)
+bool AVRBaseCharacter::SetSeatedMode(USceneComponent * SeatParent, bool bSetSeatedMode, FTransform_NetQuantize TargetTransform, FVector InitialCameraLoc, float AllowedRadius, float AllowedRadiusThreshold, bool bZeroToHead, EVRConjoinedMovementModes PostSeatedMovementMode)
 {
 	if (!this->HasAuthority() || !SeatParent)
 		return false;
@@ -496,22 +502,30 @@ bool AVRBaseCharacter::SetSeatedMode(USceneComponent * SeatParent, bool bSetSeat
 		SeatInformation.SeatParent = SeatParent;
 		//SeatedCharacter.SeatedCharacter = CharacterToSeat;
 		SeatInformation.bSitting = true;
-		SeatInformation.StoredYaw = TargetYaw;
-		SeatInformation.StoredLocation = TargetLoc;
+		SeatInformation.StoredTargetTransform = TargetTransform;
+		//SeatInformation.StoredYaw = TargetYaw;
+		SeatInformation.StoredLocation = InitialCameraLoc;
 		SeatInformation.AllowedRadius = AllowedRadius;
 		SeatInformation.AllowedRadiusThreshold = AllowedRadiusThreshold;
 
 		// Null out Z so we keep feet location if not zeroing to head
 		if (!bZeroToHead)
+		{
 			SeatInformation.StoredLocation.Z = 0.0f;
+		}
+
+		// #TODO: Need to handle non 1 scaled values here eventually
+		SeatInformation.StoredTargetTransform.AddToTranslation(FVector(0, 0, -SeatInformation.StoredLocation.Z));
+
 
 		//SetReplicateMovement(false);/ / No longer doing this, allowing it to replicate down to simulated clients now instead
 	}
 	else
 	{
 		SeatInformation.SeatParent = nullptr;
-		SeatInformation.StoredYaw = TargetYaw;
-		SeatInformation.StoredLocation = TargetLoc;
+		SeatInformation.StoredTargetTransform = TargetTransform;
+		//SeatInformation.StoredYaw = TargetYaw;
+		//SeatInformation.StoredLocation = TargetLoc;
 		SeatInformation.PostSeatedMovementMode = PostSeatedMovementMode;
 		//SetReplicateMovement(true); // No longer doing this, allowing it to replicate down to simulated clients now instead
 		SeatInformation.bSitting = false;
