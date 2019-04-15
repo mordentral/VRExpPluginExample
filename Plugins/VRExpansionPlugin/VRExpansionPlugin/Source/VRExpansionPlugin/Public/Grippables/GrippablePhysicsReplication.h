@@ -24,8 +24,8 @@
 //#include "Physics/Experimental/PhysScene_ImmediatePhysX.h"
 #include "PhysicsReplication.h"
 #endif
-#include <functional>
-#include <vector>
+//#include <functional>
+//#include <vector>
 
 #include "GrippablePhysicsReplication.generated.h"
 //#include "GrippablePhysicsReplication.generated.h"
@@ -62,6 +62,8 @@ public:
 	static bool RemoveObjectFromReplicationManager(UObject * ObjectToRemove);
 };
 
+DECLARE_DELEGATE(FBucketUpdateTickSignature);
+
 USTRUCT()
 struct VREXPANSIONPLUGIN_API FReplicationBucket
 {
@@ -70,6 +72,7 @@ public:
 	float nUpdateRate;
 	float nUpdateCount;
 
+	TArray<FBucketUpdateTickSignature> Callbacks;
 	TArray<TWeakObjectPtr<UObject>> CallbackReferences;
 
 	bool Update(float DeltaTime)
@@ -81,9 +84,19 @@ public:
 		if (nUpdateCount >= nUpdateRate)
 		{
 			nUpdateCount = 0.0f;
-			for (int i = CallbackReferences.Num() - 1; i >= 0; --i)
+			for (int i = Callbacks.Num() - 1; i >= 0; --i)
+			//for (int i = CallbackReferences.Num() - 1; i >= 0; --i)
 			{
-				if (CallbackReferences[i].IsValid() && !CallbackReferences[i]->IsPendingKill())
+				if (Callbacks[i].IsBound())
+				{
+					Callbacks[i].Execute();
+					continue;
+				}
+
+				// Remove the callback, it is complete or invalid
+				Callbacks.RemoveAt(i);
+
+				/*if (CallbackReferences[i].IsValid() && !CallbackReferences[i]->IsPendingKill())
 				{
 					if (IVRReplicationInterface * ASI = Cast<IVRReplicationInterface>(CallbackReferences[i]))
 					{
@@ -93,14 +106,17 @@ public:
 							continue;
 						}
 					}
-				}
+				}*/
 
 				// Remove the callback, it is complete or invalid
-				CallbackReferences.RemoveAt(i);
+				//CallbackReferences.RemoveAt(i);
 			}
 		}
 
-		return (CallbackReferences.Num() > 0);
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Ticking a bucket!"));
+
+		return Callbacks.Num() > 0;
+		//return (CallbackReferences.Num() > 0);
 	}
 
 	FReplicationBucket() {}
@@ -109,7 +125,6 @@ public:
 		nUpdateRate(1.0f/UpdateHTZ),
 		nUpdateCount(0.0f)
 	{
-		int vv = 0;
 	}
 };
 
@@ -173,6 +188,161 @@ public:
 
 		return false;
 	}
+
+	template<typename classType>
+	bool AddBucketObject(uint32 UpdateHTZ, classType* InObject, void(classType::* _Func)(/*float*/))
+	{
+		if (!InObject)
+			return false;
+
+		// First verify that this object isn't already contained in a bucket, if it is then erase it so that we can replace it below
+		RemoveBucketObject(InObject);
+
+		if (ReplicationBuckets.Contains(UpdateHTZ))
+		{
+			int32 NewIndex = ReplicationBuckets[UpdateHTZ].Callbacks.AddDefaulted();
+			ReplicationBuckets[UpdateHTZ].Callbacks[NewIndex].BindUObject(InObject, _Func);
+			//ReplicationBuckets[UpdateHTZ].CallbackReferences.Add(MakeWeakObjectPtr(InObject));
+		}
+		else
+		{
+			FReplicationBucket & newBucket = ReplicationBuckets.Add(UpdateHTZ, FReplicationBucket(UpdateHTZ));
+			int32 NewIndex = ReplicationBuckets[UpdateHTZ].Callbacks.AddDefaulted();
+			ReplicationBuckets[UpdateHTZ].Callbacks[NewIndex].BindUObject(InObject, _Func);
+			//ReplicationBuckets[UpdateHTZ].CallbackReferences.Add(MakeWeakObjectPtr(InObject));
+		}
+
+		if (ReplicationBuckets.Num() > 0)
+			bNeedsUpdate = true;
+
+		return true;
+	}
+
+	bool AddBucketObject(uint32 UpdateHTZ, UObject* InObject, FName FunctionName)
+	{
+		if (!InObject)
+			return false;
+
+		// First verify that this object isn't already contained in a bucket, if it is then erase it so that we can replace it below
+		RemoveBucketObject(InObject);
+
+		if (ReplicationBuckets.Contains(UpdateHTZ))
+		{
+			int32 NewIndex = ReplicationBuckets[UpdateHTZ].Callbacks.AddDefaulted();
+			ReplicationBuckets[UpdateHTZ].Callbacks[NewIndex].BindUFunction(InObject, FunctionName);
+			//ReplicationBuckets[UpdateHTZ].CallbackReferences.Add(MakeWeakObjectPtr(InObject));
+		}
+		else
+		{
+			FReplicationBucket & newBucket = ReplicationBuckets.Add(UpdateHTZ, FReplicationBucket(UpdateHTZ));
+			int32 NewIndex = ReplicationBuckets[UpdateHTZ].Callbacks.AddDefaulted();
+			ReplicationBuckets[UpdateHTZ].Callbacks[NewIndex].BindUFunction(InObject, FunctionName);
+			//ReplicationBuckets[UpdateHTZ].CallbackReferences.Add(MakeWeakObjectPtr(InObject));
+		}
+
+		if (ReplicationBuckets.Num() > 0)
+			bNeedsUpdate = true;
+
+		return true;
+	}
+
+
+	// Would require a dynamic delegate
+	/*bool AddBucketObject(uint32 UpdateHTZ, UObject * InObject, FBucketUpdateTickSignature Delegate)
+	{
+		if (!InObject)
+			return false;
+
+		// First verify that this object isn't already contained in a bucket, if it is then erase it so that we can replace it below
+		RemoveBucketObject(InObject);
+
+		if (ReplicationBuckets.Contains(UpdateHTZ))
+		{
+			//int32 NewIndex = ReplicationBuckets[UpdateHTZ].Callbacks.AddDefaulted();
+			ReplicationBuckets[UpdateHTZ].Callbacks.Add(Delegate);//BindUFunction(InObject, FunctionName);
+			//ReplicationBuckets[UpdateHTZ].CallbackReferences.Add(MakeWeakObjectPtr(InObject));
+		}
+		else
+		{
+			FReplicationBucket & newBucket = ReplicationBuckets.Add(UpdateHTZ, FReplicationBucket(UpdateHTZ));
+			//int32 NewIndex = ReplicationBuckets[UpdateHTZ].Callbacks.AddDefaulted();
+			ReplicationBuckets[UpdateHTZ].Callbacks.Add(Delegate);//BindUFunction(InObject, FunctionName);
+			//ReplicationBuckets[UpdateHTZ].CallbackReferences.Add(MakeWeakObjectPtr(InObject));
+		}
+
+		if (ReplicationBuckets.Num() > 0)
+			bNeedsUpdate = true;
+
+		return true;
+	}*/
+
+
+	bool RemoveBucketObject(UObject * ObjectToRemove)
+	{
+		if (!ObjectToRemove)
+			return false;
+
+		//IsBoundToObject
+		// Store if we ended up removing it
+		bool bRemovedObject = false;
+
+		//TWeakObjectPtr<UObject> *FoundValue;
+		TArray<uint32> BucketsToRemove;
+		for (auto& Bucket : ReplicationBuckets)
+		{
+			for (int i = Bucket.Value.CallbackReferences.Num() - 1; i >= 0; --i)
+			{
+				if (Bucket.Value.Callbacks[i].IsBoundToObject(ObjectToRemove))
+				{
+					Bucket.Value.Callbacks.RemoveAt(i);
+					bRemovedObject = true;
+
+					if (Bucket.Value.Callbacks.Num() < 1)
+					{
+						BucketsToRemove.Add(Bucket.Key);
+					}
+
+					// Leave the loop, this is called in add as well so we should never get duplicate entries
+					break;
+				}
+			}
+
+			if (bRemovedObject)
+			{
+				break;
+			}
+		}
+
+		// Remove unused buckets so that they don't get ticked
+		for (const uint32 Key : BucketsToRemove)
+		{
+			ReplicationBuckets.Remove(Key);
+		}
+
+		if (ReplicationBuckets.Num() < 1)
+			bNeedsUpdate = false;
+
+		return bRemovedObject;
+	}
+
+	bool IsObjectInBucket(UObject * ObjectToRemove)
+	{
+		if (!ObjectToRemove)
+			return false;
+		for (auto& Bucket : ReplicationBuckets)
+		{
+			for (int i = Bucket.Value.CallbackReferences.Num() - 1; i >= 0; --i)
+			{
+				if (Bucket.Value.Callbacks[i].IsBoundToObject(ObjectToRemove))
+				{
+					return true;
+				}
+			}
+		}
+
+		return false;
+	}
+
 	/*
 	template<typename classType>
 	bool AddReplicatingObject(uint32 UpdateHTZ, classType* InObject, void(classType::* _Func)())
