@@ -62,6 +62,50 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "VRGripInterface")
 		void SetDenyGripping(bool bDenyGripping);
 
+	UFUNCTION()
+	void BucketTick()
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Ticking from bucket system!"));
+	}
+
+	UFUNCTION(BlueprintCallable, Category = "VRGripInterface")
+	bool AddToManager()
+	{
+		//if (!VRPhysicsReplicationStatics::bHasVRPhysicsReplication)
+			//return false;
+
+		if (UWorld * OurWorld = GetWorld())
+		{
+			if (FPhysScene *  PhysicsScene = OurWorld->GetPhysicsScene())
+			{
+				FPhysicsReplicationVR * PhysRep = ((FPhysicsReplicationVR *)PhysicsScene->GetPhysicsReplication());
+				return PhysRep->BucketContainer.AddBucketObject(ClientAuthReplicationData.UpdateRate, this, &AGrippableStaticMeshActor::BucketTick);
+				//return PhysRep->BucketContainer.AddReplicatingObject(UpdateHTZ, ObjectToAdd);
+			}
+		}
+
+		return false;
+	}
+
+	UFUNCTION(BlueprintCallable, Category = "VRGripInterface")
+	bool AddToManagerByName(FName funcname)
+	{
+		//if (!VRPhysicsReplicationStatics::bHasVRPhysicsReplication)
+			//return false;
+
+		if (UWorld * OurWorld = GetWorld())
+		{
+			if (FPhysScene *  PhysicsScene = OurWorld->GetPhysicsScene())
+			{
+				FPhysicsReplicationVR * PhysRep = ((FPhysicsReplicationVR *)PhysicsScene->GetPhysicsReplication());
+				return PhysRep->BucketContainer.AddBucketObject(ClientAuthReplicationData.UpdateRate, this, funcname);
+				//return PhysRep->BucketContainer.AddReplicatingObject(UpdateHTZ, ObjectToAdd);
+			}
+		}
+
+		return false;
+	}
+
 
 	// ------------------------------------------------
 	// Client Auth Throwing Data and functions 

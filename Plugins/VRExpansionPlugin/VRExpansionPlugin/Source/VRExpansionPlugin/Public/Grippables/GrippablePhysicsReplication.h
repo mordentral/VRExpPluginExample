@@ -63,6 +63,9 @@ public:
 };
 
 DECLARE_DELEGATE(FBucketUpdateTickSignature);
+// Need a struct with a UniqueID + the delegate, then we can have multiples per object
+// Can also search better with a func compare.
+
 
 USTRUCT()
 struct VREXPANSIONPLUGIN_API FReplicationBucket
@@ -220,7 +223,7 @@ public:
 
 	bool AddBucketObject(uint32 UpdateHTZ, UObject* InObject, FName FunctionName)
 	{
-		if (!InObject)
+		if (!InObject || InObject->FindFunction(FunctionName) == nullptr)
 			return false;
 
 		// First verify that this object isn't already contained in a bucket, if it is then erase it so that we can replace it below
