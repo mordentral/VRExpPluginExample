@@ -65,6 +65,8 @@ public:
 DECLARE_DELEGATE(FBucketUpdateTickSignature);
 // Need a struct with a UniqueID + the delegate, then we can have multiples per object
 // Can also search better with a func compare.
+// Clear update by function name? Can create a delegate from the function name and then check for equality based on that
+// Or at least that is what the timer manager does.
 
 
 USTRUCT()
