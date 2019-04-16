@@ -1,6 +1,6 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-#include "GrippablePhysicsReplication.h"
+#include "Grippables/GrippablePhysicsReplication.h"
 #include "UObject/ObjectMacros.h"
 #include "UObject/Interface.h"
 
