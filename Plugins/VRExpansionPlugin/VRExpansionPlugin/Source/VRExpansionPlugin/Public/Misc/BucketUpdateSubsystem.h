@@ -18,13 +18,9 @@
 	TEXT(" 0: use the engines default input mapping (default), will also be default if vr.SteamVR.EnableVRInput is enabled\n")
 	TEXT(" 1: use the valve input controller. You will have to define input bindings for the controllers you want to support."),
 	ECVF_ReadOnly);*/
+
 DECLARE_DELEGATE_RetVal(bool, FBucketUpdateTickSignature);
 DECLARE_DYNAMIC_DELEGATE(FDynamicBucketUpdateTickSignature);
-// Need a struct with a UniqueID + the delegate, then we can have multiples per object
-// Can also search better with a func compare.
-// Clear update by function name? Can create a delegate from the function name and then check for equality based on that
-// Or at least that is what the timer manager does.
-
 
 USTRUCT()
 struct VREXPANSIONPLUGIN_API FUpdateBucketDrop
