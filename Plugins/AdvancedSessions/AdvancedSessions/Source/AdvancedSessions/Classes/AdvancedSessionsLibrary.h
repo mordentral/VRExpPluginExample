@@ -62,7 +62,7 @@ public:
 
 		// Get a string copy of a session ID
 		UFUNCTION(BlueprintPure, Category = "Online|AdvancedSessions|SessionInfo")
-			void GetSessionID_AsString(const FBlueprintSessionResult & SessionResult, FString& SessionID);
+		static void GetSessionID_AsString(const FBlueprintSessionResult & SessionResult, FString& SessionID);
 
 		// Get the Unique Current Build ID
 		UFUNCTION(BlueprintPure, Category = "Online|AdvancedSessions|SessionInfo")
