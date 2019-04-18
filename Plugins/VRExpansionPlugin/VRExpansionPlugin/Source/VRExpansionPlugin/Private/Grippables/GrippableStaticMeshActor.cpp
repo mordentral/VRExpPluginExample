@@ -67,7 +67,6 @@ AGrippableStaticMeshActor::AGrippableStaticMeshActor(const FObjectInitializer& O
 	VRGripInterfaceSettings.PrimarySlotRange = 20.0f;
 
 	VRGripInterfaceSettings.bIsHeld = false;
-	VRGripInterfaceSettings.HoldingController = nullptr;
 
 	this->SetMobility(EComponentMobility::Movable);
 
@@ -223,9 +222,9 @@ bool AGrippableStaticMeshActor::AllowsMultipleGrips_Implementation()
 	return VRGripInterfaceSettings.bAllowMultipleGrips;
 }
 
-void AGrippableStaticMeshActor::IsHeld_Implementation(UGripMotionControllerComponent *& HoldingController, bool & bIsHeld)
+void AGrippableStaticMeshActor::IsHeld_Implementation(TArray<UGripMotionControllerComponent *> & HoldingControllers, bool & bIsHeld)
 {
-	HoldingController = VRGripInterfaceSettings.HoldingController;
+	HoldingControllers = VRGripInterfaceSettings.HoldingControllers;
 	bIsHeld = VRGripInterfaceSettings.bIsHeld;
 }
 
@@ -233,7 +232,7 @@ void AGrippableStaticMeshActor::SetHeld_Implementation(UGripMotionControllerComp
 {
 	if (bIsHeld)
 	{
-		VRGripInterfaceSettings.HoldingController = HoldingController;
+		VRGripInterfaceSettings.HoldingControllers.AddUnique(HoldingController);
 		
 		if (ClientAuthReplicationData.bIsCurrentlyClientAuth)
 		{
@@ -243,7 +242,7 @@ void AGrippableStaticMeshActor::SetHeld_Implementation(UGripMotionControllerComp
 	}
 	else
 	{
-		VRGripInterfaceSettings.HoldingController = nullptr;
+		VRGripInterfaceSettings.HoldingControllers.Remove(HoldingController);
 
 		if (ClientAuthReplicationData.bUseClientAuthThrowing && ShouldWeSkipAttachmentReplication())
 		{
@@ -262,13 +261,8 @@ void AGrippableStaticMeshActor::SetHeld_Implementation(UGripMotionControllerComp
 		}
 	}
 
-	VRGripInterfaceSettings.bIsHeld = bIsHeld;
+	VRGripInterfaceSettings.bIsHeld = VRGripInterfaceSettings.HoldingControllers.Num() > 0;
 }
-
-/*FBPInteractionSettings AGrippableStaticMeshActor::GetInteractionSettings_Implementation()
-{
-	return VRGripInterfaceSettings.InteractionSettings;
-}*/
 
 bool AGrippableStaticMeshActor::GetGripScripts_Implementation(TArray<UVRGripScriptBase*> & ArrayReference)
 {

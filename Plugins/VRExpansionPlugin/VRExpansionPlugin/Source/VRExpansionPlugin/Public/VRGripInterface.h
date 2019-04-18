@@ -124,9 +124,9 @@ public:
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "VRGripInterface")
 		bool AllowsMultipleGrips();
 
-	// Returns if the object is held and if so, which pawn is holding it
+	// Returns if the object is held and if so, which controllers are holding it
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "VRGripInterface")
-		void IsHeld(UGripMotionControllerComponent *& HoldingController, bool & bIsHeld);
+		void IsHeld(TArray<UGripMotionControllerComponent*> & HoldingControllers, bool & bIsHeld);
 
 	// Sets is held, used by the plugin
 	UFUNCTION(BlueprintNativeEvent, /*BlueprintCallable,*/ Category = "VRGripInterface")

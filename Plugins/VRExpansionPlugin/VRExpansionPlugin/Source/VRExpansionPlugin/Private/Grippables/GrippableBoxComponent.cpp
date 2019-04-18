@@ -26,7 +26,6 @@ UGrippableBoxComponent::UGrippableBoxComponent(const FObjectInitializer& ObjectI
 	VRGripInterfaceSettings.SecondarySlotRange = 20.0f;
 	VRGripInterfaceSettings.PrimarySlotRange = 20.0f;
 	VRGripInterfaceSettings.bIsHeld = false;
-	VRGripInterfaceSettings.HoldingController = nullptr;
 
 	bReplicateMovement = false;
 	//this->bReplicates = true;
@@ -189,9 +188,9 @@ bool UGrippableBoxComponent::AllowsMultipleGrips_Implementation()
 	return VRGripInterfaceSettings.bAllowMultipleGrips;
 }
 
-void UGrippableBoxComponent::IsHeld_Implementation(UGripMotionControllerComponent *& HoldingController, bool & bIsHeld)
+void UGrippableBoxComponent::IsHeld_Implementation(TArray<UGripMotionControllerComponent *> & HoldingControllers, bool & bIsHeld)
 {
-	HoldingController = VRGripInterfaceSettings.HoldingController;
+	HoldingControllers = VRGripInterfaceSettings.HoldingControllers;
 	bIsHeld = VRGripInterfaceSettings.bIsHeld;
 }
 
@@ -206,7 +205,7 @@ void UGrippableBoxComponent::SetHeld_Implementation(UGripMotionControllerCompone
 			bReplicateMovement = false;
 		}
 
-		VRGripInterfaceSettings.HoldingController = HoldingController;
+		VRGripInterfaceSettings.HoldingControllers.AddUnique(HoldingController);
 	}
 	else
 	{
@@ -215,10 +214,10 @@ void UGrippableBoxComponent::SetHeld_Implementation(UGripMotionControllerCompone
 			bReplicateMovement = bOriginalReplicatesMovement;
 		}
 
-		VRGripInterfaceSettings.HoldingController = nullptr;
+		VRGripInterfaceSettings.HoldingControllers.Remove(HoldingController);
 	}
 
-	VRGripInterfaceSettings.bIsHeld = bIsHeld;
+	VRGripInterfaceSettings.bIsHeld = VRGripInterfaceSettings.HoldingControllers.Num() > 0;
 }
 
 /*FBPInteractionSettings UGrippableBoxComponent::GetInteractionSettings_Implementation()

@@ -1399,7 +1399,7 @@ public:
 		bool bIsHeld; // Set on grip notify, not net serializing
 
 	UPROPERTY(BlueprintReadWrite, NotReplicated, Category = "VRGripInterface")
-		UGripMotionControllerComponent * HoldingController; // Set on grip notify, not net serializing
+		TArray<UGripMotionControllerComponent *> HoldingControllers; // Set on grip notify, not net serializing
 
 
 	FBPInterfaceProperties():
@@ -1417,8 +1417,7 @@ public:
 		ConstraintBreakDistance(0.0f),
 		SecondarySlotRange(20.0f),
 		PrimarySlotRange(20.0f),
-		bIsHeld(false),
-		HoldingController(nullptr)
+		bIsHeld(false)
 	{
 	}
 };

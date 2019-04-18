@@ -24,7 +24,6 @@ AGrippableActor::AGrippableActor(const FObjectInitializer& ObjectInitializer)
 	VRGripInterfaceSettings.PrimarySlotRange = 20.0f;
 
 	VRGripInterfaceSettings.bIsHeld = false;
-	VRGripInterfaceSettings.HoldingController = nullptr;
 
 	// Default replication on for multiplayer
 	//this->bNetLoadOnClient = false;
@@ -180,9 +179,9 @@ bool AGrippableActor::AllowsMultipleGrips_Implementation()
 	return VRGripInterfaceSettings.bAllowMultipleGrips;
 }
 
-void AGrippableActor::IsHeld_Implementation(UGripMotionControllerComponent *& HoldingController, bool & bIsHeld)
+void AGrippableActor::IsHeld_Implementation(TArray<UGripMotionControllerComponent *> & HoldingControllers, bool & bIsHeld)
 {
-	HoldingController = VRGripInterfaceSettings.HoldingController;
+	HoldingControllers = VRGripInterfaceSettings.HoldingControllers;
 	bIsHeld = VRGripInterfaceSettings.bIsHeld;
 }
 
@@ -190,7 +189,7 @@ void AGrippableActor::SetHeld_Implementation(UGripMotionControllerComponent * Ho
 {
 	if (bIsHeld)
 	{
-		VRGripInterfaceSettings.HoldingController = HoldingController;
+		VRGripInterfaceSettings.HoldingControllers.AddUnique(HoldingController);
 
 		if (ClientAuthReplicationData.bIsCurrentlyClientAuth)
 		{
@@ -200,7 +199,7 @@ void AGrippableActor::SetHeld_Implementation(UGripMotionControllerComponent * Ho
 	}
 	else
 	{
-		VRGripInterfaceSettings.HoldingController = nullptr;
+		VRGripInterfaceSettings.HoldingControllers.Remove(HoldingController);
 
 		if (ClientAuthReplicationData.bUseClientAuthThrowing && ShouldWeSkipAttachmentReplication())
 		{
@@ -219,7 +218,7 @@ void AGrippableActor::SetHeld_Implementation(UGripMotionControllerComponent * Ho
 		}
 	}
 
-	VRGripInterfaceSettings.bIsHeld = bIsHeld;
+	VRGripInterfaceSettings.bIsHeld = VRGripInterfaceSettings.HoldingControllers.Num() > 0;
 }
 
 bool AGrippableActor::GetGripScripts_Implementation(TArray<UVRGripScriptBase*> & ArrayReference)
