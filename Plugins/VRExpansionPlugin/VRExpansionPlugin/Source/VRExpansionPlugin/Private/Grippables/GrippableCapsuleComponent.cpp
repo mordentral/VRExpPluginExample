@@ -12,9 +12,7 @@ UGrippableCapsuleComponent::UGrippableCapsuleComponent(const FObjectInitializer&
 	VRGripInterfaceSettings.bSimulateOnDrop = true;
 	VRGripInterfaceSettings.SlotDefaultGripType = EGripCollisionType::ManipulationGrip;
 	VRGripInterfaceSettings.FreeDefaultGripType = EGripCollisionType::ManipulationGrip;
-	//VRGripInterfaceSettings.bCanHaveDoubleGrip = false;
 	VRGripInterfaceSettings.SecondaryGripType = ESecondaryGripType::SG_None;
-	//VRGripInterfaceSettings.GripTarget = EGripTargetType::ComponentGrip;
 	VRGripInterfaceSettings.MovementReplicationType = EGripMovementReplicationSettings::ForceClientSideMovement;
 	VRGripInterfaceSettings.LateUpdateSetting = EGripLateUpdateSettings::LateUpdatesAlwaysOff;
 	VRGripInterfaceSettings.ConstraintStiffness = 1500.0f;
@@ -22,7 +20,6 @@ UGrippableCapsuleComponent::UGrippableCapsuleComponent(const FObjectInitializer&
 	VRGripInterfaceSettings.ConstraintBreakDistance = 100.0f;
 	VRGripInterfaceSettings.SecondarySlotRange = 20.0f;
 	VRGripInterfaceSettings.PrimarySlotRange = 20.0f;
-	//VRGripInterfaceSettings.bIsInteractible = false;
 
 	VRGripInterfaceSettings.bIsHeld = false;
 	VRGripInterfaceSettings.HoldingController = nullptr;
@@ -188,10 +185,10 @@ void UGrippableCapsuleComponent::ClosestGripSlotInRange_Implementation(FVector W
 	UVRExpansionFunctionLibrary::GetGripSlotInRangeByTypeName_Component(OverridePrefix, this, WorldLocation, bSecondarySlot ? VRGripInterfaceSettings.SecondarySlotRange : VRGripInterfaceSettings.PrimarySlotRange, bHadSlotInRange, SlotWorldTransform);
 }
 
-/*bool UGrippableCapsuleComponent::IsInteractible_Implementation()
+bool UGrippableCapsuleComponent::AllowsMultipleGrips_Implementation()
 {
-	return VRGripInterfaceSettings.bIsInteractible;
-}*/
+	return VRGripInterfaceSettings.bAllowMultipleGrips;
+}
 
 void UGrippableCapsuleComponent::IsHeld_Implementation(UGripMotionControllerComponent *& HoldingController, bool & bIsHeld)
 {

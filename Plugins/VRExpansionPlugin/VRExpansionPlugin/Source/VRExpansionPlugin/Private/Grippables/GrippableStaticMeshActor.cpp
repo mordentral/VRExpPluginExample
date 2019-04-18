@@ -57,9 +57,7 @@ AGrippableStaticMeshActor::AGrippableStaticMeshActor(const FObjectInitializer& O
 	VRGripInterfaceSettings.bSimulateOnDrop = true;
 	VRGripInterfaceSettings.SlotDefaultGripType = EGripCollisionType::InteractiveCollisionWithPhysics;
 	VRGripInterfaceSettings.FreeDefaultGripType = EGripCollisionType::InteractiveCollisionWithPhysics;
-	//VRGripInterfaceSettings.bCanHaveDoubleGrip = false;
 	VRGripInterfaceSettings.SecondaryGripType = ESecondaryGripType::SG_None;
-	//VRGripInterfaceSettings.GripTarget = EGripTargetType::ActorGrip;
 	VRGripInterfaceSettings.MovementReplicationType = EGripMovementReplicationSettings::ForceClientSideMovement;
 	VRGripInterfaceSettings.LateUpdateSetting = EGripLateUpdateSettings::NotWhenCollidingOrDoubleGripping;
 	VRGripInterfaceSettings.ConstraintStiffness = 1500.0f;
@@ -67,7 +65,6 @@ AGrippableStaticMeshActor::AGrippableStaticMeshActor(const FObjectInitializer& O
 	VRGripInterfaceSettings.ConstraintBreakDistance = 100.0f;
 	VRGripInterfaceSettings.SecondarySlotRange = 20.0f;
 	VRGripInterfaceSettings.PrimarySlotRange = 20.0f;
-	//VRGripInterfaceSettings.bIsInteractible = false;
 
 	VRGripInterfaceSettings.bIsHeld = false;
 	VRGripInterfaceSettings.HoldingController = nullptr;
@@ -221,10 +218,10 @@ void AGrippableStaticMeshActor::ClosestGripSlotInRange_Implementation(FVector Wo
 	UVRExpansionFunctionLibrary::GetGripSlotInRangeByTypeName(OverridePrefix, this, WorldLocation, bSecondarySlot ? VRGripInterfaceSettings.SecondarySlotRange : VRGripInterfaceSettings.PrimarySlotRange, bHadSlotInRange, SlotWorldTransform);
 }
 
-/*bool AGrippableStaticMeshActor::IsInteractible_Implementation()
+bool AGrippableStaticMeshActor::AllowsMultipleGrips_Implementation()
 {
-	return VRGripInterfaceSettings.bIsInteractible;
-}*/
+	return VRGripInterfaceSettings.bAllowMultipleGrips;
+}
 
 void AGrippableStaticMeshActor::IsHeld_Implementation(UGripMotionControllerComponent *& HoldingController, bool & bIsHeld)
 {

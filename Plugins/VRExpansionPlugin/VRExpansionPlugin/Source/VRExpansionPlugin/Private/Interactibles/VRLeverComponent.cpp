@@ -469,10 +469,10 @@ void UVRLeverComponent::ClosestGripSlotInRange_Implementation(FVector WorldLocat
 	bHadSlotInRange = false;
 }
 
-/*bool UVRLeverComponent::IsInteractible_Implementation()
+bool UVRLeverComponent::AllowsMultipleGrips_Implementation()
 {
 	return false;
-}*/
+}
 
 void UVRLeverComponent::IsHeld_Implementation(UGripMotionControllerComponent *& CurHoldingController, bool & bCurIsHeld)
 {

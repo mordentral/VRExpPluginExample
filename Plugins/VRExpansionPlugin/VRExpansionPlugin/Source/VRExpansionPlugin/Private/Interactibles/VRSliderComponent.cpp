@@ -481,10 +481,10 @@ void UVRSliderComponent::ClosestGripSlotInRange_Implementation(FVector WorldLoca
 	bHadSlotInRange = false;
 }
 
-/*bool UVRSliderComponent::IsInteractible_Implementation()
+bool UVRSliderComponent::AllowsMultipleGrips_Implementation()
 {
 	return false;
-}*/
+}
 
 void UVRSliderComponent::IsHeld_Implementation(UGripMotionControllerComponent *& CurHoldingController, bool & bCurIsHeld)
 {
