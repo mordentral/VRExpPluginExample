@@ -181,7 +181,7 @@ public:
 	float MomentumAtDrop;
 	float LastLeverAngle;
 
-	float CalcAngle(EVRInteractibleLeverAxis AxisToCalc, FVector CurInteractorLocation);
+	float CalcAngle(EVRInteractibleLeverAxis AxisToCalc, FVector CurInteractorLocation, bool bSkipLimits = false);
 
 	void LerpAxis(float CurrentAngle, float DeltaTime);
 

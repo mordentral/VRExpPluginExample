@@ -225,6 +225,21 @@ void UVRLeverComponent::TickGrip_Implementation(UGripMotionControllerComponent *
 		this->SetRelativeRotation((FTransform(Rot) * InitialRelativeTransform).Rotator());
 
 
+		//InitialGripRot
+		// Fixup yaw if this is a flight stick
+		CurInteractorLocation = this->GetComponentTransform().InverseTransformPosition(GrippingController->GetPivotLocation());
+
+		// This lets me use the correct original location over the network without changes
+		FTransform ReversedRelativeTransform = FTransform(GripInformation.RelativeTransform.ToInverseMatrixWithScale());
+		FVector origloc = ReversedRelativeTransform.GetTranslation();
+
+		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Initial Grip Rot: %s New angle: %s"), *origloc.ToString(), *CurInteractorLocation.ToString()));
+
+		float DeltaAngle = CalcAngle(EVRInteractibleLeverAxis::Axis_Z, CurInteractorLocation, true);
+		float newAngle = UVRInteractibleFunctionLibrary::GetAtan2Angle(EVRInteractibleAxis::Axis_Z, CurInteractorLocation);
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("DeltaZ: %f Initial Grip Rot: %f New angle: %f"), DeltaAngle, InitialGripRot, newAngle));
+		this->SetRelativeRotation(this->RelativeRotation.Quaternion() * FRotator(0.0, DeltaAngle, 0.0).Quaternion().Inverse());
+
 		/*
 		// #TODO: go back to testing this?
 		// This aligns the pitch from any side by rewinding yaw and then sampling pitch
@@ -317,6 +332,7 @@ void UVRLeverComponent::OnGrip_Implementation(UGripMotionControllerComponent * G
 		case EVRInteractibleLeverAxis::Axis_XZ:
 		{
 			qRotAtGrab = this->GetComponentTransform().GetRelativeTransform(CurrentRelativeTransform).GetRotation();
+			InitialGripRot = UVRInteractibleFunctionLibrary::GetAtan2Angle(EVRInteractibleAxis::Axis_Z, ReversedRelativeTransform.GetTranslation());
 		}break;
 		case EVRInteractibleLeverAxis::Axis_X:
 		case EVRInteractibleLeverAxis::Axis_Y:
@@ -811,11 +827,14 @@ void UVRLeverComponent::LerpAxis(float CurrentAngle, float DeltaTime)
 	}
 }
 
-float UVRLeverComponent::CalcAngle(EVRInteractibleLeverAxis AxisToCalc, FVector CurInteractorLocation)
+float UVRLeverComponent::CalcAngle(EVRInteractibleLeverAxis AxisToCalc, FVector CurInteractorLocation, bool bSkipLimits)
 {
 	float ReturnAxis = 0.0f;
 
 	ReturnAxis = UVRInteractibleFunctionLibrary::GetAtan2Angle((EVRInteractibleAxis)AxisToCalc, CurInteractorLocation, InitialGripRot);
+
+	if (bSkipLimits)
+		return ReturnAxis;
 
 	if (LeverLimitPositive > 0.0f && LeverLimitNegative > 0.0f && FMath::IsNearlyEqual(LeverLimitNegative, 180.f, 0.01f) && FMath::IsNearlyEqual(LeverLimitPositive, 180.f, 0.01f))
 	{
