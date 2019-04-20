@@ -169,6 +169,8 @@ public:
 		ReCalculateCurrentAngle();
 	}
 
+	FTransform InteractorOffsetTransform;
+
 	FVector InitialInteractorLocation;
 	FVector InitialInteractorDropLocation;
 	float InitialGripRot;

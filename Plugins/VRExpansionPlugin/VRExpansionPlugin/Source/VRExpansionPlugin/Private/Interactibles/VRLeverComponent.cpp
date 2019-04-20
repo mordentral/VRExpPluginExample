@@ -49,6 +49,7 @@ UVRLeverComponent::UVRLeverComponent(const FObjectInitializer& ObjectInitializer
 
 	InitialRelativeTransform = FTransform::Identity;
 	InitialInteractorLocation = FVector::ZeroVector;
+	InteractorOffsetTransform = FTransform::Identity;
 	InitialGripRot = 0.0f;
 	qRotAtGrab = FQuat::Identity;
 	bIsLerping = false;
@@ -206,7 +207,12 @@ void UVRLeverComponent::TickGrip_Implementation(UGripMotionControllerComponent *
 	// Handle manual tracking here
 
 	FTransform CurrentRelativeTransform = InitialRelativeTransform * UVRInteractibleFunctionLibrary::Interactible_GetCurrentParentTransform(this);
-	FVector CurInteractorLocation = CurrentRelativeTransform.InverseTransformPosition(GrippingController->GetPivotLocation());
+
+	FTransform we = (InteractorOffsetTransform * GrippingController->GetPivotTransform());
+
+	FTransform CalcTransform = FTransform::Identity;
+
+	FVector CurInteractorLocation = CurrentRelativeTransform.InverseTransformPosition(/*GrippingController->GetPivotLocation()*/we.GetTranslation());
 
 	switch (LeverRotationAxis)
 	{
@@ -225,7 +231,6 @@ void UVRLeverComponent::TickGrip_Implementation(UGripMotionControllerComponent *
 		this->SetRelativeRotation((FTransform(Rot) * InitialRelativeTransform).Rotator());
 
 
-		//InitialGripRot
 		// Fixup yaw if this is a flight stick
 		CurInteractorLocation = this->GetComponentTransform().InverseTransformPosition(GrippingController->GetPivotLocation());
 
@@ -237,9 +242,10 @@ void UVRLeverComponent::TickGrip_Implementation(UGripMotionControllerComponent *
 
 		float DeltaAngle = CalcAngle(EVRInteractibleLeverAxis::Axis_Z, CurInteractorLocation, true);
 		float newAngle = UVRInteractibleFunctionLibrary::GetAtan2Angle(EVRInteractibleAxis::Axis_Z, CurInteractorLocation);
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("DeltaZ: %f Initial Grip Rot: %f New angle: %f"), DeltaAngle, InitialGripRot, newAngle));
-		this->SetRelativeRotation(this->RelativeRotation.Quaternion() * FRotator(0.0, DeltaAngle, 0.0).Quaternion().Inverse());
+		this->SetRelativeRotation(this->RelativeRotation.Quaternion() * FRotator(0.0, DeltaAngle, 0.0).Quaternion()/*.Inverse()*/);
 
+
+		CalcTransform = this->GetComponentTransform() * FRotator(0.0, DeltaAngle, 0.0).Quaternion().Inverse();
 		/*
 		// #TODO: go back to testing this?
 		// This aligns the pitch from any side by rewinding yaw and then sampling pitch
@@ -285,6 +291,7 @@ void UVRLeverComponent::TickGrip_Implementation(UGripMotionControllerComponent *
 		//Final Rotation
 		FRotator ShortestDistanceRot = FRotator(0, yaw, pitch);
 		this->SetRelativeRotation((FTransform(ShortestDistanceRot) * InitialRelativeTransform).Rotator());	
+		CalcTransform = this->GetComponentTransform();
 	}break;
 	case EVRInteractibleLeverAxis::Axis_X:
 	case EVRInteractibleLeverAxis::Axis_Y:
@@ -293,8 +300,45 @@ void UVRLeverComponent::TickGrip_Implementation(UGripMotionControllerComponent *
 		float DeltaAngle = CalcAngle(LeverRotationAxis, CurInteractorLocation);
 		this->SetRelativeRotation((FTransform(UVRInteractibleFunctionLibrary::SetAxisValueRot((EVRInteractibleAxis)LeverRotationAxis, DeltaAngle, FRotator::ZeroRotator)) * InitialRelativeTransform).Rotator());
 		LastDeltaAngle = DeltaAngle;
+		CalcTransform = this->GetComponentTransform();
 	}break;
 	default:break;
+	}
+
+	CurrentRelativeTransform = CalcTransform.GetRelativeTransform(UVRInteractibleFunctionLibrary::Interactible_GetCurrentParentTransform(this));
+
+	CalculateCurrentAngle(CurrentRelativeTransform);
+
+	if (LeverReturnTypeWhenReleased == EVRInteractibleLeverReturnType::RetainMomentum)
+	{
+		// Rolling average across num samples
+		MomentumAtDrop -= MomentumAtDrop / FramesToAverage;
+		MomentumAtDrop += ((FullCurrentAngle - LastLeverAngle) / DeltaTime) / FramesToAverage;
+
+		MomentumAtDrop = FMath::Min(MaxLeverMomentum, MomentumAtDrop);
+
+		LastLeverAngle = FullCurrentAngle;
+	}
+
+	bool bNewLeverState = (!FMath::IsNearlyZero(LeverLimitNegative) && FullCurrentAngle <= -(LeverLimitNegative * LeverTogglePercentage)) || (!FMath::IsNearlyZero(LeverLimitPositive) && FullCurrentAngle >= (LeverLimitPositive * LeverTogglePercentage));
+	//if (FMath::Abs(CurrentLeverAngle) >= LeverLimit  )
+	if (bNewLeverState != bLeverState)
+	{
+		bLeverState = bNewLeverState;
+
+		ReceiveLeverStateChanged(bLeverState, FullCurrentAngle >= 0.0f ? EVRInteractibleLeverEventType::LeverPositive : EVRInteractibleLeverEventType::LeverNegative, FullCurrentAngle);
+		OnLeverStateChanged.Broadcast(bLeverState, FullCurrentAngle >= 0.0f ? EVRInteractibleLeverEventType::LeverPositive : EVRInteractibleLeverEventType::LeverNegative, FullCurrentAngle);
+
+		if (bUngripAtTargetRotation && bLeverState && HoldingController)
+		{
+			FBPActorGripInformation GripInformation;
+			EBPVRResultSwitch result;
+			HoldingController->GetGripByObject(GripInformation, this, result);
+			if (result == EBPVRResultSwitch::OnSucceeded && HoldingController->HasGripAuthority(GripInformation))
+			{
+				HoldingController->DropObjectByInterface(this);
+			}
+		}
 	}
 
 	// Also set it to after rotation
@@ -320,6 +364,19 @@ void UVRLeverComponent::OnGrip_Implementation(UGripMotionControllerComponent * G
 		// This lets me use the correct original location over the network without changes
 		FTransform ReversedRelativeTransform = FTransform(GripInformation.RelativeTransform.ToInverseMatrixWithScale());
 		FTransform CurrentTransform = this->GetComponentTransform();
+
+		FVector InitialInteractorOffset = ReversedRelativeTransform.GetTranslation();
+		InitialInteractorOffset.X = 0;
+		InitialInteractorOffset.Y = 0;
+		InteractorOffsetTransform = ReversedRelativeTransform;
+		InteractorOffsetTransform.AddToTranslation(-InitialInteractorOffset);
+		InteractorOffsetTransform = FTransform(InteractorOffsetTransform.ToInverseMatrixWithScale());
+
+		InitialInteractorOffset = ReversedRelativeTransform.GetTranslation();
+		InitialInteractorOffset.Z = 0;
+		//FTransform InitTrans = ReversedRelativeTransform;
+		ReversedRelativeTransform.AddToTranslation(-InitialInteractorOffset);
+
 		FTransform RelativeToGripTransform = ReversedRelativeTransform * CurrentTransform;
 
 		InitialInteractorLocation = CurrentRelativeTransform.InverseTransformPosition(RelativeToGripTransform.GetTranslation());
@@ -354,7 +411,7 @@ void UVRLeverComponent::OnGrip_Implementation(UGripMotionControllerComponent * G
 	bIsInFirstTick = true;
 	MomentumAtDrop = 0.0f;
 
-	this->SetComponentTickEnabled(true);
+	//this->SetComponentTickEnabled(true);
 }
 
 void UVRLeverComponent::OnGripRelease_Implementation(UGripMotionControllerComponent * ReleasingController, const FBPActorGripInformation & GripInformation, bool bWasSocketed) 
@@ -369,6 +426,7 @@ void UVRLeverComponent::OnGripRelease_Implementation(UGripMotionControllerCompon
 	if (LeverReturnTypeWhenReleased != EVRInteractibleLeverReturnType::Stay)
 	{		
 		bIsLerping = true;
+		this->SetComponentTickEnabled(true);
 		if (MovementReplicationSetting != EGripMovementReplicationSettings::ForceServerSideMovement)
 			bReplicateMovement = false;
 	}
