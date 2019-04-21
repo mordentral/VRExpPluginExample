@@ -374,10 +374,10 @@ void UVRLeverComponent::OnGrip_Implementation(UGripMotionControllerComponent * G
 
 		InitialInteractorOffset = ReversedRelativeTransform.GetTranslation();
 		InitialInteractorOffset.Z = 0;
-		//FTransform InitTrans = ReversedRelativeTransform;
-		ReversedRelativeTransform.AddToTranslation(-InitialInteractorOffset);
+		FTransform InitTrans = ReversedRelativeTransform;
+		InitTrans.AddToTranslation(-InitialInteractorOffset);
 
-		FTransform RelativeToGripTransform = ReversedRelativeTransform * CurrentTransform;
+		FTransform RelativeToGripTransform = InitTrans * CurrentTransform;
 
 		InitialInteractorLocation = CurrentRelativeTransform.InverseTransformPosition(RelativeToGripTransform.GetTranslation());
 		InitialInteractorDropLocation = ReversedRelativeTransform.GetTranslation();
