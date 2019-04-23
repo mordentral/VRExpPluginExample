@@ -8,7 +8,8 @@
 #include "VRGripInterface.h"
 #include "GameplayTagContainer.h"
 #include "GameplayTagAssetInterface.h"
-#include "VRInteractibleFunctionLibrary.h"
+#include "Interactibles/VRInteractibleFunctionLibrary.h"
+#include "VRExpansionFunctionLibrary.h"
 #include "PhysicsEngine/ConstraintInstance.h"
 #include "Components/StaticMeshComponent.h"
 
@@ -29,7 +30,7 @@ enum class EVRInteractibleLeverAxis : uint8
 	Axis_Y,
 	Axis_Z,
 	Axis_XY,
-	Axis_XZ
+	FlightStick_XY
 };
 
 UENUM(Blueprintable)
@@ -94,9 +95,9 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = "VRLeverComponent")
 		float CurrentLeverAngle;
 
-	// Flight stick "yaw" angle
-	UPROPERTY(BlueprintReadOnly, Category = "VRLeverComponent|FlightStick")
-		float CurrentLeverYawAngle;
+	// Writes out all current angles to this rotator, useful mostly for XY and Flight stick modes
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRLeverComponent")
+		FRotator AllCurrentLeverAngles;
 
 	// Bearing Direction, for X/Y is their signed direction, for XY mode it is an actual 2D directional vector
 	UPROPERTY(BlueprintReadOnly, Category = "VRLeverComponent")
@@ -111,11 +112,6 @@ public:
 	// Rotation axis to use, XY is combined X and Y, only LerpToZero and PositiveLimits work with this mode
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRLeverComponent")
 		EVRInteractibleLeverAxis LeverRotationAxis;
-
-	// If true then the lever will add in a yaw component (or roll depending on axis) that follows the gripping hand.
-	// The result of this re-orientation will be recorded in the CurrentLeverYawAngle Variable.
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRLeverComponent|FlightStick")
-		bool bUseAsFlightStick;
 
 	// The percentage of the angle at witch the lever will toggle
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRLeverComponent", meta = (ClampMin = "0.01", ClampMax = "1.0", UIMin = "0.01", UIMax = "1.0"))
@@ -181,7 +177,6 @@ public:
 	// Flight stick variables
 	FTransform InteractorOffsetTransform;
 	FTransform CalcTransform;
-	float FlightStickInitialGripRot;
 
 	FVector InitialInteractorLocation;
 	FVector InitialInteractorDropLocation;
@@ -199,7 +194,7 @@ public:
 
 	void LerpAxis(float CurrentAngle, float DeltaTime);
 
-	void CalculateCurrentAngle(FTransform & CurrentRelativeTransform);
+	void CalculateCurrentAngle(FTransform & CurrentTransform);
 
 	// ------------------------------------------------
 	// Gameplay tag interface
