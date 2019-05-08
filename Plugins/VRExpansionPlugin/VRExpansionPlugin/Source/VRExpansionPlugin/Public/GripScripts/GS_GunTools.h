@@ -143,15 +143,6 @@ public:
 	}
 };
 
-struct VREXPANSIONPLUGIN_API FTwoHandedDataCache
-{
-	GENERATED_BODY()
-public:
-
-	FTransform ParentTransform;
-
-};
-
 
 // A grip script that adds useful fire-arm related features to grips
 // Just adding it to the grippable object provides the features without removing standard
