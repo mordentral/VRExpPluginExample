@@ -2,6 +2,8 @@
 
 #include "GripScripts/GS_Melee.h"
 #include "VRGripInterface.h"
+#include "PhysicsEngine/PhysicsConstraintActor.h"
+#include "PhysicsEngine/PhysicsConstraintComponent.h"
 #include "GripMotionControllerComponent.h"
 
 UGS_Melee::UGS_Melee(const FObjectInitializer& ObjectInitializer) :
@@ -45,8 +47,8 @@ bool UGS_Melee::GetWorldTransform_Implementation
 
 	if (bLodged)
 	{
-		//WorldTransform = root->GetComponentTransform();
-		return false;
+
+		return true;
 	}
 
 	//root->OnComponentHit.AddUObject(this, &UGS_Melee::OnComponentHit);
@@ -57,7 +59,7 @@ bool UGS_Melee::GetWorldTransform_Implementation
 	FVector Difference = (WorldTransform.GetLocation() - root->GetComponentLocation());
 	StrikeVelocity = Difference / DeltaTime;
 
-	static float MinimumPenetrationVelocity = 100.0f;
+	static float MinimumPenetrationVelocity = 1000.0f;
 	static float DensityToVelocityScaler = 0.5f;
 
 	// Only even consider penetration if the velocity is at least this size, later we scale the density of the material to see if we can penetrate a specific other material.
@@ -96,39 +98,66 @@ bool UGS_Melee::GetWorldTransform_Implementation
 					if (!HitResult.IsValidBlockingHit())
 						continue;
 
+
+					// Impart force when being pushed in / pulled out
+
 					//FVector VelocityOnNormalPlane;
 					if (HitResult.PhysMaterial != nullptr) //&& SurfaceTypesToPenetrate.Contains(HitResult.PhysMaterial->SurfaceType.GetValue()))
 					{
 						float ModifiedPenetrationVelocity = MinimumPenetrationVelocity * (DensityToVelocityScaler * HitResult.PhysMaterial->Density);
 						bLodged = true;
 						OnMeleeLodgedChanged.Broadcast(bLodged);
-
+						LodgeParent = HitResult.Component;
 						
-						// If the mass of the object hit is < threshold of the weapon, then we attach the hit object to the weapon instead of attaching the weapon
-						// to the hit object, could also add a constraint between the two...mmm
-						// would need a velocity for breaking this hold as well.
 
-					
-						// If we penetrated, then project forward by the penetration at the same angle.
+						if (HitResult.Component->GetMass() < 1000.0f)
+						{
+							FTransform HitTransform = HitResult.Component->GetComponentTransform();
+							HitTransform.AddToTranslation((HitResult.ImpactNormal) * 20.0f);
 
-						FVector HitNormal = HitResult.ImpactNormal;
-						FTransform HitTransform = root->GetComponentTransform();
-						HitTransform.SetRotation(WorldTransform.GetRotation());
-						HitTransform.Blend(HitTransform, WorldTransform, HitResult.Time);
+							// Should also handle backing out if it goes outside of the body
+							HitResult.Component->SetWorldTransform(HitTransform);
 
-						// Blend in penetration depth by hit normal
-						HitTransform.AddToTranslation((-HitNormal) * 20.0f);
+							//AttachmentRules.bWeldSimulatedBodies = true;
+							//FAttachmentTransformRules AttachmentRules = FAttachmentTransformRules::KeepWor
+							//HitResult.Component->AttachToComponent(root, AttachmentRules);
+							FVector SpawnLoc = HitResult.ImpactPoint;
+							FRotator SpawnRot = FRotator::ZeroRotator;
+							APhysicsConstraintActor * aConstraint = Cast<APhysicsConstraintActor>(GetWorld()->SpawnActor(APhysicsConstraintActor::StaticClass(), &SpawnLoc, &SpawnRot));
+							aConstraint->GetConstraintComp()->SetConstrainedComponents(root, NAME_None, HitResult.Component.Get(), HitResult.BoneName);
+							aConstraint->GetConstraintComp()->SetDisableCollision(true);
+						}
+						else
+						{
+							// If the mass of the object hit is < threshold of the weapon, then we attach the hit object to the weapon instead of attaching the weapon
+							// to the hit object, could also add a constraint between the two...mmm
+							// would need a velocity for breaking this hold as well.
+							HitResult.Component->AddForceAtLocation((-HitResult.ImpactNormal * 10000.0f) * ModifiedPenetrationVelocity, HitResult.ImpactPoint, HitResult.BoneName);
+							//HitResult.Component->AddImpulseAtLocation((-HitResult.ImpactNormal) * ModifiedPenetrationVelocity, HitResult.ImpactPoint, HitResult.BoneName);
 
-						// Should also handle backing out if it goes outside of the body
-						root->SetWorldTransform(HitTransform);
-						root->AttachToComponent(HitResult.Component.Get(), FAttachmentTransformRules::KeepWorldTransform, HitResult.BoneName);
+							// If we penetrated, then project forward by the penetration at the same angle.
 
-						// If other is simulating, then attach to the sword?
-						// Otherwise just penetrate?
+							FVector HitNormal = HitResult.ImpactNormal;
+							FTransform HitTransform = root->GetComponentTransform();
+							HitTransform.SetRotation(WorldTransform.GetRotation());
+							HitTransform.Blend(HitTransform, WorldTransform, HitResult.Time);
 
-						// We can penetrate it
-						// Sample density
-						return false;
+							// Blend in penetration depth by hit normal
+							HitTransform.AddToTranslation((-HitNormal) * 20.0f);
+
+							// Should also handle backing out if it goes outside of the body
+							root->SetWorldTransform(HitTransform);
+							FAttachmentTransformRules AttachmentRules = FAttachmentTransformRules::KeepWorldTransform;
+							AttachmentRules.bWeldSimulatedBodies = true;
+							root->AttachToComponent(HitResult.Component.Get(), AttachmentRules, HitResult.BoneName);
+
+							// If other is simulating, then attach to the sword?
+							// Otherwise just penetrate?
+
+							// We can penetrate it
+							// Sample density
+							return false;
+						}
 					}
 
 					//FHitResult.Normal

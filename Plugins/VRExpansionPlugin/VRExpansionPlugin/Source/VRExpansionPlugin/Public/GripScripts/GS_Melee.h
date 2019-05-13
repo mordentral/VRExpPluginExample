@@ -54,6 +54,11 @@ public:
 	float VelocityDamageScaler;
 	float MaximumVelocityForDamage;
 
+	TWeakObjectPtr<class UPrimitiveComponent> LodgeParent;
+
+	// Amount of movement force to apply to the in/out action of penetration.
+	float PenetrationFrictionCoefficient;
+
 	//DECLARE_DYNAMIC_MULTICAST_DELEGATE_FiveParams(FComponentHitSignature, UPrimitiveComponent*, HitComponent, AActor*, OtherActor, UPrimitiveComponent*, OtherComp, FVector, NormalImpulse, const FHitResult&, Hit);
 //DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams( FActorHitSignature, AActor*, SelfActor, AActor*, OtherActor, FVector, NormalImpulse, const FHitResult&, Hit );
 	
