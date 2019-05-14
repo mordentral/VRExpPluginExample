@@ -3309,11 +3309,12 @@ bool UGripMotionControllerComponent::GetGripWorldTransform(TArray<UVRGripScriptB
 {
 	SCOPE_CYCLE_COUNTER(STAT_GetGripTransform);
 
-	bool bHasValidTransform = false;
-	bool bGetDefaultTransform = true;
+	bool bHasValidTransform = true;
 
 	if (GripScripts.Num())
 	{
+		bool bGetDefaultTransform = true;
+
 		// Get grip script world transform overrides (if there are any)
 		for (UVRGripScriptBase* Script: GripScripts)
 		{
@@ -3348,7 +3349,7 @@ bool UGripMotionControllerComponent::GetGripWorldTransform(TArray<UVRGripScriptB
 	}
 	else
 	{
-		if (bGetDefaultTransform && DefaultGripScript)
+		if (DefaultGripScript)
 		{
 			bHasValidTransform = DefaultGripScript->CallCorrect_GetWorldTransform(this, DeltaTime, WorldTransform, ParentTransform, Grip, actor, root, bRootHasInterface, bActorHasInterface, bIsForTeleport);
 			bForceADrop = DefaultGripScript->Wants_ToForceDrop();
@@ -3462,6 +3463,17 @@ void UGripMotionControllerComponent::HandleGripArray(TArray<FBPActorGripInformat
 					bActorHasInterface = true;
 				}
 
+				if (Grip->GripCollisionType == EGripCollisionType::CustomGrip)
+				{
+					// Don't perform logic on the movement for this object, just pass in the GripTick() event with the controller difference instead
+					if(bRootHasInterface)
+						IVRGripInterface::Execute_TickGrip(root, this, *Grip, DeltaTime);
+					else if(bActorHasInterface)
+						IVRGripInterface::Execute_TickGrip(actor, this, *Grip, DeltaTime);
+
+					continue;
+				}
+
 				bool bRescalePhysicsGrips = false;
 				
 				TArray<UVRGripScriptBase*> GripScripts;
@@ -3475,41 +3487,11 @@ void UGripMotionControllerComponent::HandleGripArray(TArray<FBPActorGripInformat
 					IVRGripInterface::Execute_GetGripScripts(actor, GripScripts);
 				}
 
-				bool bHasValidWorldTransform = false;
+
 				bool bForceADrop = false;
 
-				// If this is a custom grip and we have no grip scripts, then end it here by ticking custom on the interface
-				if (Grip->GripCollisionType == EGripCollisionType::CustomGrip)
-				{
-					if (GripScripts.Num())
-					{
-						// Using World transform as a grip script tick, we'll let this one continue on as it has a valid world transform now
-						bHasValidWorldTransform = GetGripWorldTransform(GripScripts, DeltaTime, WorldTransform, ParentTransform, *Grip, actor, root, bRootHasInterface, bActorHasInterface, false, bForceADrop);
-						
-						// Still call the tick grip?, iffy on this one #TODO
-						if (bRootHasInterface)
-							IVRGripInterface::Execute_TickGrip(root, this, *Grip, DeltaTime);
-						else if (bActorHasInterface)
-							IVRGripInterface::Execute_TickGrip(actor, this, *Grip, DeltaTime);
-
-						// Will still early out if bHasValidWorldTransform is false, so that can be used to skip additional logic
-					}
-					else // Exit early, no special logic here
-					{
-						// Don't perform logic on the movement for this object, just pass in the GripTick() event
-						if (bRootHasInterface)
-							IVRGripInterface::Execute_TickGrip(root, this, *Grip, DeltaTime);
-						else if (bActorHasInterface)
-							IVRGripInterface::Execute_TickGrip(actor, this, *Grip, DeltaTime);
-
-						continue;
-					}
-				}
-				else // Either not a custom grip or we have grip scripts to check
-				{
-					// Get the world transform for this grip after handling secondary grips and interaction differences
-					bHasValidWorldTransform = GetGripWorldTransform(GripScripts, DeltaTime, WorldTransform, ParentTransform, *Grip, actor, root, bRootHasInterface, bActorHasInterface, false, bForceADrop);
-				}
+				// Get the world transform for this grip after handling secondary grips and interaction differences
+				bool bHasValidWorldTransform = GetGripWorldTransform(GripScripts, DeltaTime, WorldTransform, ParentTransform, *Grip, actor, root, bRootHasInterface, bActorHasInterface, false, bForceADrop);
 
 				// If a script or behavior is telling us to skip this and continue on (IE: it dropped the grip)
 				if (bForceADrop)
@@ -3552,7 +3534,6 @@ void UGripMotionControllerComponent::HandleGripArray(TArray<FBPActorGripInformat
 				// Maybe add a grip variable of "expected loc" and use that to check next frame, but for now this will do.
 				if ((bRootHasInterface || bActorHasInterface) &&
 					(
-							(Grip->GripCollisionType != EGripCollisionType::CustomGrip) &&
 							(Grip->GripCollisionType != EGripCollisionType::AttachmentGrip) &&
 							(Grip->GripCollisionType != EGripCollisionType::PhysicsOnly) && 
 							(Grip->GripCollisionType != EGripCollisionType::SweepWithPhysics)) &&
@@ -4225,8 +4206,8 @@ bool UGripMotionControllerComponent::SetUpPhysicsHandle(const FBPActorGripInform
 				PxRigidDynamic* KinActor = Scene->getPhysics().createRigidDynamic(KinPose);
 				KinActor->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, true);
 
-				KinActor->setMass(1.0f); // 1.0f;
-				KinActor->setMassSpaceInertiaTensor(PxVec3(1.0f, 1.0f, 1.0f));// PxVec3(1.0f, 1.0f, 1.0f));
+				KinActor->setMass(0.0f); // 1.0f;
+				KinActor->setMassSpaceInertiaTensor(PxVec3(0.0f, 0.0f, 0.0f));// PxVec3(1.0f, 1.0f, 1.0f));
 				KinActor->setMaxDepenetrationVelocity(PX_MAX_F32);
 
 				// No bodyinstance
@@ -4362,10 +4343,10 @@ bool UGripMotionControllerComponent::SetGripConstraintStiffnessAndDamping(const 
 		return false;
 
 	FBPActorPhysicsHandleInformation * Handle = GetPhysicsGrip(*Grip);
+
 	if (Handle)
 	{
 #if WITH_PHYSX
-
 		if (Handle->HandleData != nullptr)
 		{
 			// Different settings for manip grip
