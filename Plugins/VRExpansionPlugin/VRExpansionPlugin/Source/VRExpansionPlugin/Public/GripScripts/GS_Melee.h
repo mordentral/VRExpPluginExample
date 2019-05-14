@@ -30,7 +30,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FVROnMeleeIsLodged, bool, IsWeaponLo
 
 
 /**
-* The default grip transform logic for the motion controllers
+* A Melee grip script *CURRENTLY WIP, DO NOT USE!!!*
 */
 UCLASS(NotBlueprintable, ClassGroup = (VRExpansionPlugin))
 class VREXPANSIONPLUGIN_API UGS_Melee : public UVRGripScriptBase

@@ -121,11 +121,13 @@ bool UGS_Melee::GetWorldTransform_Implementation
 							//AttachmentRules.bWeldSimulatedBodies = true;
 							//FAttachmentTransformRules AttachmentRules = FAttachmentTransformRules::KeepWor
 							//HitResult.Component->AttachToComponent(root, AttachmentRules);
-							FVector SpawnLoc = HitResult.ImpactPoint;
+							
+							
+							/*FVector SpawnLoc = HitResult.ImpactPoint;
 							FRotator SpawnRot = FRotator::ZeroRotator;
 							APhysicsConstraintActor * aConstraint = Cast<APhysicsConstraintActor>(GetWorld()->SpawnActor(APhysicsConstraintActor::StaticClass(), &SpawnLoc, &SpawnRot));
 							aConstraint->GetConstraintComp()->SetConstrainedComponents(root, NAME_None, HitResult.Component.Get(), HitResult.BoneName);
-							aConstraint->GetConstraintComp()->SetDisableCollision(true);
+							aConstraint->GetConstraintComp()->SetDisableCollision(true);*/
 						}
 						else
 						{
