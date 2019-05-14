@@ -4206,8 +4206,8 @@ bool UGripMotionControllerComponent::SetUpPhysicsHandle(const FBPActorGripInform
 				PxRigidDynamic* KinActor = Scene->getPhysics().createRigidDynamic(KinPose);
 				KinActor->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, true);
 
-				KinActor->setMass(0.0f); // 1.0f;
-				KinActor->setMassSpaceInertiaTensor(PxVec3(0.0f, 0.0f, 0.0f));// PxVec3(1.0f, 1.0f, 1.0f));
+				KinActor->setMass(1.0f); // 1.0f;
+				KinActor->setMassSpaceInertiaTensor(PxVec3(1.0f, 1.0f, 1.0f));// PxVec3(1.0f, 1.0f, 1.0f));
 				KinActor->setMaxDepenetrationVelocity(PX_MAX_F32);
 
 				// No bodyinstance
