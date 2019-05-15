@@ -2,6 +2,7 @@
 
 #include "GripScripts/GS_Melee.h"
 #include "VRGripInterface.h"
+#include "PhysicalMaterials/PhysicalMaterial.h"
 #include "PhysicsEngine/PhysicsConstraintActor.h"
 #include "PhysicsEngine/PhysicsConstraintComponent.h"
 #include "GripMotionControllerComponent.h"
@@ -104,7 +105,7 @@ bool UGS_Melee::GetWorldTransform_Implementation
 					//FVector VelocityOnNormalPlane;
 					if (HitResult.PhysMaterial != nullptr) //&& SurfaceTypesToPenetrate.Contains(HitResult.PhysMaterial->SurfaceType.GetValue()))
 					{
-						float ModifiedPenetrationVelocity = MinimumPenetrationVelocity * (DensityToVelocityScaler * HitResult.PhysMaterial->Density);
+						float ModifiedPenetrationVelocity = MinimumPenetrationVelocity* (DensityToVelocityScaler * HitResult.PhysMaterial->Density);
 						bLodged = true;
 						OnMeleeLodgedChanged.Broadcast(bLodged);
 						LodgeParent = HitResult.Component;
