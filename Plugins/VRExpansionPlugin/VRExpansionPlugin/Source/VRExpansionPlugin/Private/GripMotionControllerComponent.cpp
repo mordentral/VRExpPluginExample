@@ -3865,6 +3865,16 @@ bool UGripMotionControllerComponent::DestroyPhysicsHandle(const FBPActorGripInfo
 		if (root)
 		{
 			root->SetCenterOfMass(FVector(0, 0, 0), Grip.GrippedBoneName);
+				// Get our original values
+				FVector vel = rBodyInstance->GetUnrealWorldVelocity();
+				FVector aVel = rBodyInstance->GetUnrealWorldAngularVelocityInRadians();
+				FVector originalCOM = rBodyInstance->GetCOMPosition();
+
+
+				// Offset the linear velocity by the new COM position and set it
+				vel += FVector::CrossProduct(aVel, rBodyInstance->GetCOMPosition() - originalCOM);
+				rBodyInstance->SetLinearVelocity(vel, false);
+
 		}
 	}
 
@@ -3876,6 +3886,7 @@ bool UGripMotionControllerComponent::DestroyPhysicsHandle(const FBPActorGripInfo
 
 	return true;
 }
+
 
 bool UGripMotionControllerComponent::SetUpPhysicsHandle(const FBPActorGripInformation &NewGrip)
 {
@@ -3979,7 +3990,7 @@ bool UGripMotionControllerComponent::SetUpPhysicsHandle(const FBPActorGripInform
 			}
 
 			if (COMType == EPhysicsGripCOMType::COM_SetAndGripAt)
-			{
+			{			
 				FVector curCOMPosition = P2UVector(PActor->getCMassLocalPose().p);
 
 				// Trans is our physics location, and it has no scale
