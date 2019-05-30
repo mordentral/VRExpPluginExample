@@ -221,7 +221,6 @@ bool UGS_GunTools::GetWorldTransform_Implementation
 			const FTransform WorldToPivot = FTransform(FQuat::Identity, -Pivot);//-BasePoint);
 
 			FVector frontLocOrig;
-			FVector UnModifiedFrontLocOrig;
 			FVector frontLoc;
 
 			// Ending lerp out of a multi grip
@@ -259,8 +258,6 @@ bool UGS_GunTools::GetWorldTransform_Implementation
 
 				frontLocOrig = (/*WorldTransform*/SecondaryTransform.TransformPosition(Grip.SecondaryGripInfo.SecondaryRelativeTransform.GetLocation())) - BasePoint;
 
-				UnModifiedFrontLocOrig = frontLocOrig;
-
 				// Apply any smoothing settings and lerping in / constant lerping
 				GunTools_ApplySmoothingAndLerp(Grip, frontLoc, frontLocOrig, DeltaTime, bSkipHighQualityOperations);
 
@@ -287,7 +284,7 @@ bool UGS_GunTools::GetWorldTransform_Implementation
 				{
 					// Get the rotation difference from the initial second grip
 					FQuat rotVal = FQuat::FindBetweenVectors(GrippingController->GetPivotLocation() - MountWorldTransform.GetTranslation(), (frontLoc + BasePoint) - MountWorldTransform.GetTranslation());
-					FQuat MountAdditionRotation = FQuat::FindBetweenVectors(/*UnModifiedF*/frontLocOrig, GrippingController->GetPivotLocation() - MountWorldTransform.GetTranslation());
+					FQuat MountAdditionRotation = FQuat::FindBetweenVectors(frontLocOrig, GrippingController->GetPivotLocation() - MountWorldTransform.GetTranslation());
 
 					if (VirtualStockSettings.StockLerpValue < 1.0f)
 					{
