@@ -970,6 +970,17 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "GripMotionController|Custom", meta = (DisplayName = "GetGripDistance"))
 		bool GetGripDistance_BP(UPARAM(ref)FBPActorGripInformation &Grip, FVector ExpectedLocation, float & CurrentDistance);
 
+	// Creates a physics handle for this grip
+	UFUNCTION(BlueprintCallable, Category = "GripMotionController|Custom", meta = (DisplayName = "SetAdvancedConstraintSettings"))
+		bool SetAdvancedConstraintSettings(UPARAM(ref)const FBPActorGripInformation& GripToEdit, UPARAM(ref) FBPAdvancedConstraintSettings & AdvancedSettings)
+	{
+		if (FBPActorPhysicsHandleInformation * HandleInfo = GetPhysicsGrip(GripToEdit))
+		{
+			AdvancedSettings.ApplyAdvancedSettings(*HandleInfo);
+		}
+		return true;
+	}
+
 	/** If true, the Position and Orientation args will contain the most recent controller state */
 	virtual bool GripPollControllerState(FVector& Position, FRotator& Orientation, float WorldToMetersScale);
 
