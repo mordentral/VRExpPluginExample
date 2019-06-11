@@ -280,7 +280,8 @@ public:
 
 	// Recreates a grip physics handle bodies
 	// If FullRecreate is true then it will recreate the entire constraint
-	bool UpdatePhysicsHandle(const FBPActorGripInformation& GripInfo, bool bFullyRecreate = false);
+	bool UpdatePhysicsHandle(uint8 GripID, bool bFullyRecreate = false);
+	bool UpdatePhysicsHandle(const FBPActorGripInformation & GripInfo, bool bFullyRecreate = false);
 
 	// Recreates a grip in situations where the collision type or movement replication type may have been changed
 	inline void ReCreateGrip(FBPActorGripInformation & GripInfo)
@@ -967,9 +968,9 @@ public:
 		bool DestroyPhysicsHandle_BP(UPARAM(ref)const FBPActorGripInformation &Grip);
 
 	// Re-creates a physics handle for this grip
-	// If bFullyRecreate is true then it will destroy the original constraint entirely and remake it
-	UFUNCTION(BlueprintCallable, Category = "GripMotionController|Custom", meta = (DisplayName = "DestroyPhysicsHandle"))
-		bool UpdatePhysicsHandle_BP(UPARAM(ref)const FBPActorGripInformation& Grip, bool bFullyRecreate = false);
+	// If bFullyRecreate is true then it will set all of the handle properties, if not then it will only reset the physics actors and COM positions
+	UFUNCTION(BlueprintCallable, Category = "GripMotionController|Custom", meta = (DisplayName = "UpdatePhysicsHandle"))
+		bool UpdatePhysicsHandle_BP(UPARAM(ref)const FBPActorGripInformation& Grip, bool bFullyRecreate = true);
 
 	// Update the location of the physics handle
 	UFUNCTION(BlueprintCallable, Category = "GripMotionController|Custom", meta = (DisplayName = "UpdatePhysicsHandleTransform"))

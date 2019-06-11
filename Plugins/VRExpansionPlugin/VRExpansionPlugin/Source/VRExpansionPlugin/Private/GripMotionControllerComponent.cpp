@@ -3939,6 +3939,18 @@ void UGripMotionControllerComponent::CleanUpBadPhysicsHandles()
 	}
 }
 
+bool UGripMotionControllerComponent::UpdatePhysicsHandle(uint8 GripID, bool bFullyRecreate)
+{
+	FBPActorGripInformation* GripInfo = GrippedObjects.FindByKey(GripID);
+	if (!GripInfo)
+		GripInfo = LocallyGrippedObjects.FindByKey(GripID);
+
+	if (!GripInfo)
+		return false;
+
+	return UpdatePhysicsHandle(*GripInfo, bFullyRecreate);
+}
+
 bool UGripMotionControllerComponent::UpdatePhysicsHandle(const FBPActorGripInformation& GripInfo, bool bFullyRecreate)
 {
 	int HandleIndex = 0;
@@ -3949,8 +3961,8 @@ bool UGripMotionControllerComponent::UpdatePhysicsHandle(const FBPActorGripInfor
 
 	if (bFullyRecreate)
 	{
-		DestroyPhysicsHandle(/*PhysicsGrips[HandleIndex].SceneIndex,*/ &PhysicsGrips[HandleIndex].HandleData, &PhysicsGrips[HandleIndex].KinActorData);
-		PhysicsGrips.RemoveAt(HandleIndex);
+		//DestroyPhysicsHandle(/*PhysicsGrips[HandleIndex].SceneIndex,*/ &PhysicsGrips[HandleIndex].HandleData, &PhysicsGrips[HandleIndex].KinActorData);
+		//PhysicsGrips.RemoveAt(HandleIndex);
 		return SetUpPhysicsHandle(GripInfo);
 	}
 
@@ -4117,6 +4129,12 @@ bool UGripMotionControllerComponent::SetUpPhysicsHandle(const FBPActorGripInform
 	if (!root)
 		return false;
 
+	FBPActorPhysicsHandleInformation* HandleInfo = GetPhysicsGrip(NewGrip);
+	if (HandleInfo == nullptr)
+	{
+		HandleInfo = CreatePhysicsGrip(NewGrip);
+	}
+
 	// Needs to be simulating in order to run physics
 	root->SetSimulatePhysics(true);
 	/*if(NewGrip.GrippedBoneName == NAME_None)
@@ -4127,8 +4145,6 @@ bool UGripMotionControllerComponent::SetUpPhysicsHandle(const FBPActorGripInform
 		if (skele)
 			skele->SetAllBodiesBelowSimulatePhysics(NewGrip.GrippedBoneName, true);
 	}*/
-
-	FBPActorPhysicsHandleInformation * HandleInfo = CreatePhysicsGrip(NewGrip);
 
 #if WITH_PHYSX
 	// Get the PxRigidDynamic that we want to grab.
@@ -4234,133 +4250,136 @@ bool UGripMotionControllerComponent::SetUpPhysicsHandle(const FBPActorGripInform
 
 			KinPose = U2PTransform(trans);
 
+
+			if (!HandleInfo->KinActorData)
+			{
+				// Create kinematic actor we are going to create joint with. This will be moved around with calls to SetLocation/SetRotation.
+				HandleInfo->KinActorData = Scene->getPhysics().createRigidDynamic(KinPose);
+
+				HandleInfo->KinActorData->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, true);
+
+				HandleInfo->KinActorData->setMass(1.0f); // 1.0f;
+				HandleInfo->KinActorData->setMassSpaceInertiaTensor(PxVec3(1.0f, 1.0f, 1.0f));// PxVec3(1.0f, 1.0f, 1.0f));
+				HandleInfo->KinActorData->setMaxDepenetrationVelocity(PX_MAX_F32);
+				
+				// No bodyinstance
+				HandleInfo->KinActorData->userData = NULL;
+
+				// Add to Scene
+				Scene->addActor(*HandleInfo->KinActorData);
+			}
+
 			// If we don't already have a handle - make one now.
 			if (!HandleInfo->HandleData)
 			{
-				// Create kinematic actor we are going to create joint with. This will be moved around with calls to SetLocation/SetRotation.
-				PxRigidDynamic* KinActor = Scene->getPhysics().createRigidDynamic(KinPose);
-				KinActor->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, true);
-
-				KinActor->setMass(1.0f); // 1.0f;
-				KinActor->setMassSpaceInertiaTensor(PxVec3(1.0f, 1.0f, 1.0f));// PxVec3(1.0f, 1.0f, 1.0f));
-				KinActor->setMaxDepenetrationVelocity(PX_MAX_F32);
-
-				// No bodyinstance
-				KinActor->userData = NULL;
-
-				// Add to Scene
-				Scene->addActor(*KinActor);
-
-				// Save reference to the kinematic actor.
-				HandleInfo->KinActorData = KinActor;
-				PxD6Joint* NewJoint = NULL;
-
 				// Create the joint
-				NewJoint = PxD6JointCreate(Scene->getPhysics(), KinActor, PxTransform(PxIdentity), PActor, PActor->getGlobalPose().transformInv(KinPose));
+				HandleInfo->HandleData = PxD6JointCreate(Scene->getPhysics(), HandleInfo->KinActorData, PxTransform(PxIdentity), PActor, PActor->getGlobalPose().transformInv(KinPose));
+				
+				// No constraint instance
+				if(HandleInfo->HandleData)
+					HandleInfo->HandleData->userData = NULL;
+			}
+			else
+			{
+				HandleInfo->HandleData->setActors(HandleInfo->KinActorData, PActor);
+				//HandleInfo->HandleData->setLocalPose(PxJointActorIndex::eACTOR0, PxTransform(PxIdentity));
+				HandleInfo->HandleData->setLocalPose(PxJointActorIndex::eACTOR1, PActor->getGlobalPose().transformInv(KinPose));
+			}
 
-				if (!NewJoint)
+			if (HandleInfo->HandleData)
+			{
+				// Remember the scene index that the handle joint/actor are in.
+				FPhysScene* RBScene = FPhysxUserData::Get<FPhysScene>(Scene->userData);
+				//const uint32 SceneType = rBodyInstance->UseAsyncScene(RBScene) ? PST_Async : PST_Sync;
+				//HandleInfo->SceneIndex = RBScene->PhysXSceneIndex[SceneType];
+
+				// Pretty Much Unbreakable
+				HandleInfo->HandleData->setBreakForce(PX_MAX_REAL, PX_MAX_REAL);
+
+				// Different settings for manip grip
+				if (NewGrip.GripCollisionType == EGripCollisionType::ManipulationGrip || NewGrip.GripCollisionType == EGripCollisionType::ManipulationGripWithWristTwist)
 				{
-					HandleInfo->HandleData = 0;
-				}
-				else
-				{
-					// No constraint instance
-					NewJoint->userData = NULL;
-					HandleInfo->HandleData = NewJoint;
+					HandleInfo->HandleData->setMotion(PxD6Axis::eX, PxD6Motion::eFREE);
+					HandleInfo->HandleData->setMotion(PxD6Axis::eY, PxD6Motion::eFREE);
+					HandleInfo->HandleData->setMotion(PxD6Axis::eZ, PxD6Motion::eFREE);
 
-					// Remember the scene index that the handle joint/actor are in.
-					FPhysScene* RBScene = FPhysxUserData::Get<FPhysScene>(Scene->userData);
-					//const uint32 SceneType = rBodyInstance->UseAsyncScene(RBScene) ? PST_Async : PST_Sync;
-					//HandleInfo->SceneIndex = RBScene->PhysXSceneIndex[SceneType];
+					HandleInfo->HandleData->setMotion(PxD6Axis::eTWIST, PxD6Motion::eFREE);
+					HandleInfo->HandleData->setMotion(PxD6Axis::eSWING1, PxD6Motion::eFREE);
+					HandleInfo->HandleData->setMotion(PxD6Axis::eSWING2, PxD6Motion::eFREE);
 
-					// Pretty Much Unbreakable
-					NewJoint->setBreakForce(PX_MAX_REAL, PX_MAX_REAL);
+					PxD6JointDrive drive;
 
-					// Different settings for manip grip
-					if (NewGrip.GripCollisionType == EGripCollisionType::ManipulationGrip || NewGrip.GripCollisionType == EGripCollisionType::ManipulationGripWithWristTwist)
+					if (NewGrip.AdvancedGripSettings.PhysicsSettings.bUsePhysicsSettings && NewGrip.AdvancedGripSettings.PhysicsSettings.PhysicsConstraintType == EPhysicsGripConstraintType::ForceConstraint)
 					{
-						NewJoint->setMotion(PxD6Axis::eX, PxD6Motion::eFREE);
-						NewJoint->setMotion(PxD6Axis::eY, PxD6Motion::eFREE);
-						NewJoint->setMotion(PxD6Axis::eZ, PxD6Motion::eFREE);
-
-						NewJoint->setMotion(PxD6Axis::eTWIST, PxD6Motion::eFREE);
-						NewJoint->setMotion(PxD6Axis::eSWING1, PxD6Motion::eFREE);
-						NewJoint->setMotion(PxD6Axis::eSWING2, PxD6Motion::eFREE);
-
-						PxD6JointDrive drive;
-
-						if (NewGrip.AdvancedGripSettings.PhysicsSettings.bUsePhysicsSettings && NewGrip.AdvancedGripSettings.PhysicsSettings.PhysicsConstraintType == EPhysicsGripConstraintType::ForceConstraint)
-						{
-							drive = PxD6JointDrive(NewGrip.Stiffness, NewGrip.Damping, PX_MAX_F32);
-						}
-						else
-						{
-							drive = PxD6JointDrive(NewGrip.Stiffness, NewGrip.Damping, PX_MAX_F32, PxD6JointDriveFlag::eACCELERATION);
-						}
-
-						NewJoint->setDrive(PxD6Drive::eX, drive);
-						NewJoint->setDrive(PxD6Drive::eY, drive);
-						NewJoint->setDrive(PxD6Drive::eZ, drive);
-
-						if (NewGrip.GripCollisionType == EGripCollisionType::ManipulationGripWithWristTwist)
-							NewJoint->setDrive(PxD6Drive::eTWIST, drive);
+						drive = PxD6JointDrive(NewGrip.Stiffness, NewGrip.Damping, PX_MAX_F32);
 					}
 					else
 					{
-						float Stiffness = NewGrip.Stiffness;
-						float Damping = NewGrip.Damping;
-						float AngularStiffness;
-						float AngularDamping;
-
-						if (NewGrip.AdvancedGripSettings.PhysicsSettings.bUsePhysicsSettings && NewGrip.AdvancedGripSettings.PhysicsSettings.bUseCustomAngularValues)
-						{
-							AngularStiffness = NewGrip.AdvancedGripSettings.PhysicsSettings.AngularStiffness;
-							AngularDamping = NewGrip.AdvancedGripSettings.PhysicsSettings.AngularDamping;
-						}
-						else
-						{
-							AngularStiffness = Stiffness * ANGULAR_STIFFNESS_MULTIPLIER; // Default multiplier
-							AngularDamping = Damping * ANGULAR_DAMPING_MULTIPLIER; // Default multiplier
-						}
-
-						if (NewGrip.GripCollisionType == EGripCollisionType::InteractiveHybridCollisionWithPhysics)
-						{
-							// Do not effect damping, just increase stiffness so that it is stronger
-							// Default multiplier
-							Stiffness *= HYBRID_PHYSICS_GRIP_MULTIPLIER;
-							AngularStiffness *= HYBRID_PHYSICS_GRIP_MULTIPLIER;
-						}
-
-						PxD6JointDrive drive;
-						PxD6JointDrive Angledrive;
-
-						if (NewGrip.AdvancedGripSettings.PhysicsSettings.bUsePhysicsSettings && NewGrip.AdvancedGripSettings.PhysicsSettings.PhysicsConstraintType == EPhysicsGripConstraintType::ForceConstraint)
-						{
-							drive = PxD6JointDrive(Stiffness, Damping, PX_MAX_F32);
-							Angledrive = PxD6JointDrive(AngularStiffness, AngularDamping, PX_MAX_F32);
-						}
-						else
-						{
-							drive = PxD6JointDrive(Stiffness, Damping, PX_MAX_F32, PxD6JointDriveFlag::eACCELERATION);
-							Angledrive = PxD6JointDrive(AngularStiffness, AngularDamping, PX_MAX_F32, PxD6JointDriveFlag::eACCELERATION);
-						}
-
-						// Setting up the joint
-						NewJoint->setMotion(PxD6Axis::eX, PxD6Motion::eFREE);
-						NewJoint->setMotion(PxD6Axis::eY, PxD6Motion::eFREE);
-						NewJoint->setMotion(PxD6Axis::eZ, PxD6Motion::eFREE);
-
-						NewJoint->setMotion(PxD6Axis::eTWIST, PxD6Motion::eFREE);
-						NewJoint->setMotion(PxD6Axis::eSWING1, PxD6Motion::eFREE);
-						NewJoint->setMotion(PxD6Axis::eSWING2, PxD6Motion::eFREE);
-
-						NewJoint->setDrivePosition(PxTransform(PxVec3(0, 0, 0)));
-
-						NewJoint->setDrive(PxD6Drive::eX, drive);
-						NewJoint->setDrive(PxD6Drive::eY, drive);
-						NewJoint->setDrive(PxD6Drive::eZ, drive);
-						NewJoint->setDrive(PxD6Drive::eSLERP, Angledrive);
+						drive = PxD6JointDrive(NewGrip.Stiffness, NewGrip.Damping, PX_MAX_F32, PxD6JointDriveFlag::eACCELERATION);
 					}
+
+					HandleInfo->HandleData->setDrive(PxD6Drive::eX, drive);
+					HandleInfo->HandleData->setDrive(PxD6Drive::eY, drive);
+					HandleInfo->HandleData->setDrive(PxD6Drive::eZ, drive);
+
+					if (NewGrip.GripCollisionType == EGripCollisionType::ManipulationGripWithWristTwist)
+						HandleInfo->HandleData->setDrive(PxD6Drive::eTWIST, drive);
+				}
+				else
+				{
+					float Stiffness = NewGrip.Stiffness;
+					float Damping = NewGrip.Damping;
+					float AngularStiffness;
+					float AngularDamping;
+
+					if (NewGrip.AdvancedGripSettings.PhysicsSettings.bUsePhysicsSettings && NewGrip.AdvancedGripSettings.PhysicsSettings.bUseCustomAngularValues)
+					{
+						AngularStiffness = NewGrip.AdvancedGripSettings.PhysicsSettings.AngularStiffness;
+						AngularDamping = NewGrip.AdvancedGripSettings.PhysicsSettings.AngularDamping;
+					}
+					else
+					{
+						AngularStiffness = Stiffness * ANGULAR_STIFFNESS_MULTIPLIER; // Default multiplier
+						AngularDamping = Damping * ANGULAR_DAMPING_MULTIPLIER; // Default multiplier
+					}
+
+					if (NewGrip.GripCollisionType == EGripCollisionType::InteractiveHybridCollisionWithPhysics)
+					{
+						// Do not effect damping, just increase stiffness so that it is stronger
+						// Default multiplier
+						Stiffness *= HYBRID_PHYSICS_GRIP_MULTIPLIER;
+						AngularStiffness *= HYBRID_PHYSICS_GRIP_MULTIPLIER;
+					}
+
+					PxD6JointDrive drive;
+					PxD6JointDrive Angledrive;
+
+					if (NewGrip.AdvancedGripSettings.PhysicsSettings.bUsePhysicsSettings && NewGrip.AdvancedGripSettings.PhysicsSettings.PhysicsConstraintType == EPhysicsGripConstraintType::ForceConstraint)
+					{
+						drive = PxD6JointDrive(Stiffness, Damping, PX_MAX_F32);
+						Angledrive = PxD6JointDrive(AngularStiffness, AngularDamping, PX_MAX_F32);
+					}
+					else
+					{
+						drive = PxD6JointDrive(Stiffness, Damping, PX_MAX_F32, PxD6JointDriveFlag::eACCELERATION);
+						Angledrive = PxD6JointDrive(AngularStiffness, AngularDamping, PX_MAX_F32, PxD6JointDriveFlag::eACCELERATION);
+					}
+
+					// Setting up the joint
+					HandleInfo->HandleData->setMotion(PxD6Axis::eX, PxD6Motion::eFREE);
+					HandleInfo->HandleData->setMotion(PxD6Axis::eY, PxD6Motion::eFREE);
+					HandleInfo->HandleData->setMotion(PxD6Axis::eZ, PxD6Motion::eFREE);
+
+					HandleInfo->HandleData->setMotion(PxD6Axis::eTWIST, PxD6Motion::eFREE);
+					HandleInfo->HandleData->setMotion(PxD6Axis::eSWING1, PxD6Motion::eFREE);
+					HandleInfo->HandleData->setMotion(PxD6Axis::eSWING2, PxD6Motion::eFREE);
+
+					HandleInfo->HandleData->setDrivePosition(PxTransform(PxVec3(0, 0, 0)));
+
+					HandleInfo->HandleData->setDrive(PxD6Drive::eX, drive);
+					HandleInfo->HandleData->setDrive(PxD6Drive::eY, drive);
+					HandleInfo->HandleData->setDrive(PxD6Drive::eZ, drive);
+					HandleInfo->HandleData->setDrive(PxD6Drive::eSLERP, Angledrive);
 				}
 			}
 		}
@@ -5455,7 +5474,7 @@ bool UGripMotionControllerComponent::DestroyPhysicsHandle_BP(const FBPActorGripI
 
 bool UGripMotionControllerComponent::UpdatePhysicsHandle_BP(const FBPActorGripInformation& Grip, bool bFullyRecreate)
 {
-	return UpdatePhysicsHandle(Grip, bFullyRecreate);
+	return UpdatePhysicsHandle(Grip.GripID, bFullyRecreate);
 }
 
 
