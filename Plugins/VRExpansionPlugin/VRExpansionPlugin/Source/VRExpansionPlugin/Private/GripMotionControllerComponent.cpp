@@ -3939,6 +3939,68 @@ void UGripMotionControllerComponent::CleanUpBadPhysicsHandles()
 	}
 }
 
+bool UGripMotionControllerComponent::UpdatePhysicsHandle(const FBPActorGripInformation& GripInfo, bool bFullyRecreate)
+{
+	int HandleIndex = 0;
+	bool bHadPhysicsHandle = GetPhysicsGripIndex(GripInfo, HandleIndex);
+
+	if (!bHadPhysicsHandle)
+		return false;
+
+	if (bFullyRecreate)
+	{
+		DestroyPhysicsHandle(/*PhysicsGrips[HandleIndex].SceneIndex,*/ &PhysicsGrips[HandleIndex].HandleData, &PhysicsGrips[HandleIndex].KinActorData);
+		PhysicsGrips.RemoveAt(HandleIndex);
+		return SetUpPhysicsHandle(GripInfo);
+	}
+
+	// Not fully recreating
+#if WITH_PHYSX
+
+	UPrimitiveComponent* root = GripInfo.GetGrippedComponent();
+	AActor* pActor = GripInfo.GetGrippedActor();
+
+	if (!root && pActor)
+		root = Cast<UPrimitiveComponent>(pActor->GetRootComponent());
+
+	if (!root)
+		return false;
+
+	FBodyInstance* rBodyInstance = root->GetBodyInstance(GripInfo.GrippedBoneName);
+	if (!rBodyInstance || !rBodyInstance->IsValidBodyInstance())
+	{
+		return false;
+	}
+
+	check(rBodyInstance->BodySetup->GetCollisionTraceFlag() != CTF_UseComplexAsSimple);
+
+	FBPActorPhysicsHandleInformation* HandleInfo = &PhysicsGrips[HandleIndex];
+	FPhysicsCommand::ExecuteWrite(rBodyInstance->ActorHandle, [&](const FPhysicsActorHandle& Actor)
+		{
+			if (PxRigidDynamic * PActor = FPhysicsInterface::GetPxRigidDynamic_AssumesLocked(Actor))
+			{
+				HandleInfo->HandleData->setActors(HandleInfo->KinActorData, PActor);
+			}
+
+			if (HandleInfo->bSetCOM)
+			{
+				FVector Loc = (FTransform((HandleInfo->RootBoneRotation * GripInfo.RelativeTransform).ToInverseMatrixWithScale())).GetLocation();
+				Loc *= rBodyInstance->Scale3D;
+
+				FTransform localCom = FPhysicsInterface::GetComTransformLocal_AssumesLocked(Actor);
+				localCom.SetLocation(Loc);
+
+				FPhysicsInterface::SetComLocalPose_AssumesLocked(Actor, localCom);
+			}
+
+		});
+
+	return true;
+#endif
+
+	return false;
+}
+
 bool UGripMotionControllerComponent::DestroyPhysicsHandle(/*int32 SceneIndex,*/ physx::PxD6Joint** HandleData, physx::PxRigidDynamic** KinActorData)
 {
 	#if WITH_PHYSX
@@ -3979,34 +4041,34 @@ bool UGripMotionControllerComponent::DestroyPhysicsHandle(const FBPActorGripInfo
 		return true;
 	}
 
-	// Reset center of mass to zero
-	if (HandleInfo->bSetCOM)
+	UPrimitiveComponent *root = Grip.GetGrippedComponent();
+	AActor * pActor = Grip.GetGrippedActor();
+
+	if (!root && pActor)
+		root = Cast<UPrimitiveComponent>(pActor->GetRootComponent());
+
+	if (root)
 	{
-		UPrimitiveComponent *root = Grip.GetGrippedComponent();
-		AActor * pActor = Grip.GetGrippedActor();
-
-		if (!root && pActor)
-			root = Cast<UPrimitiveComponent>(pActor->GetRootComponent());
-
-		if (root)
+		if (FBodyInstance * rBodyInstance = root->GetBodyInstance())
 		{
-			if (FBodyInstance * rBodyInstance = root->GetBodyInstance())
+			// #TODO: Should this be done on drop instead?
+			// Remove event registration
+			if (!bSkipUnregistering)
+				rBodyInstance->OnRecalculatedMassProperties.RemoveAll(this);
+
+			if (HandleInfo->bSetCOM)
 			{
+				// Reset center of mass to zero
 				// Get our original values
 				FVector vel = rBodyInstance->GetUnrealWorldVelocity();
 				FVector aVel = rBodyInstance->GetUnrealWorldAngularVelocityInRadians();
 				FVector originalCOM = rBodyInstance->GetCOMPosition();
-
-				// #TODO: Should this be done on drop instead?
-				if(!bSkipUnregistering)
-					rBodyInstance->OnRecalculatedMassProperties.RemoveAll(this);
 
 				rBodyInstance->UpdateMassProperties();
 
 				// Offset the linear velocity by the new COM position and set it
 				vel += FVector::CrossProduct(aVel, rBodyInstance->GetCOMPosition() - originalCOM);
 				rBodyInstance->SetLinearVelocity(vel, false);
-
 			}
 		}
 	}
@@ -4030,57 +4092,17 @@ void UGripMotionControllerComponent::OnGripMassUpdated(FBodyInstance* GripBodyIn
 	{
 		NewGrip = GripArray[i];
 
-		EPhysicsGripCOMType COMType = NewGrip.AdvancedGripSettings.PhysicsSettings.PhysicsGripLocationSettings;
-
-		if (!NewGrip.AdvancedGripSettings.PhysicsSettings.bUsePhysicsSettings || COMType == EPhysicsGripCOMType::COM_Default)
-		{
-			if (NewGrip.GripCollisionType == EGripCollisionType::ManipulationGrip || NewGrip.GripCollisionType == EGripCollisionType::ManipulationGripWithWristTwist)
-			{
-				COMType = EPhysicsGripCOMType::COM_GripAtControllerLoc;
-			}
-			else
-			{
-				COMType = EPhysicsGripCOMType::COM_SetAndGripAt;
-			}
-		}
-
-		if (COMType != EPhysicsGripCOMType::COM_SetAndGripAt)
-			continue;
-
 		UPrimitiveComponent *root = NewGrip.GetGrippedComponent();
 		AActor * pActor = NewGrip.GetGrippedActor();
 
 		if (!root && pActor)
 			root = Cast<UPrimitiveComponent>(pActor->GetRootComponent());
 
-		if (!root)
+		if (!root || root != GripBodyInstance->OwnerComponent)
 			continue;
 
-		if (FBodyInstance* rBodyInstance = root->GetBodyInstance(NewGrip.GrippedBoneName))
-		{
-			if (rBodyInstance != GripBodyInstance)
-				continue;
-
-			FTransform RootBoneRotation = FTransform::Identity;
-
-			FBPActorPhysicsHandleInformation *PhysicsInfo = GetPhysicsGrip(NewGrip);
-
-			if (PhysicsInfo != nullptr)
-			{
-				RootBoneRotation = PhysicsInfo->RootBoneRotation;
-			}
-
-			FPhysicsCommand::ExecuteWrite(rBodyInstance->ActorHandle, [&](const FPhysicsActorHandle& Actor)
-			{
-				FVector Loc = (FTransform((RootBoneRotation * NewGrip.RelativeTransform).ToInverseMatrixWithScale())).GetLocation();
-				Loc *= rBodyInstance->Scale3D;
-
-				FTransform localCom = FPhysicsInterface::GetComTransformLocal_AssumesLocked(Actor);
-				localCom.SetLocation(Loc);
-
-				FPhysicsInterface::SetComLocalPose_AssumesLocked(Actor, localCom);
-			});
-		}
+		UpdatePhysicsHandle(NewGrip);
+		break;
 	}
 }
 
@@ -4189,9 +4211,6 @@ bool UGripMotionControllerComponent::SetUpPhysicsHandle(const FBPActorGripInform
 				FTransform localCom = FPhysicsInterface::GetComTransformLocal_AssumesLocked(Actor);
 				localCom.SetLocation(Loc);
 				FPhysicsInterface::SetComLocalPose_AssumesLocked(Actor, localCom);
-
-				// Bind to further updates in order to keep it alive
-				rBodyInstance->OnRecalculatedMassProperties.AddUObject(this, &UGripMotionControllerComponent::OnGripMassUpdated);
 				
 				trans.SetLocation(FPhysicsInterface::GetComTransform_AssumesLocked(Actor).GetLocation());
 				HandleInfo->bSetCOM = true;
@@ -4209,6 +4228,9 @@ bool UGripMotionControllerComponent::SetUpPhysicsHandle(const FBPActorGripInform
 				trans.SetLocation(ComLoc);
 				HandleInfo->COMPosition = U2PTransform(FTransform(rBodyInstance->GetUnrealWorldTransform().InverseTransformPosition(ComLoc)));
 			}
+
+			// Bind to further updates in order to keep it alive
+			rBodyInstance->OnRecalculatedMassProperties.AddUObject(this, &UGripMotionControllerComponent::OnGripMassUpdated);
 
 			KinPose = U2PTransform(trans);
 
@@ -5430,6 +5452,12 @@ bool UGripMotionControllerComponent::DestroyPhysicsHandle_BP(const FBPActorGripI
 {
 	return DestroyPhysicsHandle(Grip);
 }
+
+bool UGripMotionControllerComponent::UpdatePhysicsHandle_BP(const FBPActorGripInformation& Grip, bool bFullyRecreate)
+{
+	return UpdatePhysicsHandle(Grip, bFullyRecreate);
+}
+
 
 void UGripMotionControllerComponent::UpdatePhysicsHandleTransform_BP(const FBPActorGripInformation &GrippedActor, const FTransform& NewTransform)
 {
