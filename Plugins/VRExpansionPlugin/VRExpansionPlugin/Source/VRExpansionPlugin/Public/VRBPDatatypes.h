@@ -1196,6 +1196,7 @@ public:
 	{
 		bool bWasInitiallyRepped;
 		bool bCachedHasSecondaryAttachment;
+		FTransform_NetQuantize CachedRelativeTransform;
 		FTransform_NetQuantize CachedSecondaryRelativeTransform;
 		EGripCollisionType CachedGripCollisionType;
 		EGripMovementReplicationSettings CachedGripMovementReplicationSetting;
@@ -1209,6 +1210,7 @@ public:
 		FGripValueCache() :
 			bWasInitiallyRepped(false),
 			bCachedHasSecondaryAttachment(false),
+			CachedRelativeTransform(FTransform::Identity),
 			CachedSecondaryRelativeTransform(FTransform::Identity),
 			CachedGripCollisionType(EGripCollisionType::InteractiveCollisionWithSweep),
 			CachedGripMovementReplicationSetting(EGripMovementReplicationSettings::ForceClientSideMovement),

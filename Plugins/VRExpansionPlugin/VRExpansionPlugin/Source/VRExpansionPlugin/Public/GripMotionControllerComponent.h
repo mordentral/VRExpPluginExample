@@ -279,15 +279,14 @@ public:
 	void CleanUpBadPhysicsHandles();
 
 	// Recreates a grip physics handle bodies
-	// If FullRecreate is true then it will recreate the entire constraint
-	bool UpdatePhysicsHandle(uint8 GripID, bool bFullyRecreate = false);
-	bool UpdatePhysicsHandle(const FBPActorGripInformation & GripInfo, bool bFullyRecreate = false);
+	// If FullRecreate is false then it will only set the COM and actors, otherwise will re-init the entire grip
+	bool UpdatePhysicsHandle(uint8 GripID, bool bFullyRecreate = true);
+	bool UpdatePhysicsHandle(const FBPActorGripInformation & GripInfo, bool bFullyRecreate = true);
 
 	// Recreates a grip in situations where the collision type or movement replication type may have been changed
 	inline void ReCreateGrip(FBPActorGripInformation & GripInfo)
 	{
 		int HandleIndex = 0;
-
 		if (GetPhysicsGripIndex(GripInfo, HandleIndex))
 		{
 			DestroyPhysicsHandle(/*PhysicsGrips[HandleIndex].SceneIndex,*/ &PhysicsGrips[HandleIndex].HandleData, &PhysicsGrips[HandleIndex].KinActorData);
@@ -343,12 +342,6 @@ public:
 			{
 				// Reset the secondary grip distance
 				Grip.SecondaryGripInfo.SecondaryGripDistance = 0.0f;
-
-				/*const UVRGlobalSettings& VRSettings = *GetDefault<UVRGlobalSettings>();
-				Grip.AdvancedGripSettings.SecondaryGripSettings.SecondarySmoothing.CutoffSlope = VRSettings.OneEuroCutoffSlope;
-				Grip.AdvancedGripSettings.SecondaryGripSettings.SecondarySmoothing.DeltaCutoff = VRSettings.OneEuroDeltaCutoff;
-				Grip.AdvancedGripSettings.SecondaryGripSettings.SecondarySmoothing.MinCutoff = VRSettings.OneEuroMinCutoff;
-				Grip.AdvancedGripSettings.SecondaryGripSettings.SecondarySmoothing.ResetSmoothingFilter();*/
 
 				if (FMath::IsNearlyZero(Grip.SecondaryGripInfo.LerpToRate)) // Zero, could use IsNearlyZero instead
 					Grip.SecondaryGripInfo.GripLerpState = EGripLerpState::NotLerping;
@@ -425,16 +418,21 @@ public:
 			}
 			else // If re-creating the grip anyway we don't need to do the below
 			{
-				// If the stiffness and damping got changed server side
-				if (!FMath::IsNearlyEqual(Grip.ValueCache.CachedStiffness, Grip.Stiffness) || !FMath::IsNearlyEqual(Grip.ValueCache.CachedDamping, Grip.Damping) || Grip.ValueCache.CachedPhysicsSettings != Grip.AdvancedGripSettings.PhysicsSettings)
+				// If physics settings got changed server side
+				if (!FMath::IsNearlyEqual(Grip.ValueCache.CachedStiffness, Grip.Stiffness) || 
+					!FMath::IsNearlyEqual(Grip.ValueCache.CachedDamping, Grip.Damping) || 
+					Grip.ValueCache.CachedPhysicsSettings != Grip.AdvancedGripSettings.PhysicsSettings ||
+					!Grip.ValueCache.CachedRelativeTransform.Equals(Grip.RelativeTransform)
+					)
 				{
-					SetGripConstraintStiffnessAndDamping(&Grip);
+					UpdatePhysicsHandle(Grip);
 				}
 			}
 		}
 
 		// Set caches now for next rep
 		Grip.ValueCache.bCachedHasSecondaryAttachment = Grip.SecondaryGripInfo.bHasSecondaryAttachment;
+		Grip.ValueCache.CachedRelativeTransform = Grip.RelativeTransform;
 		Grip.ValueCache.CachedSecondaryRelativeTransform = Grip.SecondaryGripInfo.SecondaryRelativeTransform;
 		Grip.ValueCache.CachedGripCollisionType = Grip.GripCollisionType;
 		Grip.ValueCache.CachedGripMovementReplicationSetting = Grip.GripMovementReplicationSetting;

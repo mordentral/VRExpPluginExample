@@ -621,6 +621,11 @@ void UGripMotionControllerComponent::SetGripRelativeTransform(
 	if (fIndex != INDEX_NONE)
 	{
 		GrippedObjects[fIndex].RelativeTransform = NewRelativeTransform;
+		if (FBPActorPhysicsHandleInformation * HandleInfo = GetPhysicsGrip(Grip))
+		{
+			UpdatePhysicsHandle(Grip.GripID);
+		}
+
 		Result = EBPVRResultSwitch::OnSucceeded;
 		return;
 	}
@@ -631,6 +636,10 @@ void UGripMotionControllerComponent::SetGripRelativeTransform(
 		if (fIndex != INDEX_NONE)
 		{
 			LocallyGrippedObjects[fIndex].RelativeTransform = NewRelativeTransform;
+			if (FBPActorPhysicsHandleInformation * HandleInfo = GetPhysicsGrip(Grip))
+			{
+				UpdatePhysicsHandle(Grip.GripID);
+			}
 
 			if (GetNetMode() == ENetMode::NM_Client && !IsTornOff() && LocallyGrippedObjects[fIndex].GripMovementReplicationSetting == EGripMovementReplicationSettings::ClientSide_Authoritive)
 				Server_NotifyLocalGripAddedOrChanged(LocallyGrippedObjects[fIndex]);
@@ -3961,8 +3970,6 @@ bool UGripMotionControllerComponent::UpdatePhysicsHandle(const FBPActorGripInfor
 
 	if (bFullyRecreate)
 	{
-		//DestroyPhysicsHandle(/*PhysicsGrips[HandleIndex].SceneIndex,*/ &PhysicsGrips[HandleIndex].HandleData, &PhysicsGrips[HandleIndex].KinActorData);
-		//PhysicsGrips.RemoveAt(HandleIndex);
 		return SetUpPhysicsHandle(GripInfo);
 	}
 
