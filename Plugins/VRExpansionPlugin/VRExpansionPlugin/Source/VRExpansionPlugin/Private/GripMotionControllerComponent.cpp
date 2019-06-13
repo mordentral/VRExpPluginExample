@@ -4073,7 +4073,12 @@ bool UGripMotionControllerComponent::DestroyPhysicsHandle(const FBPActorGripInfo
 			// #TODO: Should this be done on drop instead?
 			// Remove event registration
 			if (!bSkipUnregistering)
-				rBodyInstance->OnRecalculatedMassProperties.RemoveAll(this);
+			{
+				if (rBodyInstance->OnRecalculatedMassProperties.IsBoundToObject(this))
+				{
+					rBodyInstance->OnRecalculatedMassProperties.RemoveAll(this);
+				}
+			}
 
 			if (HandleInfo->bSetCOM)
 			{
@@ -4253,7 +4258,10 @@ bool UGripMotionControllerComponent::SetUpPhysicsHandle(const FBPActorGripInform
 			}
 
 			// Bind to further updates in order to keep it alive
-			rBodyInstance->OnRecalculatedMassProperties.AddUObject(this, &UGripMotionControllerComponent::OnGripMassUpdated);
+			if (!rBodyInstance->OnRecalculatedMassProperties.IsBoundToObject(this))
+			{
+				rBodyInstance->OnRecalculatedMassProperties.AddUObject(this, &UGripMotionControllerComponent::OnGripMassUpdated);
+			}
 
 			KinPose = U2PTransform(trans);
 

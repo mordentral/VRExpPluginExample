@@ -1455,7 +1455,7 @@ public:
 };
 
 
-USTRUCT(BlueprintType, Category = "VRExpansionLibrary")
+/*USTRUCT(BlueprintType, Category = "VRExpansionLibrary")
 struct VREXPANSIONPLUGIN_API FBPAdvancedConstraintSettings
 {
 	GENERATED_BODY()
@@ -1465,7 +1465,7 @@ public:
 	{
 		// Apply settings here
 	}
-};
+};*/
 
 USTRUCT(BlueprintType, Category = "VRExpansionLibrary")
 struct VREXPANSIONPLUGIN_API FBPActorPhysicsHandleInformation
