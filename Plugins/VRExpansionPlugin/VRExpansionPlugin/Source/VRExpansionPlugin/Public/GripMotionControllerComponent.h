@@ -298,7 +298,7 @@ public:
 	}
 
 	// Handles variable state changes and specific actions on a grip replication
-	inline bool HandleGripReplication(FBPActorGripInformation & Grip)
+	inline bool HandleGripReplication(FBPActorGripInformation & Grip, FBPActorGripInformation * OldGripInfo = nullptr)
 	{
 		if (Grip.ValueCache.bWasInitiallyRepped && Grip.GripID != Grip.ValueCache.CachedGripID)
 		{
@@ -325,7 +325,7 @@ public:
 		{
 			Grip.ValueCache.bWasInitiallyRepped = NotifyGrip(Grip); // Grip it
 
-																	// Tick will keep checking from here on out locally
+			// Tick will keep checking from here on out locally
 			if (!Grip.ValueCache.bWasInitiallyRepped)
 			{
 				//UE_LOG(LogVRMotionController, Warning, TEXT("Replicated grip Notify grip failed, was grip called before the object was replicated to the client?"));
@@ -333,12 +333,12 @@ public:
 			}
 			//Grip.ValueCache.bWasInitiallyRepped = true; // Set has been initialized
 		}
-		else // Check for changes from cached information
+		else if(OldGripInfo != nullptr) // Check for changes from cached information if we aren't skipping the delta check
 		{
 			// Manage lerp states
-			if ((Grip.ValueCache.bCachedHasSecondaryAttachment != Grip.SecondaryGripInfo.bHasSecondaryAttachment) || 
-				(Grip.ValueCache.OldSecondaryAttachment != Grip.SecondaryGripInfo.SecondaryAttachment) ||
-				(!Grip.ValueCache.CachedSecondaryRelativeTransform.Equals(Grip.SecondaryGripInfo.SecondaryRelativeTransform)))
+			if ((OldGripInfo->SecondaryGripInfo.bHasSecondaryAttachment != Grip.SecondaryGripInfo.bHasSecondaryAttachment) ||
+				(OldGripInfo->SecondaryGripInfo.SecondaryAttachment != Grip.SecondaryGripInfo.SecondaryAttachment) ||
+				(!OldGripInfo->SecondaryGripInfo.SecondaryRelativeTransform.Equals(Grip.SecondaryGripInfo.SecondaryRelativeTransform)))
 			{
 				// Reset the secondary grip distance
 				Grip.SecondaryGripInfo.SecondaryGripDistance = 0.0f;
@@ -360,18 +360,18 @@ public:
 					}
 				}
 
-				bool bSendReleaseEvent = ((!Grip.SecondaryGripInfo.bHasSecondaryAttachment && Grip.ValueCache.bCachedHasSecondaryAttachment) || 
-										((Grip.SecondaryGripInfo.bHasSecondaryAttachment && Grip.ValueCache.bCachedHasSecondaryAttachment) && 
-										(Grip.ValueCache.OldSecondaryAttachment != Grip.SecondaryGripInfo.SecondaryAttachment)));
+				bool bSendReleaseEvent = ((!Grip.SecondaryGripInfo.bHasSecondaryAttachment && OldGripInfo->SecondaryGripInfo.bHasSecondaryAttachment) ||
+										((Grip.SecondaryGripInfo.bHasSecondaryAttachment && OldGripInfo->SecondaryGripInfo.bHasSecondaryAttachment) &&
+										(OldGripInfo->SecondaryGripInfo.SecondaryAttachment != Grip.SecondaryGripInfo.SecondaryAttachment)));
 
 				bool bSendGripEvent =	(Grip.SecondaryGripInfo.bHasSecondaryAttachment && 
-										(!Grip.ValueCache.bCachedHasSecondaryAttachment || (Grip.ValueCache.OldSecondaryAttachment != Grip.SecondaryGripInfo.SecondaryAttachment)));
+										(!OldGripInfo->SecondaryGripInfo.bHasSecondaryAttachment || (OldGripInfo->SecondaryGripInfo.SecondaryAttachment != Grip.SecondaryGripInfo.SecondaryAttachment)));
 
 				if (bSendReleaseEvent)
 				{
 					if (Grip.GrippedObject->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
 					{
-						IVRGripInterface::Execute_OnSecondaryGripRelease(Grip.GrippedObject, Grip.ValueCache.OldSecondaryAttachment, Grip);
+						IVRGripInterface::Execute_OnSecondaryGripRelease(Grip.GrippedObject, OldGripInfo->SecondaryGripInfo.SecondaryAttachment, Grip);
 
 						TArray<UVRGripScriptBase*> GripScripts;
 						if (IVRGripInterface::Execute_GetGripScripts(Grip.GrippedObject, GripScripts))
@@ -380,7 +380,7 @@ public:
 							{
 								if (Script)
 								{
-									Script->OnSecondaryGripRelease(this, Grip.ValueCache.OldSecondaryAttachment, Grip);
+									Script->OnSecondaryGripRelease(this, OldGripInfo->SecondaryGripInfo.SecondaryAttachment, Grip);
 								}
 							}
 						}
@@ -408,10 +408,10 @@ public:
 				}
 			}
 
-			if (Grip.ValueCache.CachedGripCollisionType != Grip.GripCollisionType ||
-				Grip.ValueCache.CachedGripMovementReplicationSetting != Grip.GripMovementReplicationSetting ||
-				Grip.ValueCache.CachedBoneName != Grip.GrippedBoneName ||
-				Grip.ValueCache.CachedPhysicsSettings.bUsePhysicsSettings != Grip.AdvancedGripSettings.PhysicsSettings.bUsePhysicsSettings
+			if (OldGripInfo->GripCollisionType != Grip.GripCollisionType ||
+				OldGripInfo->GripMovementReplicationSetting != Grip.GripMovementReplicationSetting ||
+				OldGripInfo->GrippedBoneName != Grip.GrippedBoneName ||
+				OldGripInfo->AdvancedGripSettings.PhysicsSettings.bUsePhysicsSettings != Grip.AdvancedGripSettings.PhysicsSettings.bUsePhysicsSettings
 				)
 			{
 				ReCreateGrip(Grip); // Need to re-create grip
@@ -419,10 +419,10 @@ public:
 			else // If re-creating the grip anyway we don't need to do the below
 			{
 				// If physics settings got changed server side
-				if (!FMath::IsNearlyEqual(Grip.ValueCache.CachedStiffness, Grip.Stiffness) || 
-					!FMath::IsNearlyEqual(Grip.ValueCache.CachedDamping, Grip.Damping) || 
-					Grip.ValueCache.CachedPhysicsSettings != Grip.AdvancedGripSettings.PhysicsSettings ||
-					!Grip.ValueCache.CachedRelativeTransform.Equals(Grip.RelativeTransform)
+				if (!FMath::IsNearlyEqual(OldGripInfo->Stiffness, Grip.Stiffness) ||
+					!FMath::IsNearlyEqual(OldGripInfo->Damping, Grip.Damping) ||
+					OldGripInfo->AdvancedGripSettings.PhysicsSettings != Grip.AdvancedGripSettings.PhysicsSettings ||
+					!OldGripInfo->RelativeTransform.Equals(Grip.RelativeTransform)
 					)
 				{
 					UpdatePhysicsHandle(Grip);
@@ -431,23 +431,13 @@ public:
 		}
 
 		// Set caches now for next rep
-		Grip.ValueCache.bCachedHasSecondaryAttachment = Grip.SecondaryGripInfo.bHasSecondaryAttachment;
-		Grip.ValueCache.CachedRelativeTransform = Grip.RelativeTransform;
-		Grip.ValueCache.CachedSecondaryRelativeTransform = Grip.SecondaryGripInfo.SecondaryRelativeTransform;
-		Grip.ValueCache.CachedGripCollisionType = Grip.GripCollisionType;
-		Grip.ValueCache.CachedGripMovementReplicationSetting = Grip.GripMovementReplicationSetting;
-		Grip.ValueCache.CachedStiffness = Grip.Stiffness;
-		Grip.ValueCache.CachedDamping = Grip.Damping;
-		Grip.ValueCache.CachedPhysicsSettings = Grip.AdvancedGripSettings.PhysicsSettings;
-		Grip.ValueCache.CachedBoneName = Grip.GrippedBoneName;
 		Grip.ValueCache.CachedGripID = Grip.GripID;
-		Grip.ValueCache.OldSecondaryAttachment = Grip.SecondaryGripInfo.SecondaryAttachment;
 
 		return true;
 	}
 
 	UFUNCTION()
-	virtual void OnRep_GrippedObjects(/*TArray<FBPActorGripInformation> OriginalArrayState*/) // Original array state is useless without full serialize, it just hold last delta
+	virtual void OnRep_GrippedObjects(TArray<FBPActorGripInformation> OriginalArrayState) // Original array state is useless without full serialize, it just hold last delta
 	{
 		// Need to think about how best to handle the simulating flag here, don't handle for now
 		// Check for removed gripped actors
@@ -455,16 +445,16 @@ public:
 
 		for (int i = GrippedObjects.Num() - 1; i >= 0; --i)
 		{
-			HandleGripReplication(GrippedObjects[i]);
+			HandleGripReplication(GrippedObjects[i], OriginalArrayState.FindByKey(GrippedObjects[i].GripID));
 		}
 	}
 
 	UFUNCTION()
-	virtual void OnRep_LocallyGrippedObjects()
+	virtual void OnRep_LocallyGrippedObjects(TArray<FBPActorGripInformation> OriginalArrayState)
 	{
 		for (int i = LocallyGrippedObjects.Num() - 1; i >= 0; --i)
 		{
-			HandleGripReplication(LocallyGrippedObjects[i]);
+			HandleGripReplication(LocallyGrippedObjects[i], OriginalArrayState.FindByKey(LocallyGrippedObjects[i].GripID));
 		}
 	}
 

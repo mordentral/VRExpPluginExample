@@ -4966,7 +4966,6 @@ void UGripMotionControllerComponent::Server_NotifyLocalGripAddedOrChanged_Implem
 	if (!LocallyGrippedObjects.Contains(newGrip))
 	{
 		int32 NewIndex = LocallyGrippedObjects.Add(newGrip);
-
 		HandleGripReplication(LocallyGrippedObjects[NewIndex]);
 		// Initialize the differences, clients will do this themselves on the rep back, this sets up the cache
 		//HandleGripReplication(LocallyGrippedObjects[LocallyGrippedObjects.Num() - 1]);
@@ -4976,8 +4975,9 @@ void UGripMotionControllerComponent::Server_NotifyLocalGripAddedOrChanged_Implem
 		int32 IndexFound;
 		if (LocallyGrippedObjects.Find(newGrip, IndexFound))
 		{
+			FBPActorGripInformation OriginalGrip = LocallyGrippedObjects[IndexFound];
 			LocallyGrippedObjects[IndexFound].RepCopy(newGrip);
-			HandleGripReplication(LocallyGrippedObjects[IndexFound]);
+			HandleGripReplication(LocallyGrippedObjects[IndexFound], &OriginalGrip);
 		}
 	}
 
@@ -5031,11 +5031,13 @@ void UGripMotionControllerComponent::Server_NotifySecondaryAttachmentChanged_Imp
 	FBPActorGripInformation * GripInfo = LocallyGrippedObjects.FindByKey(GripID);
 	if (GripInfo != nullptr)
 	{
+		FBPActorGripInformation OriginalGrip = *GripInfo;
+
 		// I override the = operator now so that it won't set the lerp components
 		GripInfo->SecondaryGripInfo.RepCopy(SecondaryGripInfo);
 
 		// Initialize the differences, clients will do this themselves on the rep back
-		HandleGripReplication(*GripInfo);
+		HandleGripReplication(*GripInfo, &OriginalGrip);
 	}
 
 }
@@ -5055,12 +5057,14 @@ void UGripMotionControllerComponent::Server_NotifySecondaryAttachmentChanged_Ret
 	FBPActorGripInformation * GripInfo = LocallyGrippedObjects.FindByKey(GripID);
 	if (GripInfo != nullptr)
 	{
+		FBPActorGripInformation OriginalGrip = *GripInfo;
+
 		// I override the = operator now so that it won't set the lerp components
 		GripInfo->SecondaryGripInfo.RepCopy(SecondaryGripInfo);
 		GripInfo->RelativeTransform = NewRelativeTransform;
 
 		// Initialize the differences, clients will do this themselves on the rep back
-		HandleGripReplication(*GripInfo);
+		HandleGripReplication(*GripInfo, &OriginalGrip);
 	}
 
 }
