@@ -1455,29 +1455,17 @@ public:
 };
 
 
-USTRUCT(BlueprintType, Category = "VRExpansionLibrary")
+/*USTRUCT(BlueprintType, Category = "VRExpansionLibrary")
 struct VREXPANSIONPLUGIN_API FBPAdvancedConstraintSettings
 {
 	GENERATED_BODY()
 public:
-	/*
-	Constraint break point, max force limits, expose somehow. 
-	A "SetAdvancedConstraintSettings" node or something? 
-	Can be called post grip then. 
-	Expose full feature set of physx d joint. 
-	Set LocalPose function as well, or at least an OffsetLocalPose function, or a ResetLocalPose.
-	*/
-
-	float MaxForceLimit;
-	// OnConstraintBroken
-	float Stiffness_X;
-	float Stiffness_Y;
 
 	void ApplyAdvancedSettings(FBPActorPhysicsHandleInformation & PhysicsHandleInformation)
 	{
 		// Apply settings here
 	}
-};
+};*/
 
 USTRUCT(BlueprintType, Category = "VRExpansionLibrary")
 struct VREXPANSIONPLUGIN_API FBPActorPhysicsHandleInformation
