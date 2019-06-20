@@ -1488,6 +1488,9 @@ public:
 		UObject * HandledObject;
 	uint8 GripID;
 
+	FPhysicsActorHandle KinActorData2;
+	FPhysicsConstraintHandle HandleData2;
+
 	/** Physics scene index of the body we are grabbing. */
 	//int32 SceneIndex; // No longer needed, retrieved at runtime
 	/** Pointer to PhysX joint used by the handle*/
