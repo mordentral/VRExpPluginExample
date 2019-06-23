@@ -289,7 +289,8 @@ public:
 		int HandleIndex = 0;
 		if (GetPhysicsGripIndex(GripInfo, HandleIndex))
 		{
-			DestroyPhysicsHandle(/*PhysicsGrips[HandleIndex].SceneIndex,*/ &PhysicsGrips[HandleIndex].HandleData, &PhysicsGrips[HandleIndex].KinActorData);
+
+			DestroyPhysicsHandle(&PhysicsGrips[HandleIndex]);
 			PhysicsGrips.RemoveAt(HandleIndex);
 		}
 
@@ -945,7 +946,7 @@ public:
 	FBPActorPhysicsHandleInformation * GetPhysicsGrip(const FBPActorGripInformation & GripInfo);
 	bool GetPhysicsGripIndex(const FBPActorGripInformation & GripInfo, int & index);
 	FBPActorPhysicsHandleInformation * CreatePhysicsGrip(const FBPActorGripInformation & GripInfo);
-	bool DestroyPhysicsHandle(/*int32 SceneIndex,*/ physx::PxD6Joint** HandleData, physx::PxRigidDynamic** KinActorData);
+	bool DestroyPhysicsHandle(FBPActorPhysicsHandleInformation * HandleInfo);
 
 	// Creates a physics handle for this grip
 	UFUNCTION(BlueprintCallable, Category = "GripMotionController|Custom", meta = (DisplayName = "SetUpPhysicsHandle"))

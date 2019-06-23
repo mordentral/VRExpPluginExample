@@ -7,8 +7,8 @@
 
 #include "PhysicsPublic.h"
 #if WITH_PHYSX
-#include "PhysXPublic.h"
-#include "PhysXSupport.h"
+//#include "PhysXPublic.h"
+//#include "PhysicsEngine/PhysXSupport.h"
 #endif // WITH_PHYSX
 
 #include "VRBPDatatypes.generated.h"
@@ -1490,27 +1490,30 @@ public:
 
 	FPhysicsActorHandle KinActorData2;
 	FPhysicsConstraintHandle HandleData2;
+	FTransform LastPhysicsTransform;
 
 	/** Physics scene index of the body we are grabbing. */
 	//int32 SceneIndex; // No longer needed, retrieved at runtime
 	/** Pointer to PhysX joint used by the handle*/
-	physx::PxD6Joint* HandleData;
+	//physx::PxD6Joint* HandleData;
 	/** Pointer to kinematic actor jointed to grabbed object */
-	physx::PxRigidDynamic* KinActorData;
+	//physx::PxRigidDynamic* KinActorData;
 
-	physx::PxTransform COMPosition;
+	FTransform COMPosition;
+	//physx::PxTransform COMPosition;
 	FTransform RootBoneRotation;
 
 	bool bSetCOM;
 
 	FBPActorPhysicsHandleInformation()
 	{
-		HandleData = NULL;
-		KinActorData = NULL;		
+		//HandleData = NULL;
+		//KinActorData = NULL;		
 		HandledObject = nullptr;
+		LastPhysicsTransform = FTransform::Identity;
 		//Actor = nullptr;
 		//Component = nullptr;
-		COMPosition = U2PTransform(FTransform::Identity);
+		COMPosition = FTransform::Identity;//U2PTransform(FTransform::Identity);
 		GripID = INVALID_VRGRIP_ID;
 		RootBoneRotation = FTransform::Identity;
 		bSetCOM = false;
