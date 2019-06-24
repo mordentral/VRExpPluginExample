@@ -4240,6 +4240,7 @@ bool UGripMotionControllerComponent::SetUpPhysicsHandle(const FBPActorGripInform
 		}
 
 		KinPose = trans;
+		bool bRecreatingConstraint = false;
 
 		if (!HandleInfo->KinActorData2.IsValid())
 		{
@@ -4267,17 +4268,7 @@ bool UGripMotionControllerComponent::SetUpPhysicsHandle(const FBPActorGripInform
 			}
 
 #if WITH_PHYSX
-			//FPhysScene* PhysScene = ActorParams.Scene;
-			//FPhysicsCommand::ExecuteWrite(PhysScene, [&]()
-			//{
-			//	TArray<FPhysicsActorHandle> ActorHandles;
-			//	ActorHandles.Add(HandleInfo->KinActorData2);
-			//	PhysScene->AddActorsToScene_AssumesLocked(ActorHandles);
-
-			//});
-			// Missing from physx, not sure how it is working for them currently.
-			TArray<FPhysicsActorHandle> ActorHandles;
-			ActorHandles.Add(HandleInfo->KinActorData2);
+			// Correct method is missing an ENGINE_API flag, so I can't use the function
 			ActorParams.Scene->GetPxScene()->addActor(*FPhysicsInterface_PhysX::GetPxRigidActor_AssumesLocked(HandleInfo->KinActorData2));
 #else
 			// Missing from physx, not sure how it is working for them currently.
@@ -4290,15 +4281,17 @@ bool UGripMotionControllerComponent::SetUpPhysicsHandle(const FBPActorGripInform
 		// If we don't already have a handle - make one now.
 		if (!HandleInfo->HandleData2.IsValid())
 		{
-			HandleInfo->HandleData2 = FPhysicsInterface::CreateConstraint(HandleInfo->KinActorData2, Actor, FTransform::Identity, KinPose.GetRelativeTransform(FPhysicsInterface::GetGlobalPose_AssumesLocked(Actor)));
+			HandleInfo->HandleData2 = FPhysicsInterface::CreateConstraint(Actor, HandleInfo->KinActorData2, KinPose.GetRelativeTransform(FPhysicsInterface::GetGlobalPose_AssumesLocked(Actor)), FTransform::Identity);
 		}
 		else
 		{
+			bRecreatingConstraint = true;
+
 #if WITH_PHYSX
 			HandleInfo->HandleData2.ConstraintData->setActors(FPhysicsInterface_PhysX::GetPxRigidDynamic_AssumesLocked(HandleInfo->KinActorData2), FPhysicsInterface_PhysX::GetPxRigidDynamic_AssumesLocked(Actor));
 #endif
 			
-			FPhysicsInterface::SetLocalPose(HandleInfo->HandleData2, KinPose.GetRelativeTransform(FPhysicsInterface::GetGlobalPose_AssumesLocked(Actor)), EConstraintFrame::Frame2);
+			FPhysicsInterface::SetLocalPose(HandleInfo->HandleData2, KinPose.GetRelativeTransform(FPhysicsInterface::GetGlobalPose_AssumesLocked(Actor)), EConstraintFrame::Frame1);
 		}
 
 		if (HandleInfo->HandleData2.IsValid())
@@ -4336,31 +4329,39 @@ bool UGripMotionControllerComponent::SetUpPhysicsHandle(const FBPActorGripInform
 			// Different settings for manip grip
 			if (NewGrip.GripCollisionType == EGripCollisionType::ManipulationGrip || NewGrip.GripCollisionType == EGripCollisionType::ManipulationGripWithWristTwist)
 			{
-				FConstraintDrive NewLinDrive;
-				NewLinDrive.bEnablePositionDrive = true;
-				NewLinDrive.bEnableVelocityDrive = true;
-				NewLinDrive.Damping = Damping;
-				NewLinDrive.Stiffness = Stiffness;
-				NewLinDrive.MaxForce = MAX_FLT;
+				if (!bRecreatingConstraint)
+				{
+					FConstraintDrive NewLinDrive;
+					NewLinDrive.bEnablePositionDrive = true;
+					NewLinDrive.bEnableVelocityDrive = true;
+					NewLinDrive.Damping = Damping;
+					NewLinDrive.Stiffness = Stiffness;
+					NewLinDrive.MaxForce = MAX_FLT;
 
-				HandleInfo->LinConstraint.bEnablePositionDrive = true;
-				HandleInfo->LinConstraint.XDrive = NewLinDrive;
-				HandleInfo->LinConstraint.YDrive = NewLinDrive;
-				HandleInfo->LinConstraint.ZDrive = NewLinDrive;
+					HandleInfo->LinConstraint.bEnablePositionDrive = true;
+					HandleInfo->LinConstraint.XDrive = NewLinDrive;
+					HandleInfo->LinConstraint.YDrive = NewLinDrive;
+					HandleInfo->LinConstraint.ZDrive = NewLinDrive;
+				}
+
 				FPhysicsInterface::UpdateLinearDrive_AssumesLocked(HandleInfo->HandleData2, HandleInfo->LinConstraint);
 
 				if (NewGrip.GripCollisionType == EGripCollisionType::ManipulationGripWithWristTwist)
 				{
-					FConstraintDrive NewAngDrive;
-					NewAngDrive.bEnablePositionDrive = true;
-					NewAngDrive.bEnableVelocityDrive = true;
-					NewAngDrive.Damping = AngularDamping;
-					NewAngDrive.Stiffness = AngularStiffness;
-					NewAngDrive.MaxForce = MAX_FLT;
+					if (!bRecreatingConstraint)
+					{
+						FConstraintDrive NewAngDrive;
+						NewAngDrive.bEnablePositionDrive = true;
+						NewAngDrive.bEnableVelocityDrive = true;
+						NewAngDrive.Damping = AngularDamping;
+						NewAngDrive.Stiffness = AngularStiffness;
+						NewAngDrive.MaxForce = MAX_FLT;
 
-					HandleInfo->AngConstraint.AngularDriveMode = EAngularDriveMode::TwistAndSwing;
-					//AngParams.AngularDriveMode = EAngularDriveMode::SLERP;
-					HandleInfo->AngConstraint.TwistDrive = NewAngDrive;
+						HandleInfo->AngConstraint.AngularDriveMode = EAngularDriveMode::TwistAndSwing;
+						//AngParams.AngularDriveMode = EAngularDriveMode::SLERP;
+						HandleInfo->AngConstraint.TwistDrive = NewAngDrive;
+					}
+
 					FPhysicsInterface::UpdateAngularDrive_AssumesLocked(HandleInfo->HandleData2, HandleInfo->AngConstraint);
 				}
 			}
@@ -4374,29 +4375,32 @@ bool UGripMotionControllerComponent::SetUpPhysicsHandle(const FBPActorGripInform
 					AngularStiffness *= HYBRID_PHYSICS_GRIP_MULTIPLIER;
 				}
 
-				FConstraintDrive NewLinDrive;
-				NewLinDrive.bEnablePositionDrive = true;
-				NewLinDrive.bEnableVelocityDrive = true;
-				NewLinDrive.Damping = Damping;
-				NewLinDrive.Stiffness = Stiffness;
-				NewLinDrive.MaxForce = MAX_FLT;
+				if (!bRecreatingConstraint)
+				{
+					FConstraintDrive NewLinDrive;
+					NewLinDrive.bEnablePositionDrive = true;
+					NewLinDrive.bEnableVelocityDrive = true;
+					NewLinDrive.Damping = Damping;
+					NewLinDrive.Stiffness = Stiffness;
+					NewLinDrive.MaxForce = MAX_FLT;
 
-				FConstraintDrive NewAngDrive;
-				NewAngDrive.bEnablePositionDrive = true;
-				NewAngDrive.bEnableVelocityDrive = true;
-				NewAngDrive.Damping = AngularDamping;
-				NewAngDrive.Stiffness = AngularStiffness;
-				NewAngDrive.MaxForce = MAX_FLT;
+					FConstraintDrive NewAngDrive;
+					NewAngDrive.bEnablePositionDrive = true;
+					NewAngDrive.bEnableVelocityDrive = true;
+					NewAngDrive.Damping = AngularDamping;
+					NewAngDrive.Stiffness = AngularStiffness;
+					NewAngDrive.MaxForce = MAX_FLT;
 
-				HandleInfo->LinConstraint.bEnablePositionDrive = true;
-				HandleInfo->LinConstraint.XDrive = NewLinDrive;
-				HandleInfo->LinConstraint.YDrive = NewLinDrive;
-				HandleInfo->LinConstraint.ZDrive = NewLinDrive;
+					HandleInfo->LinConstraint.bEnablePositionDrive = true;
+					HandleInfo->LinConstraint.XDrive = NewLinDrive;
+					HandleInfo->LinConstraint.YDrive = NewLinDrive;
+					HandleInfo->LinConstraint.ZDrive = NewLinDrive;
+
+					HandleInfo->AngConstraint.AngularDriveMode = EAngularDriveMode::SLERP;
+					HandleInfo->AngConstraint.SlerpDrive = NewAngDrive;
+				}
 					
 				FPhysicsInterface::UpdateLinearDrive_AssumesLocked(HandleInfo->HandleData2, HandleInfo->LinConstraint);
-
-				HandleInfo->AngConstraint.AngularDriveMode = EAngularDriveMode::SLERP;
-				HandleInfo->AngConstraint.SlerpDrive = NewAngDrive;
 				FPhysicsInterface::UpdateAngularDrive_AssumesLocked(HandleInfo->HandleData2, HandleInfo->AngConstraint);
 			}
 
@@ -5498,9 +5502,9 @@ bool UGripMotionControllerComponent::HasGrippedObjects()
 	return GrippedObjects.Num() > 0 || LocallyGrippedObjects.Num() > 0;
 }
 
-bool UGripMotionControllerComponent::SetUpPhysicsHandle_BP(const FBPActorGripInformation &NewGrip)
+bool UGripMotionControllerComponent::SetUpPhysicsHandle_BP(const FBPActorGripInformation &Grip)
 {
-	return SetUpPhysicsHandle(NewGrip);
+	return SetUpPhysicsHandle(Grip);
 }
 
 bool UGripMotionControllerComponent::DestroyPhysicsHandle_BP(const FBPActorGripInformation &Grip)
@@ -5511,6 +5515,28 @@ bool UGripMotionControllerComponent::DestroyPhysicsHandle_BP(const FBPActorGripI
 bool UGripMotionControllerComponent::UpdatePhysicsHandle_BP(const FBPActorGripInformation& Grip, bool bFullyRecreate)
 {
 	return UpdatePhysicsHandle(Grip.GripID, bFullyRecreate);
+}
+
+bool UGripMotionControllerComponent::GetPhysicsHandleSettings(const FBPActorGripInformation& Grip, FBPAdvancedPhysicsHandleSettings& PhysicsHandleSettingsOut)
+{
+	FBPActorPhysicsHandleInformation * HandleInfo = GetPhysicsGrip(Grip);
+	
+	if (!HandleInfo)
+		return false;
+
+	PhysicsHandleSettingsOut.FillFrom(HandleInfo);
+	return true;
+}
+
+bool UGripMotionControllerComponent::SetPhysicsHandleSettings(const FBPActorGripInformation& Grip, const FBPAdvancedPhysicsHandleSettings& PhysicsHandleSettingsIn)
+{
+	FBPActorPhysicsHandleInformation* HandleInfo = GetPhysicsGrip(Grip);
+
+	if (!HandleInfo)
+		return false;
+
+	PhysicsHandleSettingsIn.FillTo(HandleInfo);
+	return UpdatePhysicsHandle(Grip, true);
 }
 
 
