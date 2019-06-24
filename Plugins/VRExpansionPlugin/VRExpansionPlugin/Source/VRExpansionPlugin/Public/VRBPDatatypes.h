@@ -1490,6 +1490,9 @@ public:
 
 	FPhysicsActorHandle KinActorData2;
 	FPhysicsConstraintHandle HandleData2;
+
+	FLinearDriveConstraint LinConstraint;
+	FAngularDriveConstraint AngConstraint;
 	FTransform LastPhysicsTransform;
 
 	/** Physics scene index of the body we are grabbing. */

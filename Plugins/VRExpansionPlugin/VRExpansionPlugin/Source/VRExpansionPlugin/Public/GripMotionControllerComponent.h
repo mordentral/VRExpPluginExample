@@ -939,7 +939,7 @@ public:
 	bool SetUpPhysicsHandle(const FBPActorGripInformation &NewGrip);
 	bool DestroyPhysicsHandle(const FBPActorGripInformation &Grip, bool bSkipUnregistering = false);
 	void UpdatePhysicsHandleTransform(const FBPActorGripInformation &GrippedActor, const FTransform& NewTransform);
-	bool SetGripConstraintStiffnessAndDamping(const FBPActorGripInformation *Grip, bool bUseHybridMultiplier = false);
+	bool SetGripConstraintStiffnessAndDamping(const FBPActorGripInformation *Grip, bool bUseHybridMultiplier = false);	
 	bool GetPhysicsJointLength(const FBPActorGripInformation &GrippedActor, UPrimitiveComponent * rootComp, FVector & LocOut);
 
 	TArray<FBPActorPhysicsHandleInformation> PhysicsGrips;
@@ -948,6 +948,17 @@ public:
 	FBPActorPhysicsHandleInformation * CreatePhysicsGrip(const FBPActorGripInformation & GripInfo);
 	bool DestroyPhysicsHandle(FBPActorPhysicsHandleInformation * HandleInfo);
 
+	/*
+	// Get the angular constraint for this handle
+	UFUNCTION(BlueprintCallable, Category = "GripMotionController|Custom", meta = (DisplayName = "GetPhysicsHandle_AngularConstraint"))
+		bool GetPhysicsHandle_AngularConstraint_BP(UPARAM(ref)const FBPActorGripInformation & NewGrip, FAngularDriveConstraint & AngularConstraintOut);
+
+	// Get the linear constraint for this handle
+	UFUNCTION(BlueprintCallable, Category = "GripMotionController|Custom", meta = (DisplayName = "GetPhysicsHandle_LinearConstraint"))
+		bool GetPhysicsHandle_LinearConstraint_BP(UPARAM(ref)const FBPActorGripInformation & NewGrip, FAngularDriveConstraint & LinearConstraintOut);
+	FLinearDriveConstraint LinConstraint;
+	FAngularDriveConstraint AngConstraint;
+	*/
 	// Creates a physics handle for this grip
 	UFUNCTION(BlueprintCallable, Category = "GripMotionController|Custom", meta = (DisplayName = "SetUpPhysicsHandle"))
 		bool SetUpPhysicsHandle_BP(UPARAM(ref)const FBPActorGripInformation &NewGrip);
