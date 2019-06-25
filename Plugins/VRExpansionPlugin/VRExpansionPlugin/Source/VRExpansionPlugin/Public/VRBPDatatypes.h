@@ -1513,9 +1513,18 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Constraint)
 		bool bEnablePositionDrive;
 
-	/** Enables/Disables velocity drive (angular velocity if using angular drive) */
+	/** Enables/Disables velocity drive (damping) (angular velocity if using angular drive) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Constraint)
 		bool bEnableVelocityDrive;
+
+	FBPAdvancedPhysicsHandleAxisSettings()
+	{
+		Stiffness = 0.f;
+		Damping = 0.f;
+		MaxForce = MAX_FLT;
+		bEnablePositionDrive = true;
+		bEnableVelocityDrive = true;
+	}
 
 	void FillFrom(FConstraintDrive& ConstraintDrive)
 	{
@@ -1555,6 +1564,13 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Linear Constraint Settings")
 		FBPAdvancedPhysicsHandleAxisSettings ZAxisSettings;
 
+	// The settings for the Orientation (Slerp only for now)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Angular Constraint Settings")
+		FBPAdvancedPhysicsHandleAxisSettings SlerpSettings;
+
+
+	// FConstraintSettings  - settings for various things like distance limits
+	// Add a deletegate bindable in the motion controller
 
 	bool FillFrom(FBPActorPhysicsHandleInformation* HandleInfo)
 	{
@@ -1564,6 +1580,8 @@ public:
 		XAxisSettings.FillFrom(HandleInfo->LinConstraint.XDrive);
 		YAxisSettings.FillFrom(HandleInfo->LinConstraint.YDrive);
 		ZAxisSettings.FillFrom(HandleInfo->LinConstraint.ZDrive);
+
+		SlerpSettings.FillFrom(HandleInfo->AngConstraint.SlerpDrive);
 
 		return true;
 	}
@@ -1576,6 +1594,8 @@ public:
 		XAxisSettings.FillTo(HandleInfo->LinConstraint.XDrive);
 		YAxisSettings.FillTo(HandleInfo->LinConstraint.YDrive);
 		ZAxisSettings.FillTo(HandleInfo->LinConstraint.ZDrive);
+
+		SlerpSettings.FillTo(HandleInfo->AngConstraint.SlerpDrive);
 
 		return true;
 	}
