@@ -23,6 +23,7 @@
 
 #include "PhysicsPublic.h"
 #include "PhysicsEngine/BodySetup.h"
+#include "PhysicsEngine/ConstraintDrives.h"
 #include "Physics/PhysicsInterfaceCore.h"
 #include "Physics/PhysicsInterfaceTypes.h"
 #include "PhysicsReplication.h"

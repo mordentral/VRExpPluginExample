@@ -6,6 +6,8 @@
 #include "Components/PrimitiveComponent.h"
 
 #include "PhysicsPublic.h"
+#include "PhysicsEngine/ConstraintDrives.h"
+
 #if WITH_PHYSX
 //#include "PhysXPublic.h"
 //#include "PhysicsEngine/PhysXSupport.h"
