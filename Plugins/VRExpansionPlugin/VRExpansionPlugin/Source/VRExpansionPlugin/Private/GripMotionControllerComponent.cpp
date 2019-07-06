@@ -3213,7 +3213,7 @@ void UGripMotionControllerComponent::TickComponent(float DeltaTime, enum ELevelT
 			const bool bNewTrackedState = GripPollControllerState(Position, Orientation, WorldToMeters);
 
 			bTracked = bNewTrackedState && CurrentTrackingStatus != ETrackingStatus::NotTracked;
-			if (!bTracked)
+			if (bTracked)
 			{
 				SetRelativeTransform(FTransform(Orientation, Position, this->RelativeScale3D));
 			}
