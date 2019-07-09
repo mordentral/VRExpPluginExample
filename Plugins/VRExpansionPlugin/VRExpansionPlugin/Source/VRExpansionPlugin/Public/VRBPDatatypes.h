@@ -940,28 +940,6 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SecondaryGripSettings")
 		bool bUseSecondaryGripSettings;
 
-	/*
-	// Scaler used for handling the smoothing amount, 0.0f is full smoothing, 1.0f is smoothing off
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SecondaryGripSettings", meta = (editcondition = "bUseSecondaryGripSettings", ClampMin = "0.00", UIMin = "0.00", ClampMax = "1.00", UIMax = "1.00"))
-		float SecondaryGripScaler;
-
-	// Whether to scale the secondary hand influence off of distance from grip point
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SecondaryGripSettings", meta = (editcondition = "bUseSecondaryGripSettings"))
-		bool bUseSecondaryGripDistanceInfluence;
-
-	// If true, will use the GripInfluenceDeadZone as a constant value instead of calculating the distance and lerping, lets you define a static influence amount.
-	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SecondaryGripSettings", meta = (editcondition = "bUseSecondaryGripDistanceInfluence"))
-	//	bool bUseGripInfluenceDeadZoneAsConstant;
-
-	// Distance from grip point in local space where there is 100% influence
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SecondaryGripSettings", meta = (editcondition = "bUseSecondaryGripDistanceInfluence", ClampMin = "0.00", UIMin = "0.00", ClampMax = "256.00", UIMax = "256.00"))
-		float GripInfluenceDeadZone;
-
-	// Distance from grip point in local space before all influence is lost on the secondary grip (1.0f - 0.0f influence over this range)
-	// this comes into effect outside of the deadzone
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SecondaryGripSettings", meta = (editcondition = "bUseSecondaryGripDistanceInfluence", ClampMin = "1.00", UIMin = "1.00", ClampMax = "256.00", UIMax = "256.00"))
-		float GripInfluenceDistanceToZero;*/
-
 	// Whether clamp the grip scaling in scaling grips
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SecondaryGripSettings", meta = (editcondition = "bUseSecondaryGripSettings"))
 		bool bLimitGripScaling;
