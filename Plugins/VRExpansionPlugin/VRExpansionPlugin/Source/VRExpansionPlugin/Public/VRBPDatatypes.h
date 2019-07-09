@@ -984,11 +984,6 @@ public:
 
 	FBPAdvSecondaryGripSettings() :
 		bUseSecondaryGripSettings(false),
-		/*SecondaryGripScaler_DEPRECATED(1.0f),
-		bUseSecondaryGripDistanceInfluence_DEPRECATED(false),
-		//bUseGripInfluenceDeadZoneAsConstant(false),
-		GripInfluenceDeadZone_DEPRECATED(50.0f),
-		GripInfluenceDistanceToZero_DEPRECATED(100.0f),*/
 		bLimitGripScaling(false),
 		MinimumGripScaling(FVector(0.1f)),
 		MaximumGripScaling(FVector(10.0f))
@@ -998,10 +993,6 @@ public:
 	FORCEINLINE FBPAdvSecondaryGripSettings& operator=(const FBPAdvSecondaryGripSettings& Other)
 	{
 		this->bUseSecondaryGripSettings = Other.bUseSecondaryGripSettings;
-		/*this->SecondaryGripScaler_DEPRECATED = Other.SecondaryGripScaler_DEPRECATED;
-		this->bUseSecondaryGripDistanceInfluence_DEPRECATED = Other.bUseSecondaryGripDistanceInfluence_DEPRECATED;
-		this->GripInfluenceDeadZone_DEPRECATED = Other.GripInfluenceDeadZone_DEPRECATED;
-		this->GripInfluenceDistanceToZero_DEPRECATED = Other.GripInfluenceDistanceToZero_DEPRECATED;*/
 		this->bLimitGripScaling = Other.bLimitGripScaling;
 		this->MinimumGripScaling = Other.MinimumGripScaling;
 		this->MaximumGripScaling = Other.MaximumGripScaling;
@@ -1011,54 +1002,17 @@ public:
 	/** Network serialization */
 	bool NetSerialize(FArchive& Ar, class UPackageMap* Map, bool& bOutSuccess)
 	{
-		//Ar << bUseSecondaryGripSettings;
 		Ar.SerializeBits(&bUseSecondaryGripSettings, 1);
 
 		if (bUseSecondaryGripSettings)
 		{
 			bOutSuccess = true;
 
-			//Ar << SecondaryGripScaler;
-
-			// This is 0.0-1.0, using normalized compression to get it smaller, 9 bits = 1 bit + 1 bit sign+value and 7 bits precision for 128 / full 2 digit precision
-			/*if (Ar.IsSaving())
-				bOutSuccess &= WriteFixedCompressedFloat<1, 9>(SecondaryGripScaler_DEPRECATED, Ar);
-			else
-				bOutSuccess &= ReadFixedCompressedFloat<1, 9>(SecondaryGripScaler_DEPRECATED, Ar);
-			
-			//Ar << bUseSecondaryGripDistanceInfluence;
-			Ar.SerializeBits(&bUseSecondaryGripDistanceInfluence_DEPRECATED, 1);
-			
-			if (bUseSecondaryGripDistanceInfluence_DEPRECATED)
-			{
-				//Ar << GripInfluenceDeadZone;
-				//Ar << GripInfluenceDistanceToZero;
-				//Ar.SerializeBits(&bUseGripInfluenceDeadZoneAsConstant, 1);
-
-				// Forcing a maximum value here so that we can compress it by making assumptions
-				// 256 max value = 8 bits + 1 bit for sign + 7 bits for precision (up to 128 on precision, so full range 2 digit precision).
-				if (Ar.IsSaving())
-				{
-					bOutSuccess &= WriteFixedCompressedFloat<256, 16>(GripInfluenceDeadZone_DEPRECATED, Ar);
-					//if(!bUseGripInfluenceDeadZoneAsConstant)
-					bOutSuccess &= WriteFixedCompressedFloat<256, 16>(GripInfluenceDistanceToZero_DEPRECATED, Ar);
-				}
-				else
-				{
-					bOutSuccess &= ReadFixedCompressedFloat<256, 16>(GripInfluenceDeadZone_DEPRECATED, Ar);
-					//if (!bUseGripInfluenceDeadZoneAsConstant)
-					bOutSuccess &= ReadFixedCompressedFloat<256, 16>(GripInfluenceDistanceToZero_DEPRECATED, Ar);
-				}
-			}*/
-
-			//Ar << bLimitGripScaling;
 			Ar.SerializeBits(&bLimitGripScaling, 1);
 
 			if (bLimitGripScaling)
 			{
-				//Ar << MinimumGripScaling;
 				MinimumGripScaling.NetSerialize(Ar, Map, bOutSuccess);
-				//Ar << MaximumGripScaling;
 				MaximumGripScaling.NetSerialize(Ar, Map, bOutSuccess);
 			}
 		}
@@ -1123,7 +1077,7 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = "SecondaryGripInfo")
 		USceneComponent * SecondaryAttachment;
 
-	UPROPERTY()
+	UPROPERTY(BlueprintReadOnly, Category = "SecondaryGripInfo")
 		FTransform_NetQuantize SecondaryRelativeTransform;
 
 	UPROPERTY(BlueprintReadWrite, Category = "SecondaryGripInfo")
