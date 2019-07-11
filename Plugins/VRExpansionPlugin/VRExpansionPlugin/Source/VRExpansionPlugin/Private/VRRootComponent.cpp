@@ -1185,7 +1185,7 @@ bool UVRRootComponent::UpdateOverlapsImpl(const TOverlapArrayView* NewPendingOve
 
 			const TOverlapArrayView* OverlapsAtEndLocationPtr = OverlapsAtEndLocation;
 
-			// #TODO: Filter this better so it runs even less often?
+			// TODO: Filter this better so it runs even less often?
 			// Its not that bad currently running off of NewPendingOverlaps
 			// It forces checking for end location overlaps again if none are registered, just in case
 			// the capsule isn't setting things correctly.
@@ -1210,18 +1210,18 @@ bool UVRRootComponent::UpdateOverlapsImpl(const TOverlapArrayView* NewPendingOve
 				// 4.17 converted to auto cvar
 				static const auto CVarAllowCachedOverlaps = IConsoleManager::Get().FindConsoleVariable(TEXT("p.AllowCachedOverlaps"));
 				// Might be able to avoid testing for new overlaps at the end location.
-				if (OverlapsAtEndLocationPtr != nullptr && CVarAllowCachedOverlaps->GetInt() > 0 && PrevTransform.Equals(GetComponentTransform()))
+				if (OverlapsAtEndLocation != nullptr && CVarAllowCachedOverlaps->GetInt() > 0 && PrevTransform.Equals(GetComponentTransform()))
 				{
 					UE_LOG(LogVRRootComponent, VeryVerbose, TEXT("%s->%s Skipping overlap test!"), *GetNameSafe(GetOwner()), *GetName());
 					const bool bCheckForInvalid = (NewPendingOverlaps && NewPendingOverlaps->Num() > 0);
 					if (bCheckForInvalid)
 					{
 						// BeginComponentOverlap may have disabled what we thought were valid overlaps at the end (collision response or overlap flags could change).
-						GetPointersToArrayDataByPredicate(NewOverlappingComponentPtrs, *OverlapsAtEndLocationPtr, FPredicateFilterCanOverlap(*this));
+						GetPointersToArrayDataByPredicate(NewOverlappingComponentPtrs, *OverlapsAtEndLocation, FPredicateFilterCanOverlap(*this));
 					}
 					else
 					{
-						GetPointersToArrayData(NewOverlappingComponentPtrs, *OverlapsAtEndLocationPtr);
+						GetPointersToArrayData(NewOverlappingComponentPtrs, *OverlapsAtEndLocation);
 					}
 				}
 				else
@@ -1325,7 +1325,7 @@ bool UVRRootComponent::UpdateOverlapsImpl(const TOverlapArrayView* NewPendingOve
 
 			// Ensure these arrays are still in scope, because we kept pointers to them in NewOverlappingComponentPtrs.
 			static_assert(sizeof(OverlapMultiResult) != 0, "Variable must be in this scope");
-			static_assert(sizeof(OverlapsAtEndLocationPtr) != 0, "Variable must be in this scope");
+			static_assert(sizeof(OverlapsAtEndLocation) != 0, "Variable must be in this scope");
 
 			// NewOverlappingComponents now contains only new overlaps that didn't exist previously.
 			for (const FOverlapInfo* NewOverlap : NewOverlappingComponentPtrs)
