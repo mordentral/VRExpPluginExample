@@ -753,6 +753,11 @@ void UVRLeverComponent::CalculateCurrentAngle(FTransform & CurrentTransform)
 		FullCurrentAngle = FMath::RadiansToDegrees(FMath::Acos(FVector::DotProduct(UpVec, FVector::UpVector)));
 		CurrentLeverAngle = FMath::RoundToFloat(FullCurrentAngle);
 
+		float RollModifier = FMath::Abs(FMath::RadiansToDegrees(FMath::Acos(FVector::DotProduct(FVector(UpVec.X, UpVec.Y, 0.0f).GetSafeNormal(), FMath::Sign(UpVec.Y) * FVector::ForwardVector))));
+		float PitchModifier = FMath::Abs(FMath::RadiansToDegrees(FMath::Acos(FVector::DotProduct(FVector(UpVec.X, UpVec.Y, 0.0f).GetSafeNormal(), FMath::Sign(UpVec.X) * FVector::RightVector))));
+
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Modifiers: x: %f, y: %f"), RollModifier, PitchModifier));
+
 		AllCurrentLeverAngles.Roll = FMath::RoundToFloat(FMath::Sign(UpVec.Y) * FMath::RadiansToDegrees(FMath::Acos(FVector::DotProduct(FVector(0.0f, UpVec.Y, UpVec.Z), FVector::UpVector))));
 		AllCurrentLeverAngles.Pitch = FMath::RoundToFloat(FMath::Sign(UpVec.X) * FMath::RadiansToDegrees(FMath::Acos(FVector::DotProduct(FVector(UpVec.X, 0.0f, UpVec.Z), FVector::UpVector))));
 
