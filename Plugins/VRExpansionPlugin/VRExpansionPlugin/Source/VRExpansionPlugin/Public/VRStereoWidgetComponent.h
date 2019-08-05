@@ -31,7 +31,7 @@ public:
 	void BeginDestroy() override;
 	void OnUnregister() override;
 	virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction) override;
-
+	virtual void DrawWidgetToRenderTarget(float DeltaTime) override;
 	virtual TStructOnScope<FActorComponentInstanceData>  GetComponentInstanceData() const override;
 	void ApplyVRComponentInstanceData(class FVRStereoWidgetComponentInstanceData* WidgetInstanceData);
 
@@ -121,11 +121,11 @@ public:
 		int32 Priority;
 
 	bool bShouldCreateProxy;
-	bool bLastWidgetDrew;
 
 private:
 	/** Dirty state determines whether the stereo layer needs updating **/
 	bool bIsDirty;
+	bool bDirtyRenderTarget;
 
 	/** Texture needs to be marked for update **/
 	bool bTextureNeedsUpdate;
