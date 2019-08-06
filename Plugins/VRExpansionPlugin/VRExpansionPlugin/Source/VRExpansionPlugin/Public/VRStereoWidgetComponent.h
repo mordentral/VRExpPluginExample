@@ -53,6 +53,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "StereoLayer")
 		bool bUseEpicsWorldLockedStereo;
 
+	// If true will not render or update until false
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "StereoLayer")
+		bool bIsSleeping;
+
 	/**
 	* Change the layer's render priority, higher priorities render on top of lower priorities
 	* @param	InPriority: Priority value

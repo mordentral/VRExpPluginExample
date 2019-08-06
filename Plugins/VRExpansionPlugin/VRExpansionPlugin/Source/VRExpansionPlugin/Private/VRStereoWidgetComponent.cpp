@@ -71,6 +71,7 @@ UVRStereoWidgetComponent::UVRStereoWidgetComponent(const FObjectInitializer& Obj
 
 	bIsDirty = true;
 	bDirtyRenderTarget = false;
+	bIsSleeping = false;
 	//Texture = nullptr;
 }
 
@@ -120,7 +121,7 @@ void UVRStereoWidgetComponent::TickComponent(float DeltaTime, enum ELevelTick Ti
 
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	bool bIsVisible = IsVisible() && ((GetWorld()->TimeSince(GetLastRenderTime()) <= 0.1f) || bDirtyRenderTarget);
+	bool bIsVisible = IsVisible() && !bIsSleeping && ((GetWorld()->TimeSince(GetLastRenderTime()) <= 0.5f));
 
 	if (StereoWidgetCvars::ForceNoStereoWithVRWidgets)
 	{
@@ -258,12 +259,20 @@ void UVRStereoWidgetComponent::TickComponent(float DeltaTime, enum ELevelTick Ti
 	}
 
 	// If the transform changed dirty the layer and push the new transform
-	if (!bIsDirty && (bLastVisible != bVisible || bDirtyRenderTarget || FMemory::Memcmp(&LastTransform, &Transform, sizeof(Transform)) != 0))
+	
+	if (!bIsDirty)
 	{
-		bIsDirty = true;
+		if (bLastVisible != bIsVisible)
+		{
+			bIsDirty = true;
+		}
+		else if (bDirtyRenderTarget || FMemory::Memcmp(&LastTransform, &Transform, sizeof(Transform)) != 0)
+		{
+			bIsDirty = true;
+		}
 	}
 
-	bool bCurrVisible = bVisible;
+	bool bCurrVisible = bIsVisible;
 	if (!RenderTarget || !RenderTarget->Resource)
 	{
 		bCurrVisible = false;
@@ -355,10 +364,13 @@ void UVRStereoWidgetComponent::TickComponent(float DeltaTime, enum ELevelTick Ti
 				LayerId = StereoLayers->CreateLayer(LayerDsec);
 			}
 		}
-		LastTransform = Transform;
-		bLastVisible = bCurrVisible;
-		bIsDirty = false;
+
 	}
+
+	LastTransform = Transform;
+	bLastVisible = bCurrVisible;
+	bIsDirty = false;
+	bDirtyRenderTarget = false;
 #endif
 }
 
