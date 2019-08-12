@@ -29,7 +29,7 @@
 		},
 		{
 			"Name": "AdvancedSteamSessions",
-			"Enabled": false
+			"Enabled": true
 		}
 	],
 	"TargetPlatforms": [
