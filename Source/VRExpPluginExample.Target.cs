@@ -10,15 +10,42 @@ public class VRExpPluginExampleTarget : TargetRules
         //bUseLoggingInShipping = true;
         Type = TargetType.Game;
         ExtraModuleNames.AddRange(new string[] { "VRExpPluginExample" });
-		//bUsePCHFiles = false;
-		//bUseUnityBuild = false;
+        //bUsePCHFiles = false;
+        //bUseUnityBuild = false;
+
+        /*
+         * This is our Steam App ID.
+         * # Define in both server and client targets
+         */
+        GlobalDefinitions.Add("UE4_PROJECT_STEAMSHIPPINGID=480");
+
+
+        /*
+         * This is used on SetProduct(), and should be the same as your Product Name
+         * under Dedicated Game Server Information in Steamworks
+         * # Define in the Server target
+         */
+        //GlobalDefinitions.Add("UE4_PROJECT_STEAMPRODUCTNAME=\"MyGame\"");
+
+        /*
+         * This is used on SetModDir(), and should be the same as your Product Name
+         * under Dedicated Game Server Information in Steamworks
+         * # Define in the client target
+         */
+        //GlobalDefinitions.Add("UE4_PROJECT_STEAMGAMEDIR=\"MyGame\"");
+
+        /*
+         * This is what shows up under the game filter in Steam server browsers.
+         * # Define in both server and client targets
+         */
+        //GlobalDefinitions.Add("UE4_PROJECT_STEAMGAMEDESC=\"My Game\"");
     }
 
-	//
-	// TargetRules interface.
-	//
+    //
+    // TargetRules interface.
+    //
 
-	/*public override void SetupBinaries(
+    /*public override void SetupBinaries(
 		TargetInfo Target,
 		ref List<UEBuildBinaryConfiguration> OutBuildBinaryConfigurations,
 		ref List<string> OutExtraModuleNames
