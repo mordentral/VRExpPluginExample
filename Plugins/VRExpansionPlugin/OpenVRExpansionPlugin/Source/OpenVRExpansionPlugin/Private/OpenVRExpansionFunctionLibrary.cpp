@@ -70,7 +70,7 @@ EBPOpenVRHMDDeviceType UOpenVRExpansionFunctionLibrary::GetOpenVRHMDType()
 		EBPOVRResultSwitch Result;
 
 		// Using index 0 as it is always HMD
-		UOpenVRExpansionFunctionLibrary::GetVRDevicePropertyString(EVRDeviceProperty_String::Prop_ModelNumber_String_1001, 0, DeviceModelNumber, Result);
+		UOpenVRExpansionFunctionLibrary::GetVRDevicePropertyString(EVRDeviceProperty_String::Prop_ModelNumber_String_1001, vr::k_unTrackedDeviceIndex_Hmd, DeviceModelNumber, Result);
 		if (Result == EBPOVRResultSwitch::OnSucceeded)
 		{
 			UE_LOG(OpenVRExpansionFunctionLibraryLog, Display, TEXT("OpenVRDeviceType - Prop_ModelNumber_String_1001: %s"), *DeviceModelNumber);
@@ -109,7 +109,7 @@ EBPOpenVRHMDDeviceType UOpenVRExpansionFunctionLibrary::GetOpenVRHMDType()
 			else
 			{
 				// Check for manufacturer name for windows MR
-				UOpenVRExpansionFunctionLibrary::GetVRDevicePropertyString(EVRDeviceProperty_String::Prop_ManufacturerName_String_1005, 0, DeviceModelNumber, Result);
+				UOpenVRExpansionFunctionLibrary::GetVRDevicePropertyString(EVRDeviceProperty_String::Prop_ManufacturerName_String_1005, vr::k_unTrackedDeviceIndex_Hmd, DeviceModelNumber, Result);
 				if (Result == EBPOVRResultSwitch::OnSucceeded)
 				{
 					if (DeviceModelNumber.Find("WindowsMR", ESearchCase::IgnoreCase) != INDEX_NONE)
