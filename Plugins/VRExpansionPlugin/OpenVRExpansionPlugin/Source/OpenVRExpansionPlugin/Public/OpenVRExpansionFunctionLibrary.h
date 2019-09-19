@@ -495,10 +495,12 @@ UENUM(Blueprintable)
 enum class EBPOpenVRHMDDeviceType : uint8
 {
 	DT_SteamVR,
+	DT_ValveIndex,
 	DT_Vive,
+	DT_ViveCosmos,
 	DT_OculusHMD,
 	DT_WindowsMR,
-	DT_OSVR,
+	//DT_OSVR,
 	DT_Unknown
 };
 

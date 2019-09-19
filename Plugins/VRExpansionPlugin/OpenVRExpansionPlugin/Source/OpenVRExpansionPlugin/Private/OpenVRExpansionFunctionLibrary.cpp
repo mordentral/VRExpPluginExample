@@ -45,7 +45,7 @@ EBPOpenVRHMDDeviceType UOpenVRExpansionFunctionLibrary::GetOpenVRHMDType()
 		// Already declared in some of our includes here
 		//static const FName SteamVRSysName(TEXT("SteamVR"));
 		static const FName OculusSystemName(TEXT("OculusHMD"));
-		static const FName OSVRSystemName(TEXT("OSVR"));
+		//static const FName OSVRSystemName(TEXT("OSVR"));
 
 		FName DeviceName(NAME_None);
 		DeviceName = GEngine->XRSystem->GetSystemName();
@@ -55,8 +55,8 @@ EBPOpenVRHMDDeviceType UOpenVRExpansionFunctionLibrary::GetOpenVRHMDType()
 			DeviceType = EBPOpenVRHMDDeviceType::DT_SteamVR;
 		else if (DeviceName == OculusSystemName)
 			DeviceType = EBPOpenVRHMDDeviceType::DT_OculusHMD;
-		else if (DeviceName == OSVRSystemName)
-			DeviceType = EBPOpenVRHMDDeviceType::DT_OSVR;
+		//else if (DeviceName == OSVRSystemName)
+			//DeviceType = EBPOpenVRHMDDeviceType::DT_OSVR;
 	}
 
 #if !STEAMVR_SUPPORTED_PLATFORM
@@ -79,6 +79,7 @@ EBPOpenVRHMDDeviceType UOpenVRExpansionFunctionLibrary::GetOpenVRHMDType()
 			// This is the hacky workaround for now
 			/*
 				"Vive MV";
+				"Vive Cosmos"
 				"VIVE_Pro MV"
 				"Oculus Rift CV1";
 				"Lenovo Explorer";
@@ -90,9 +91,17 @@ EBPOpenVRHMDDeviceType UOpenVRExpansionFunctionLibrary::GetOpenVRHMDType()
 			// Manufacturer name
 			/*WindowsMR*/
 
-			if (DeviceModelNumber.Find("vive", ESearchCase::IgnoreCase) != INDEX_NONE)
+			if (DeviceModelNumber.Find("index", ESearchCase::IgnoreCase) != INDEX_NONE)
+			{
+				DeviceType = EBPOpenVRHMDDeviceType::DT_ValveIndex;
+			}
+			else if (DeviceModelNumber.Find("vive", ESearchCase::IgnoreCase) != INDEX_NONE)
 			{
 				DeviceType = EBPOpenVRHMDDeviceType::DT_Vive;
+			}
+			else if (DeviceModelNumber.Find("vive_cosmos", ESearchCase::IgnoreCase) != INDEX_NONE)
+			{
+				DeviceType = EBPOpenVRHMDDeviceType::DT_ViveCosmos;
 			}
 			else if (DeviceModelNumber.Find("oculus", ESearchCase::IgnoreCase) != INDEX_NONE)
 			{
