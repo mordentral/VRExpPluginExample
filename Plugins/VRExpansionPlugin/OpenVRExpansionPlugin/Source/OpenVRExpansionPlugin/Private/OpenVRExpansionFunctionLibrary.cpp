@@ -138,6 +138,75 @@ EBPOpenVRHMDDeviceType UOpenVRExpansionFunctionLibrary::GetOpenVRHMDType()
 #endif
 }
 
+EBPOpenVRControllerDeviceType UOpenVRExpansionFunctionLibrary::GetOpenVRControllerType()
+{
+
+	EBPOpenVRControllerDeviceType DeviceType = EBPOpenVRControllerDeviceType::DT_UnknownController;
+
+#if !STEAMVR_SUPPORTED_PLATFORM
+	return DeviceType;
+#else
+
+	if (!GEngine->XRSystem.IsValid() || (GEngine->XRSystem->GetSystemName() != SteamVRSystemName))
+	{
+		return DeviceType;
+	}
+
+	vr::IVRSystem* VRSystem = vr::VRSystem();
+
+	if (!VRSystem)
+	{
+		return DeviceType;
+	}
+
+	int32 DeviceIndexOut = INDEX_NONE;
+	int32 FallbackIndex = INDEX_NONE;
+
+	for (uint32 DeviceIndex = 0; DeviceIndex < vr::k_unMaxTrackedDeviceCount; ++DeviceIndex)
+	{
+		const vr::ETrackedDeviceClass DeviceClass = VRSystem->GetTrackedDeviceClass(DeviceIndex);
+		if (DeviceClass == vr::ETrackedDeviceClass::TrackedDeviceClass_Controller)
+		{
+			// NOTE: GetControllerRoleForTrackedDeviceIndex() only seems to return a valid role if the device is on and being tracked
+			const vr::ETrackedControllerRole ControllerRole = VRSystem->GetControllerRoleForTrackedDeviceIndex(DeviceIndex);
+			if (ControllerRole != vr::TrackedControllerRole_LeftHand && ControllerRole != vr::TrackedControllerRole_RightHand)
+			{
+				continue;
+			}
+
+			DeviceIndexOut = DeviceIndex;
+			break;
+		}
+	}
+
+	if (DeviceIndexOut == INDEX_NONE)
+	{
+		return DeviceType;
+	}
+
+	EBPOVRResultSwitch Result;
+
+	FString DeviceModelNumber;
+	UOpenVRExpansionFunctionLibrary::GetVRDevicePropertyString(EVRDeviceProperty_String::Prop_ModelNumber_String_1001, DeviceIndexOut, DeviceModelNumber, Result);
+	if (Result == EBPOVRResultSwitch::OnSucceeded)
+	{
+		UE_LOG(OpenVRExpansionFunctionLibraryLog, Display, TEXT("OpenVRControllerDeviceType - Prop_ModelNumber_String_1001: %s"), *DeviceModelNumber);
+	}
+
+
+	if (DeviceModelNumber.Find("knuckles", ESearchCase::IgnoreCase) != INDEX_NONE || DeviceModelNumber.Find("index", ESearchCase::IgnoreCase) != INDEX_NONE)
+	{
+		DeviceType = EBPOpenVRControllerDeviceType::DT_IndexController;
+	}
+	//else if ( )
+	{
+		// Add other controllers here
+	}
+
+	return DeviceType;
+#endif
+}
+
 bool UOpenVRExpansionFunctionLibrary::HasVRCamera(EOpenVRCameraFrameType FrameType, int32 &Width, int32 &Height)
 {
 #if !STEAMVR_SUPPORTED_PLATFORM

@@ -675,7 +675,6 @@ enum class EBPHMDDeviceType : uint8
 	DT_SteamVR,
 	DT_GearVR,
 	DT_GoogleVR,
-	DT_OSVR,
 	DT_AppleARKit,
 	DT_GoogleARCore,
 	DT_Unknown
