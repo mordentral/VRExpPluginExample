@@ -73,7 +73,7 @@ EBPOpenVRHMDDeviceType UOpenVRExpansionFunctionLibrary::GetOpenVRHMDType()
 		UOpenVRExpansionFunctionLibrary::GetVRDevicePropertyString(EVRDeviceProperty_String::Prop_ModelNumber_String_1001, vr::k_unTrackedDeviceIndex_Hmd, DeviceModelNumber, Result);
 		if (Result == EBPOVRResultSwitch::OnSucceeded)
 		{
-			UE_LOG(OpenVRExpansionFunctionLibraryLog, Display, TEXT("OpenVRDeviceType - Prop_ModelNumber_String_1001: %s"), *DeviceModelNumber);
+			//UE_LOG(OpenVRExpansionFunctionLibraryLog, Display, TEXT("OpenVRDeviceType - Prop_ModelNumber_String_1001: %s"), *DeviceModelNumber);
 
 			//#TODO: Screw this eventually, need it to be actual string value comparisons for each model
 			// This is the hacky workaround for now
@@ -192,18 +192,15 @@ EBPOpenVRControllerDeviceType UOpenVRExpansionFunctionLibrary::GetOpenVRControll
 	UOpenVRExpansionFunctionLibrary::GetVRDevicePropertyString(EVRDeviceProperty_String::Prop_ModelNumber_String_1001, DeviceIndexOut, DeviceModelNumber, Result);
 	if (Result == EBPOVRResultSwitch::OnSucceeded)
 	{
-		UE_LOG(OpenVRExpansionFunctionLibraryLog, Display, TEXT("OpenVRControllerDeviceType - Prop_ModelNumber_String_1001: %s"), *DeviceModelNumber);
-	}
-
-
-	if (DeviceModelNumber.Find("knuckles", ESearchCase::IgnoreCase) != INDEX_NONE || DeviceModelNumber.Find("index", ESearchCase::IgnoreCase) != INDEX_NONE)
-	{
-		DeviceType = EBPOpenVRControllerDeviceType::DT_IndexController;
-	}
-	else
-	{
-		UE_LOG(OpenVRExpansionFunctionLibraryLog, Warning, TEXT("Tell VRE about unhandled controller model type: %s !!!"), *DeviceModelNumber);
-		// Add other controllers here
+		if (DeviceModelNumber.Find("knuckles", ESearchCase::IgnoreCase) != INDEX_NONE || DeviceModelNumber.Find("index", ESearchCase::IgnoreCase) != INDEX_NONE)
+		{
+			DeviceType = EBPOpenVRControllerDeviceType::DT_IndexController;
+		}
+		else
+		{
+			UE_LOG(OpenVRExpansionFunctionLibraryLog, Warning, TEXT("Tell VRE about unhandled controller model type: %s !!!"), *DeviceModelNumber);
+			// Add other controllers here
+		}
 	}
 
 	return DeviceType;
