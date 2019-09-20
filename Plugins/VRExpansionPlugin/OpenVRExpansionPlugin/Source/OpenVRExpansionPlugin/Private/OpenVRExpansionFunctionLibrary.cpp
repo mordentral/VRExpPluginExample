@@ -196,6 +196,10 @@ EBPOpenVRControllerDeviceType UOpenVRExpansionFunctionLibrary::GetOpenVRControll
 		{
 			DeviceType = EBPOpenVRControllerDeviceType::DT_IndexController;
 		}
+		else if (DeviceModelNumber.Find("oculus rift cv1", ESearchCase::IgnoreCase) != INDEX_NONE) // Oculus Rift CV1
+		{
+			DeviceType = EBPOpenVRControllerDeviceType::DT_RiftController;
+		}
 		else
 		{
 			UE_LOG(OpenVRExpansionFunctionLibraryLog, Warning, TEXT("Tell VRE about unhandled controller model type: %s !!!"), *DeviceModelNumber);
