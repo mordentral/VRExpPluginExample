@@ -129,6 +129,7 @@ EBPOpenVRHMDDeviceType UOpenVRExpansionFunctionLibrary::GetOpenVRHMDType()
 				else
 				{
 					DeviceType = EBPOpenVRHMDDeviceType::DT_Unknown;
+					UE_LOG(OpenVRExpansionFunctionLibraryLog, Warning, TEXT("Tell VRE about unhandled HMD model type: %s !!!"), *DeviceModelNumber);
 				}
 			}
 		}
@@ -198,8 +199,9 @@ EBPOpenVRControllerDeviceType UOpenVRExpansionFunctionLibrary::GetOpenVRControll
 	{
 		DeviceType = EBPOpenVRControllerDeviceType::DT_IndexController;
 	}
-	//else if ( )
+	else
 	{
+		UE_LOG(OpenVRExpansionFunctionLibraryLog, Warning, TEXT("Tell VRE about unhandled controller model type: %s !!!"), *DeviceModelNumber);
 		// Add other controllers here
 	}
 

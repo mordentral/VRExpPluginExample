@@ -4216,6 +4216,7 @@ bool UGripMotionControllerComponent::SetUpPhysicsHandle(const FBPActorGripInform
 				if (RootBodyIndex != INDEX_NONE)
 				{
 					RootBoneRotation = FTransform(skele->GetBoneTransform(RootBodyIndex, FTransform::Identity));
+					RootBoneRotation.SetScale3D(FVector(1.f));
 					HandleInfo->RootBoneRotation = RootBoneRotation;
 				}
 			}
