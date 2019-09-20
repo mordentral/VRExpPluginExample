@@ -95,14 +95,15 @@ EBPOpenVRHMDDeviceType UOpenVRExpansionFunctionLibrary::GetOpenVRHMDType()
 			{
 				DeviceType = EBPOpenVRHMDDeviceType::DT_ValveIndex;
 			}
-			else if (DeviceModelNumber.Find("vive", ESearchCase::IgnoreCase) != INDEX_NONE)
-			{
-				DeviceType = EBPOpenVRHMDDeviceType::DT_Vive;
-			}
 			else if (DeviceModelNumber.Find("vive_cosmos", ESearchCase::IgnoreCase) != INDEX_NONE)
 			{
 				DeviceType = EBPOpenVRHMDDeviceType::DT_ViveCosmos;
 			}
+			else if (DeviceModelNumber.Find("vive", ESearchCase::IgnoreCase) != INDEX_NONE)
+			{
+				DeviceType = EBPOpenVRHMDDeviceType::DT_Vive;
+			}
+
 			else if (DeviceModelNumber.Find("oculus", ESearchCase::IgnoreCase) != INDEX_NONE)
 			{
 				DeviceType = EBPOpenVRHMDDeviceType::DT_OculusHMD;
