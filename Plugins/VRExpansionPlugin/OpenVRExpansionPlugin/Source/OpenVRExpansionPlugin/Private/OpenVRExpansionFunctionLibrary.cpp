@@ -130,7 +130,9 @@ EBPOpenVRHMDDeviceType UOpenVRExpansionFunctionLibrary::GetOpenVRHMDType()
 				else
 				{
 					DeviceType = EBPOpenVRHMDDeviceType::DT_Unknown;
+#if WITH_EDITOR
 					UE_LOG(OpenVRExpansionFunctionLibraryLog, Warning, TEXT("Tell VRE about unhandled HMD model type: %s !!!"), *DeviceModelNumber);
+#endif
 				}
 			}
 		}
@@ -196,14 +198,28 @@ EBPOpenVRControllerDeviceType UOpenVRExpansionFunctionLibrary::GetOpenVRControll
 		{
 			DeviceType = EBPOpenVRControllerDeviceType::DT_IndexController;
 		}
+		else if (DeviceModelNumber.Find("VIVE Controller Pro", ESearchCase::IgnoreCase) != INDEX_NONE) // Vive Wand
+		{
+			DeviceType = EBPOpenVRControllerDeviceType::DT_ViveController;
+		}
+		else if (DeviceModelNumber.Find("VIVE Controller", ESearchCase::IgnoreCase) != INDEX_NONE) // Vive Wand
+		{
+			DeviceType = EBPOpenVRControllerDeviceType::DT_ViveController;
+		}
 		else if (DeviceModelNumber.Find("oculus rift cv1", ESearchCase::IgnoreCase) != INDEX_NONE) // Oculus Rift CV1
 		{
 			DeviceType = EBPOpenVRControllerDeviceType::DT_RiftController;
+		}		
+		else if (DeviceModelNumber.Find("oculus rift s", ESearchCase::IgnoreCase) != INDEX_NONE) // Oculus Rift CV1
+		{
+			DeviceType = EBPOpenVRControllerDeviceType::DT_RiftSController;
 		}
 		else
 		{
+#if WITH_EDITOR
 			UE_LOG(OpenVRExpansionFunctionLibraryLog, Warning, TEXT("Tell VRE about unhandled controller model type: %s !!!"), *DeviceModelNumber);
 			// Add other controllers here
+#endif
 		}
 	}
 
