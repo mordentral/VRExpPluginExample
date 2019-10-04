@@ -29,30 +29,42 @@ public:
 		// I wanted to use the new interface and not directly set the drive so that it is ready to delete this section
 		// When its fixed
 		//#if WITH_PHYSX
+
+		PxD6JointDriveFlags JointFlags;
+		if (!bUseForceConstraint)
+			JointFlags = PxD6JointDriveFlag::eACCELERATION;
+
+
 			PxD6JointDrive driveVal = ConstraintInstance.ConstraintHandle.ConstraintData->getDrive(PxD6Drive::Enum::eX);
-			driveVal.flags = PxD6JointDriveFlags();
-			if(!bUseForceConstraint) 
-				driveVal.flags &= ~PxD6JointDriveFlag::eACCELERATION;
+			driveVal.flags = JointFlags;
 			ConstraintInstance.ConstraintHandle.ConstraintData->setDrive(PxD6Drive::Enum::eX, driveVal);
 
 			driveVal = ConstraintInstance.ConstraintHandle.ConstraintData->getDrive(PxD6Drive::Enum::eY);
-			driveVal.flags = PxD6JointDriveFlags();
-			if (!bUseForceConstraint)
-				driveVal.flags &= ~PxD6JointDriveFlag::eACCELERATION;
+			driveVal.flags = JointFlags;
 			ConstraintInstance.ConstraintHandle.ConstraintData->setDrive(PxD6Drive::Enum::eY, driveVal);
 
 			driveVal = ConstraintInstance.ConstraintHandle.ConstraintData->getDrive(PxD6Drive::Enum::eZ);
-			driveVal.flags = PxD6JointDriveFlags();
-			if (!bUseForceConstraint)
-				driveVal.flags &= ~PxD6JointDriveFlag::eACCELERATION;
+			driveVal.flags = JointFlags;
 			ConstraintInstance.ConstraintHandle.ConstraintData->setDrive(PxD6Drive::Enum::eZ, driveVal);
 
 			// Check if slerp
-			driveVal = ConstraintInstance.ConstraintHandle.ConstraintData->getDrive(PxD6Drive::Enum::eSLERP);
-			driveVal.flags = PxD6JointDriveFlags();
-			if (!bUseForceConstraint)
-				driveVal.flags &= ~PxD6JointDriveFlag::eACCELERATION;
-			ConstraintInstance.ConstraintHandle.ConstraintData->setDrive(PxD6Drive::Enum::eSLERP, driveVal);
+			if (ConstraintInstance.ProfileInstance.AngularDrive.AngularDriveMode == EAngularDriveMode::SLERP)
+			{
+				driveVal = ConstraintInstance.ConstraintHandle.ConstraintData->getDrive(PxD6Drive::Enum::eSLERP);
+				driveVal.flags = JointFlags;
+				ConstraintInstance.ConstraintHandle.ConstraintData->setDrive(PxD6Drive::Enum::eSLERP, driveVal);
+			}
+			else
+			{
+				driveVal = ConstraintInstance.ConstraintHandle.ConstraintData->getDrive(PxD6Drive::Enum::eSWING);
+				driveVal.flags = JointFlags;
+				ConstraintInstance.ConstraintHandle.ConstraintData->setDrive(PxD6Drive::Enum::eSWING, driveVal);
+
+				driveVal = ConstraintInstance.ConstraintHandle.ConstraintData->getDrive(PxD6Drive::Enum::eTWIST);
+				driveVal.flags = JointFlags;
+				ConstraintInstance.ConstraintHandle.ConstraintData->setDrive(PxD6Drive::Enum::eTWIST, driveVal);
+			}
+
 		//#endif
 	}
 
@@ -64,7 +76,7 @@ public:
 	}
 
 	// Gets the angular offset on the constraint
-	UFUNCTION(BlueprintCallable, Category = "VRE Physics Constraint Component")
+	UFUNCTION(BlueprintPure, Category = "VRE Physics Constraint Component")
 	FRotator GetAngularOffset()
 	{
 		return ConstraintInstance.AngularRotationOffset;
@@ -74,6 +86,18 @@ public:
 	UFUNCTION(BlueprintCallable, Category="VRE Physics Constraint Component")
 	void SetAngularOffset(FRotator NewAngularOffset)
 	{
+
+		// If the constraint is broken then there is no reason to do everything below
+		// Just early out of it.
+		if (!ConstraintInstance.IsValidConstraintInstance() || ConstraintInstance.IsBroken())
+		{
+			ConstraintInstance.AngularRotationOffset = NewAngularOffset;
+			return;
+		}
+
+		// I could remove a full step if I calc delta in Frame2 local and then apply to the new
+		// Values. However I am keeping it like this for now, would require an extra inverse / relative calc, this may not even be slower
+
 		FVector RefPos = ConstraintInstance.Pos2;
 		const float RefScale = FMath::Max(GetConstraintScale(), 0.01f);
 		if (GetBodyInstance(EConstraintFrame::Frame2))
@@ -81,33 +105,31 @@ public:
 			RefPos *= RefScale;
 		}
 		
-		FQuat myRot = GetComponentRotation().Quaternion();
 		FQuat AngRotOffset = ConstraintInstance.AngularRotationOffset.Quaternion();
 		FQuat newAngRotOffset = NewAngularOffset.Quaternion();
 
-
-		AngRotOffset = myRot * AngRotOffset;
-		newAngRotOffset = myRot * newAngRotOffset;
-
-
-
 		FTransform A2Transform = GetBodyTransform(EConstraintFrame::Frame2);
 		A2Transform.RemoveScaling();
-		FQuat targetRot = A2Transform.GetRotation().Inverse();
 
-		AngRotOffset = targetRot * AngRotOffset;
-		newAngRotOffset = targetRot * newAngRotOffset;
+		FTransform CurrentLocalFrame(ConstraintInstance.PriAxis2, ConstraintInstance.SecAxis2, ConstraintInstance.PriAxis2 ^ ConstraintInstance.SecAxis2, ConstraintInstance.Pos2);
+		FTransform WorldLocalFrame = (CurrentLocalFrame * A2Transform);
+	
+		FVector WPri21 = GetComponentTransform().TransformVectorNoScale(AngRotOffset.GetForwardVector());
+		FVector WOrth21 = GetComponentTransform().TransformVectorNoScale(AngRotOffset.GetRightVector());
 
-
-		FQuat DeltaRot = AngRotOffset.Inverse() * newAngRotOffset;
-
-		//FQuat DeltaRot = (GetComponentRotation().Quaternion() * ConstraintInstance.AngularRotationOffset.Quaternion()).Inverse() * (GetComponentRotation().Quaternion() * NewAngularOffset.Quaternion());
+		FTransform OriginalRotOffset(WPri21, WOrth21, WPri21 ^ WOrth21, FVector::ZeroVector);
+		FQuat DeltaRot = WorldLocalFrame.GetRotation() * OriginalRotOffset.GetRotation().Inverse();
 		DeltaRot.Normalize();
 
-		ConstraintInstance.AngularRotationOffset = NewAngularOffset;
+		FVector WPri2 = GetComponentTransform().TransformVectorNoScale(newAngRotOffset.GetForwardVector());
+		FVector WOrth2 = GetComponentTransform().TransformVectorNoScale(newAngRotOffset.GetRightVector());
 
-		ConstraintInstance.PriAxis2 = DeltaRot.RotateVector(ConstraintInstance.PriAxis2);
-		ConstraintInstance.SecAxis2 = DeltaRot.RotateVector(ConstraintInstance.SecAxis2);
+		WPri2 = DeltaRot.RotateVector(WPri2);
+		WOrth2 = DeltaRot.RotateVector(WOrth2);
+
+		ConstraintInstance.PriAxis2 = A2Transform.InverseTransformVectorNoScale(WPri2);
+		ConstraintInstance.SecAxis2 = A2Transform.InverseTransformVectorNoScale(WOrth2);
+		ConstraintInstance.AngularRotationOffset = NewAngularOffset;
 
 		FPhysicsInterface::ExecuteOnUnbrokenConstraintReadWrite(ConstraintInstance.ConstraintHandle, [&](const FPhysicsConstraintHandle& InUnbrokenConstraint)
 			{
@@ -118,8 +140,8 @@ public:
 		return;
 	}
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRE Constraint Settings")
-	bool bSetAndMaintainCOMOnFrame2;
+	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRE Constraint Settings")
+	//bool bSetAndMaintainCOMOnFrame2;
 
 	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRE Constraint Settings")
 	//	bool bUseForceConstraint;
