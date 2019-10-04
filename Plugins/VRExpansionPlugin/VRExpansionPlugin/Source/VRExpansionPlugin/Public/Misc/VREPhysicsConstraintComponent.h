@@ -80,8 +80,28 @@ public:
 		{
 			RefPos *= RefScale;
 		}
+		
+		FQuat myRot = GetComponentRotation().Quaternion();
+		FQuat AngRotOffset = ConstraintInstance.AngularRotationOffset.Quaternion();
+		FQuat newAngRotOffset = NewAngularOffset.Quaternion();
 
-		FQuat DeltaRot = ConstraintInstance.AngularRotationOffset.Quaternion().Inverse() * NewAngularOffset.Quaternion();
+
+		AngRotOffset = myRot * AngRotOffset;
+		newAngRotOffset = myRot * newAngRotOffset;
+
+
+
+		FTransform A2Transform = GetBodyTransform(EConstraintFrame::Frame2);
+		A2Transform.RemoveScaling();
+		FQuat targetRot = A2Transform.GetRotation().Inverse();
+
+		AngRotOffset = targetRot * AngRotOffset;
+		newAngRotOffset = targetRot * newAngRotOffset;
+
+
+		FQuat DeltaRot = AngRotOffset.Inverse() * newAngRotOffset;
+
+		//FQuat DeltaRot = (GetComponentRotation().Quaternion() * ConstraintInstance.AngularRotationOffset.Quaternion()).Inverse() * (GetComponentRotation().Quaternion() * NewAngularOffset.Quaternion());
 		DeltaRot.Normalize();
 
 		ConstraintInstance.AngularRotationOffset = NewAngularOffset;
@@ -97,6 +117,9 @@ public:
 
 		return;
 	}
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRE Constraint Settings")
+	bool bSetAndMaintainCOMOnFrame2;
 
 	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRE Constraint Settings")
 	//	bool bUseForceConstraint;
