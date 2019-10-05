@@ -4521,6 +4521,23 @@ bool UGripMotionControllerComponent::SetGripConstraintStiffnessAndDamping(const 
 
 				FPhysicsInterface::UpdateLinearDrive_AssumesLocked(HandleInfo->HandleData2, HandleInfo->LinConstraint);
 
+				if (bUseForceDrive)
+				{
+#if WITH_PHYSX
+					PxD6JointDrive driveVal = HandleInfo->HandleData2.ConstraintData->getDrive(PxD6Drive::Enum::eX);
+					driveVal.flags &= ~PxD6JointDriveFlag::eACCELERATION;
+					HandleInfo->HandleData2.ConstraintData->setDrive(PxD6Drive::Enum::eX, driveVal);
+
+					driveVal = HandleInfo->HandleData2.ConstraintData->getDrive(PxD6Drive::Enum::eY);
+					driveVal.flags &= ~PxD6JointDriveFlag::eACCELERATION;
+					HandleInfo->HandleData2.ConstraintData->setDrive(PxD6Drive::Enum::eY, driveVal);
+
+					driveVal = HandleInfo->HandleData2.ConstraintData->getDrive(PxD6Drive::Enum::eZ);
+					driveVal.flags &= ~PxD6JointDriveFlag::eACCELERATION;
+					HandleInfo->HandleData2.ConstraintData->setDrive(PxD6Drive::Enum::eZ, driveVal);
+#endif
+				}
+
 				if (Grip->GripCollisionType == EGripCollisionType::ManipulationGripWithWristTwist)
 				{
 					HandleInfo->AngConstraint.TwistDrive.Damping = AngularDamping;
@@ -4560,9 +4577,36 @@ bool UGripMotionControllerComponent::SetGripConstraintStiffnessAndDamping(const 
 
 				FPhysicsInterface::UpdateLinearDrive_AssumesLocked(HandleInfo->HandleData2, HandleInfo->LinConstraint);
 
+				if (bUseForceDrive)
+				{
+#if WITH_PHYSX
+					PxD6JointDrive driveVal = HandleInfo->HandleData2.ConstraintData->getDrive(PxD6Drive::Enum::eX);
+					driveVal.flags &= ~PxD6JointDriveFlag::eACCELERATION;
+					HandleInfo->HandleData2.ConstraintData->setDrive(PxD6Drive::Enum::eX, driveVal);
+
+					driveVal = HandleInfo->HandleData2.ConstraintData->getDrive(PxD6Drive::Enum::eY);
+					driveVal.flags &= ~PxD6JointDriveFlag::eACCELERATION;
+					HandleInfo->HandleData2.ConstraintData->setDrive(PxD6Drive::Enum::eY, driveVal);
+
+					driveVal = HandleInfo->HandleData2.ConstraintData->getDrive(PxD6Drive::Enum::eZ);
+					driveVal.flags &= ~PxD6JointDriveFlag::eACCELERATION;
+					HandleInfo->HandleData2.ConstraintData->setDrive(PxD6Drive::Enum::eZ, driveVal);
+#endif
+				}
+
+
 				HandleInfo->AngConstraint.SlerpDrive.Damping = AngularDamping;
 				HandleInfo->AngConstraint.SlerpDrive.Stiffness = AngularStiffness;
 				FPhysicsInterface::UpdateAngularDrive_AssumesLocked(HandleInfo->HandleData2, HandleInfo->AngConstraint);
+
+				if (bUseForceDrive)
+				{
+#if WITH_PHYSX
+					PxD6JointDrive driveVal = HandleInfo->HandleData2.ConstraintData->getDrive(PxD6Drive::Enum::eSLERP);
+					driveVal.flags &= ~PxD6JointDriveFlag::eACCELERATION;
+					HandleInfo->HandleData2.ConstraintData->setDrive(PxD6Drive::Enum::eSLERP, driveVal);
+#endif
+				}
 			}
 
 		}
