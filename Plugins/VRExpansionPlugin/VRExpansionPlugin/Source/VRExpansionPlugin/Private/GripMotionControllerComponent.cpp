@@ -4677,21 +4677,6 @@ void UGripMotionControllerComponent::UpdatePhysicsHandleTransform(const FBPActor
 	if (!HandleInfo || !HandleInfo->KinActorData2.IsValid())
 		return;
 
-	// Debug draw for COM movement with physics grips
-#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-	if (GripMotionControllerCvars::DrawDebugGripCOM)
-	{
-		UPrimitiveComponent* me = Cast<UPrimitiveComponent>(GrippedActor.GripTargetType == EGripTargetType::ActorGrip ? GrippedActor.GetGrippedActor()->GetRootComponent() : GrippedActor.GetGrippedComponent());
-		FVector curCOMPosition = me->GetBodyInstance(GrippedActor.GrippedBoneName)->GetCOMPosition();
-		DrawDebugSphere(GetWorld(), curCOMPosition, 4, 32, FColor::Red, false);
-		FTransform TargetTransform = (HandleInfo->COMPosition * (HandleInfo->RootBoneRotation * NewTransform));
-		DrawDebugSphere(GetWorld(), TargetTransform.GetLocation(), 4, 32, FColor::Cyan, false);
-		DrawDebugLine(GetWorld(), TargetTransform.GetTranslation(), TargetTransform.GetTranslation() + (TargetTransform.GetRotation().GetForwardVector() * 20.f), FColor::Red);
-		DrawDebugLine(GetWorld(), TargetTransform.GetTranslation(), TargetTransform.GetTranslation() + (TargetTransform.GetRotation().GetRightVector() * 20.f), FColor::Green);
-		DrawDebugLine(GetWorld(), TargetTransform.GetTranslation(), TargetTransform.GetTranslation() + (TargetTransform.GetRotation().GetUpVector() * 20.f), FColor::Blue);
-	}
-#endif
-
 	// Don't call moveKinematic if it hasn't changed - that will stop bodies from going to sleep.
 	if (!HandleInfo->LastPhysicsTransform.EqualsNoScale(NewTransform))
 	{
@@ -4703,6 +4688,20 @@ void UGripMotionControllerComponent::UpdatePhysicsHandleTransform(const FBPActor
 		});
 	}
 
+	// Debug draw for COM movement with physics grips
+#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+	if (GripMotionControllerCvars::DrawDebugGripCOM)
+	{
+		UPrimitiveComponent* me = Cast<UPrimitiveComponent>(GrippedActor.GripTargetType == EGripTargetType::ActorGrip ? GrippedActor.GetGrippedActor()->GetRootComponent() : GrippedActor.GetGrippedComponent());
+		FVector curCOMPosition = me->GetBodyInstance(GrippedActor.GrippedBoneName)->GetCOMPosition();
+		DrawDebugSphere(GetWorld(), curCOMPosition, 4, 32, FColor::Red, false);
+		FTransform TargetTransform = (HandleInfo->COMPosition * (HandleInfo->RootBoneRotation * HandleInfo->LastPhysicsTransform));
+		DrawDebugSphere(GetWorld(), TargetTransform.GetLocation(), 4, 32, FColor::Cyan, false);
+		DrawDebugLine(GetWorld(), TargetTransform.GetTranslation(), TargetTransform.GetTranslation() + (TargetTransform.GetRotation().GetForwardVector() * 20.f), FColor::Red);
+		DrawDebugLine(GetWorld(), TargetTransform.GetTranslation(), TargetTransform.GetTranslation() + (TargetTransform.GetRotation().GetRightVector() * 20.f), FColor::Green);
+		DrawDebugLine(GetWorld(), TargetTransform.GetTranslation(), TargetTransform.GetTranslation() + (TargetTransform.GetRotation().GetUpVector() * 20.f), FColor::Blue);
+	}
+#endif
 
 }
 
