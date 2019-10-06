@@ -1539,8 +1539,8 @@ public:
 		Stiffness = 0.f;
 		Damping = 0.f;
 		MaxForce = 0.f;
-		bEnablePositionDrive = true;
-		bEnableVelocityDrive = true;
+		bEnablePositionDrive = false;
+		bEnableVelocityDrive = false;
 	}
 
 	void FillFrom(FConstraintDrive& ConstraintDrive)
