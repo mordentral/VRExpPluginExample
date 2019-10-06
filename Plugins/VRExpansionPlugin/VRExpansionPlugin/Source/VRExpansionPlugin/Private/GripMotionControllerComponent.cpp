@@ -4251,11 +4251,12 @@ bool UGripMotionControllerComponent::SetUpPhysicsHandle(const FBPActorGripInform
 			localCom.SetLocation(Loc);
 			FPhysicsInterface::SetComLocalPose_AssumesLocked(Actor, localCom);
 				
-			trans.SetLocation(FPhysicsInterface::GetComTransform_AssumesLocked(Actor).GetLocation());
+			FVector ComLoc = FPhysicsInterface::GetComTransform_AssumesLocked(Actor).GetLocation();
+			trans.SetLocation(ComLoc);
+			HandleInfo->COMPosition = FTransform(rBodyInstance->GetUnrealWorldTransform().InverseTransformPosition(ComLoc));
 			HandleInfo->bSetCOM = true;
-		}
-
-		if (COMType == EPhysicsGripCOMType::COM_GripAtControllerLoc)
+		}		
+		else if (COMType == EPhysicsGripCOMType::COM_GripAtControllerLoc)
 		{
 			FVector ControllerLoc = (FTransform(NewGrip.RelativeTransform.ToInverseMatrixWithScale()) * root->GetComponentTransform()).GetLocation();
 			trans.SetLocation(ControllerLoc);
@@ -4311,6 +4312,7 @@ bool UGripMotionControllerComponent::SetUpPhysicsHandle(const FBPActorGripInform
 		if (!HandleInfo->HandleData2.IsValid())
 		{
 			HandleInfo->HandleData2 = FPhysicsInterface::CreateConstraint(Actor, HandleInfo->KinActorData2, KinPose.GetRelativeTransform(FPhysicsInterface::GetGlobalPose_AssumesLocked(Actor)), FTransform::Identity);
+			//HandleInfo->HandleData2 = FPhysicsInterface::CreateConstraint(Actor, HandleInfo->KinActorData2, FTransform::Identity, KinPose.Inverse().GetRelativeTransform(FPhysicsInterface::GetGlobalPose_AssumesLocked(Actor)));
 		}
 		else
 		{
@@ -4451,19 +4453,17 @@ bool UGripMotionControllerComponent::SetUpPhysicsHandle(const FBPActorGripInform
 				driveVal.flags = PxD6JointDriveFlags();//&= ~PxD6JointDriveFlag::eACCELERATION;
 				HandleInfo->HandleData2.ConstraintData->setDrive(PxD6Drive::Enum::eZ, driveVal);
 
+				driveVal = HandleInfo->HandleData2.ConstraintData->getDrive(PxD6Drive::Enum::eTWIST);
+				driveVal.flags = PxD6JointDriveFlags();//&= ~PxD6JointDriveFlag::eACCELERATION;
+				HandleInfo->HandleData2.ConstraintData->setDrive(PxD6Drive::Enum::eTWIST, driveVal);
 
-				if (NewGrip.GripCollisionType == EGripCollisionType::ManipulationGripWithWristTwist)
-				{
-					driveVal = HandleInfo->HandleData2.ConstraintData->getDrive(PxD6Drive::Enum::eTWIST);
-					driveVal.flags = PxD6JointDriveFlags();//&= ~PxD6JointDriveFlag::eACCELERATION;
-					HandleInfo->HandleData2.ConstraintData->setDrive(PxD6Drive::Enum::eTWIST, driveVal);
-				}
-				else if (NewGrip.GripCollisionType != EGripCollisionType::ManipulationGrip)
-				{
-					driveVal = HandleInfo->HandleData2.ConstraintData->getDrive(PxD6Drive::Enum::eSLERP);
-					driveVal.flags = PxD6JointDriveFlags();//&= ~PxD6JointDriveFlag::eACCELERATION;
-					HandleInfo->HandleData2.ConstraintData->setDrive(PxD6Drive::Enum::eSLERP, driveVal);
-				}
+				driveVal = HandleInfo->HandleData2.ConstraintData->getDrive(PxD6Drive::Enum::eSWING);
+				driveVal.flags = PxD6JointDriveFlags();//&= ~PxD6JointDriveFlag::eACCELERATION;
+				HandleInfo->HandleData2.ConstraintData->setDrive(PxD6Drive::Enum::eTWIST, driveVal);
+
+				driveVal = HandleInfo->HandleData2.ConstraintData->getDrive(PxD6Drive::Enum::eSLERP);
+				driveVal.flags = PxD6JointDriveFlags();//&= ~PxD6JointDriveFlag::eACCELERATION;
+				HandleInfo->HandleData2.ConstraintData->setDrive(PxD6Drive::Enum::eSLERP, driveVal);
 #endif
 			}
 		}
@@ -4602,7 +4602,15 @@ bool UGripMotionControllerComponent::SetGripConstraintStiffnessAndDamping(const 
 				if (bUseForceDrive)
 				{
 #if WITH_PHYSX
-					PxD6JointDrive driveVal = HandleInfo->HandleData2.ConstraintData->getDrive(PxD6Drive::Enum::eSLERP);
+					PxD6JointDrive driveVal = HandleInfo->HandleData2.ConstraintData->getDrive(PxD6Drive::Enum::eTWIST);
+					driveVal.flags &= ~PxD6JointDriveFlag::eACCELERATION;
+					HandleInfo->HandleData2.ConstraintData->setDrive(PxD6Drive::Enum::eTWIST, driveVal);
+
+					driveVal = HandleInfo->HandleData2.ConstraintData->getDrive(PxD6Drive::Enum::eSWING);
+					driveVal.flags &= ~PxD6JointDriveFlag::eACCELERATION;
+					HandleInfo->HandleData2.ConstraintData->setDrive(PxD6Drive::Enum::eSWING, driveVal);
+
+					driveVal = HandleInfo->HandleData2.ConstraintData->getDrive(PxD6Drive::Enum::eSLERP);
 					driveVal.flags &= ~PxD6JointDriveFlag::eACCELERATION;
 					HandleInfo->HandleData2.ConstraintData->setDrive(PxD6Drive::Enum::eSLERP, driveVal);
 #endif
@@ -4676,7 +4684,11 @@ void UGripMotionControllerComponent::UpdatePhysicsHandleTransform(const FBPActor
 		UPrimitiveComponent* me = Cast<UPrimitiveComponent>(GrippedActor.GripTargetType == EGripTargetType::ActorGrip ? GrippedActor.GetGrippedActor()->GetRootComponent() : GrippedActor.GetGrippedComponent());
 		FVector curCOMPosition = me->GetBodyInstance(GrippedActor.GrippedBoneName)->GetCOMPosition();
 		DrawDebugSphere(GetWorld(), curCOMPosition, 4, 32, FColor::Red, false);
-		DrawDebugSphere(GetWorld(), (HandleInfo->COMPosition * (HandleInfo->RootBoneRotation * NewTransform)).GetLocation(), 4, 32, FColor::Cyan, false);
+		FTransform TargetTransform = (HandleInfo->COMPosition * (HandleInfo->RootBoneRotation * NewTransform));
+		DrawDebugSphere(GetWorld(), TargetTransform.GetLocation(), 4, 32, FColor::Cyan, false);
+		DrawDebugLine(GetWorld(), TargetTransform.GetTranslation(), TargetTransform.GetTranslation() + (TargetTransform.GetRotation().GetForwardVector() * 20.f), FColor::Red);
+		DrawDebugLine(GetWorld(), TargetTransform.GetTranslation(), TargetTransform.GetTranslation() + (TargetTransform.GetRotation().GetRightVector() * 20.f), FColor::Green);
+		DrawDebugLine(GetWorld(), TargetTransform.GetTranslation(), TargetTransform.GetTranslation() + (TargetTransform.GetRotation().GetUpVector() * 20.f), FColor::Blue);
 	}
 #endif
 
@@ -4690,6 +4702,8 @@ void UGripMotionControllerComponent::UpdatePhysicsHandleTransform(const FBPActor
 			FPhysicsInterface::SetKinematicTarget_AssumesLocked(Actor, HandleInfo->COMPosition * (HandleInfo->RootBoneRotation * HandleInfo->LastPhysicsTransform));
 		});
 	}
+
+
 }
 
 static void PullBackHitComp(FHitResult& Hit, const FVector& Start, const FVector& End, const float Dist)
