@@ -75,6 +75,12 @@ void UGS_Melee::HandlePostPhysicsHandle(FBPActorPhysicsHandleInformation * Handl
 	HandleInfo->AngConstraint.SwingDrive.Damping /= 4.f;
 	HandleInfo->AngConstraint.SwingDrive.Stiffness /= 4.f;
 
+
+	HandleInfo->AngConstraint.TwistDrive.bEnablePositionDrive = true;
+	HandleInfo->AngConstraint.TwistDrive.bEnableVelocityDrive = true;
+	HandleInfo->AngConstraint.SwingDrive.bEnablePositionDrive = true;
+	HandleInfo->AngConstraint.SwingDrive.bEnableVelocityDrive = true;
+
 	HandleInfo->AngConstraint.SlerpDrive.bEnablePositionDrive = false;
 	HandleInfo->AngConstraint.SlerpDrive.bEnableVelocityDrive = false;
 }

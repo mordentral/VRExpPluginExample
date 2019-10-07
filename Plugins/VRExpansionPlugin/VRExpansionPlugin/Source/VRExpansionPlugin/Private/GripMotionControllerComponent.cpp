@@ -656,7 +656,7 @@ void UGripMotionControllerComponent::SetGripRelativeTransform(
 		GrippedObjects[fIndex].RelativeTransform = NewRelativeTransform;
 		if (FBPActorPhysicsHandleInformation * HandleInfo = GetPhysicsGrip(Grip))
 		{
-			UpdatePhysicsHandle(Grip.GripID);
+			UpdatePhysicsHandle(Grip.GripID, true);
 		}
 
 		Result = EBPVRResultSwitch::OnSucceeded;
@@ -671,7 +671,7 @@ void UGripMotionControllerComponent::SetGripRelativeTransform(
 			LocallyGrippedObjects[fIndex].RelativeTransform = NewRelativeTransform;
 			if (FBPActorPhysicsHandleInformation * HandleInfo = GetPhysicsGrip(Grip))
 			{
-				UpdatePhysicsHandle(Grip.GripID);
+				UpdatePhysicsHandle(Grip.GripID, true);
 			}
 
 			if (GetNetMode() == ENetMode::NM_Client && !IsTornOff() && LocallyGrippedObjects[fIndex].GripMovementReplicationSetting == EGripMovementReplicationSettings::ClientSide_Authoritive)
@@ -4026,16 +4026,17 @@ bool UGripMotionControllerComponent::UpdatePhysicsHandle(const FBPActorGripInfor
 		{
 			if (PxRigidDynamic * PActor = FPhysicsInterface::GetPxRigidDynamic_AssumesLocked(Actor))
 			{
-				HandleInfo->HandleData2.ConstraintData->setActors(FPhysicsInterface::GetPxRigidDynamic_AssumesLocked(HandleInfo->KinActorData2), PActor);
+				HandleInfo->HandleData2.ConstraintData->setActors(PActor, FPhysicsInterface::GetPxRigidDynamic_AssumesLocked(HandleInfo->KinActorData2));
 			}
 
 			if (HandleInfo->bSetCOM)
 			{
-				FVector Loc = (FTransform((HandleInfo->RootBoneRotation * GripInfo.RelativeTransform).ToInverseMatrixWithScale())).GetLocation();
-				Loc *= rBodyInstance->Scale3D;
+				/*FVector Loc = (FTransform((HandleInfo->RootBoneRotation * GripInfo.RelativeTransform).ToInverseMatrixWithScale())).GetLocation();
+				Loc *= rBodyInstance->Scale3D;*/
 
 				FTransform localCom = FPhysicsInterface::GetComTransformLocal_AssumesLocked(Actor);
-				localCom.SetLocation(Loc);
+				//localCom.SetLocation(Loc);
+				localCom.SetLocation(HandleInfo->COMPosition.GetTranslation());//Loc);
 
 				FPhysicsInterface::SetComLocalPose_AssumesLocked(Actor, localCom);
 			}
@@ -4295,20 +4296,20 @@ bool UGripMotionControllerComponent::SetUpPhysicsHandle(const FBPActorGripInform
 		KinPose = trans;
 		bool bRecreatingConstraint = false;
 
-		if (!HandleInfo->KinActorData2.IsValid())
+		if (GripScripts)
 		{
-			if (GripScripts)
+			// Inject any alterations that the grip scripts want to make
+			for (UVRGripScriptBase* Script : *GripScripts)
 			{
-				// Inject any alterations that the grip scripts want to make
-				for (UVRGripScriptBase* Script : *GripScripts)
+				if (Script && Script->IsScriptActive() && Script->InjectPrePhysicsHandle())
 				{
-					if (Script && Script->IsScriptActive() && Script->InjectPrePhysicsHandle())
-					{
-						Script->HandlePrePhysicsHandle(HandleInfo, KinPose);
-					}
+					Script->HandlePrePhysicsHandle(HandleInfo, KinPose);
 				}
 			}
+		}
 
+		if (!HandleInfo->KinActorData2.IsValid())
+		{
 			// Create kinematic actor we are going to create joint with. This will be moved around with calls to SetLocation/SetRotation.
 				
 			//FString DebugName(TEXT("KinematicGripActor"));
@@ -4353,7 +4354,7 @@ bool UGripMotionControllerComponent::SetUpPhysicsHandle(const FBPActorGripInform
 			bRecreatingConstraint = true;
 
 #if WITH_PHYSX
-			HandleInfo->HandleData2.ConstraintData->setActors(FPhysicsInterface_PhysX::GetPxRigidDynamic_AssumesLocked(HandleInfo->KinActorData2), FPhysicsInterface_PhysX::GetPxRigidDynamic_AssumesLocked(Actor));
+			HandleInfo->HandleData2.ConstraintData->setActors(FPhysicsInterface_PhysX::GetPxRigidDynamic_AssumesLocked(Actor), FPhysicsInterface_PhysX::GetPxRigidDynamic_AssumesLocked(HandleInfo->KinActorData2));
 #endif
 			
 			FPhysicsInterface::SetLocalPose(HandleInfo->HandleData2, KinPose.GetRelativeTransform(FPhysicsInterface::GetGlobalPose_AssumesLocked(Actor)), EConstraintFrame::Frame2);
