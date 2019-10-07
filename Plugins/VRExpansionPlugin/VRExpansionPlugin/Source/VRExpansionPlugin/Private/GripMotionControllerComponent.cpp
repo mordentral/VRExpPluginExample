@@ -3037,7 +3037,7 @@ bool UGripMotionControllerComponent::TeleportMoveGrip_Impl(FBPActorGripInformati
 	{
 		bRootHasInterface = true;
 	}
-	if (actor->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
+	else if (actor->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
 	{
 		// Actor grip interface is checked after component
 		bActorHasInterface = true;
@@ -3494,7 +3494,7 @@ void UGripMotionControllerComponent::HandleGripArray(TArray<FBPActorGripInformat
 				{
 					bRootHasInterface = true;
 				}
-				if (actor->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
+				else if (actor->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
 				{
 					// Actor grip interface is checked after component
 					bActorHasInterface = true;
@@ -3812,7 +3812,7 @@ void UGripMotionControllerComponent::HandleGripArray(TArray<FBPActorGripInformat
 						{
 							root->SetSimulatePhysics(true);
 
-							SetUpPhysicsHandle(*Grip);
+							SetUpPhysicsHandle(*Grip, &GripScripts);
 							UpdatePhysicsHandleTransform(*Grip, WorldTransform);
 							if (bRescalePhysicsGrips)
 								root->SetWorldScale3D(WorldTransform.GetScale3D());
@@ -4138,7 +4138,7 @@ void UGripMotionControllerComponent::OnGripMassUpdated(FBodyInstance* GripBodyIn
 	}
 }
 
-bool UGripMotionControllerComponent::SetUpPhysicsHandle(const FBPActorGripInformation &NewGrip)
+bool UGripMotionControllerComponent::SetUpPhysicsHandle(const FBPActorGripInformation &NewGrip, TArray<UVRGripScriptBase*> * GripScripts)
 {
 	UPrimitiveComponent *root = NewGrip.GetGrippedComponent();
 	AActor * pActor = NewGrip.GetGrippedActor();
@@ -4154,6 +4154,33 @@ bool UGripMotionControllerComponent::SetUpPhysicsHandle(const FBPActorGripInform
 	{
 		HandleInfo = CreatePhysicsGrip(NewGrip);
 	}
+
+	// Check for grip scripts if we weren't passed in any
+	TArray<UVRGripScriptBase*> LocalGripScripts;
+	if (GripScripts == nullptr)
+	{
+		bool bHasInterface = false;
+		UObject * InterfacedObject = nullptr;
+		if (root->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
+		{
+			bHasInterface = true;
+			InterfacedObject = root;
+		}
+		else if (pActor->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
+		{
+			bHasInterface = true;
+			InterfacedObject = pActor;
+		}
+
+		if (bHasInterface)
+		{
+			if (IVRGripInterface::Execute_GetGripScripts(InterfacedObject, LocalGripScripts))
+			{
+				GripScripts = &LocalGripScripts;
+			}
+		}
+	}
+
 
 	// Needs to be simulating in order to run physics
 	root->SetSimulatePhysics(true);
@@ -4274,6 +4301,18 @@ bool UGripMotionControllerComponent::SetUpPhysicsHandle(const FBPActorGripInform
 
 		if (!HandleInfo->KinActorData2.IsValid())
 		{
+			if (GripScripts)
+			{
+				// Inject any alterations that the grip scripts want to make
+				for (UVRGripScriptBase* Script : *GripScripts)
+				{
+					if (Script && Script->IsScriptActive() && Script->InjectPrePhysicsHandle())
+					{
+						Script->HandlePrePhysicsHandle(HandleInfo, KinPose);
+					}
+				}
+			}
+
 			// Create kinematic actor we are going to create joint with. This will be moved around with calls to SetLocation/SetRotation.
 				
 			//FString DebugName(TEXT("KinematicGripActor"));
@@ -4311,8 +4350,7 @@ bool UGripMotionControllerComponent::SetUpPhysicsHandle(const FBPActorGripInform
 		// If we don't already have a handle - make one now.
 		if (!HandleInfo->HandleData2.IsValid())
 		{
-			HandleInfo->HandleData2 = FPhysicsInterface::CreateConstraint(Actor, HandleInfo->KinActorData2, KinPose.GetRelativeTransform(FPhysicsInterface::GetGlobalPose_AssumesLocked(Actor)), FTransform::Identity);
-			//HandleInfo->HandleData2 = FPhysicsInterface::CreateConstraint(Actor, HandleInfo->KinActorData2, FTransform::Identity, KinPose.Inverse().GetRelativeTransform(FPhysicsInterface::GetGlobalPose_AssumesLocked(Actor)));
+			HandleInfo->HandleData2 = FPhysicsInterface::CreateConstraint(HandleInfo->KinActorData2, Actor, FTransform::Identity, KinPose.GetRelativeTransform(FPhysicsInterface::GetGlobalPose_AssumesLocked(Actor)));
 		}
 		else
 		{
@@ -4374,7 +4412,6 @@ bool UGripMotionControllerComponent::SetUpPhysicsHandle(const FBPActorGripInform
 					HandleInfo->LinConstraint.ZDrive = NewLinDrive;
 				}
 
-				FPhysicsInterface::UpdateLinearDrive_AssumesLocked(HandleInfo->HandleData2, HandleInfo->LinConstraint);
 
 				if (NewGrip.GripCollisionType == EGripCollisionType::ManipulationGripWithWristTwist)
 				{
@@ -4391,9 +4428,22 @@ bool UGripMotionControllerComponent::SetUpPhysicsHandle(const FBPActorGripInform
 						//AngParams.AngularDriveMode = EAngularDriveMode::SLERP;
 						HandleInfo->AngConstraint.TwistDrive = NewAngDrive;
 					}
-
-					FPhysicsInterface::UpdateAngularDrive_AssumesLocked(HandleInfo->HandleData2, HandleInfo->AngConstraint);
 				}
+
+				if (GripScripts)
+				{
+					// Inject any alterations that the grip scripts want to make
+					for (UVRGripScriptBase* Script : *GripScripts)
+					{
+						if (Script && Script->IsScriptActive() && Script->InjectPostPhysicsHandle())
+						{
+							Script->HandlePostPhysicsHandle(HandleInfo);
+						}
+					}
+				}
+
+				FPhysicsInterface::UpdateLinearDrive_AssumesLocked(HandleInfo->HandleData2, HandleInfo->LinConstraint);
+				FPhysicsInterface::UpdateAngularDrive_AssumesLocked(HandleInfo->HandleData2, HandleInfo->AngConstraint);
 			}
 			else
 			{
@@ -4428,6 +4478,18 @@ bool UGripMotionControllerComponent::SetUpPhysicsHandle(const FBPActorGripInform
 
 					HandleInfo->AngConstraint.AngularDriveMode = EAngularDriveMode::SLERP;
 					HandleInfo->AngConstraint.SlerpDrive = NewAngDrive;
+				}
+
+				if (GripScripts)
+				{
+					// Inject any alterations that the grip scripts want to make
+					for (UVRGripScriptBase* Script : *GripScripts)
+					{
+						if (Script && Script->IsScriptActive() && Script->InjectPostPhysicsHandle())
+						{
+							Script->HandlePostPhysicsHandle(HandleInfo);
+						}
+					}
 				}
 					
 				FPhysicsInterface::UpdateLinearDrive_AssumesLocked(HandleInfo->HandleData2, HandleInfo->LinConstraint);

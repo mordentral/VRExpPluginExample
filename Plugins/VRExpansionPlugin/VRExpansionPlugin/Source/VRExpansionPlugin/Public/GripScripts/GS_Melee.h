@@ -40,6 +40,26 @@ public:
 
 	UGS_Melee(const FObjectInitializer& ObjectInitializer);
 
+	// The name of the component that is used to orient the weapon along its primary axis
+	// If it does not exist then the weapon is assumed to be X+ facing.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon Settings")
+		FName WeaponRootOrientationComponent;
+	FTransform OrientationComponentRelativeFacing;
+
+	UFUNCTION(BlueprintCallable, Category = "Weapon Settings")
+		void SetCOMOffsetInLocalSpace(FVector Offset, bool bOffsetIsInWorldSpace = true, bool bLimitToXOnly = true)
+	{
+		// Alter the com offset and constraint COM to match this
+		// Allows world space to set to a components location
+
+		// LimitToXOnly means that we will only be sampling the X location and applying an offset from it
+		// This allows you to shift grips up and down on the Orientation Components forward axis
+	}
+
+	virtual void HandlePostPhysicsHandle(FBPActorPhysicsHandleInformation * HandleInfo) override;
+	virtual void HandlePrePhysicsHandle(FBPActorPhysicsHandleInformation * HandleInfo, FTransform & KinPose) override;
+	virtual void OnBeginPlay_Implementation(UObject * CallingOwner) override;
+
 	TArray<FBPMelee_SurfacePair> SurfaceTypesToPenetrate;
 	bool bAllowPenetration;
 	bool bUseDensityForPenetrationCalcs;

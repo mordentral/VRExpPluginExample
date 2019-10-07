@@ -26,9 +26,58 @@ UGS_Melee::UGS_Melee(const FObjectInitializer& ObjectInitializer) :
 	MaximumVelocityForDamage = 1000.0f;
 
 	bLodged = false;
+	bInjectPrePhysicsHandle = true;
+	bInjectPostPhysicsHandle = true;
+	WeaponRootOrientationComponent = NAME_None;
+	OrientationComponentRelativeFacing = FTransform::Identity;
+}
+
+void UGS_Melee::OnBeginPlay_Implementation(UObject * CallingOwner)
+{
+	// Grip base has no super of this
+
+	if (WeaponRootOrientationComponent.IsValid())
+	{
+		if (AActor * Owner = GetOwner())
+		{
+			for (UActorComponent* Comp : Owner->GetComponents())
+			{
+				if (Comp->GetFName() == WeaponRootOrientationComponent)
+				{	
+					if (USceneComponent * SceneComp = Cast<USceneComponent>(Comp))
+					{
+						OrientationComponentRelativeFacing = SceneComp->GetRelativeTransform();
+					}
+					break;
+				}
+			}
+		}
+	}
 
 }
 
+void UGS_Melee::HandlePrePhysicsHandle(FBPActorPhysicsHandleInformation * HandleInfo, FTransform & KinPose)
+{
+	// Alter to rotate to x+ if we have an orientation component
+	FQuat DeltaQuat = OrientationComponentRelativeFacing.GetRotation();
+
+	// This moves the kinematic actor to face its X+ in the direction designated
+	KinPose.SetRotation(KinPose.GetRotation() * DeltaQuat);
+	HandleInfo->COMPosition.SetRotation(HandleInfo->COMPosition.GetRotation() * DeltaQuat);
+}
+
+void UGS_Melee::HandlePostPhysicsHandle(FBPActorPhysicsHandleInformation * HandleInfo)
+{
+	HandleInfo->AngConstraint.AngularDriveMode = EAngularDriveMode::TwistAndSwing;
+	HandleInfo->AngConstraint.TwistDrive = HandleInfo->AngConstraint.SlerpDrive;
+	HandleInfo->AngConstraint.SwingDrive = HandleInfo->AngConstraint.SlerpDrive;
+
+	HandleInfo->AngConstraint.SwingDrive.Damping /= 4.f;
+	HandleInfo->AngConstraint.SwingDrive.Stiffness /= 4.f;
+
+	HandleInfo->AngConstraint.SlerpDrive.bEnablePositionDrive = false;
+	HandleInfo->AngConstraint.SlerpDrive.bEnableVelocityDrive = false;
+}
 
 bool UGS_Melee::GetWorldTransform_Implementation
 (
@@ -43,6 +92,8 @@ bool UGS_Melee::GetWorldTransform_Implementation
 	bool bIsForTeleport
 ) 
 {
+	return true;
+
 	if (!GrippingController)
 		return false;
 
