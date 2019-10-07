@@ -5,6 +5,9 @@
 #include "GameFramework/WorldSettings.h"
 #include "GS_Melee.generated.h"
 
+#if WITH_PHYSX
+#include "PhysXPublic.h"
+#endif // WITH_PHYSX
 
 USTRUCT()
 struct FBPMelee_SurfacePair
