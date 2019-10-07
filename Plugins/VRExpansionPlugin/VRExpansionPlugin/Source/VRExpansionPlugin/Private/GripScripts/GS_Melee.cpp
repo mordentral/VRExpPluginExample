@@ -113,14 +113,17 @@ void UGS_Melee::OnGrip_Implementation(UGripMotionControllerComponent* GrippingCo
 
 	// This lets us change the grip settings prior to actually starting the grip off
 
-	FBPActorGripInformation* Grip = GrippingController->LocallyGrippedObjects.FindByKey(GripInformation.GripID);
-
-	if (!Grip)
-		Grip = GrippingController->GrippedObjects.FindByKey(GripInformation.GripID);
-
-	if (Grip)
+	if (GrippingController->HasGripAuthority(GripInformation))
 	{
-		Grip->AdvancedGripSettings.PhysicsSettings.PhysicsGripLocationSettings = EPhysicsGripCOMType::COM_GripAtControllerLoc;
+		FBPActorGripInformation* Grip = GrippingController->LocallyGrippedObjects.FindByKey(GripInformation.GripID);
+
+		if (!Grip)
+			Grip = GrippingController->GrippedObjects.FindByKey(GripInformation.GripID);
+
+		if (Grip)
+		{
+			Grip->AdvancedGripSettings.PhysicsSettings.PhysicsGripLocationSettings = EPhysicsGripCOMType::COM_GripAtControllerLoc;
+		}
 	}
 }
 
