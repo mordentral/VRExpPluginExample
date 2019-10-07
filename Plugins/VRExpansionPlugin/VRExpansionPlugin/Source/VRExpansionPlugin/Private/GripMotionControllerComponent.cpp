@@ -4163,18 +4163,14 @@ bool UGripMotionControllerComponent::SetUpPhysicsHandle(const FBPActorGripInform
 		UObject * InterfacedObject = nullptr;
 		if (root->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
 		{
-			bHasInterface = true;
-			InterfacedObject = root;
+			if (IVRGripInterface::Execute_GetGripScripts(root, LocalGripScripts))
+			{
+				GripScripts = &LocalGripScripts;
+			}
 		}
 		else if (pActor->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
 		{
-			bHasInterface = true;
-			InterfacedObject = pActor;
-		}
-
-		if (bHasInterface)
-		{
-			if (IVRGripInterface::Execute_GetGripScripts(InterfacedObject, LocalGripScripts))
+			if (IVRGripInterface::Execute_GetGripScripts(pActor, LocalGripScripts))
 			{
 				GripScripts = &LocalGripScripts;
 			}
@@ -4360,7 +4356,7 @@ bool UGripMotionControllerComponent::SetUpPhysicsHandle(const FBPActorGripInform
 			HandleInfo->HandleData2.ConstraintData->setActors(FPhysicsInterface_PhysX::GetPxRigidDynamic_AssumesLocked(HandleInfo->KinActorData2), FPhysicsInterface_PhysX::GetPxRigidDynamic_AssumesLocked(Actor));
 #endif
 			
-			FPhysicsInterface::SetLocalPose(HandleInfo->HandleData2, KinPose.GetRelativeTransform(FPhysicsInterface::GetGlobalPose_AssumesLocked(Actor)), EConstraintFrame::Frame1);
+			FPhysicsInterface::SetLocalPose(HandleInfo->HandleData2, KinPose.GetRelativeTransform(FPhysicsInterface::GetGlobalPose_AssumesLocked(Actor)), EConstraintFrame::Frame2);
 		}
 
 		if (HandleInfo->HandleData2.IsValid())
