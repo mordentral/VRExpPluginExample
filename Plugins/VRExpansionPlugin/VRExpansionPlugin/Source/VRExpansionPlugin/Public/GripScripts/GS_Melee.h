@@ -40,6 +40,19 @@ public:
 
 	UGS_Melee(const FObjectInitializer& ObjectInitializer);
 
+	// The name of the component that is used to orient the weapon along its primary axis
+	// If it does not exist then the weapon is assumed to be X+ facing.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon Settings")
+		FName WeaponRootOrientationComponent;
+	FTransform OrientationComponentRelativeFacing;
+
+	UFUNCTION(BlueprintCallable, Category = "Weapon Settings")
+		void SetCOMOffsetInLocalSpace(UGripMotionControllerComponent* GrippingController, UPARAM(ref) FBPActorGripInformation& Grip, FVector Offset, bool bOffsetIsInWorldSpace = true, bool bLimitToXOnly = true);
+
+	virtual void HandlePostPhysicsHandle(FBPActorPhysicsHandleInformation* HandleInfo) override;
+	virtual void HandlePrePhysicsHandle(FBPActorPhysicsHandleInformation* HandleInfo, FTransform& KinPose) override;
+	virtual void OnBeginPlay_Implementation(UObject* CallingOwner) override;
+
 	TArray<FBPMelee_SurfacePair> SurfaceTypesToPenetrate;
 	bool bAllowPenetration;
 	bool bUseDensityForPenetrationCalcs;
@@ -61,7 +74,7 @@ public:
 
 	//DECLARE_DYNAMIC_MULTICAST_DELEGATE_FiveParams(FComponentHitSignature, UPrimitiveComponent*, HitComponent, AActor*, OtherActor, UPrimitiveComponent*, OtherComp, FVector, NormalImpulse, const FHitResult&, Hit);
 //DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams( FActorHitSignature, AActor*, SelfActor, AActor*, OtherActor, FVector, NormalImpulse, const FHitResult&, Hit );
-	
+
 	/*UFUNCTION()
 	void OnActorHit(AActor * Self, AActor * Other, FVector NormalImpulse, const FHitResult& HitResult)
 	{
@@ -96,12 +109,7 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "MeleeEvents")
 		FVROnMeleeIsLodged OnMeleeLodgedChanged;
 
-	virtual void OnGrip_Implementation(UGripMotionControllerComponent * GrippingController, const FBPActorGripInformation & GripInformation) override
-	{
-		// Not storing an id, we should only be doing this once
-	//	GetOwner()->OnActorHit.AddDynamic(this, &UGS_Melee::OnActorHit);
-
-	}
+	virtual void OnGrip_Implementation(UGripMotionControllerComponent* GrippingController, const FBPActorGripInformation& GripInformation) override;
 
 	virtual void OnGripRelease_Implementation(UGripMotionControllerComponent * ReleasingController, const FBPActorGripInformation & GripInformation, bool bWasSocketed = false) override
 	{
