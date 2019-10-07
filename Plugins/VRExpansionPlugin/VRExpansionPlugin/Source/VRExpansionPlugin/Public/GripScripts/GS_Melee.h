@@ -47,18 +47,11 @@ public:
 	FTransform OrientationComponentRelativeFacing;
 
 	UFUNCTION(BlueprintCallable, Category = "Weapon Settings")
-		void SetCOMOffsetInLocalSpace(FVector Offset, bool bOffsetIsInWorldSpace = true, bool bLimitToXOnly = true)
-	{
-		// Alter the com offset and constraint COM to match this
-		// Allows world space to set to a components location
+		void SetCOMOffsetInLocalSpace(UGripMotionControllerComponent* GrippingController, UPARAM(ref) FBPActorGripInformation& Grip, FVector Offset, bool bOffsetIsInWorldSpace = true, bool bLimitToXOnly = true);
 
-		// LimitToXOnly means that we will only be sampling the X location and applying an offset from it
-		// This allows you to shift grips up and down on the Orientation Components forward axis
-	}
-
-	virtual void HandlePostPhysicsHandle(FBPActorPhysicsHandleInformation * HandleInfo) override;
-	virtual void HandlePrePhysicsHandle(FBPActorPhysicsHandleInformation * HandleInfo, FTransform & KinPose) override;
-	virtual void OnBeginPlay_Implementation(UObject * CallingOwner) override;
+	virtual void HandlePostPhysicsHandle(FBPActorPhysicsHandleInformation* HandleInfo) override;
+	virtual void HandlePrePhysicsHandle(FBPActorPhysicsHandleInformation* HandleInfo, FTransform& KinPose) override;
+	virtual void OnBeginPlay_Implementation(UObject* CallingOwner) override;
 
 	TArray<FBPMelee_SurfacePair> SurfaceTypesToPenetrate;
 	bool bAllowPenetration;
@@ -81,7 +74,7 @@ public:
 
 	//DECLARE_DYNAMIC_MULTICAST_DELEGATE_FiveParams(FComponentHitSignature, UPrimitiveComponent*, HitComponent, AActor*, OtherActor, UPrimitiveComponent*, OtherComp, FVector, NormalImpulse, const FHitResult&, Hit);
 //DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams( FActorHitSignature, AActor*, SelfActor, AActor*, OtherActor, FVector, NormalImpulse, const FHitResult&, Hit );
-	
+
 	/*UFUNCTION()
 	void OnActorHit(AActor * Self, AActor * Other, FVector NormalImpulse, const FHitResult& HitResult)
 	{
@@ -116,12 +109,7 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "MeleeEvents")
 		FVROnMeleeIsLodged OnMeleeLodgedChanged;
 
-	virtual void OnGrip_Implementation(UGripMotionControllerComponent * GrippingController, const FBPActorGripInformation & GripInformation) override
-	{
-		// Not storing an id, we should only be doing this once
-	//	GetOwner()->OnActorHit.AddDynamic(this, &UGS_Melee::OnActorHit);
-
-	}
+	virtual void OnGrip_Implementation(UGripMotionControllerComponent* GrippingController, const FBPActorGripInformation& GripInformation) override;
 
 	virtual void OnGripRelease_Implementation(UGripMotionControllerComponent * ReleasingController, const FBPActorGripInformation & GripInformation, bool bWasSocketed = false) override
 	{

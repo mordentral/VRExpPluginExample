@@ -32,6 +32,98 @@ UGS_Melee::UGS_Melee(const FObjectInitializer& ObjectInitializer) :
 	OrientationComponentRelativeFacing = FTransform::Identity;
 }
 
+void UGS_Melee::SetCOMOffsetInLocalSpace(UGripMotionControllerComponent * GrippingController, FBPActorGripInformation & Grip, FVector Offset, bool bOffsetIsInWorldSpace, bool bLimitToXOnly)
+{
+	// Alter the com offset and constraint COM to match this
+	// Allows world space to set to a components location
+
+	// LimitToXOnly means that we will only be sampling the X location and applying an offset from it
+	// This allows you to shift grips up and down on the Orientation Components forward axis
+
+	UPrimitiveComponent * Root;
+	if (AActor * ParentActor = Cast<AActor>(Grip.GrippedObject))
+	{
+		Root = Cast<UPrimitiveComponent>(ParentActor->GetRootComponent());
+	}
+	else
+	{
+		Root = Cast<UPrimitiveComponent>(Grip.GrippedObject);
+	}
+
+	if (!Root)
+		return;
+
+	FBodyInstance* rBodyInstance = Root->GetBodyInstance(Grip.GrippedBoneName);
+
+	if (!rBodyInstance)
+		return;
+
+	FBPActorPhysicsHandleInformation * PhysicsHandle = GrippingController->GetPhysicsGrip(Grip);
+
+	if (!PhysicsHandle)
+		return;
+
+	FPhysicsCommand::ExecuteWrite(rBodyInstance->ActorHandle, [&](const FPhysicsActorHandle& Actor)
+		{
+
+			FTransform currentTransform = rBodyInstance->GetUnrealWorldTransform_AssumesLocked();
+			if (bOffsetIsInWorldSpace)
+			{
+				// Make our offset be in relative space now
+				Offset = currentTransform.InverseTransformPosition(Offset);
+			}
+
+			if (bLimitToXOnly)
+			{
+
+				//OrientationComponentRelativeFacing
+			}
+
+			//PhysicsHandle->COMPosition.SetLocation(Offset);
+
+			FTransform localCom = FPhysicsInterface::GetComTransformLocal_AssumesLocked(Actor);
+			localCom.SetLocation(Offset);// PhysicsHandle->COMPosition.GetTranslation());//Loc);
+			FPhysicsInterface::SetComLocalPose_AssumesLocked(Actor, localCom);
+
+			//PhysicsHandle->COMPosition.SetLocation(PhysicsHandle->COMPosition.GetTranslation() * -1.f);
+		});
+
+	/*
+				// Update the center of mass
+			FVector Loc = (FTransform((RootBoneRotation * NewGrip.RelativeTransform).ToInverseMatrixWithScale())).GetLocation();
+			Loc *= rBodyInstance->Scale3D;
+
+			FTransform localCom = FPhysicsInterface::GetComTransformLocal_AssumesLocked(Actor);
+			localCom.SetLocation(Loc);
+			FPhysicsInterface::SetComLocalPose_AssumesLocked(Actor, localCom);
+
+			FVector ComLoc = FPhysicsInterface::GetComTransform_AssumesLocked(Actor).GetLocation();
+			trans.SetLocation(ComLoc);
+			HandleInfo->COMPosition = FTransform(rBodyInstance->GetUnrealWorldTransform().InverseTransformPosition(ComLoc));
+			HandleInfo->bSetCOM = true;
+	
+	
+	*/
+}
+
+void UGS_Melee::OnGrip_Implementation(UGripMotionControllerComponent* GrippingController, const FBPActorGripInformation& GripInformation)
+{
+	// Not storing an id, we should only be doing this once
+//	GetOwner()->OnActorHit.AddDynamic(this, &UGS_Melee::OnActorHit);
+
+	// This lets us change the grip settings prior to actually starting the grip off
+
+	FBPActorGripInformation* Grip = GrippingController->LocallyGrippedObjects.FindByKey(GripInformation.GripID);
+
+	if (!Grip)
+		Grip = GrippingController->GrippedObjects.FindByKey(GripInformation.GripID);
+
+	if (Grip)
+	{
+		Grip->AdvancedGripSettings.PhysicsSettings.PhysicsGripLocationSettings = EPhysicsGripCOMType::COM_GripAtControllerLoc;
+	}
+}
+
 void UGS_Melee::OnBeginPlay_Implementation(UObject * CallingOwner)
 {
 	// Grip base has no super of this

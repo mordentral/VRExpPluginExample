@@ -1213,16 +1213,24 @@ bool UGripMotionControllerComponent::GripActor(
 	if (!bIsLocalGrip)
 	{
 		int32 Index = GrippedObjects.Add(newActorGrip);
-		NotifyGrip(newActorGrip);
+		if (Index != INDEX_NONE)
+			NotifyGrip(GrippedObjects[Index]);
+		//NotifyGrip(newActorGrip);
 	}
 	else
 	{
 		int32 Index = LocallyGrippedObjects.Add(newActorGrip);
 
-		if(GetNetMode() == ENetMode::NM_Client && !IsTornOff() && newActorGrip.GripMovementReplicationSetting == EGripMovementReplicationSettings::ClientSide_Authoritive)
-			Server_NotifyLocalGripAddedOrChanged(newActorGrip);
-		
-		NotifyGrip(newActorGrip);
+		if (Index != INDEX_NONE)
+		{
+			NotifyGrip(LocallyGrippedObjects[Index]);
+
+			FBPActorGripInformation GripInfo = LocallyGrippedObjects[Index];
+
+			if (GetNetMode() == ENetMode::NM_Client && !IsTornOff() && newActorGrip.GripMovementReplicationSetting == EGripMovementReplicationSettings::ClientSide_Authoritive)
+				Server_NotifyLocalGripAddedOrChanged(GripInfo);
+		}
+		//NotifyGrip(newActorGrip);
 	}
 
 	return true;
