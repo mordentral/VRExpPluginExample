@@ -108,6 +108,11 @@ void UGS_Melee::SetCOMOffsetInLocalSpace(UGripMotionControllerComponent * Grippi
 	*/
 }
 
+void UGS_Melee::SetPrimaryAndSecondaryHands(FBPGripPair& PrimaryGrip, FBPGripPair& SecondaryGrip)
+{
+
+}
+
 void UGS_Melee::OnGrip_Implementation(UGripMotionControllerComponent* GrippingController, const FBPActorGripInformation& GripInformation)
 {
 	// Not storing an id, we should only be doing this once
@@ -117,7 +122,31 @@ void UGS_Melee::OnGrip_Implementation(UGripMotionControllerComponent* GrippingCo
 
 	if (GrippingController->HasGripAuthority(GripInformation))
 	{
-		FBPActorGripInformation* Grip = GrippingController->LocallyGrippedObjects.FindByKey(GripInformation.GripID);
+		TArray<FBPGripPair> HoldingControllers;
+		bool bIsHeld;
+		IVRGripInterface::Execute_IsHeld(GetParent(), HoldingControllers, bIsHeld);
+
+		for (FBPGripPair& Grip : HoldingControllers)
+		{
+			FBPActorGripInformation GripInfo;
+			EBPVRResultSwitch Result;
+			Grip.HoldingController->GetGripByID(GripInfo, Grip.GripID, Result);
+
+			if (Result == EBPVRResultSwitch::OnSucceeded)
+			{
+				float GripDistanceOnPrimaryAxis = 0.f;
+				FTransform relTransform(GripInfo.RelativeTransform.ToInverseMatrixWithScale());
+				relTransform = relTransform.GetRelativeTransform(OrientationComponentRelativeFacing);
+
+				// This is the Forward vector projected transform
+				// The most negative one of these is the rearmost hand
+				FVector localLoc = relTransform.GetTranslation();
+			}
+
+		}
+
+
+		/*FBPActorGripInformation* Grip = GrippingController->LocallyGrippedObjects.FindByKey(GripInformation.GripID);
 
 		if (!Grip)
 			Grip = GrippingController->GrippedObjects.FindByKey(GripInformation.GripID);
@@ -125,7 +154,7 @@ void UGS_Melee::OnGrip_Implementation(UGripMotionControllerComponent* GrippingCo
 		if (Grip)
 		{
 			Grip->AdvancedGripSettings.PhysicsSettings.PhysicsGripLocationSettings = EPhysicsGripCOMType::COM_GripAtControllerLoc;
-		}
+		}*/
 	}
 }
 
