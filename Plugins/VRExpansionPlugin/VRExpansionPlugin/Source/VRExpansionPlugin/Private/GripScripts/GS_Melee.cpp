@@ -30,6 +30,8 @@ UGS_Melee::UGS_Melee(const FObjectInitializer& ObjectInitializer) :
 	bInjectPostPhysicsHandle = true;
 	WeaponRootOrientationComponent = NAME_None;
 	OrientationComponentRelativeFacing = FTransform::Identity;
+
+	bAutoSetPrimaryAndSecondaryHands = true;
 }
 
 void UGS_Melee::SetCOMOffsetInLocalSpace(UGripMotionControllerComponent * GrippingController, FBPActorGripInformation & Grip, FVector Offset, bool bOffsetIsInWorldSpace, bool bLimitToXOnly)

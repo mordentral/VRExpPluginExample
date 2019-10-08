@@ -25,6 +25,7 @@ public:
 
 };
 
+
 // Event, Hit, material object normal
 // Event, lodged, material, object, normal
 
@@ -48,6 +49,11 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon Settings")
 		FName WeaponRootOrientationComponent;
 	FTransform OrientationComponentRelativeFacing;
+
+	// When true, will auto set the primary and secondary hands by the WeaponRootOrientationComponents X Axis distance.
+	// Smallest value along the X Axis will be considered the primary hand.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon Settings")
+		bool bAutoSetPrimaryAndSecondaryHands;
 
 	UFUNCTION(BlueprintCallable, Category = "Weapon Settings")
 		void SetCOMOffsetInLocalSpace(UGripMotionControllerComponent* GrippingController, UPARAM(ref) FBPActorGripInformation& Grip, FVector Offset, bool bOffsetIsInWorldSpace = true, bool bLimitToXOnly = true);
