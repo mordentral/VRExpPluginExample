@@ -36,7 +36,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FVROnMeleeIsLodged, bool, IsWeaponLo
 /**
 * A Melee grip script *CURRENTLY WIP, DO NOT USE!!!*
 */
-UCLASS(NotBlueprintable, ClassGroup = (VRExpansionPlugin))
+UCLASS(NotBlueprintable, ClassGroup = (VRExpansionPlugin), hideCategories = TickSettings)
 class VREXPANSIONPLUGIN_API UGS_Melee : public UVRGripScriptBase
 {
 	GENERATED_BODY()

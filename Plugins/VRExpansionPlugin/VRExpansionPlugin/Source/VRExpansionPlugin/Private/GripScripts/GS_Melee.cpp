@@ -128,14 +128,11 @@ void UGS_Melee::OnGrip_Implementation(UGripMotionControllerComponent* GrippingCo
 
 		for (FBPGripPair& Grip : HoldingControllers)
 		{
-			FBPActorGripInformation GripInfo;
-			EBPVRResultSwitch Result;
-			Grip.HoldingController->GetGripByID(GripInfo, Grip.GripID, Result);
-
-			if (Result == EBPVRResultSwitch::OnSucceeded)
+			FBPActorGripInformation * GripInfo = Grip.HoldingController->GetGripPtrByID(Grip.GripID);
+			if (GripInfo)
 			{
 				float GripDistanceOnPrimaryAxis = 0.f;
-				FTransform relTransform(GripInfo.RelativeTransform.ToInverseMatrixWithScale());
+				FTransform relTransform(GripInfo->RelativeTransform.ToInverseMatrixWithScale());
 				relTransform = relTransform.GetRelativeTransform(OrientationComponentRelativeFacing);
 
 				// This is the Forward vector projected transform
