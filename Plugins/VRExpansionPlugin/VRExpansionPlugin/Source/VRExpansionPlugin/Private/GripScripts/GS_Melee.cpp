@@ -67,7 +67,7 @@ void UGS_Melee::SetCOMOffsetInLocalSpace(UGripMotionControllerComponent * Grippi
 
 	FPhysicsCommand::ExecuteWrite(rBodyInstance->ActorHandle, [&](const FPhysicsActorHandle& Actor)
 		{
-
+		
 			FTransform currentTransform = rBodyInstance->GetUnrealWorldTransform_AssumesLocked();
 			if (bOffsetIsInWorldSpace)
 			{
