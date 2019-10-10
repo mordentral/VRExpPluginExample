@@ -686,9 +686,21 @@ public:
 			LastPreAdditiveVRVelocity = FVector::ZeroVector;
 			return;
 		}
-		
+	
+
 		LastPreAdditiveVRVelocity = (AdditionalVRInputVector) / deltaTime;// Velocity; // Save off pre-additive Velocity for restoration next tick	
-		Velocity += LastPreAdditiveVRVelocity;
+		
+
+		if (LastPreAdditiveVRVelocity.SizeSquared() < FMath::Square(15000.f))
+		{
+			Velocity += LastPreAdditiveVRVelocity;
+			//GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Green, FString::Printf(TEXT("Delta: %f"), LastPreAdditiveVRVelocity.SizeSquared()));
+		}
+		else
+		{
+			LastPreAdditiveVRVelocity = FVector::ZeroVector;
+			GEngine->AddOnScreenDebugMessage(-1, 15.f, FColor::Red, FString::Printf(TEXT("Delta: %f"), LastPreAdditiveVRVelocity.SizeSquared()));
+		}
 	}
 
 	inline void RestorePreAdditiveVRMotionVelocity()
