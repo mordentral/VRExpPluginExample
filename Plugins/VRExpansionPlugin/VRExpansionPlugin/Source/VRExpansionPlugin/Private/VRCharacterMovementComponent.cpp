@@ -1064,26 +1064,7 @@ void UVRCharacterMovementComponent::PhysWalking(float deltaTime, int32 Iteration
 	// Rewind the players position by the new capsule location
 	RewindVRRelativeMovement();
 
-	// Apply our movement to the character now, we don't want to inject into the velocity
-	const FVector PreDelta = ((AdditionalVRInputVector / deltaTime));
-	const bool bPreZeroDelta = PreDelta.IsNearlyZero();
-	if (!bPreZeroDelta)
-	{
-		FStepDownResult DownResult;
-		MoveAlongFloor(PreDelta, deltaTime, &DownResult);
-		// Update floor.
-		// StepUp might have already done it for us.
-		if (DownResult.bComputedFloor)
-		{
-			CurrentFloor = DownResult.FloorResult;
-		}
-		else
-		{
-			FindFloor(UpdatedComponent->GetComponentLocation(), CurrentFloor, bPreZeroDelta, NULL);
-		}
-	}
-
-	// Perform the normal movement handling with sub stepping
+	// Perform the move
 	while ((remainingTime >= MIN_TICK_TIME) && (Iterations < MaxSimulationIterations) && CharacterOwner && (CharacterOwner->Controller || bRunPhysicsWithNoController || HasAnimRootMotion() || CurrentRootMotion.HasOverrideVelocity() || (CharacterOwner->Role == ROLE_SimulatedProxy)))
 	{
 		Iterations++;
@@ -1117,7 +1098,7 @@ void UVRCharacterMovementComponent::PhysWalking(float deltaTime, int32 Iteration
 		}
 
 		//ApplyRootMotionToVelocity(timeTick);
-		//ApplyVRMotionToVelocity(timeTick);//timeTick);
+		ApplyVRMotionToVelocity(deltaTime);//timeTick);
 
 		devCode(ensureMsgf(!Velocity.ContainsNaN(), TEXT("PhysWalking: Velocity contains NaN after Root Motion application (%s)\n%s"), *GetPathNameSafe(this), *Velocity.ToString()));
 
@@ -1132,7 +1113,8 @@ void UVRCharacterMovementComponent::PhysWalking(float deltaTime, int32 Iteration
 		// Compute move parameters
 		const FVector MoveVelocity = Velocity;
 
-		const FVector Delta = (timeTick * MoveVelocity);
+		const FVector Delta = timeTick * MoveVelocity;
+
 		const bool bZeroDelta = Delta.IsNearlyZero();
 		FStepDownResult StepDownResult;
 
@@ -1172,13 +1154,13 @@ void UVRCharacterMovementComponent::PhysWalking(float deltaTime, int32 Iteration
 					const float ActualDist = (UpdatedComponent->GetComponentLocation() - OldLocation).Size2D();
 					remainingTime += timeTick * (1.f - FMath::Min(1.f, ActualDist / DesiredDist));
 				}
-				//RestorePreAdditiveVRMotionVelocity();
+				RestorePreAdditiveVRMotionVelocity();
 				StartNewPhysics(remainingTime, Iterations);
 				return;
 			}
 			else if (IsSwimming()) //just entered water
 			{
-				//RestorePreAdditiveVRMotionVelocity();
+				RestorePreAdditiveVRMotionVelocity();
 				StartSwimmingVR(OldCapsuleLocation, OldVelocity, timeTick, remainingTime, Iterations);
 				return;
 			}
