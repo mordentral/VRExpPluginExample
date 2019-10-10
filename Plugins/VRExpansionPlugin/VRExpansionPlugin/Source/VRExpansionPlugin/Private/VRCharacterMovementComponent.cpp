@@ -1064,13 +1064,21 @@ void UVRCharacterMovementComponent::PhysWalking(float deltaTime, int32 Iteration
 	// Rewind the players position by the new capsule location
 	RewindVRRelativeMovement();
 
+	bool bHeadPass = !AdditionalVRInputVector.IsNearlyZero();
+
 	// Perform the move
 	while ((remainingTime >= MIN_TICK_TIME) && (Iterations < MaxSimulationIterations) && CharacterOwner && (CharacterOwner->Controller || bRunPhysicsWithNoController || HasAnimRootMotion() || CurrentRootMotion.HasOverrideVelocity() || (CharacterOwner->Role == ROLE_SimulatedProxy)))
 	{
-		Iterations++;
+		if(!bHeadPass)
+			Iterations++;
+
 		bJustTeleported = false;
-		const float timeTick = GetSimulationTimeStep(remainingTime, Iterations);
-		remainingTime -= timeTick;
+		/*const */float timeTick = deltaTime;
+		if (!bHeadPass)
+		{
+			timeTick = GetSimulationTimeStep(remainingTime, Iterations);
+			remainingTime -= timeTick;
+		}
 
 		// Save current values
 		UPrimitiveComponent * const OldBase = GetMovementBase();
@@ -1090,15 +1098,18 @@ void UVRCharacterMovementComponent::PhysWalking(float deltaTime, int32 Iteration
 		const FVector OldVelocity = Velocity;
 		Acceleration.Z = 0.f;
 
-		// Apply acceleration
-		if (!HasAnimRootMotion() && !CurrentRootMotion.HasOverrideVelocity())
+		if (!bHeadPass)
 		{
-			CalcVelocity(timeTick, GroundFriction, false, GetMaxBrakingDeceleration());
-			devCode(ensureMsgf(!Velocity.ContainsNaN(), TEXT("PhysWalking: Velocity contains NaN after CalcVelocity (%s)\n%s"), *GetPathNameSafe(this), *Velocity.ToString()));
+			// Apply acceleration
+			if (!HasAnimRootMotion() && !CurrentRootMotion.HasOverrideVelocity())
+			{
+				CalcVelocity(timeTick, GroundFriction, false, GetMaxBrakingDeceleration());
+				devCode(ensureMsgf(!Velocity.ContainsNaN(), TEXT("PhysWalking: Velocity contains NaN after CalcVelocity (%s)\n%s"), *GetPathNameSafe(this), *Velocity.ToString()));
+			}
 		}
 
 		//ApplyRootMotionToVelocity(timeTick);
-		ApplyVRMotionToVelocity(deltaTime);//timeTick);
+		//ApplyVRMotionToVelocity(deltaTime);//timeTick);
 
 		devCode(ensureMsgf(!Velocity.ContainsNaN(), TEXT("PhysWalking: Velocity contains NaN after Root Motion application (%s)\n%s"), *GetPathNameSafe(this), *Velocity.ToString()));
 
@@ -1111,7 +1122,10 @@ void UVRCharacterMovementComponent::PhysWalking(float deltaTime, int32 Iteration
 		}
 
 		// Compute move parameters
-		const FVector MoveVelocity = Velocity;
+		FVector MoveVelocity = Velocity;
+
+		if (bHeadPass)
+			MoveVelocity = AdditionalVRInputVector / deltaTime;
 
 		const FVector Delta = timeTick * MoveVelocity;
 
@@ -1120,7 +1134,8 @@ void UVRCharacterMovementComponent::PhysWalking(float deltaTime, int32 Iteration
 
 		if (bZeroDelta)
 		{
-			remainingTime = 0.f;
+			if(!bHeadPass)
+				remainingTime = 0.f;
 			// TODO: Bugged currently
 			/*if (VRRootCapsule && VRRootCapsule->bUseWalkingCollisionOverride)
 			{
@@ -1192,9 +1207,13 @@ void UVRCharacterMovementComponent::PhysWalking(float deltaTime, int32 Iteration
 				// avoid repeated ledge moves if the first one fails
 				bTriedLedgeMove = true;
 
-				// Try new movement direction
-				Velocity = NewDelta / timeTick;
-				remainingTime += timeTick;
+				if (!bHeadPass)
+				{
+					// Try new movement direction
+					Velocity = NewDelta / timeTick;
+					remainingTime += timeTick;
+				}
+
 				RestorePreAdditiveVRMotionVelocity();
 				continue;
 			}
@@ -1212,7 +1231,8 @@ void UVRCharacterMovementComponent::PhysWalking(float deltaTime, int32 Iteration
 
 				// revert this move
 				RevertMove(OldLocation, OldBase, PreviousBaseLocation, OldFloor, true);
-				remainingTime = 0.f;
+				if (!bHeadPass)
+					remainingTime = 0.f;
 				RestorePreAdditiveVRMotionVelocity();
 				break;
 			}
@@ -1222,16 +1242,19 @@ void UVRCharacterMovementComponent::PhysWalking(float deltaTime, int32 Iteration
 			// Validate the floor check
 			if (CurrentFloor.IsWalkableFloor())
 			{
-				if (ShouldCatchAir(OldFloor, CurrentFloor))
+				if (!bHeadPass)
 				{
-					RestorePreAdditiveVRMotionVelocity();
-					HandleWalkingOffLedge(OldFloor.HitResult.ImpactNormal, OldFloor.HitResult.Normal, OldLocation, timeTick);
-					if (IsMovingOnGround())
+					if (ShouldCatchAir(OldFloor, CurrentFloor))
 					{
-						// If still walking, then fall. If not, assume the user set a different mode they want to keep.
-						StartFalling(Iterations, remainingTime, timeTick, Delta, OldLocation);
+						RestorePreAdditiveVRMotionVelocity();
+						HandleWalkingOffLedge(OldFloor.HitResult.ImpactNormal, OldFloor.HitResult.Normal, OldLocation, timeTick);
+						if (IsMovingOnGround())
+						{
+							// If still walking, then fall. If not, assume the user set a different mode they want to keep.
+							StartFalling(Iterations, remainingTime, timeTick, Delta, OldLocation);
+						}
+						return;
 					}
-					return;
 				}
 
 				AdjustFloorHeight();
@@ -1277,7 +1300,9 @@ void UVRCharacterMovementComponent::PhysWalking(float deltaTime, int32 Iteration
 			if (!bJustTeleported && !HasAnimRootMotion() && !CurrentRootMotion.HasOverrideVelocity() && timeTick >= MIN_TICK_TIME)
 			{
 				// TODO-RootMotionSource: Allow this to happen during partial override Velocity, but only set allowed axes?
-				Velocity =((UpdatedComponent->GetComponentLocation() - OldLocation ) / timeTick);
+				
+				if(!bHeadPass)
+					Velocity =((UpdatedComponent->GetComponentLocation() - OldLocation ) / timeTick);
 				RestorePreAdditiveVRMotionVelocity();
 			}
 		}
@@ -1289,6 +1314,8 @@ void UVRCharacterMovementComponent::PhysWalking(float deltaTime, int32 Iteration
 			remainingTime = 0.f;
 			break;
 		}
+
+		bHeadPass = false;
 	}
 
 	if (IsMovingOnGround())
