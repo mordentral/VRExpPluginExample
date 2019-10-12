@@ -25,6 +25,7 @@ public:
 
 };
 
+
 // Event, Hit, material object normal
 // Event, lodged, material, object, normal
 
@@ -35,7 +36,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FVROnMeleeIsLodged, bool, IsWeaponLo
 /**
 * A Melee grip script *CURRENTLY WIP, DO NOT USE!!!*
 */
-UCLASS(NotBlueprintable, ClassGroup = (VRExpansionPlugin))
+UCLASS(NotBlueprintable, ClassGroup = (VRExpansionPlugin), hideCategories = TickSettings)
 class VREXPANSIONPLUGIN_API UGS_Melee : public UVRGripScriptBase
 {
 	GENERATED_BODY()
@@ -45,9 +46,18 @@ public:
 
 	// The name of the component that is used to orient the weapon along its primary axis
 	// If it does not exist then the weapon is assumed to be X+ facing.
+	// Also used to perform some calculations, make sure it is parented to the gripped object (root component for actors).
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon Settings")
 		FName WeaponRootOrientationComponent;
 	FTransform OrientationComponentRelativeFacing;
+
+	// When true, will auto set the primary and secondary hands by the WeaponRootOrientationComponents X Axis distance.
+	// Smallest value along the X Axis will be considered the primary hand.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon Settings")
+		bool bAutoSetPrimaryAndSecondaryHands;
+
+	UFUNCTION(BlueprintCallable, Category = "Weapon Settings")
+		void SetPrimaryAndSecondaryHands(FBPGripPair & PrimaryGrip, FBPGripPair & SecondaryGrip);
 
 	UFUNCTION(BlueprintCallable, Category = "Weapon Settings")
 		void SetCOMOffsetInLocalSpace(UGripMotionControllerComponent* GrippingController, UPARAM(ref) FBPActorGripInformation& Grip, FVector Offset, bool bOffsetIsInWorldSpace = true, bool bLimitToXOnly = true);

@@ -30,6 +30,8 @@ UGS_Melee::UGS_Melee(const FObjectInitializer& ObjectInitializer) :
 	bInjectPostPhysicsHandle = true;
 	WeaponRootOrientationComponent = NAME_None;
 	OrientationComponentRelativeFacing = FTransform::Identity;
+
+	bAutoSetPrimaryAndSecondaryHands = true;
 }
 
 void UGS_Melee::SetCOMOffsetInLocalSpace(UGripMotionControllerComponent * GrippingController, FBPActorGripInformation & Grip, FVector Offset, bool bOffsetIsInWorldSpace, bool bLimitToXOnly)
@@ -65,7 +67,7 @@ void UGS_Melee::SetCOMOffsetInLocalSpace(UGripMotionControllerComponent * Grippi
 
 	FPhysicsCommand::ExecuteWrite(rBodyInstance->ActorHandle, [&](const FPhysicsActorHandle& Actor)
 		{
-
+		
 			FTransform currentTransform = rBodyInstance->GetUnrealWorldTransform_AssumesLocked();
 			if (bOffsetIsInWorldSpace)
 			{
@@ -106,6 +108,11 @@ void UGS_Melee::SetCOMOffsetInLocalSpace(UGripMotionControllerComponent * Grippi
 	*/
 }
 
+void UGS_Melee::SetPrimaryAndSecondaryHands(FBPGripPair& PrimaryGrip, FBPGripPair& SecondaryGrip)
+{
+
+}
+
 void UGS_Melee::OnGrip_Implementation(UGripMotionControllerComponent* GrippingController, const FBPActorGripInformation& GripInformation)
 {
 	// Not storing an id, we should only be doing this once
@@ -113,14 +120,38 @@ void UGS_Melee::OnGrip_Implementation(UGripMotionControllerComponent* GrippingCo
 
 	// This lets us change the grip settings prior to actually starting the grip off
 
-	FBPActorGripInformation* Grip = GrippingController->LocallyGrippedObjects.FindByKey(GripInformation.GripID);
-
-	if (!Grip)
-		Grip = GrippingController->GrippedObjects.FindByKey(GripInformation.GripID);
-
-	if (Grip)
+	if (GrippingController->HasGripAuthority(GripInformation))
 	{
-		Grip->AdvancedGripSettings.PhysicsSettings.PhysicsGripLocationSettings = EPhysicsGripCOMType::COM_GripAtControllerLoc;
+		TArray<FBPGripPair> HoldingControllers;
+		bool bIsHeld;
+		IVRGripInterface::Execute_IsHeld(GetParent(), HoldingControllers, bIsHeld);
+
+		for (FBPGripPair& Grip : HoldingControllers)
+		{
+			FBPActorGripInformation * GripInfo = Grip.HoldingController->GetGripPtrByID(Grip.GripID);
+			if (GripInfo)
+			{
+				float GripDistanceOnPrimaryAxis = 0.f;
+				FTransform relTransform(GripInfo->RelativeTransform.ToInverseMatrixWithScale());
+				relTransform = relTransform.GetRelativeTransform(OrientationComponentRelativeFacing);
+
+				// This is the Forward vector projected transform
+				// The most negative one of these is the rearmost hand
+				FVector localLoc = relTransform.GetTranslation();
+			}
+
+		}
+
+
+		/*FBPActorGripInformation* Grip = GrippingController->LocallyGrippedObjects.FindByKey(GripInformation.GripID);
+
+		if (!Grip)
+			Grip = GrippingController->GrippedObjects.FindByKey(GripInformation.GripID);
+
+		if (Grip)
+		{
+			Grip->AdvancedGripSettings.PhysicsSettings.PhysicsGripLocationSettings = EPhysicsGripCOMType::COM_GripAtControllerLoc;
+		}*/
 	}
 }
 
