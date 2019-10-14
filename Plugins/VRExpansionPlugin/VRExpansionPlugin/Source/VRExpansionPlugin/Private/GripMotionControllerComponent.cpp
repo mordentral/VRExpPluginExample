@@ -4180,16 +4180,14 @@ bool UGripMotionControllerComponent::SetUpPhysicsHandle(const FBPActorGripInform
 	TArray<UVRGripScriptBase*> LocalGripScripts;
 	if (GripScripts == nullptr)
 	{
-		bool bHasInterface = false;
-		UObject * InterfacedObject = nullptr;
-		if (root->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
+		if (root && root->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
 		{
 			if (IVRGripInterface::Execute_GetGripScripts(root, LocalGripScripts))
 			{
 				GripScripts = &LocalGripScripts;
 			}
 		}
-		else if (pActor->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
+		else if (pActor && pActor->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
 		{
 			if (IVRGripInterface::Execute_GetGripScripts(pActor, LocalGripScripts))
 			{
