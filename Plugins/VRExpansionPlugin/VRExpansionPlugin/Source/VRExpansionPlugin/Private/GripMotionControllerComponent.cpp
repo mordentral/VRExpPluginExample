@@ -894,6 +894,7 @@ bool UGripMotionControllerComponent::GripObjectByInterface(UObject * ObjectToGri
 		else
 		{
 			// No interface, no grip
+			UE_LOG(LogVRMotionController, Warning, TEXT("VRGripMotionController GripObjectByInterface was called on an object that doesn't implement the interface and doesn't have a parent that implements the interface!"));
 			return false;
 		}
 	}
@@ -943,6 +944,7 @@ bool UGripMotionControllerComponent::GripObjectByInterface(UObject * ObjectToGri
 		else
 		{
 			// No interface, no grip
+			UE_LOG(LogVRMotionController, Warning, TEXT("VRGripMotionController GripObjectByInterface was called on an object that doesn't implement the interface and doesn't have a parent that implements the interface!"));
 			return false;
 		}
 	}
