@@ -30,6 +30,10 @@ public:
 		// When its fixed
 		//#if WITH_PHYSX
 
+
+		if (!ConstraintInstance.ConstraintHandle.ConstraintData)
+			return;
+
 		PxD6JointDriveFlags JointFlags;
 		if (!bUseForceConstraint)
 			JointFlags = PxD6JointDriveFlag::eACCELERATION;
