@@ -673,7 +673,7 @@ void UVRRootComponent::TickComponent(float DeltaTime, enum ELevelTick TickType, 
 				OnUpdateTransform(EUpdateTransformFlags::SkipPhysicsUpdate, ETeleportType::None);
 
 				// This is an edge case, need to check if the nav data needs updated client side
-				if (this->GetOwner()->Role == ENetRole::ROLE_SimulatedProxy)
+				if (this->GetOwner()->GetLocalRole() == ENetRole::ROLE_SimulatedProxy)
 				{
 					if (bNavigationRelevant && bRegistered)
 					{

@@ -83,7 +83,9 @@ UGripMotionControllerComponent::UGripMotionControllerComponent(const FObjectInit
 	bAlwaysSendTickGrip = false;
 	bAutoActivate = true;
 
-	this->SetIsReplicated(true);
+	PRAGMA_DISABLE_DEPRECATION_WARNINGS
+		bReplicates = true;
+	PRAGMA_ENABLE_DEPRECATION_WARNINGS
 
 	// Default 100 htz update rate, same as the 100htz update rate of rep_notify, will be capped to 90/45 though because of vsync on HMD
 	//bReplicateControllerTransform = true;
@@ -247,7 +249,7 @@ void UGripMotionControllerComponent::BeginPlay()
 void UGripMotionControllerComponent::CreateRenderState_Concurrent()
 {	
 	// Don't bother updating this stuff if we aren't local or using them
-	if (bHasAuthority && !bDisableLowLatencyUpdate && bIsActive)
+	if (bHasAuthority && !bDisableLowLatencyUpdate && IsActive())
 	{
 		GripRenderThreadRelativeTransform = GetRelativeTransform();
 		GripRenderThreadComponentScale = GetComponentScale();
@@ -260,7 +262,7 @@ void UGripMotionControllerComponent::CreateRenderState_Concurrent()
 void UGripMotionControllerComponent::SendRenderTransform_Concurrent()
 {
 	// Don't bother updating this stuff if we aren't local or using them
-	if (bHasAuthority && !bDisableLowLatencyUpdate && bIsActive)
+	if (bHasAuthority && !bDisableLowLatencyUpdate && IsActive())
 	{
 		struct FPrimitiveUpdateRenderThreadRelativeTransformParams
 		{
@@ -325,9 +327,12 @@ void UGripMotionControllerComponent::GetLifetimeReplicatedProps(TArray< class FL
 	 Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	 
 	 // Don't ever replicate these, they are getting replaced by my custom send anyway
+	 PRAGMA_DISABLE_DEPRECATION_WARNINGS
 	 DISABLE_REPLICATED_PROPERTY(USceneComponent, RelativeLocation);
 	 DISABLE_REPLICATED_PROPERTY(USceneComponent, RelativeRotation);
 	 DISABLE_REPLICATED_PROPERTY(USceneComponent, RelativeScale3D);
+	 PRAGMA_ENABLE_DEPRECATION_WARNINGS
+
 
 	// Skipping the owner with this as the owner will use the controllers location directly
 	DOREPLIFETIME_CONDITION(UGripMotionControllerComponent, ReplicatedControllerTransform, COND_SkipOwner);
@@ -1155,7 +1160,7 @@ bool UGripMotionControllerComponent::GripActor(
 	}
 	else
 	{
-		newActorGrip.bOriginalReplicatesMovement = ActorToGrip->bReplicateMovement;
+		newActorGrip.bOriginalReplicatesMovement = ActorToGrip->IsReplicatingMovement();
 		newActorGrip.bOriginalGravity = root->IsGravityEnabled();
 	}
 	newActorGrip.Stiffness = GripStiffness;
@@ -1182,7 +1187,7 @@ bool UGripMotionControllerComponent::GripActor(
 
 	if (GripMovementReplicationSetting == EGripMovementReplicationSettings::KeepOriginalMovement)
 	{
-		if (ActorToGrip->bReplicateMovement)
+		if (ActorToGrip->IsReplicatingMovement())
 		{
 			newActorGrip.GripMovementReplicationSetting = EGripMovementReplicationSettings::ForceServerSideMovement;
 		}
@@ -1378,7 +1383,7 @@ bool UGripMotionControllerComponent::GripComponent(
 	else
 	{
 		if (ComponentToGrip->GetOwner())
-			newComponentGrip.bOriginalReplicatesMovement = ComponentToGrip->GetOwner()->bReplicateMovement;
+			newComponentGrip.bOriginalReplicatesMovement = ComponentToGrip->GetOwner()->IsReplicatingMovement();
 
 		newComponentGrip.bOriginalGravity = ComponentToGrip->IsGravityEnabled();
 	}
@@ -1410,7 +1415,7 @@ bool UGripMotionControllerComponent::GripComponent(
 	{
 		if (ComponentToGrip->GetOwner())
 		{
-			if (ComponentToGrip->GetOwner()->bReplicateMovement)
+			if (ComponentToGrip->GetOwner()->IsReplicatingMovement())
 			{
 				newComponentGrip.GripMovementReplicationSetting = EGripMovementReplicationSettings::ForceServerSideMovement;
 			}
@@ -3207,7 +3212,7 @@ void UGripMotionControllerComponent::Deactivate()
 {
 	Super::Deactivate();
 
-	if (bIsActive == false && GripViewExtension.IsValid())
+	if (IsActive() == false && GripViewExtension.IsValid())
 	{
 		{
 			// This component could be getting accessed from the render thread so it needs to wait
@@ -3226,7 +3231,7 @@ void UGripMotionControllerComponent::TickComponent(float DeltaTime, enum ELevelT
 	// Skip motion controller tick, we override a lot of things that it does and we don't want it to perform the same functions
 	Super::Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	if (!bIsActive)
+	if (!IsActive())
 		return;
 
 	// Moved this here instead of in the polling function, it was ticking once per frame anyway so no loss of perf
@@ -3263,7 +3268,7 @@ void UGripMotionControllerComponent::TickComponent(float DeltaTime, enum ELevelT
 			bTracked = bNewTrackedState && CurrentTrackingStatus != ETrackingStatus::NotTracked;
 			if (bTracked)
 			{
-				SetRelativeTransform(FTransform(Orientation, Position, this->RelativeScale3D));
+				SetRelativeTransform(FTransform(Orientation, Position, this->GetRelativeScale3D()));
 			}
 
 			// if controller tracking just changed
@@ -3285,10 +3290,13 @@ void UGripMotionControllerComponent::TickComponent(float DeltaTime, enum ELevelT
 			return; // Don't update anything including location
 
 		// Don't bother with any of this if not replicating transform
-		if (bReplicates && (bTracked || bReplicateWithoutTracking))
+		if (GetIsReplicated() && (bTracked || bReplicateWithoutTracking))
 		{
+			FVector RelLoc = GetRelativeLocation();
+			FRotator RelRot = GetRelativeRotation();
+
 			// Don't rep if no changes
-			if (!this->RelativeLocation.Equals(ReplicatedControllerTransform.Position) || !this->RelativeRotation.Equals(ReplicatedControllerTransform.Rotation))
+			if (!RelLoc.Equals(ReplicatedControllerTransform.Position) || !RelRot.Equals(ReplicatedControllerTransform.Rotation))
 			{
 				ControllerNetUpdateCount += DeltaTime;
 				if (ControllerNetUpdateCount >= (1.0f / ControllerNetUpdateRate))
@@ -3296,8 +3304,8 @@ void UGripMotionControllerComponent::TickComponent(float DeltaTime, enum ELevelT
 					ControllerNetUpdateCount = 0.0f;
 
 					// Tracked doesn't matter, already set the relative location above in that case
-					ReplicatedControllerTransform.Position = this->RelativeLocation;
-					ReplicatedControllerTransform.Rotation = this->RelativeRotation;
+					ReplicatedControllerTransform.Position = RelLoc;
+					ReplicatedControllerTransform.Rotation = RelRot;
 
 					// I would keep the torn off check here, except this can be checked on tick if they
 					// Set 100 htz updates, and in the TornOff case, it actually can't hurt any besides some small
@@ -3441,7 +3449,7 @@ void UGripMotionControllerComponent::TickGrip(float DeltaTime)
 
 	// Save out the component velocity from this and last frame
 	if(!LastRelativePosition.GetTranslation().IsZero())
-		ComponentVelocity = (RelativeLocation - LastRelativePosition.GetTranslation()) / DeltaTime;
+		ComponentVelocity = (GetRelativeLocation() - LastRelativePosition.GetTranslation()) / DeltaTime;
 
 	// #TODO:
 	// Relative angular velocity too?
