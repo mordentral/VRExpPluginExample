@@ -343,8 +343,8 @@ UVRRootComponent::UVRRootComponent(const FObjectInitializer& ObjectInitializer)
 	PrimaryComponentTick.bStartWithTickEnabled = true;
 	PrimaryComponentTick.TickGroup = TG_PrePhysics;
 
-	this->RelativeScale3D = FVector(1.0f, 1.0f, 1.0f);
-	this->RelativeLocation = FVector(0, 0, 0);
+	this->SetRelativeScale3D(FVector(1.f));
+	this->SetRelativeLocation(FVector::ZeroVector);
 
 	// 2.15f is ((MIN_FLOOR_DIST + MAX_FLOOR_DIST) / 2), same value that walking attempts to retain
 	// 1.9f is MIN_FLOOR_DIST, this would not go below ledges when hanging off
@@ -541,8 +541,8 @@ void UVRRootComponent::TickComponent(float DeltaTime, enum ELevelTick TickType, 
 		}
 		else if (TargetPrimitiveComponent)
 		{
-			curCameraRot = TargetPrimitiveComponent->RelativeRotation;
-			curCameraLoc = TargetPrimitiveComponent->RelativeLocation;
+			curCameraRot = TargetPrimitiveComponent->GetRelativeRotation();
+			curCameraLoc = TargetPrimitiveComponent->GetRelativeLocation();
 		}
 		else
 		{
@@ -640,8 +640,8 @@ void UVRRootComponent::TickComponent(float DeltaTime, enum ELevelTick TickType, 
 	{
 		if (TargetPrimitiveComponent)
 		{
-			curCameraRot = TargetPrimitiveComponent->RelativeRotation;
-			curCameraLoc = TargetPrimitiveComponent->RelativeLocation;
+			curCameraRot = TargetPrimitiveComponent->GetRelativeRotation();
+			curCameraLoc = TargetPrimitiveComponent->GetRelativeLocation();
 		}
 		else
 		{

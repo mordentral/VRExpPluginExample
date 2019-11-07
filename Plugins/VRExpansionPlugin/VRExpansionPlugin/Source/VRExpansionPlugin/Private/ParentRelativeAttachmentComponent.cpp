@@ -83,11 +83,11 @@ void UParentRelativeAttachmentComponent::TickComponent(float DeltaTime, enum ELe
 		{
 			if (!bIgnoreRotationFromParent)
 			{
-				FRotator InverseRot = UVRExpansionFunctionLibrary::GetHMDPureYaw(CameraOwner->RelativeRotation);
-				SetRelativeRotAndLoc(CameraOwner->RelativeLocation, InverseRot, DeltaTime);
+				FRotator InverseRot = UVRExpansionFunctionLibrary::GetHMDPureYaw(CameraOwner->GetRelativeRotation());
+				SetRelativeRotAndLoc(CameraOwner->GetRelativeLocation(), InverseRot, DeltaTime);
 			}
 			else
-				SetRelativeRotAndLoc(CameraOwner->RelativeLocation, FRotator::ZeroRotator, DeltaTime);
+				SetRelativeRotAndLoc(CameraOwner->GetRelativeLocation(), FRotator::ZeroRotator, DeltaTime);
 		}
 	}
 

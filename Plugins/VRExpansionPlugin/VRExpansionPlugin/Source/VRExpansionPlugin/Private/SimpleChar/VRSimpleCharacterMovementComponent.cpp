@@ -833,7 +833,7 @@ void UVRSimpleCharacterMovementComponent::PhysWalking(float deltaTime, int32 Ite
 	//bool bHasLastAdditiveVelocity = false;
 	//FVector LastPreAdditiveVRVelocity;
 	// Perform the move
-	while ((remainingTime >= MIN_TICK_TIME) && (Iterations < MaxSimulationIterations) && CharacterOwner && (CharacterOwner->Controller || bRunPhysicsWithNoController || HasAnimRootMotion() || CurrentRootMotion.HasOverrideVelocity() || (CharacterOwner->Role == ROLE_SimulatedProxy)))
+	while ((remainingTime >= MIN_TICK_TIME) && (Iterations < MaxSimulationIterations) && CharacterOwner && (CharacterOwner->Controller || bRunPhysicsWithNoController || HasAnimRootMotion() || CurrentRootMotion.HasOverrideVelocity() || (CharacterOwner->GetLocalRole() == ROLE_SimulatedProxy)))
 	{
 		Iterations++;
 		bJustTeleported = false;
@@ -1064,9 +1064,10 @@ void UVRSimpleCharacterMovementComponent::TickComponent(float DeltaTime, enum EL
 			}
 			else if (VRCameraComponent)
 			{
-				curCameraLoc = VRCameraComponent->RelativeLocation;
-				curCameraRot = VRCameraComponent->RelativeRotation;
-				VRCameraComponent->SetRelativeLocation(FVector(0, 0, VRCameraComponent->RelativeLocation.Z));
+				FVector curRelLoc = VRCameraComponent->GetRelativeLocation();
+				curCameraLoc = curRelLoc;
+				curCameraRot = VRCameraComponent->GetRelativeRotation();
+				VRCameraComponent->SetRelativeLocation(FVector(0, 0, curRelLoc.Z));
 			}
 
 			if (!bIsFirstTick)
@@ -1406,7 +1407,7 @@ void UVRSimpleCharacterMovementComponent::ReplicateMoveToServer(float DeltaTime,
 	NewMove->PostUpdate(CharacterOwner, FSavedMove_Character::PostUpdate_Record);
 
 	// Add NewMove to the list
-	if (CharacterOwner->bReplicateMovement)
+	if (CharacterOwner->IsReplicatingMovement())
 	{
 		check(NewMove == NewMovePtr.Get());
 		ClientData->SavedMoves.Push(NewMovePtr);
@@ -1496,7 +1497,7 @@ FNetworkPredictionData_Server* UVRSimpleCharacterMovementComponent::GetPredictio
 {
 	// Should only be called on server in network games
 	check(CharacterOwner != NULL);
-	check(CharacterOwner->Role == ROLE_Authority);
+	check(CharacterOwner->GetLocalRole() == ROLE_Authority);
 	checkSlow(GetNetMode() < NM_Client);
 
 	if (!ServerPredictionData)

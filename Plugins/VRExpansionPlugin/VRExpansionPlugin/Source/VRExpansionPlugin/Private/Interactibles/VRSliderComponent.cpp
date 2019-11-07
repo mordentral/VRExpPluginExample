@@ -349,7 +349,7 @@ void UVRSliderComponent::OnGrip_Implementation(UGripMotionControllerComponent * 
 	FTransform RelativeToGripTransform = ReversedRelativeTransform * this->GetComponentTransform();
 
 	InitialInteractorLocation = CurrentRelativeTransform.InverseTransformPosition(RelativeToGripTransform.GetTranslation());
-	InitialGripLoc = InitialRelativeTransform.InverseTransformPosition(this->RelativeLocation);
+	InitialGripLoc = InitialRelativeTransform.InverseTransformPosition(this->GetRelativeLocation());
 	InitialDropLocation = ReversedRelativeTransform.GetTranslation();
 	LastInputKey = -1.0f;
 	LerpedKey = 0.0f;

@@ -98,7 +98,7 @@ void UVRCharacterMovementComponent::Crouch(bool bClientSimulation)
 		return;
 	}
 
-	if (bClientSimulation && CharacterOwner->Role == ROLE_SimulatedProxy)
+	if (bClientSimulation && CharacterOwner->GetLocalRole() == ROLE_SimulatedProxy)
 	{
 		// restore collision size before crouching
 		ACharacter* DefaultCharacter = CharacterOwner->GetClass()->GetDefaultObject<ACharacter>();
@@ -178,7 +178,7 @@ void UVRCharacterMovementComponent::Crouch(bool bClientSimulation)
 	CharacterOwner->OnStartCrouch(HalfHeightAdjust, ScaledHalfHeightAdjust);
 
 	// Don't smooth this change in mesh position
-	if (bClientSimulation && CharacterOwner->Role == ROLE_SimulatedProxy)
+	if (bClientSimulation && CharacterOwner->GetLocalRole() == ROLE_SimulatedProxy)
 	{
 		FNetworkPredictionData_Client_Character* ClientData = GetPredictionData_Client_Character();
 		if (ClientData && ClientData->MeshTranslationOffset.Z != 0.f)
@@ -332,7 +332,7 @@ void UVRCharacterMovementComponent::UnCrouch(bool bClientSimulation)
 	CharacterOwner->OnEndCrouch(HalfHeightAdjust, ScaledHalfHeightAdjust);
 
 	// Don't smooth this change in mesh position
-	if (bClientSimulation && CharacterOwner->Role == ROLE_SimulatedProxy)
+	if (bClientSimulation && CharacterOwner->GetLocalRole() == ROLE_SimulatedProxy)
 	{
 		FNetworkPredictionData_Client_Character* ClientData = GetPredictionData_Client_Character();
 		if (ClientData && ClientData->MeshTranslationOffset.Z != 0.f)
@@ -363,7 +363,7 @@ FNetworkPredictionData_Server* UVRCharacterMovementComponent::GetPredictionData_
 {
 	// Should only be called on server in network games
 	check(CharacterOwner != NULL);
-	check(CharacterOwner->Role == ROLE_Authority);
+	check(CharacterOwner->GetLocalRole() == ROLE_Authority);
 	checkSlow(GetNetMode() < NM_Client);
 
 	if (!ServerPredictionData)
@@ -1041,7 +1041,7 @@ void UVRCharacterMovementComponent::PhysWalking(float deltaTime, int32 Iteration
 		return;
 	}
 
-	if (!CharacterOwner || (!CharacterOwner->Controller && !bRunPhysicsWithNoController && !HasAnimRootMotion() && !CurrentRootMotion.HasOverrideVelocity() && (CharacterOwner->Role != ROLE_SimulatedProxy)))
+	if (!CharacterOwner || (!CharacterOwner->Controller && !bRunPhysicsWithNoController && !HasAnimRootMotion() && !CurrentRootMotion.HasOverrideVelocity() && (CharacterOwner->GetLocalRole() != ROLE_SimulatedProxy)))
 	{
 		Acceleration = FVector::ZeroVector;
 		Velocity = FVector::ZeroVector;
@@ -1065,7 +1065,7 @@ void UVRCharacterMovementComponent::PhysWalking(float deltaTime, int32 Iteration
 	RewindVRRelativeMovement();
 
 	// Perform the move
-	while ((remainingTime >= MIN_TICK_TIME) && (Iterations < MaxSimulationIterations) && CharacterOwner && (CharacterOwner->Controller || bRunPhysicsWithNoController || HasAnimRootMotion() || CurrentRootMotion.HasOverrideVelocity() || (CharacterOwner->Role == ROLE_SimulatedProxy)))
+	while ((remainingTime >= MIN_TICK_TIME) && (Iterations < MaxSimulationIterations) && CharacterOwner && (CharacterOwner->Controller || bRunPhysicsWithNoController || HasAnimRootMotion() || CurrentRootMotion.HasOverrideVelocity() || (CharacterOwner->GetLocalRole() == ROLE_SimulatedProxy)))
 	{
 		Iterations++;
 		bJustTeleported = false;
@@ -1473,7 +1473,7 @@ void UVRCharacterMovementComponent::ReplicateMoveToServer(float DeltaTime, const
 	NewMove->PostUpdate(CharacterOwner, FSavedMove_Character::PostUpdate_Record);
 
 	// Add NewMove to the list
-	if (CharacterOwner->bReplicateMovement)
+	if (CharacterOwner->IsReplicatingMovement())
 	{
 		check(NewMove == NewMovePtr.Get());
 		ClientData->SavedMoves.Push(NewMovePtr);
@@ -3724,13 +3724,15 @@ void UVRCharacterMovementComponent::SimulateMovement(float DeltaSeconds)
 		return;
 	}
 
-	const bool bIsSimulatedProxy = (CharacterOwner->Role == ROLE_SimulatedProxy);
+	const bool bIsSimulatedProxy = (CharacterOwner->GetLocalRole() == ROLE_SimulatedProxy);
 
+
+	FRepMovement ReppedMovement = CharacterOwner->GetReplicatedMovement();
 	// Workaround for replication not being updated initially
 	if (bIsSimulatedProxy &&
-		CharacterOwner->ReplicatedMovement.Location.IsZero() &&
-		CharacterOwner->ReplicatedMovement.Rotation.IsZero() &&
-		CharacterOwner->ReplicatedMovement.LinearVelocity.IsZero())
+		ReppedMovement.Location.IsZero() &&
+		ReppedMovement.Rotation.IsZero() &&
+		ReppedMovement.LinearVelocity.IsZero())
 	{
 		return;
 	}
@@ -3789,7 +3791,7 @@ void UVRCharacterMovementComponent::SimulateMovement(float DeltaSeconds)
 		}
 
 		const bool bSimGravityDisabled = (bIsSimulatedProxy && CharacterOwner->bSimGravityDisabled);
-		const bool bZeroReplicatedGroundVelocity = (bIsSimulatedProxy && IsMovingOnGround() && CharacterOwner->ReplicatedMovement.LinearVelocity.IsZero());
+		const bool bZeroReplicatedGroundVelocity = (bIsSimulatedProxy && IsMovingOnGround() && CharacterOwner->GetReplicatedMovement().LinearVelocity.IsZero());
 
 		// bSimGravityDisabled means velocity was zero when replicated and we were stuck in something. Avoid external changes in velocity as well.
 		// Being in ground movement with zero velocity, we cannot simulate proxy velocities safely because we might not get any further updates from the server.
@@ -4446,7 +4448,7 @@ FVector UVRCharacterMovementComponent::GetPenetrationAdjustment(const FHitResult
 
 	if (CharacterOwner)
 	{
-		const bool bIsProxy = (CharacterOwner->Role == ROLE_SimulatedProxy);
+		const bool bIsProxy = (CharacterOwner->GetLocalRole() == ROLE_SimulatedProxy);
 		float MaxDistance = bIsProxy ? MaxDepenetrationWithGeometryAsProxy : MaxDepenetrationWithGeometry;
 		const AActor* HitActor = Hit.GetActor();
 		if (Cast<APawn>(HitActor))
