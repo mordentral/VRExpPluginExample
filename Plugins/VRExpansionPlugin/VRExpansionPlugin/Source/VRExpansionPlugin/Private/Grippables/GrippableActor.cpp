@@ -28,7 +28,7 @@ AGrippableActor::AGrippableActor(const FObjectInitializer& ObjectInitializer)
 	// Default replication on for multiplayer
 	//this->bNetLoadOnClient = false;
 	SetReplicatingMovement(true);
-	this->bReplicates = true;
+	bReplicates = true;
 	
 	bRepGripSettingsAndGameplayTags = true;
 	bAllowIgnoringAttachOnOwner = true;

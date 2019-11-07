@@ -83,9 +83,7 @@ UGripMotionControllerComponent::UGripMotionControllerComponent(const FObjectInit
 	bAlwaysSendTickGrip = false;
 	bAutoActivate = true;
 
-	PRAGMA_DISABLE_DEPRECATION_WARNINGS
-		bReplicates = true;
-	PRAGMA_ENABLE_DEPRECATION_WARNINGS
+	SetIsReplicatedByDefault(true);
 
 	// Default 100 htz update rate, same as the 100htz update rate of rep_notify, will be capped to 90/45 though because of vsync on HMD
 	//bReplicateControllerTransform = true;

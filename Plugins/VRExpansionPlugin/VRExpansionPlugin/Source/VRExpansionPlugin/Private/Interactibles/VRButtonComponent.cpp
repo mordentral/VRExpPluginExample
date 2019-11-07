@@ -157,7 +157,7 @@ void UVRButtonComponent::TickComponent(float DeltaTime, enum ELevelTick TickType
 			(StateChangeAuthorityType == EVRStateChangeAuthorityType::CanChangeState_Owner && LocalLastInteractingActor.IsValid() && LocalLastInteractingActor->HasLocalNetOwner()))
 		{
 			// Check for if we should set the state of the button, done here as for the press button the lerp counts for input
-			bool bCheckState = (GetAxisValue(InitialRelativeTransform.InverseTransformPosition(this->RelativeLocation)) <= (-ButtonEngageDepth) + KINDA_SMALL_NUMBER);
+			bool bCheckState = (GetAxisValue(InitialRelativeTransform.InverseTransformPosition(this->GetRelativeLocation())) <= (-ButtonEngageDepth) + KINDA_SMALL_NUMBER);
 			if (bButtonState != bCheckState && (WorldTime - LastToggleTime) >= MinTimeBetweenEngaging)
 
 			{
