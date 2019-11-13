@@ -399,9 +399,8 @@ bool AGrippableSkeletalMeshActor::Server_GetClientAuthReplication_Validate(const
 
 void AGrippableSkeletalMeshActor::Server_GetClientAuthReplication_Implementation(const FRepMovementVR & newMovement)
 {
-	FRepMovement RepMove = GetReplicatedMovement();
-	newMovement.CopyTo(RepMove);
-	SetReplicatedMovement(RepMove);
+	FRepMovement& MovementRep = GetReplicatedMovement_Mutable();
+	newMovement.CopyTo(MovementRep);
 	OnRep_ReplicatedMovement();
 }
 
@@ -428,7 +427,7 @@ void AGrippableSkeletalMeshActor::OnRep_ReplicateMovement()
 		const FRepAttachment ReplicationAttachment = GetAttachmentReplication();
 		if (!ReplicationAttachment.AttachParent)
 		{
-			FRepMovement RepMove = GetReplicatedMovement();
+			const FRepMovement& RepMove = GetReplicatedMovement();
 
 			// This "fix" corrects the simulation state not replicating over correctly
 			// If you turn off movement replication, simulate an object, turn movement replication back on and un-simulate, it never knows the difference

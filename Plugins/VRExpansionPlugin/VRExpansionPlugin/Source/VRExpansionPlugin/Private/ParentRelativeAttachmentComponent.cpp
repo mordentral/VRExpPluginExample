@@ -15,9 +15,8 @@ UParentRelativeAttachmentComponent::UParentRelativeAttachmentComponent(const FOb
 	// Let it sit in DuringPhysics like is the default
 	//PrimaryComponentTick.TickGroup = TG_PrePhysics;
 
-	
-	this->RelativeScale3D = FVector(1.0f, 1.0f, 1.0f);
-	this->RelativeLocation = FVector(0, 0, 0);
+	SetRelativeScale3D(FVector(1.0f, 1.0f, 1.0f));
+	SetRelativeLocation(FVector::ZeroVector);
 	YawTolerance = 0.0f;
 	bOffsetByHMD = false;
 	

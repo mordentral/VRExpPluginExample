@@ -120,8 +120,8 @@ public:
 	}*/
 
 	// Call to use an object
-	UPROPERTY(BlueprintAssignable, Category = "MeleeEvents")
-		FVROnMeleeIsLodged OnMeleeLodgedChanged;
+	//UPROPERTY(BlueprintAssignable, Category = "MeleeEvents")
+		//FVROnMeleeIsLodged OnMeleeLodgedChanged;
 
 	virtual void OnGrip_Implementation(UGripMotionControllerComponent* GrippingController, const FBPActorGripInformation& GripInformation) override;
 

@@ -591,7 +591,7 @@ void UVRCharacterMovementComponent::ServerMoveVROld_Implementation
 
 	if (!VerifyClientTimeStamp(OldTimeStamp, *ServerData))
 	{
-		UE_LOG(LogVRCharacterMovement, VeryVerbose, TEXT("ServerMoveOld: TimeStamp expired. %f, CurrentTimeStamp: %f"), OldTimeStamp, ServerData->CurrentClientTimeStamp);
+		UE_LOG(LogVRCharacterMovement, VeryVerbose, TEXT("ServerMoveOld: TimeStamp expired. %f, CurrentTimeStamp: %f, Character: %s"), OldTimeStamp, ServerData->CurrentClientTimeStamp, *GetNameSafe(CharacterOwner));
 		return;
 	}
 
@@ -659,8 +659,6 @@ void UVRCharacterMovementComponent::ServerMoveVR_Implementation(
 	uint8 ClientMovementMode)
 {
 
-
-
 	if (!HasValidData() || !IsComponentTickEnabled())
 	{
 		return;
@@ -671,6 +669,17 @@ void UVRCharacterMovementComponent::ServerMoveVR_Implementation(
 
 	if (!VerifyClientTimeStamp(TimeStamp, *ServerData))
 	{
+		const float ServerTimeStamp = ServerData->CurrentClientTimeStamp;
+		// This is more severe if the timestamp has a large discrepancy and hasn't been recently reset.
+		static const auto CVarNetServerMoveTimestampExpiredWarningThreshold = IConsoleManager::Get().FindConsoleVariable(TEXT("net.NetServerMoveTimestampExpiredWarningThreshold"));
+		if (ServerTimeStamp > 1.0f && FMath::Abs(ServerTimeStamp - TimeStamp) > CVarNetServerMoveTimestampExpiredWarningThreshold->GetFloat())
+		{
+			UE_LOG(LogVRCharacterMovement, Warning, TEXT("ServerMove: TimeStamp expired: %f, CurrentTimeStamp: %f, Character: %s"), TimeStamp, ServerTimeStamp, *GetNameSafe(CharacterOwner));
+		}
+		else
+		{
+			UE_LOG(LogVRCharacterMovement, Log, TEXT("ServerMove: TimeStamp expired: %f, CurrentTimeStamp: %f, Character: %s"), TimeStamp, ServerTimeStamp, *GetNameSafe(CharacterOwner));
+		}
 		return;
 	}
 
@@ -2710,100 +2719,6 @@ float UVRCharacterMovementComponent::ImmersionDepth() const
 	return depth;
 }
 
-/*void UVRCharacterMovementComponent::VisualizeMovement() const
-{
-	if (CharacterOwner == nullptr)
-	{
-		return;
-	}
-
-#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-	FVector TopOfCapsule;
-	if (VRRootCapsule)
-		TopOfCapsule = VRRootCapsule->GetVRLocation_Inline();
-	else
-		TopOfCapsule = GetActorLocation();
-
-	TopOfCapsule += FVector(0.f, 0.f, CharacterOwner->GetSimpleCollisionHalfHeight());
-
-
-	float HeightOffset = 0.f;
-
-	// Position
-	{
-		const FColor DebugColor = FColor::White;
-		const FVector DebugLocation = TopOfCapsule + FVector(0.f, 0.f, HeightOffset);
-		FString DebugText = FString::Printf(TEXT("Position: %s"), *GetActorLocation().ToCompactString());
-		DrawDebugString(GetWorld(), DebugLocation, DebugText, nullptr, DebugColor, 0.f, true);
-	}
-
-	// Velocity
-	{
-		const FColor DebugColor = FColor::Green;
-		HeightOffset += 15.f;
-		const FVector DebugLocation = TopOfCapsule + FVector(0.f, 0.f, HeightOffset);
-		DrawDebugDirectionalArrow(GetWorld(), DebugLocation, DebugLocation + Velocity,
-			100.f, DebugColor, false, -1.f, (uint8)'\000', 10.f);
-
-		FString DebugText = FString::Printf(TEXT("Velocity: %s (Speed: %.2f)"), *Velocity.ToCompactString(), Velocity.Size());
-		DrawDebugString(GetWorld(), DebugLocation + FVector(0.f, 0.f, 5.f), DebugText, nullptr, DebugColor, 0.f, true);
-	}
-
-	// Acceleration
-	{
-		const FColor DebugColor = FColor::Yellow;
-		HeightOffset += 15.f;
-		const float MaxAccelerationLineLength = 200.f;
-		const float CurrentMaxAccel = GetMaxAcceleration();
-		const float CurrentAccelAsPercentOfMaxAccel = CurrentMaxAccel > 0.f ? Acceleration.Size() / CurrentMaxAccel : 1.f;
-		const FVector DebugLocation = TopOfCapsule + FVector(0.f, 0.f, HeightOffset);
-		DrawDebugDirectionalArrow(GetWorld(), DebugLocation,
-			DebugLocation + Acceleration.GetSafeNormal(SMALL_NUMBER) * CurrentAccelAsPercentOfMaxAccel * MaxAccelerationLineLength,
-			25.f, DebugColor, false, -1.f, (uint8)'\000', 8.f);
-
-		FString DebugText = FString::Printf(TEXT("Acceleration: %s"), *Acceleration.ToCompactString());
-		DrawDebugString(GetWorld(), DebugLocation + FVector(0.f, 0.f, 5.f), DebugText, nullptr, DebugColor, 0.f, true);
-	}
-
-	// Movement Mode
-	{
-		const FColor DebugColor = FColor::Blue;
-		HeightOffset += 20.f;
-		const FVector DebugLocation = TopOfCapsule + FVector(0.f, 0.f, HeightOffset);
-		FString DebugText = FString::Printf(TEXT("MovementMode: %s"), *GetMovementName());
-		DrawDebugString(GetWorld(), DebugLocation, DebugText, nullptr, DebugColor, 0.f, true);
-	}
-
-	// Root motion (additive)
-	if (CurrentRootMotion.HasAdditiveVelocity())
-	{
-		const FColor DebugColor = FColor::Cyan;
-		HeightOffset += 15.f;
-		const FVector DebugLocation = TopOfCapsule + FVector(0.f, 0.f, HeightOffset);
-
-		FVector CurrentAdditiveVelocity(FVector::ZeroVector);
-		CurrentRootMotion.AccumulateAdditiveRootMotionVelocity(0.f, *CharacterOwner, *this, CurrentAdditiveVelocity);
-
-		DrawDebugDirectionalArrow(GetWorld(), DebugLocation, DebugLocation + CurrentAdditiveVelocity,
-			100.f, DebugColor, false, -1.f, (uint8)'\000', 10.f);
-
-		FString DebugText = FString::Printf(TEXT("RootMotionAdditiveVelocity: %s (Speed: %.2f)"),
-			*CurrentAdditiveVelocity.ToCompactString(), CurrentAdditiveVelocity.Size());
-		DrawDebugString(GetWorld(), DebugLocation + FVector(0.f, 0.f, 5.f), DebugText, nullptr, DebugColor, 0.f, true);
-	}
-
-	// Root motion (override)
-	if (CurrentRootMotion.HasOverrideVelocity())
-	{
-		const FColor DebugColor = FColor::Green;
-		HeightOffset += 15.f;
-		const FVector DebugLocation = TopOfCapsule + FVector(0.f, 0.f, HeightOffset);
-		FString DebugText = FString::Printf(TEXT("Has Override RootMotion"));
-		DrawDebugString(GetWorld(), DebugLocation, DebugText, nullptr, DebugColor, 0.f, true);
-	}
-#endif // !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-}*/
-
 ///////////////////////////
 // Navigation Functions
 ///////////////////////////
@@ -3330,6 +3245,7 @@ void UVRCharacterMovementComponent::PhysNavWalking(float deltaTime, int32 Iterat
 	//const FVector OldPlayerLocation = GetActorFeetLocation();
 	const FVector OldLocation = GetActorFeetLocationVR();
 	const FVector DeltaMove = DesiredMove * deltaTime;
+	const bool bDeltaMoveNearlyZero = DeltaMove.IsNearlyZero();
 
 	FVector AdjustedDest = OldLocation + DeltaMove;
 	FNavLocation DestNavLocation;
@@ -3352,10 +3268,21 @@ void UVRCharacterMovementComponent::PhysNavWalking(float deltaTime, int32 Iterat
 		{
 			bSameNavLocation = CachedNavLocation.Location.Equals(OldLocation);
 		}
+
+		if (bDeltaMoveNearlyZero && bSameNavLocation)
+		{
+			if (const INavigationDataInterface * NavData = GetNavData())
+			{
+				if (!NavData->IsNodeRefValid(CachedNavLocation.NodeRef))
+				{
+					CachedNavLocation.NodeRef = INVALID_NAVNODEREF;
+					bSameNavLocation = false;
+				}
+			}
+		}
 	}
 
-
-	if (DeltaMove.IsNearlyZero() && bSameNavLocation)
+	if (bDeltaMoveNearlyZero && bSameNavLocation)
 	{
 		DestNavLocation = CachedNavLocation;
 		UE_LOG(LogVRCharacterMovement, VeryVerbose, TEXT("%s using cached navmesh location! (bProjectNavMeshWalking = %d)"), *GetNameSafe(CharacterOwner), bProjectNavMeshWalking);
@@ -3725,14 +3652,13 @@ void UVRCharacterMovementComponent::SimulateMovement(float DeltaSeconds)
 	}
 
 	const bool bIsSimulatedProxy = (CharacterOwner->GetLocalRole() == ROLE_SimulatedProxy);
+	const FRepMovement& ConstRepMovement = CharacterOwner->GetReplicatedMovement();
 
-
-	FRepMovement ReppedMovement = CharacterOwner->GetReplicatedMovement();
 	// Workaround for replication not being updated initially
 	if (bIsSimulatedProxy &&
-		ReppedMovement.Location.IsZero() &&
-		ReppedMovement.Rotation.IsZero() &&
-		ReppedMovement.LinearVelocity.IsZero())
+		ConstRepMovement.Location.IsZero() &&
+		ConstRepMovement.Rotation.IsZero() &&
+		ConstRepMovement.LinearVelocity.IsZero())
 	{
 		return;
 	}
@@ -3791,7 +3717,7 @@ void UVRCharacterMovementComponent::SimulateMovement(float DeltaSeconds)
 		}
 
 		const bool bSimGravityDisabled = (bIsSimulatedProxy && CharacterOwner->bSimGravityDisabled);
-		const bool bZeroReplicatedGroundVelocity = (bIsSimulatedProxy && IsMovingOnGround() && CharacterOwner->GetReplicatedMovement().LinearVelocity.IsZero());
+		const bool bZeroReplicatedGroundVelocity = (bIsSimulatedProxy && IsMovingOnGround() && ConstRepMovement.LinearVelocity.IsZero());
 
 		// bSimGravityDisabled means velocity was zero when replicated and we were stuck in something. Avoid external changes in velocity as well.
 		// Being in ground movement with zero velocity, we cannot simulate proxy velocities safely because we might not get any further updates from the server.
@@ -4249,28 +4175,19 @@ bool UVRCharacterMovementComponent::ServerCheckClientErrorVR(float ClientTimeSta
 	// Check location difference against global setting
 	if (!bIgnoreClientMovementErrorChecksAndCorrection)
 	{
-		const FVector LocDiff = UpdatedComponent->GetComponentLocation() - ClientWorldLocation;
+		//const FVector LocDiff = UpdatedComponent->GetComponentLocation() - ClientWorldLocation;
 
 #if ROOT_MOTION_DEBUG
 		if (RootMotionSourceDebug::CVarDebugRootMotionSources.GetValueOnAnyThread() == 1)
 		{
+			const FVector LocDiff = UpdatedComponent->GetComponentLocation() - ClientWorldLocation;
 			FString AdjustedDebugString = FString::Printf(TEXT("ServerCheckClientError LocDiff(%.1f) ExceedsAllowablePositionError(%d) TimeStamp(%f)"),
 				LocDiff.Size(), GetDefault<AGameNetworkManager>()->ExceedsAllowablePositionError(LocDiff), ClientTimeStamp);
 			RootMotionSourceDebug::PrintOnScreen(*CharacterOwner, AdjustedDebugString);
 		}
 #endif
 
-		const AGameNetworkManager* GameNetworkManager = (const AGameNetworkManager*)(AGameNetworkManager::StaticClass()->GetDefaultObject());
-		if (GameNetworkManager->ExceedsAllowablePositionError(LocDiff))
-		{
-			bNetworkLargeClientCorrection = (LocDiff.SizeSquared() > FMath::Square(NetworkLargeClientCorrectionDistance));
-			return true;
-
-		}
-
-		// Check for disagreement in movement mode
-		const uint8 CurrentPackedMovementMode = PackNetworkMovementMode();
-		if (CurrentPackedMovementMode != ClientMovementMode)
+		if (ServerExceedsAllowablePositionError(ClientTimeStamp, DeltaTime, Accel, ClientWorldLocation, RelativeClientLocation, ClientMovementBase, ClientBaseBoneName, ClientMovementMode))
 		{
 			return true;
 		}

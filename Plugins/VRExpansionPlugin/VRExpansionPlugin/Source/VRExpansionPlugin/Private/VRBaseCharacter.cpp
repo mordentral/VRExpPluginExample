@@ -18,12 +18,10 @@ AVRBaseCharacter::AVRBaseCharacter(const FObjectInitializer& ObjectInitializer)
 
 {
 
-	FRepMovement ReppedMove = this->GetReplicatedMovement();
+	FRepMovement& MovementRep = GetReplicatedMovement_Mutable();
 	
 	// Remove the movement jitter with slow speeds
-	ReppedMove.LocationQuantizationLevel = EVectorQuantization::RoundTwoDecimals;
-
-	SetReplicatedMovement(ReppedMove);
+	MovementRep.LocationQuantizationLevel = EVectorQuantization::RoundTwoDecimals;
 
 	if (UCapsuleComponent * cap = GetCapsuleComponent())
 	{
@@ -97,7 +95,7 @@ AVRBaseCharacter::AVRBaseCharacter(const FObjectInitializer& ObjectInitializer)
 	// This is for smooth turning, we have more of a use for this than FPS characters do
 	// Due to roll/pitch almost never being off 0 for VR the cost is just one byte so i'm fine defaulting it here
 	// End users can reset to byte components if they ever want too.
-	ReplicatedMovement.RotationQuantizationLevel = ERotatorQuantization::ShortComponents;
+	MovementRep.RotationQuantizationLevel = ERotatorQuantization::ShortComponents;
 
 	VRReplicateCapsuleHeight = false;
 
@@ -120,7 +118,10 @@ void AVRBaseCharacter::GetLifetimeReplicatedProps(TArray< class FLifetimePropert
 	DOREPLIFETIME_CONDITION(AVRBaseCharacter, VRReplicateCapsuleHeight, COND_None);
 	DOREPLIFETIME_CONDITION(AVRBaseCharacter, ReplicatedCapsuleHeight, COND_SimulatedOnly);
 
+	PRAGMA_DISABLE_DEPRECATION_WARNINGS
 	DISABLE_REPLICATED_PROPERTY(AActor, ReplicatedMovement);
+	PRAGMA_ENABLE_DEPRECATION_WARNINGS
+
 	DOREPLIFETIME_CONDITION_NOTIFY(AVRBaseCharacter, ReplicatedMovementVR, COND_SimulatedOrPhysics, REPNOTIFY_Always);
 }
 
@@ -129,8 +130,7 @@ void AVRBaseCharacter::PreReplication(IRepChangedPropertyTracker & ChangedProper
 	Super::PreReplication(ChangedPropertyTracker);
 
 	DOREPLIFETIME_ACTIVE_OVERRIDE(AVRBaseCharacter, ReplicatedCapsuleHeight, VRReplicateCapsuleHeight);
-
-	DOREPLIFETIME_ACTIVE_OVERRIDE(AVRBaseCharacter, ReplicatedMovementVR, bReplicateMovement);
+	DOREPLIFETIME_ACTIVE_OVERRIDE(AVRBaseCharacter, ReplicatedMovementVR, IsReplicatingMovement());
 }
 
 USkeletalMeshComponent* AVRBaseCharacter::GetIKMesh_Implementation() const
@@ -246,7 +246,7 @@ void AVRBaseCharacter::NotifyOfTeleport()
 
 void AVRBaseCharacter::OnRep_ReplicatedMovement()
 {
-	FRepMovement ReppedMovement = this->GetReplicatedMovement();
+	FRepMovement& ReppedMovement = GetReplicatedMovement_Mutable();
 
 	ReppedMovement.AngularVelocity = ReplicatedMovementVR.AngularVelocity;
 	ReppedMovement.bRepPhysics = ReplicatedMovementVR.bRepPhysics;
@@ -254,8 +254,6 @@ void AVRBaseCharacter::OnRep_ReplicatedMovement()
 	ReppedMovement.LinearVelocity = ReplicatedMovementVR.LinearVelocity;
 	ReppedMovement.Location = ReplicatedMovementVR.Location;
 	ReppedMovement.Rotation = ReplicatedMovementVR.Rotation;
-
-	SetReplicatedMovement(ReppedMovement);
 
 	if (ReplicatedMovementVR.bJustTeleported && !IsLocallyControlled())
 	{

@@ -856,6 +856,7 @@ void UVRRootComponent::PostEditChangeProperty(FPropertyChangedEvent& PropertyCha
 bool UVRRootComponent::MoveComponentImpl(const FVector& Delta, const FQuat& NewRotationQuat, bool bSweep, FHitResult* OutHit, EMoveComponentFlags MoveFlags, ETeleportType Teleport)
 {
 	SCOPE_CYCLE_COUNTER(STAT_VRRootMovement);
+	//CSV_SCOPED_TIMING_STAT(PrimitiveComponent, MoveComponentTime);
 
 	// static things can move before they are registered (e.g. immediately after streaming), but not after.
 	if (IsPendingKill() || (this->Mobility == EComponentMobility::Static && IsRegistered()))//|| CheckStaticMobilityAndWarn(PrimitiveComponentStatics::MobilityWarnText))
@@ -946,12 +947,13 @@ bool UVRRootComponent::MoveComponentImpl(const FVector& Delta, const FQuat& NewR
 #endif 
 			UWorld* const MyWorld = GetWorld();
 
-			const bool bForceGatherOverlaps = !ShouldCheckOverlapFlagToQueueOverlaps(*this);
-			
+			static const FName TraceTagName = TEXT("MoveComponent");
+			const bool bForceGatherOverlaps = !ShouldCheckOverlapFlagToQueueOverlaps(*this);		
 			FComponentQueryParams Params(/*PrimitiveComponentStatics::MoveComponentName*//*"MoveComponent"*/SCENE_QUERY_STAT(MoveComponent), Actor);
 			FCollisionResponseParams ResponseParam;
 			InitSweepCollisionParams(Params, ResponseParam);
 			Params.bIgnoreTouches |= !(GetGenerateOverlapEvents() || bForceGatherOverlaps);
+			Params.TraceTag = TraceTagName;
 			bool const bHadBlockingHit = MyWorld->ComponentSweepMulti(Hits, this, TraceStart, TraceEnd, InitialRotationQuat, Params);
 			//bool const bHadBlockingHit = MyWorld->SweepMultiByChannel(Hits, TraceStart, TraceEnd, InitialRotationQuat, this->GetCollisionObjectType(), this->GetCollisionShape(), Params, ResponseParam);
 
@@ -1156,6 +1158,16 @@ bool UVRRootComponent::MoveComponentImpl(const FVector& Delta, const FQuat& NewR
 bool UVRRootComponent::UpdateOverlapsImpl(const TOverlapArrayView* NewPendingOverlaps, bool bDoNotifies, const TOverlapArrayView* OverlapsAtEndLocation)
 {
 	//SCOPE_CYCLE_COUNTER(STAT_UpdateOverlaps);
+	SCOPE_CYCLE_UOBJECT(ComponentScope, this);
+
+	// if we haven't begun play, we're still setting things up (e.g. we might be inside one of the construction scripts)
+	// so we don't want to generate overlaps yet. There is no need to update children yet either, they will update once we are allowed to as well.
+	const AActor* const MyActor = GetOwner();
+	if (MyActor && !MyActor->HasActorBegunPlay() && !MyActor->IsActorBeginningPlay())
+	{
+		return false;
+	}
+
 	bool bCanSkipUpdateOverlaps = true;
 
 	// first, dispatch any pending overlaps
@@ -1163,10 +1175,7 @@ bool UVRRootComponent::UpdateOverlapsImpl(const TOverlapArrayView* NewPendingOve
 	{
 		bCanSkipUpdateOverlaps = false;
 
-		// if we haven't begun play, we're still setting things up (e.g. we might be inside one of the construction scripts)
-		// so we don't want to generate overlaps yet.
-		AActor* const MyActor = GetOwner();
-		if (MyActor && MyActor->IsActorInitialized())
+		if (MyActor)
 		{
 			const FTransform PrevTransform = GetComponentTransform();
 			// If we are the root component we ignore child components. Those children will update their overlaps when we descend into the child tree.
