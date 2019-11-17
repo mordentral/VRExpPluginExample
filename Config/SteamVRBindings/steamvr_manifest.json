@@ -1,0 +1,258 @@
+{
+	"actions": [
+		{
+			"name": "/actions/main/in/controllerleft",
+			"type": "pose",
+			"requirement": "optional"
+		},
+		{
+			"name": "/actions/main/in/controllerright",
+			"type": "pose",
+			"requirement": "optional"
+		},
+		{
+			"name": "/actions/main/in/special1",
+			"type": "pose",
+			"requirement": "optional"
+		},
+		{
+			"name": "/actions/main/in/special2",
+			"type": "pose",
+			"requirement": "optional"
+		},
+		{
+			"name": "/actions/main/in/special3",
+			"type": "pose",
+			"requirement": "optional"
+		},
+		{
+			"name": "/actions/main/in/special4",
+			"type": "pose",
+			"requirement": "optional"
+		},
+		{
+			"name": "/actions/main/in/special5",
+			"type": "pose",
+			"requirement": "optional"
+		},
+		{
+			"name": "/actions/main/in/special6",
+			"type": "pose",
+			"requirement": "optional"
+		},
+		{
+			"name": "/actions/main/in/special7",
+			"type": "pose",
+			"requirement": "optional"
+		},
+		{
+			"name": "/actions/main/in/special8",
+			"type": "pose",
+			"requirement": "optional"
+		},
+		{
+			"name": "/actions/main/in/skeletonleft",
+			"type": "skeleton",
+			"skeleton": "/skeleton/hand/left",
+			"requirement": "optional"
+		},
+		{
+			"name": "/actions/main/in/skeletonright",
+			"type": "skeleton",
+			"skeleton": "/skeleton/hand/right",
+			"requirement": "optional"
+		},
+		{
+			"name": "/actions/main/in/open_console",
+			"type": "boolean",
+			"requirement": "optional"
+		},
+		{
+			"name": "/actions/main/out/vibrateleft",
+			"type": "vibration",
+			"requirement": "optional"
+		},
+		{
+			"name": "/actions/main/out/vibrateright",
+			"type": "vibration",
+			"requirement": "optional"
+		},
+		{
+			"name": "/actions/main/in/TeleportRight",
+			"type": "boolean"
+		},
+		{
+			"name": "/actions/main/in/SideGripPressedR",
+			"type": "boolean"
+		},
+		{
+			"name": "/actions/main/in/SideGripPressedL",
+			"type": "boolean"
+		},
+		{
+			"name": "/actions/main/in/GrabLeft",
+			"type": "boolean"
+		},
+		{
+			"name": "/actions/main/in/GrabRight",
+			"type": "boolean"
+		},
+		{
+			"name": "/actions/main/in/TeleportLeft",
+			"type": "boolean"
+		},
+		{
+			"name": "/actions/main/in/LaserBeamLeft",
+			"type": "boolean"
+		},
+		{
+			"name": "/actions/main/in/LaserBeamRight",
+			"type": "boolean"
+		},
+		{
+			"name": "/actions/main/in/MotionControllerThumbLeft_X,MotionControllerThumbLeft_Y X Y_axis2d",
+			"type": "vector2"
+		},
+		{
+			"name": "/actions/main/in/MotionControllerThumbRight_X,MotionControllerThumbRight_Y X Y_axis2d",
+			"type": "vector2"
+		},
+		{
+			"name": "/actions/main/in/ControllerMovementLeft axis",
+			"type": "vector1"
+		},
+		{
+			"name": "/actions/main/in/ControllerMovementRight axis",
+			"type": "vector1"
+		}
+	],
+	"action_sets": [
+		{
+			"name": "/actions/main",
+			"usage": "leftright"
+		}
+	],
+	"default_bindings": [
+		{
+			"controller_type": "knuckles",
+			"binding_url": "knuckles.json"
+		},
+		{
+			"controller_type": "vive_controller",
+			"binding_url": "vive_controller.json"
+		},
+		{
+			"controller_type": "vive_cosmos_controller",
+			"binding_url": "vive_cosmos_controller.json"
+		},
+		{
+			"controller_type": "oculus_touch",
+			"binding_url": "oculus_touch.json"
+		},
+		{
+			"controller_type": "holographic_controller",
+			"binding_url": "holographic_controller.json"
+		},
+		{
+			"controller_type": "indexhmd",
+			"binding_url": "indexhmd.json"
+		},
+		{
+			"controller_type": "vive",
+			"binding_url": "vive.json"
+		},
+		{
+			"controller_type": "vive_pro",
+			"binding_url": "vive_pro.json"
+		},
+		{
+			"controller_type": "rift",
+			"binding_url": "rift.json"
+		},
+		{
+			"controller_type": "vive_tracker_camera",
+			"binding_url": "vive_tracker_camera.json"
+		},
+		{
+			"controller_type": "gamepad",
+			"binding_url": "gamepad.json"
+		},
+		{
+			"controller_type": "gamepad",
+			"binding_url": "gamepad.json"
+		},
+		{
+			"controller_type": "holographic_controller",
+			"binding_url": "holographic_controller.json"
+		},
+		{
+			"controller_type": "indexhmd",
+			"binding_url": "indexhmd.json"
+		},
+		{
+			"controller_type": "knuckles",
+			"binding_url": "knuckles.json"
+		},
+		{
+			"controller_type": "oculus_touch",
+			"binding_url": "oculus_touch.json"
+		},
+		{
+			"controller_type": "rift",
+			"binding_url": "rift.json"
+		},
+		{
+			"controller_type": "vive",
+			"binding_url": "vive.json"
+		},
+		{
+			"controller_type": "vive_controller",
+			"binding_url": "vive_controller.json"
+		},
+		{
+			"controller_type": "vive_cosmos_controller",
+			"binding_url": "vive_cosmos_controller.json"
+		},
+		{
+			"controller_type": "vive_pro",
+			"binding_url": "vive_pro.json"
+		},
+		{
+			"controller_type": "vive_tracker_camera",
+			"binding_url": "vive_tracker_camera.json"
+		}
+	],
+	"localization": [
+		{
+			"language_tag": "en_us",
+			"/actions/main/in/controllerleft": "Left Controller [Pose]",
+			"/actions/main/in/controllerright": "Right Controller [Pose]",
+			"/actions/main/in/special1": "Special 1 [Tracker]",
+			"/actions/main/in/special2": "Special 2 [Tracker]",
+			"/actions/main/in/special3": "Special 3 [Tracker]",
+			"/actions/main/in/special4": "Special 4 [Tracker]",
+			"/actions/main/in/special5": "Special 5 [Tracker]",
+			"/actions/main/in/special6": "Special 6 [Tracker]",
+			"/actions/main/in/special7": "Special 7 [Tracker]",
+			"/actions/main/in/special8": "Special 8 [Tracker]",
+			"/actions/main/in/skeletonleft": "Skeleton (Left)",
+			"/actions/main/in/skeletonright": "Skeleton (Right)",
+			"/actions/main/in/open_console": "Open Console",
+			"/actions/main/out/vibrateleft": "Haptic (Left)",
+			"/actions/main/out/vibrateright": "Haptic (Right)",
+			"/actions/main/in/TeleportRight": "TeleportRight",
+			"/actions/main/in/SideGripPressedR": "SideGripPressedR",
+			"/actions/main/in/SideGripPressedL": "SideGripPressedL",
+			"/actions/main/in/GrabLeft": "GrabLeft",
+			"/actions/main/in/GrabRight": "GrabRight",
+			"/actions/main/in/TeleportLeft": "TeleportLeft",
+			"/actions/main/in/LaserBeamLeft": "LaserBeamLeft",
+			"/actions/main/in/LaserBeamRight": "LaserBeamRight",
+			"/actions/main/in/MotionControllerThumbLeft_X,MotionControllerThumbLeft_Y X Y_axis2d": "MotionControllerThumbLeft",
+			"/actions/main/in/MotionControllerThumbRight_X,MotionControllerThumbRight_Y X Y_axis2d": "MotionControllerThumbRight",
+			"/actions/main/in/ControllerMovementLeft axis": "ControllerMovementLeft",
+			"/actions/main/in/ControllerMovementRight axis": "ControllerMovementRight",
+			"/actions/main": "Main Game Actions"
+		}
+	]
+}

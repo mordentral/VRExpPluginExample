@@ -1,0 +1,209 @@
+{
+	"name": "Default bindings for Vive Trackers",
+	"controller_type": "vive_tracker_camera",
+	"bindings":
+	{
+		"/actions/main":
+		{
+			"sources": [
+				{
+					"mode": "button",
+					"path": "/user/hand/right/input/a",
+					"inputs":
+					{
+						"click":
+						{
+							"output": "/actions/main/in/TeleportRight"
+						}
+					}
+				},
+				{
+					"mode": "button",
+					"path": "/user/hand/right/input/joystick",
+					"inputs":
+					{
+						"click":
+						{
+							"output": "/actions/main/in/TeleportRight"
+						}
+					}
+				},
+				{
+					"mode": "button",
+					"path": "/user/hand/right/input/grip",
+					"inputs":
+					{
+						"click":
+						{
+							"output": "/actions/main/in/SideGripPressedR"
+						}
+					}
+				},
+				{
+					"mode": "button",
+					"path": "/user/hand/left/input/grip",
+					"inputs":
+					{
+						"click":
+						{
+							"output": "/actions/main/in/SideGripPressedL"
+						}
+					}
+				},
+				{
+					"mode": "trigger",
+					"path": "/user/hand/left/input/trigger",
+					"inputs":
+					{
+						"click":
+						{
+							"output": "/actions/main/in/GrabLeft"
+						}
+					}
+				},
+				{
+					"mode": "trigger",
+					"path": "/user/hand/right/input/trigger",
+					"inputs":
+					{
+						"click":
+						{
+							"output": "/actions/main/in/GrabRight"
+						}
+					}
+				},
+				{
+					"mode": "button",
+					"path": "/user/hand/left/input/a",
+					"inputs":
+					{
+						"click":
+						{
+							"output": "/actions/main/in/TeleportLeft"
+						}
+					}
+				},
+				{
+					"mode": "button",
+					"path": "/user/hand/left/input/joystick",
+					"inputs":
+					{
+						"click":
+						{
+							"output": "/actions/main/in/TeleportLeft"
+						}
+					}
+				},
+				{
+					"mode": "joystick",
+					"path": "/user/hand/left/input/joystick",
+					"inputs":
+					{
+						"position":
+						{
+							"output": "/actions/main/in/MotionControllerThumbLeft_X,MotionControllerThumbLeft_Y X Y_axis2d"
+						}
+					}
+				},
+				{
+					"mode": "joystick",
+					"path": "/user/hand/right/input/joystick",
+					"inputs":
+					{
+						"position":
+						{
+							"output": "/actions/main/in/MotionControllerThumbRight_X,MotionControllerThumbRight_Y X Y_axis2d"
+						}
+					}
+				},
+				{
+					"mode": "scalar_constant",
+					"path": "/user/hand/left/input/b",
+					"inputs":
+					{
+						"value":
+						{
+							"output": "/actions/main/in/ControllerMovementLeft axis"
+						}
+					}
+				},
+				{
+					"mode": "scalar_constant",
+					"path": "/user/hand/left/input/a",
+					"inputs":
+					{
+						"value":
+						{
+							"output": "/actions/main/in/ControllerMovementLeft axis"
+						}
+					}
+				},
+				{
+					"mode": "scalar_constant",
+					"path": "/user/hand/right/input/b",
+					"inputs":
+					{
+						"value":
+						{
+							"output": "/actions/main/in/ControllerMovementRight axis"
+						}
+					}
+				},
+				{
+					"mode": "scalar_constant",
+					"path": "/user/hand/right/input/a",
+					"inputs":
+					{
+						"value":
+						{
+							"output": "/actions/main/in/ControllerMovementRight axis"
+						}
+					}
+				}
+			],
+			"poses": [
+				{
+					"output": "/actions/main/in/special1",
+					"path": "/user/hand/left/pose/back",
+					"requirement": "optional"
+				},
+				{
+					"output": "/actions/main/in/special2",
+					"path": "/user/hand/right/pose/back",
+					"requirement": "optional"
+				},
+				{
+					"output": "/actions/main/in/special3",
+					"path": "/user/hand/left/pose/front",
+					"requirement": "optional"
+				},
+				{
+					"output": "/actions/main/in/special4",
+					"path": "/user/hand/right/pose/front",
+					"requirement": "optional"
+				},
+				{
+					"output": "/actions/main/in/special5",
+					"path": "/user/hand/left/pose/frontandrolled",
+					"requirement": "optional"
+				},
+				{
+					"output": "/actions/main/in/special6",
+					"path": "/user/hand/right/pose/frontandrolled",
+					"requirement": "optional"
+				},
+				{
+					"output": "/actions/main/in/special7",
+					"path": "/user/hand/left/pose/pistolgrip",
+					"requirement": "optional"
+				},
+				{
+					"output": "/actions/main/in/special8",
+					"path": "/user/hand/right/pose/pistolgrip",
+					"requirement": "optional"
+				}
+			]
+		}
+	},
+	"description": "Virtual Reality BP Game Template"
+}

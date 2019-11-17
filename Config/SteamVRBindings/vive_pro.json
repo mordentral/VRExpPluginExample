@@ -1,0 +1,12 @@
+{
+	"name": "Default bindings for Vive Pro Headset",
+	"controller_type": "vive_pro",
+	"bindings":
+	{
+		"/actions/main":
+		{
+			"sources": []
+		}
+	},
+	"description": "Virtual Reality BP Game Template"
+}
