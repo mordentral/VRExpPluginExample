@@ -2063,7 +2063,7 @@ void UGripMotionControllerComponent::DropAndSocket_Implementation(const FBPActor
 	}
 
 	// Broadcast a new drop
-	OnDroppedObject.Broadcast(DropBroadcastData);
+	OnDroppedObject.Broadcast(DropBroadcastData, true);
 }
 
 
@@ -2634,7 +2634,7 @@ void UGripMotionControllerComponent::Drop_Implementation(const FBPActorGripInfor
 	}
 
 	// Broadcast a new drop
-	OnDroppedObject.Broadcast(DropBroadcastData);
+	OnDroppedObject.Broadcast(DropBroadcastData, false);
 }
 
 bool UGripMotionControllerComponent::BP_IsLocallyControlled()
