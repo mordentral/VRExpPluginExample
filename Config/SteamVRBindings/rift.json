@@ -1,6 +1,7 @@
 {
 	"name": "Default bindings for Rift Headset",
 	"controller_type": "rift",
+	"last_edited_by": "UnrealEngine",
 	"bindings":
 	{
 		"/actions/main":
@@ -8,5 +9,5 @@
 			"sources": []
 		}
 	},
-	"description": "Virtual Reality BP Game Template"
+	"description": "Virtual Reality BP Game Template-10387632"
 }

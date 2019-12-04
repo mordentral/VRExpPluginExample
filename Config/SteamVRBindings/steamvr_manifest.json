@@ -78,6 +78,10 @@
 			"requirement": "optional"
 		},
 		{
+			"name": "/actions/main/in/TeleportLeft",
+			"type": "boolean"
+		},
+		{
 			"name": "/actions/main/in/TeleportRight",
 			"type": "boolean"
 		},
@@ -98,15 +102,11 @@
 			"type": "boolean"
 		},
 		{
-			"name": "/actions/main/in/TeleportLeft",
+			"name": "/actions/main/in/LaserBeamRight",
 			"type": "boolean"
 		},
 		{
 			"name": "/actions/main/in/LaserBeamLeft",
-			"type": "boolean"
-		},
-		{
-			"name": "/actions/main/in/LaserBeamRight",
 			"type": "boolean"
 		},
 		{
@@ -133,50 +133,6 @@
 		}
 	],
 	"default_bindings": [
-		{
-			"controller_type": "knuckles",
-			"binding_url": "knuckles.json"
-		},
-		{
-			"controller_type": "vive_controller",
-			"binding_url": "vive_controller.json"
-		},
-		{
-			"controller_type": "vive_cosmos_controller",
-			"binding_url": "vive_cosmos_controller.json"
-		},
-		{
-			"controller_type": "oculus_touch",
-			"binding_url": "oculus_touch.json"
-		},
-		{
-			"controller_type": "holographic_controller",
-			"binding_url": "holographic_controller.json"
-		},
-		{
-			"controller_type": "indexhmd",
-			"binding_url": "indexhmd.json"
-		},
-		{
-			"controller_type": "vive",
-			"binding_url": "vive.json"
-		},
-		{
-			"controller_type": "vive_pro",
-			"binding_url": "vive_pro.json"
-		},
-		{
-			"controller_type": "rift",
-			"binding_url": "rift.json"
-		},
-		{
-			"controller_type": "vive_tracker_camera",
-			"binding_url": "vive_tracker_camera.json"
-		},
-		{
-			"controller_type": "gamepad",
-			"binding_url": "gamepad.json"
-		},
 		{
 			"controller_type": "gamepad",
 			"binding_url": "gamepad.json"
@@ -240,14 +196,14 @@
 			"/actions/main/in/open_console": "Open Console",
 			"/actions/main/out/vibrateleft": "Haptic (Left)",
 			"/actions/main/out/vibrateright": "Haptic (Right)",
+			"/actions/main/in/TeleportLeft": "TeleportLeft",
 			"/actions/main/in/TeleportRight": "TeleportRight",
 			"/actions/main/in/SideGripPressedR": "SideGripPressedR",
 			"/actions/main/in/SideGripPressedL": "SideGripPressedL",
 			"/actions/main/in/GrabLeft": "GrabLeft",
 			"/actions/main/in/GrabRight": "GrabRight",
-			"/actions/main/in/TeleportLeft": "TeleportLeft",
-			"/actions/main/in/LaserBeamLeft": "LaserBeamLeft",
 			"/actions/main/in/LaserBeamRight": "LaserBeamRight",
+			"/actions/main/in/LaserBeamLeft": "LaserBeamLeft",
 			"/actions/main/in/MotionControllerThumbLeft_X,MotionControllerThumbLeft_Y X Y_axis2d": "MotionControllerThumbLeft",
 			"/actions/main/in/MotionControllerThumbRight_X,MotionControllerThumbRight_Y X Y_axis2d": "MotionControllerThumbRight",
 			"/actions/main/in/ControllerMovementLeft axis": "ControllerMovementLeft",

@@ -1,198 +1,144 @@
 {
-	"name": "Default bindings for ValveIndex",
-	"controller_type": "knuckles",
-	"bindings":
-	{
-		"/actions/main":
-		{
-			"sources": [
-				{
-					"mode": "button",
-					"path": "/user/hand/right/input/a",
-					"inputs":
-					{
-						"click":
-						{
-							"output": "/actions/main/in/TeleportRight"
-						}
-					}
-				},
-				{
-					"mode": "button",
-					"path": "/user/hand/right/input/joystick",
-					"inputs":
-					{
-						"click":
-						{
-							"output": "/actions/main/in/TeleportRight"
-						}
-					}
-				},
-				{
-					"mode": "button",
-					"path": "/user/hand/right/input/grip",
-					"inputs":
-					{
-						"click":
-						{
-							"output": "/actions/main/in/SideGripPressedR"
-						}
-					}
-				},
-				{
-					"mode": "button",
-					"path": "/user/hand/left/input/grip",
-					"inputs":
-					{
-						"click":
-						{
-							"output": "/actions/main/in/SideGripPressedL"
-						}
-					}
-				},
-				{
-					"mode": "trigger",
-					"path": "/user/hand/left/input/trigger",
-					"inputs":
-					{
-						"click":
-						{
-							"output": "/actions/main/in/GrabLeft"
-						}
-					}
-				},
-				{
-					"mode": "trigger",
-					"path": "/user/hand/right/input/trigger",
-					"inputs":
-					{
-						"click":
-						{
-							"output": "/actions/main/in/GrabRight"
-						}
-					}
-				},
-				{
-					"mode": "button",
-					"path": "/user/hand/left/input/a",
-					"inputs":
-					{
-						"click":
-						{
-							"output": "/actions/main/in/TeleportLeft"
-						}
-					}
-				},
-				{
-					"mode": "button",
-					"path": "/user/hand/left/input/joystick",
-					"inputs":
-					{
-						"click":
-						{
-							"output": "/actions/main/in/TeleportLeft"
-						}
-					}
-				},
-				{
-					"mode": "joystick",
-					"path": "/user/hand/left/input/joystick",
-					"inputs":
-					{
-						"position":
-						{
-							"output": "/actions/main/in/MotionControllerThumbLeft_X,MotionControllerThumbLeft_Y X Y_axis2d"
-						}
-					}
-				},
-				{
-					"mode": "joystick",
-					"path": "/user/hand/right/input/joystick",
-					"inputs":
-					{
-						"position":
-						{
-							"output": "/actions/main/in/MotionControllerThumbRight_X,MotionControllerThumbRight_Y X Y_axis2d"
-						}
-					}
-				},
-				{
-					"mode": "scalar_constant",
-					"path": "/user/hand/left/input/b",
-					"inputs":
-					{
-						"value":
-						{
-							"output": "/actions/main/in/ControllerMovementLeft axis"
-						}
-					}
-				},
-				{
-					"mode": "scalar_constant",
-					"path": "/user/hand/left/input/a",
-					"inputs":
-					{
-						"value":
-						{
-							"output": "/actions/main/in/ControllerMovementLeft axis"
-						}
-					}
-				},
-				{
-					"mode": "scalar_constant",
-					"path": "/user/hand/right/input/b",
-					"inputs":
-					{
-						"value":
-						{
-							"output": "/actions/main/in/ControllerMovementRight axis"
-						}
-					}
-				},
-				{
-					"mode": "scalar_constant",
-					"path": "/user/hand/right/input/a",
-					"inputs":
-					{
-						"value":
-						{
-							"output": "/actions/main/in/ControllerMovementRight axis"
-						}
-					}
-				}
-			],
-			"poses": [
-				{
-					"output": "/actions/main/in/controllerleft",
-					"path": "/user/hand/left/pose/raw",
-					"requirement": "optional"
-				},
-				{
-					"output": "/actions/main/in/controllerright",
-					"path": "/user/hand/right/pose/raw"
-				}
-			],
-			"skeleton": [
-				{
-					"output": "/actions/main/in/skeletonleft",
-					"path": "/user/hand/left/input/skeleton/left"
-				},
-				{
-					"output": "/actions/main/in/skeletonright",
-					"path": "/user/hand/right/input/skeleton/right"
-				}
-			],
-			"haptics": [
-				{
-					"output": "/actions/main/out/vibrateleft",
-					"path": "/user/hand/left/output/haptic"
-				},
-				{
-					"output": "/actions/main/out/vibrateright",
-					"path": "/user/hand/right/output/haptic"
-				}
-			]
-		}
-	},
-	"description": "Virtual Reality BP Game Template"
+   "action_manifest_version" : 0,
+   "alias_info" : {},
+   "app_key" : "application.generated.ue.virtual-reality-bp-game-template-10387632.ue4editor-win64-debuggame.exe",
+   "bindings" : {
+      "/actions/main" : {
+         "haptics" : [
+            {
+               "output" : "/actions/main/out/vibrateleft",
+               "path" : "/user/hand/left/output/haptic"
+            },
+            {
+               "output" : "/actions/main/out/vibrateright",
+               "path" : "/user/hand/right/output/haptic"
+            }
+         ],
+         "poses" : [
+            {
+               "output" : "/actions/main/in/controllerleft",
+               "path" : "/user/hand/left/pose/raw",
+               "requirement" : "optional"
+            },
+            {
+               "output" : "/actions/main/in/controllerright",
+               "path" : "/user/hand/right/pose/raw"
+            }
+         ],
+         "skeleton" : [
+            {
+               "output" : "/actions/main/in/skeletonleft",
+               "path" : "/user/hand/left/input/skeleton/left"
+            },
+            {
+               "output" : "/actions/main/in/skeletonright",
+               "path" : "/user/hand/right/input/skeleton/right"
+            }
+         ],
+         "sources" : [
+            {
+               "inputs" : {
+                  "touch" : {
+                     "output" : "/actions/main/in/TeleportLeft"
+                  }
+               },
+               "mode" : "joystick",
+               "path" : "/user/hand/left/input/thumbstick"
+            },
+            {
+               "inputs" : {
+                  "touch" : {
+                     "output" : "/actions/main/in/TeleportRight"
+                  }
+               },
+               "mode" : "joystick",
+               "path" : "/user/hand/right/input/thumbstick"
+            },
+            {
+               "inputs" : {
+                  "click" : {
+                     "output" : "/actions/main/in/SideGripPressedR"
+                  }
+               },
+               "mode" : "button",
+               "path" : "/user/hand/right/input/a"
+            },
+            {
+               "inputs" : {
+                  "click" : {
+                     "output" : "/actions/main/in/SideGripPressedL"
+                  }
+               },
+               "mode" : "button",
+               "path" : "/user/hand/left/input/a"
+            },
+            {
+               "inputs" : {
+                  "click" : {
+                     "output" : "/actions/main/in/GrabLeft"
+                  }
+               },
+               "mode" : "button",
+               "path" : "/user/hand/left/input/trigger"
+            },
+            {
+               "inputs" : {
+                  "click" : {
+                     "output" : "/actions/main/in/GrabRight"
+                  }
+               },
+               "mode" : "button",
+               "path" : "/user/hand/right/input/trigger"
+            },
+            {
+               "inputs" : {
+                  "click" : {
+                     "output" : "/actions/main/in/LaserBeamRight"
+                  }
+               },
+               "mode" : "button",
+               "path" : "/user/hand/right/input/b"
+            },
+            {
+               "inputs" : {
+                  "click" : {
+                     "output" : "/actions/main/in/LaserBeamLeft"
+                  }
+               },
+               "mode" : "button",
+               "path" : "/user/hand/left/input/b"
+            },
+            {
+               "inputs" : {
+                  "position" : {
+                     "output" : "/actions/main/in/MotionControllerThumbLeft_X,MotionControllerThumbLeft_Y X Y_axis2d"
+                  },
+                  "touch" : {
+                     "output" : "/actions/main/in/controllermovementleft axis"
+                  }
+               },
+               "mode" : "joystick",
+               "path" : "/user/hand/left/input/thumbstick"
+            },
+            {
+               "inputs" : {
+                  "position" : {
+                     "output" : "/actions/main/in/MotionControllerThumbRight_X,MotionControllerThumbRight_Y X Y_axis2d"
+                  },
+                  "touch" : {
+                     "output" : "/actions/main/in/controllermovementright axis"
+                  }
+               },
+               "mode" : "joystick",
+               "path" : "/user/hand/right/input/thumbstick"
+            }
+         ]
+      }
+   },
+   "category" : "steamvr_input",
+   "controller_type" : "knuckles",
+   "description" : "Virtual Reality BP Game Template-10387632",
+   "name" : "My Virtual Reality BP Game Template-10387632 [UE Editor] configuration for Index Controller",
+   "options" : {},
+   "simulated_actions" : []
 }

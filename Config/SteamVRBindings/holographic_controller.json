@@ -1,24 +1,25 @@
 {
 	"name": "Default bindings for MixedReality",
 	"controller_type": "holographic_controller",
+	"last_edited_by": "UnrealEngine",
 	"bindings":
 	{
 		"/actions/main":
 		{
 			"sources": [
 				{
-					"mode": "button",
-					"path": "/user/hand/right/input/a",
+					"mode": "joystick",
+					"path": "/user/hand/left/input/joystick",
 					"inputs":
 					{
 						"click":
 						{
-							"output": "/actions/main/in/TeleportRight"
+							"output": "/actions/main/in/TeleportLeft"
 						}
 					}
 				},
 				{
-					"mode": "button",
+					"mode": "joystick",
 					"path": "/user/hand/right/input/joystick",
 					"inputs":
 					{
@@ -51,7 +52,7 @@
 					}
 				},
 				{
-					"mode": "trigger",
+					"mode": "button",
 					"path": "/user/hand/left/input/trigger",
 					"inputs":
 					{
@@ -62,7 +63,7 @@
 					}
 				},
 				{
-					"mode": "trigger",
+					"mode": "button",
 					"path": "/user/hand/right/input/trigger",
 					"inputs":
 					{
@@ -73,24 +74,32 @@
 					}
 				},
 				{
-					"mode": "button",
-					"path": "/user/hand/left/input/a",
+					"mode": "dpad",
+					"path": "/user/hand/right/input/joystick",
+					"parameters":
+					{
+						"sub_mode": "click"
+					},
 					"inputs":
 					{
-						"click":
+						"south":
 						{
-							"output": "/actions/main/in/TeleportLeft"
+							"output": "/actions/main/in/LaserBeamRight"
 						}
 					}
 				},
 				{
-					"mode": "button",
+					"mode": "dpad",
 					"path": "/user/hand/left/input/joystick",
+					"parameters":
+					{
+						"sub_mode": "click"
+					},
 					"inputs":
 					{
-						"click":
+						"south":
 						{
-							"output": "/actions/main/in/TeleportLeft"
+							"output": "/actions/main/in/LaserBeamLeft"
 						}
 					}
 				},
@@ -118,7 +127,7 @@
 				},
 				{
 					"mode": "scalar_constant",
-					"path": "/user/hand/left/input/b",
+					"path": "/user/hand/left/input/joystick",
 					"inputs":
 					{
 						"value":
@@ -129,29 +138,7 @@
 				},
 				{
 					"mode": "scalar_constant",
-					"path": "/user/hand/left/input/a",
-					"inputs":
-					{
-						"value":
-						{
-							"output": "/actions/main/in/ControllerMovementLeft axis"
-						}
-					}
-				},
-				{
-					"mode": "scalar_constant",
-					"path": "/user/hand/right/input/b",
-					"inputs":
-					{
-						"value":
-						{
-							"output": "/actions/main/in/ControllerMovementRight axis"
-						}
-					}
-				},
-				{
-					"mode": "scalar_constant",
-					"path": "/user/hand/right/input/a",
+					"path": "/user/hand/right/input/joystick",
 					"inputs":
 					{
 						"value":
@@ -194,5 +181,5 @@
 			]
 		}
 	},
-	"description": "Virtual Reality BP Game Template"
+	"description": "Virtual Reality BP Game Template-10387632"
 }
