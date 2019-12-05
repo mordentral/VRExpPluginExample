@@ -57,7 +57,7 @@
             {
                "inputs" : {
                   "click" : {
-                     "output" : "/actions/main/in/SideGripPressedR"
+                     "output" : "/actions/main/in/AlternateGripRight"
                   }
                },
                "mode" : "button",
@@ -66,7 +66,7 @@
             {
                "inputs" : {
                   "click" : {
-                     "output" : "/actions/main/in/SideGripPressedL"
+                     "output" : "/actions/main/in/AlternateGripLeft"
                   }
                },
                "mode" : "button",
@@ -75,20 +75,24 @@
             {
                "inputs" : {
                   "click" : {
-                     "output" : "/actions/main/in/GrabLeft"
+                     "output" : "/actions/main/in/PrimaryGripLeft"
                   }
                },
                "mode" : "button",
-               "path" : "/user/hand/left/input/trigger"
+               "parameters" : {
+                  "click_activate_threshold" : "1",
+                  "click_deactivate_threshold" : "0.95"
+               },
+               "path" : "/user/hand/left/input/grip"
             },
             {
                "inputs" : {
                   "click" : {
-                     "output" : "/actions/main/in/GrabRight"
+                     "output" : "/actions/main/in/PrimaryGripRight"
                   }
                },
                "mode" : "button",
-               "path" : "/user/hand/right/input/trigger"
+               "path" : "/user/hand/right/input/grip"
             },
             {
                "inputs" : {
@@ -107,6 +111,24 @@
                },
                "mode" : "button",
                "path" : "/user/hand/left/input/b"
+            },
+            {
+               "inputs" : {
+                  "click" : {
+                     "output" : "/actions/main/in/UseHeldObjectLeft"
+                  }
+               },
+               "mode" : "button",
+               "path" : "/user/hand/left/input/trigger"
+            },
+            {
+               "inputs" : {
+                  "click" : {
+                     "output" : "/actions/main/in/UseHeldObjectRight"
+                  }
+               },
+               "mode" : "button",
+               "path" : "/user/hand/right/input/trigger"
             },
             {
                "inputs" : {
