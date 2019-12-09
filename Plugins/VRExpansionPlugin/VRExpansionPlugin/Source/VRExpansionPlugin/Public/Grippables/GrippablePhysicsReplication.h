@@ -20,6 +20,8 @@
 #include "PhysicsReplication.h"
 #endif
 
+#include "Misc/ScopeRWLock.h"
+
 #include "GrippablePhysicsReplication.generated.h"
 //#include "GrippablePhysicsReplication.generated.h"
 
@@ -35,6 +37,7 @@
 	ECVF_ReadOnly);*/
 
 #if WITH_PHYSX
+
 class FPhysicsReplicationVR : public FPhysicsReplication
 {
 public:
@@ -165,20 +168,29 @@ public:
 	}
 };
 
-struct BodyInstancePair
+struct FContactModBodyInstancePair
 {
 	bool bBody1IgnoreEntireActor;
 	bool bBody2IgnoreEntireActor;
 
 	FPhysicsActorHandle Actor1;
 	FPhysicsActorHandle Actor2;
+
+	FORCEINLINE bool operator==(const FContactModBodyInstancePair &Other) const
+	{
+		return (
+			(Actor1 == Other.Actor1 || Actor1 == Other.Actor2) &&
+			(Actor2 == Other.Actor2 || Actor2 == Other.Actor1)
+			);
+	}
 };
 
 class FContactModifyCallbackVR : public FContactModifyCallback
 {
 public:
 
-	TArray<BodyInstancePair> ContactsToIgnore;
+	TArray<FContactModBodyInstancePair> ContactsToIgnore;
+	FRWLock RWAccessLock;
 
 	void onContactModify(PxContactModifyPair* const pairs, PxU32 count) override
 	{
@@ -202,7 +214,9 @@ public:
 
 			if (BodyInst0->bContactModification && BodyInst1->bContactModification)
 			{
-				const BodyInstancePair* prop = ContactsToIgnore.FindByPredicate([&](const BodyInstancePair& it) {return (it.Actor1.SyncActor == PRigidBody0 && it.Actor2.SyncActor == PRigidBody1) || (it.Actor2.SyncActor == PRigidBody0 && it.Actor1.SyncActor == PRigidBody1);  });
+				FRWScopeLock(RWAccessLock, FRWScopeLockType::SLT_ReadOnly);
+
+				const FContactModBodyInstancePair* prop = ContactsToIgnore.FindByPredicate([&](const FContactModBodyInstancePair& it) {return (it.Actor1.SyncActor == PRigidBody0 && it.Actor2.SyncActor == PRigidBody1) || (it.Actor2.SyncActor == PRigidBody0 && it.Actor1.SyncActor == PRigidBody1);  });
 				if (prop)
 				{
 					for (uint32 ContactPt = 0; ContactPt < pairs[PairIdx].contacts.size(); ContactPt++)
@@ -224,7 +238,8 @@ class FCCDContactModifyCallbackVR : public FCCDContactModifyCallback
 {
 public:
 
-	TArray<BodyInstancePair> ContactsToIgnore;
+	TArray<FContactModBodyInstancePair> ContactsToIgnore;
+	FRWLock RWAccessLock;
 
 	void onCCDContactModify(PxContactModifyPair* const pairs, PxU32 count) override
 	{
@@ -249,7 +264,9 @@ public:
 
 			if (BodyInst0->bContactModification && BodyInst1->bContactModification)
 			{
-				const BodyInstancePair* prop = ContactsToIgnore.FindByPredicate([&](const BodyInstancePair& it) {return (it.Actor1.SyncActor == PRigidBody0 && it.Actor2.SyncActor == PRigidBody1) || (it.Actor2.SyncActor == PRigidBody0 && it.Actor1.SyncActor == PRigidBody1);  });
+				FRWScopeLock(RWAccessLock, FRWScopeLockType::SLT_ReadOnly);
+
+				const FContactModBodyInstancePair* prop = ContactsToIgnore.FindByPredicate([&](const FContactModBodyInstancePair& it) {return (it.Actor1.SyncActor == PRigidBody0 && it.Actor2.SyncActor == PRigidBody1) || (it.Actor2.SyncActor == PRigidBody0 && it.Actor1.SyncActor == PRigidBody1);  });
 				if (prop)
 				{
 					for (uint32 ContactPt = 0; ContactPt < pairs[PairIdx].contacts.size(); ContactPt++)
