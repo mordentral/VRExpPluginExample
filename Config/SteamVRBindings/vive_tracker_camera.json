@@ -1,0 +1,188 @@
+{
+	"name": "Default bindings for Vive Trackers",
+	"controller_type": "vive_tracker_camera",
+	"last_edited_by": "UnrealEngine",
+	"bindings":
+	{
+		"/actions/main":
+		{
+			"sources": [
+				{
+					"mode": "trackpad",
+					"path": "/user/hand/left/input/trackpad",
+					"inputs":
+					{
+						"touch":
+						{
+							"output": "/actions/main/in/TeleportLeft"
+						}
+					}
+				},
+				{
+					"mode": "trackpad",
+					"path": "/user/hand/right/input/trackpad",
+					"inputs":
+					{
+						"touch":
+						{
+							"output": "/actions/main/in/TeleportRight"
+						}
+					}
+				},
+				{
+					"mode": "button",
+					"path": "/user/hand/right/input/grip",
+					"inputs":
+					{
+						"click":
+						{
+							"output": "/actions/main/in/AlternateGripRight"
+						}
+					}
+				},
+				{
+					"mode": "button",
+					"path": "/user/hand/left/input/grip",
+					"inputs":
+					{
+						"click":
+						{
+							"output": "/actions/main/in/AlternateGripLeft"
+						}
+					}
+				},
+				{
+					"mode": "button",
+					"path": "/user/hand/left/input/trigger",
+					"inputs":
+					{
+						"click":
+						{
+							"output": "/actions/main/in/PrimaryGripLeft"
+						}
+					}
+				},
+				{
+					"mode": "button",
+					"path": "/user/hand/right/input/trigger",
+					"inputs":
+					{
+						"click":
+						{
+							"output": "/actions/main/in/PrimaryGripRight"
+						}
+					}
+				},
+				{
+					"mode": "button",
+					"path": "/user/hand/left/input/trigger",
+					"inputs":
+					{
+						"click":
+						{
+							"output": "/actions/main/in/UseHeldObjectLeft"
+						}
+					}
+				},
+				{
+					"mode": "button",
+					"path": "/user/hand/right/input/trigger",
+					"inputs":
+					{
+						"click":
+						{
+							"output": "/actions/main/in/UseHeldObjectRight"
+						}
+					}
+				},
+				{
+					"mode": "trackpad",
+					"path": "/user/hand/left/input/trackpad",
+					"inputs":
+					{
+						"position":
+						{
+							"output": "/actions/main/in/MotionControllerThumbLeft_X,MotionControllerThumbLeft_Y X Y_axis2d"
+						}
+					}
+				},
+				{
+					"mode": "trackpad",
+					"path": "/user/hand/right/input/trackpad",
+					"inputs":
+					{
+						"position":
+						{
+							"output": "/actions/main/in/MotionControllerThumbRight_X,MotionControllerThumbRight_Y X Y_axis2d"
+						}
+					}
+				},
+				{
+					"mode": "scalar_constant",
+					"path": "/user/hand/left/input/trackpad",
+					"inputs":
+					{
+						"value":
+						{
+							"output": "/actions/main/in/ControllerMovementLeft axis"
+						}
+					}
+				},
+				{
+					"mode": "scalar_constant",
+					"path": "/user/hand/right/input/trackpad",
+					"inputs":
+					{
+						"value":
+						{
+							"output": "/actions/main/in/ControllerMovementRight axis"
+						}
+					}
+				}
+			],
+			"poses": [
+				{
+					"output": "/actions/main/in/special1",
+					"path": "/user/hand/left/pose/back",
+					"requirement": "optional"
+				},
+				{
+					"output": "/actions/main/in/special2",
+					"path": "/user/hand/right/pose/back",
+					"requirement": "optional"
+				},
+				{
+					"output": "/actions/main/in/special3",
+					"path": "/user/hand/left/pose/front",
+					"requirement": "optional"
+				},
+				{
+					"output": "/actions/main/in/special4",
+					"path": "/user/hand/right/pose/front",
+					"requirement": "optional"
+				},
+				{
+					"output": "/actions/main/in/special5",
+					"path": "/user/hand/left/pose/frontandrolled",
+					"requirement": "optional"
+				},
+				{
+					"output": "/actions/main/in/special6",
+					"path": "/user/hand/right/pose/frontandrolled",
+					"requirement": "optional"
+				},
+				{
+					"output": "/actions/main/in/special7",
+					"path": "/user/hand/left/pose/pistolgrip",
+					"requirement": "optional"
+				},
+				{
+					"output": "/actions/main/in/special8",
+					"path": "/user/hand/right/pose/pistolgrip",
+					"requirement": "optional"
+				}
+			]
+		}
+	},
+	"description": "Virtual Reality BP Game Template-10387632"
+}

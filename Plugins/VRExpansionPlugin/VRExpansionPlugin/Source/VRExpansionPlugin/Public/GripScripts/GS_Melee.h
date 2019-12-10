@@ -4,46 +4,101 @@
 #include "Engine/Engine.h"
 #include "VRGripScriptBase.h"
 #include "GameFramework/WorldSettings.h"
+#include "GripScripts/GS_Default.h"
 #include "GS_Melee.generated.h"
 
 #if WITH_PHYSX
 #include "PhysXPublic.h"
 #endif // WITH_PHYSX
 
-USTRUCT()
-struct FBPMelee_SurfacePair
+
+
+// A Lodge component data struct
+USTRUCT(BlueprintType, Category = "Lodging")
+struct VREXPANSIONPLUGIN_API FBPLodgeComponentInfo
 {
 	GENERATED_BODY()
 public:
 
-	EPhysicalSurface PhysicalSurfaceType;
-	float SurfaceVelocityScaler;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LodgeComponentInfo")
+		FName ComponentName;
 
-	FORCEINLINE bool operator==(const EPhysicalSurface &Other) const
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LodgeComponentInfo")
+		float PenetrationDepth;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LodgeComponentInfo")
+		bool bAllowPenetrationInReverseAsWell;
+
+	// This is the velocity (along forward axis of component) required to throw an OnPenetrated event from a PenetrationNotifierComponent
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon Settings")
+		float PenetrationVelocity;
+
+	// The acceptable range of the dot product of the forward vector and the impact normal to define a valid facing
+	// Subtracted from the 1.0f forward facing value
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon Settings")
+		float AcceptableForwardProductRange;
+
+	FBPLodgeComponentInfo()
 	{
-		return PhysicalSurfaceType == Other;
+		ComponentName = NAME_None;
+		PenetrationDepth = 100.f;
+		bAllowPenetrationInReverseAsWell = false;
+		PenetrationVelocity = 200.f;
+		AcceptableForwardProductRange = 0.1f;
+	}
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LodgeComponentInfo")
+	TWeakObjectPtr<UPrimitiveComponent> TargetComponent;
+
+	FORCEINLINE bool operator==(const FName& Other) const
+	{
+		return (ComponentName == Other);
 	}
 
 };
 
 
-// Event, Hit, material object normal
-// Event, lodged, material, object, normal
-
 // Event thrown when we the melee weapon becomes lodged
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FVROnMeleeIsLodged, bool, IsWeaponLodged);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_SixParams(FVROnMeleeShouldLodgeSignature, FBPLodgeComponentInfo, LogComponent, AActor *, OtherActor, UPrimitiveComponent *, OtherComp, ECollisionChannel, OtherCompCollisionChannel, FVector, NormalImpulse, const FHitResult&, Hit);
 
 
 /**
 * A Melee grip script *CURRENTLY WIP, DO NOT USE!!!*
 */
 UCLASS(NotBlueprintable, ClassGroup = (VRExpansionPlugin), hideCategories = TickSettings)
-class VREXPANSIONPLUGIN_API UGS_Melee : public UVRGripScriptBase
+class VREXPANSIONPLUGIN_API UGS_Melee : public UGS_Default
 {
 	GENERATED_BODY()
 public:
 
 	UGS_Melee(const FObjectInitializer& ObjectInitializer);
+
+	UFUNCTION()
+	void OnLodgeHitCallback(AActor* SelfActor, AActor* OtherActor, FVector NormalImpulse, const FHitResult& Hit);
+
+	UFUNCTION(BlueprintCallable, Category = "Weapon Settings")
+		void SetIsLodged(bool IsLodged, UPrimitiveComponent * LodgeComponent)
+	{
+		bIsLodged = IsLodged;
+		LodgedComponent = LodgeComponent;
+	}
+
+	bool bIsLodged;
+	TWeakObjectPtr<UPrimitiveComponent> LodgedComponent;
+
+	virtual void Tick(float DeltaTime) override;
+
+	// Thrown if we should lodge into a hit object
+	UPROPERTY(BlueprintAssignable, Category = "Melee|Lodging")
+		FVROnMeleeShouldLodgeSignature OnShouldLodgeInObject;
+
+	// Always tick for penetration
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Melee|Lodging")
+		bool bAlwaysTickPenetration;
+
+	FVector RollingVelocityAverage;
+	FVector RollingAngVelocityAverage;
+	float NumberOfFramesToAverageVelocity;
 
 	// The name of the component that is used to orient the weapon along its primary axis
 	// If it does not exist then the weapon is assumed to be X+ facing.
@@ -51,6 +106,15 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon Settings")
 		FName WeaponRootOrientationComponent;
 	FTransform OrientationComponentRelativeFacing;
+
+	// This is a built list of components that act as penetration notifiers, they will have their OnHit bound too and we will handle penetration logic
+	// off of it.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon Settings")
+		TArray<FBPLodgeComponentInfo> PenetrationNotifierComponents;
+
+	FVector LastRelativePos;
+	bool bTickedAlready;
+	FVector RelativeBetweenGripsCenterPos;
 
 	// When true, will auto set the primary and secondary hands by the WeaponRootOrientationComponents X Axis distance.
 	// Smallest value along the X Axis will be considered the primary hand.
@@ -60,14 +124,41 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Weapon Settings")
 		void SetPrimaryAndSecondaryHands(FBPGripPair & PrimaryGrip, FBPGripPair & SecondaryGrip);
 
+	// If true then the primary hand is considered the rearmost one
+	UPROPERTY(BlueprintReadOnly, Category = "Weapon Settings")
+		bool bPrimaryHandInRear;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Weapon Settings")
+	FBPGripPair PrimaryHand;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Weapon Settings")
+	FBPGripPair SecondaryHand;
+
+	FTransform ObjectRelativeGripCenter;
+
+	// Grip settings to use on the primary hand when multiple grips are active
+	// Falls back to the standard grip settings when only one grip is active
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon Settings")
+		FBPAdvancedPhysicsHandleSettings PrimaryHandPhysicsSettings;
+
+	// Grip settings to use on the secondary hand when multiple grips are active
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon Settings")
+		FBPAdvancedPhysicsHandleSettings SecondaryHandPhysicsSettings;
+
+
+	void UpdateDualHandInfo();
+
+
 	UFUNCTION(BlueprintCallable, Category = "Weapon Settings")
 		void SetCOMOffsetInLocalSpace(UGripMotionControllerComponent* GrippingController, UPARAM(ref) FBPActorGripInformation& Grip, FVector Offset, bool bOffsetIsInWorldSpace = true, bool bLimitToXOnly = true);
 
-	virtual void HandlePostPhysicsHandle(FBPActorPhysicsHandleInformation* HandleInfo) override;
-	virtual void HandlePrePhysicsHandle(FBPActorPhysicsHandleInformation* HandleInfo, FTransform& KinPose) override;
+	virtual void HandlePostPhysicsHandle(UGripMotionControllerComponent* GrippingController, FBPActorPhysicsHandleInformation* HandleInfo) override;
+	virtual void HandlePrePhysicsHandle(UGripMotionControllerComponent* GrippingController, FBPActorPhysicsHandleInformation* HandleInfo, FTransform& KinPose) override;
 	virtual void OnBeginPlay_Implementation(UObject* CallingOwner) override;
+	virtual void OnEndPlay_Implementation(const EEndPlayReason::Type EndPlayReason) override;
+	virtual void OnSecondaryGrip_Implementation(UGripMotionControllerComponent* Controller, USceneComponent* SecondaryGripComponent, const FBPActorGripInformation& GripInformation) override;
 
-	TArray<FBPMelee_SurfacePair> SurfaceTypesToPenetrate;
+	/*TArray<FBPMelee_SurfacePair> SurfaceTypesToPenetrate;
 	bool bAllowPenetration;
 	bool bUseDensityForPenetrationCalcs;
 	bool bTraceComplex;
@@ -85,50 +176,11 @@ public:
 
 	// Amount of movement force to apply to the in/out action of penetration.
 	float PenetrationFrictionCoefficient;
-
-	//DECLARE_DYNAMIC_MULTICAST_DELEGATE_FiveParams(FComponentHitSignature, UPrimitiveComponent*, HitComponent, AActor*, OtherActor, UPrimitiveComponent*, OtherComp, FVector, NormalImpulse, const FHitResult&, Hit);
-//DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams( FActorHitSignature, AActor*, SelfActor, AActor*, OtherActor, FVector, NormalImpulse, const FHitResult&, Hit );
-
-	/*UFUNCTION()
-	void OnActorHit(AActor * Self, AActor * Other, FVector NormalImpulse, const FHitResult& HitResult)
-	{
-		//Normal impulse only has value if simulating
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("MyActorHit!"));
-
-		static float MinimumPenetrationVelocity = 10.0f;
-		static float DensityToVelocityScaler = 0.5f;
-
-		if (bAllowPenetration && StrikeVelocity.SizeSquared() > FMath::Square(MinimumPenetrationVelocity))
-		{
-
-			if (!HitResult.IsValidBlockingHit())
-				return;//	continue;
-
-			//FVector VelocityOnNormalPlane;
-			if (HitResult.PhysMaterial != nullptr)// && SurfaceTypesToPenetrate.Contains(HitResult.PhysMaterial->SurfaceType.GetValue()))
-			{
-				float ModifiedPenetrationVelocity = MinimumPenetrationVelocity * (DensityToVelocityScaler * HitResult.PhysMaterial->Density);
-
-				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Penetration!"));
-				// We can penetrate it
-				// Sample density
-			}
-
-			//FHitResult.Normal
-			//FHitResult.PenetrationDepth
-		}
-	}*/
-
-	// Call to use an object
-	UPROPERTY(BlueprintAssignable, Category = "MeleeEvents")
-		FVROnMeleeIsLodged OnMeleeLodgedChanged;
+	*/
 
 	virtual void OnGrip_Implementation(UGripMotionControllerComponent* GrippingController, const FBPActorGripInformation& GripInformation) override;
 
-	virtual void OnGripRelease_Implementation(UGripMotionControllerComponent * ReleasingController, const FBPActorGripInformation & GripInformation, bool bWasSocketed = false) override
-	{
-		//GetOwner()->OnActorHit.RemoveDynamic(this, &UGS_Melee::OnActorHit);
-	}
+	virtual void OnGripRelease_Implementation(UGripMotionControllerComponent* ReleasingController, const FBPActorGripInformation& GripInformation, bool bWasSocketed = false) override;
 
 	//virtual void BeginPlay_Implementation() override;
 	virtual bool GetWorldTransform_Implementation(UGripMotionControllerComponent * GrippingController, float DeltaTime, FTransform & WorldTransform, const FTransform &ParentTransform, FBPActorGripInformation &Grip, AActor * actor, UPrimitiveComponent * root, bool bRootHasInterface, bool bActorHasInterface, bool bIsForTeleport) override;

@@ -7,6 +7,9 @@ public class VRExpPluginExampleTarget : TargetRules
 {
 	public VRExpPluginExampleTarget(TargetInfo Target) : base(Target)
 	{
+
+        DefaultBuildSettings = BuildSettingsVersion.V2;
+
         //bUseLoggingInShipping = true;
         Type = TargetType.Game;
         ExtraModuleNames.AddRange(new string[] { "VRExpPluginExample" });

@@ -1,0 +1,13 @@
+{
+	"name": "Default bindings for Vive Headset",
+	"controller_type": "vive",
+	"last_edited_by": "UnrealEngine",
+	"bindings":
+	{
+		"/actions/main":
+		{
+			"sources": []
+		}
+	},
+	"description": "Virtual Reality BP Game Template-10387632"
+}

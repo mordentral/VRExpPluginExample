@@ -1,0 +1,166 @@
+{
+   "action_manifest_version" : 0,
+   "alias_info" : {},
+   "app_key" : "application.generated.ue.virtual-reality-bp-game-template-10387632.ue4editor-win64-debuggame.exe",
+   "bindings" : {
+      "/actions/main" : {
+         "haptics" : [
+            {
+               "output" : "/actions/main/out/vibrateleft",
+               "path" : "/user/hand/left/output/haptic"
+            },
+            {
+               "output" : "/actions/main/out/vibrateright",
+               "path" : "/user/hand/right/output/haptic"
+            }
+         ],
+         "poses" : [
+            {
+               "output" : "/actions/main/in/controllerleft",
+               "path" : "/user/hand/left/pose/raw",
+               "requirement" : "optional"
+            },
+            {
+               "output" : "/actions/main/in/controllerright",
+               "path" : "/user/hand/right/pose/raw"
+            }
+         ],
+         "skeleton" : [
+            {
+               "output" : "/actions/main/in/skeletonleft",
+               "path" : "/user/hand/left/input/skeleton/left"
+            },
+            {
+               "output" : "/actions/main/in/skeletonright",
+               "path" : "/user/hand/right/input/skeleton/right"
+            }
+         ],
+         "sources" : [
+            {
+               "inputs" : {
+                  "touch" : {
+                     "output" : "/actions/main/in/TeleportLeft"
+                  }
+               },
+               "mode" : "joystick",
+               "path" : "/user/hand/left/input/thumbstick"
+            },
+            {
+               "inputs" : {
+                  "touch" : {
+                     "output" : "/actions/main/in/TeleportRight"
+                  }
+               },
+               "mode" : "joystick",
+               "path" : "/user/hand/right/input/thumbstick"
+            },
+            {
+               "inputs" : {
+                  "click" : {
+                     "output" : "/actions/main/in/AlternateGripRight"
+                  }
+               },
+               "mode" : "button",
+               "path" : "/user/hand/right/input/a"
+            },
+            {
+               "inputs" : {
+                  "click" : {
+                     "output" : "/actions/main/in/AlternateGripLeft"
+                  }
+               },
+               "mode" : "button",
+               "path" : "/user/hand/left/input/a"
+            },
+            {
+               "inputs" : {
+                  "click" : {
+                     "output" : "/actions/main/in/PrimaryGripLeft"
+                  }
+               },
+               "mode" : "button",
+               "parameters" : {
+                  "click_activate_threshold" : "1",
+                  "click_deactivate_threshold" : "0.95"
+               },
+               "path" : "/user/hand/left/input/grip"
+            },
+            {
+               "inputs" : {
+                  "click" : {
+                     "output" : "/actions/main/in/PrimaryGripRight"
+                  }
+               },
+               "mode" : "button",
+               "path" : "/user/hand/right/input/grip"
+            },
+            {
+               "inputs" : {
+                  "click" : {
+                     "output" : "/actions/main/in/LaserBeamRight"
+                  }
+               },
+               "mode" : "button",
+               "path" : "/user/hand/right/input/b"
+            },
+            {
+               "inputs" : {
+                  "click" : {
+                     "output" : "/actions/main/in/LaserBeamLeft"
+                  }
+               },
+               "mode" : "button",
+               "path" : "/user/hand/left/input/b"
+            },
+            {
+               "inputs" : {
+                  "click" : {
+                     "output" : "/actions/main/in/UseHeldObjectLeft"
+                  }
+               },
+               "mode" : "button",
+               "path" : "/user/hand/left/input/trigger"
+            },
+            {
+               "inputs" : {
+                  "click" : {
+                     "output" : "/actions/main/in/UseHeldObjectRight"
+                  }
+               },
+               "mode" : "button",
+               "path" : "/user/hand/right/input/trigger"
+            },
+            {
+               "inputs" : {
+                  "position" : {
+                     "output" : "/actions/main/in/MotionControllerThumbLeft_X,MotionControllerThumbLeft_Y X Y_axis2d"
+                  },
+                  "touch" : {
+                     "output" : "/actions/main/in/controllermovementleft axis"
+                  }
+               },
+               "mode" : "joystick",
+               "path" : "/user/hand/left/input/thumbstick"
+            },
+            {
+               "inputs" : {
+                  "position" : {
+                     "output" : "/actions/main/in/MotionControllerThumbRight_X,MotionControllerThumbRight_Y X Y_axis2d"
+                  },
+                  "touch" : {
+                     "output" : "/actions/main/in/controllermovementright axis"
+                  }
+               },
+               "mode" : "joystick",
+               "path" : "/user/hand/right/input/thumbstick"
+            }
+         ]
+      }
+   },
+   "category" : "steamvr_input",
+   "controller_type" : "knuckles",
+   "description" : "Virtual Reality BP Game Template-10387632",
+   "name" : "My Virtual Reality BP Game Template-10387632 [UE Editor] configuration for Index Controller",
+   "options" : {},
+   "simulated_actions" : []
+}
