@@ -218,11 +218,17 @@ void UGS_Melee::SetPrimaryAndSecondaryHands(FBPGripPair& PrimaryGrip, FBPGripPai
 
 void UGS_Melee::OnSecondaryGrip_Implementation(UGripMotionControllerComponent* Controller, USceneComponent* SecondaryGripComponent, const FBPActorGripInformation& GripInformation)
 {
+	if (!bIsActive)
+		return;
+
 	UpdateDualHandInfo();
 }
 
 void UGS_Melee::OnGrip_Implementation(UGripMotionControllerComponent* GrippingController, const FBPActorGripInformation& GripInformation)
 {
+	if (!bIsActive)
+		return;
+
 	// Not storing an id, we should only be doing this once
 //	GetOwner()->OnActorHit.AddDynamic(this, &UGS_Melee::OnActorHit);
 
@@ -259,6 +265,10 @@ void UGS_Melee::OnGrip_Implementation(UGripMotionControllerComponent* GrippingCo
 
 void UGS_Melee::OnGripRelease_Implementation(UGripMotionControllerComponent* ReleasingController, const FBPActorGripInformation& GripInformation, bool bWasSocketed)
 {
+
+	if (!bIsActive)
+		return;
+
 	if(!bAlwaysTickPenetration)
 		SetTickEnabled(false);
 
@@ -386,7 +396,7 @@ void UGS_Melee::OnEndPlay_Implementation(const EEndPlayReason::Type EndPlayReaso
 
 void UGS_Melee::OnLodgeHitCallback(AActor* SelfActor, AActor* OtherActor, FVector NormalImpulse, const FHitResult& Hit)
 {
-	if (bIsLodged || OtherActor == SelfActor)
+	if (!bIsActive || bIsLodged || OtherActor == SelfActor)
 		return;
 
 	if (UPrimitiveComponent * root = Cast<UPrimitiveComponent>(SelfActor->GetRootComponent()))
@@ -429,6 +439,9 @@ void UGS_Melee::OnLodgeHitCallback(AActor* SelfActor, AActor* OtherActor, FVecto
 
 void UGS_Melee::HandlePrePhysicsHandle(UGripMotionControllerComponent* GrippingController, FBPActorPhysicsHandleInformation * HandleInfo, FTransform & KinPose)
 {
+	if (!bIsActive)
+		return;
+
 	if (WeaponRootOrientationComponent != NAME_None)
 	{
 		// Alter to rotate to x+ if we have an orientation component
@@ -446,6 +459,9 @@ void UGS_Melee::HandlePrePhysicsHandle(UGripMotionControllerComponent* GrippingC
 
 void UGS_Melee::HandlePostPhysicsHandle(UGripMotionControllerComponent* GrippingController, FBPActorPhysicsHandleInformation * HandleInfo)
 {
+	if (!bIsActive)
+		return;
+
 	if (SecondaryHand.IsValid())
 	{
 		if (GrippingController == SecondaryHand.HoldingController && HandleInfo->GripID == SecondaryHand.GripID)

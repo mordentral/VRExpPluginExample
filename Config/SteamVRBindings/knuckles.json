@@ -1,7 +1,7 @@
 {
    "action_manifest_version" : 0,
    "alias_info" : {},
-   "app_key" : "application.generated.ue.virtual-reality-bp-game-template-10387632.ue4editor-win64-debuggame.exe",
+   "app_key" : "application.generated.ue.virtual-reality-bp-game-template-10570792.ue4editor-win64-debuggame.exe",
    "bindings" : {
       "/actions/main" : {
          "haptics" : [
@@ -92,6 +92,10 @@
                   }
                },
                "mode" : "button",
+               "parameters" : {
+                  "click_activate_threshold" : "1",
+                  "click_deactivate_threshold" : "0.95"
+               },
                "path" : "/user/hand/right/input/grip"
             },
             {
@@ -160,7 +164,7 @@
    "category" : "steamvr_input",
    "controller_type" : "knuckles",
    "description" : "Virtual Reality BP Game Template-10387632",
-   "name" : "My Virtual Reality BP Game Template-10387632 [UE Editor] configuration for Index Controller",
+   "name" : "My Virtual Reality BP Game Template-10570792 [UE Editor] configuration for Index Controller",
    "options" : {},
    "simulated_actions" : []
 }
