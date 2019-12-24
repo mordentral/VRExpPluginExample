@@ -44,56 +44,7 @@ public:
 
 	// Applies a delta rotation around a pivot point, if bUseOriginalYawOnly is true then it only takes the original Yaw into account (characters)
 	UFUNCTION(BlueprintCallable, Category = "VRExpansionFunctions", meta = (bIgnoreSelf = "true"))
-		static void SetObjectsIgnoreCollision(UPrimitiveComponent* Prim1 = nullptr, FName OptionalBoneName1 = NAME_None, UPrimitiveComponent* Prim2 = nullptr, FName OptionalBoneName2 = NAME_None, bool bIgnoreCollision = true)
-	{
-#if WITH_PHYSX
-		if (Prim1 && Prim2)
-		{
-			FBodyInstance *Inst1 = Prim1->GetBodyInstance(OptionalBoneName1);
-			FBodyInstance *Inst2 = Prim2->GetBodyInstance(OptionalBoneName2);
-
-			Inst1->SetContactModification(bIgnoreCollision);
-			Inst2->SetContactModification(bIgnoreCollision);
-
-			if (FPhysScene* PhysScene = Prim1->GetWorld()->GetPhysicsScene())
-			{
-				if (PxScene * PScene = PhysScene->GetPxScene())
-				{
-					if (FCCDContactModifyCallbackVR * ContactCallback = (FCCDContactModifyCallbackVR*)PScene->getCCDContactModifyCallback())
-					{
-						FRWScopeLock(ContactCallback->RWAccessLock, FRWScopeLockType::SLT_Write);
-						FContactModBodyInstancePair newContactPair;
-						newContactPair.Actor1 = Inst1->ActorHandle;
-						newContactPair.Actor2 = Inst2->ActorHandle;
-						newContactPair.bBody1IgnoreEntireActor = false;
-						newContactPair.bBody2IgnoreEntireActor = false;
-
-						if (bIgnoreCollision)
-							ContactCallback->ContactsToIgnore.AddUnique(newContactPair);
-						else
-							ContactCallback->ContactsToIgnore.Remove(newContactPair);
-					}
-
-					if (FContactModifyCallbackVR * ContactCallback = (FContactModifyCallbackVR*)PScene->getContactModifyCallback())
-					{
-						FRWScopeLock(ContactCallback->RWAccessLock, FRWScopeLockType::SLT_Write);
-						FContactModBodyInstancePair newContactPair;
-						newContactPair.Actor1 = Inst1->ActorHandle;
-						newContactPair.Actor2 = Inst2->ActorHandle;
-						newContactPair.bBody1IgnoreEntireActor = false;
-						newContactPair.bBody2IgnoreEntireActor = false;
-
-						if (bIgnoreCollision)
-							ContactCallback->ContactsToIgnore.AddUnique(newContactPair);
-						else
-							ContactCallback->ContactsToIgnore.Remove(newContactPair);
-					}
-				}
-			}
-		}
-#endif
-	}
-
+		static void SetObjectsIgnoreCollision(UPrimitiveComponent* Prim1 = nullptr, FName OptionalBoneName1 = NAME_None, UPrimitiveComponent* Prim2 = nullptr, FName OptionalBoneName2 = NAME_None, bool bIgnoreCollision = true);
 
 	UFUNCTION(BlueprintPure, Category = "VRExpansionFunctions", meta = (bIgnoreSelf = "true", DisplayName = "GetHandFromMotionSourceName"))
 	static bool GetHandFromMotionSourceName(FName MotionSource, EControllerHand& Hand)
