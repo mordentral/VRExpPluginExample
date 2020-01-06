@@ -383,9 +383,8 @@ public:
 
 		updateUpperArmPosition();
 		calcElbowInnerAngle();
-		setLowerArmRotation(nextLowerArmAngle.Quaternion());
 		rotateShoulder();
-		//correctElbowRotation();
+		correctElbowRotation();
 		if (elbowSettings.calcElbowAngle)
 		{
 			//if (elbowCorrectionSettings.useFixedElbowWhenNearShoulder)
@@ -393,7 +392,7 @@ public:
 			//if (handSettings.rotateElbowWithHandRight)
 			//	rotateElbowWithHandRight();
 			//if (handSettings.rotateElbowWithHandForward)
-				//rotateElbowWithHandFoward();
+			//	rotateElbowWithHandFoward();
 			//rotateHand();
 		}
 
@@ -473,7 +472,6 @@ public:
 			eulerAngles.Yaw = 0.f;
 
 		FQuat shoulderRightRotation = FQuat::FindBetweenNormals(armDirection(), targetShoulderDirection);//Quaternion.FromToRotation(armDirection, targetShoulderDirection);
-
 		setUpperArmRotation(shoulderRightRotation);
 		armTransforms.lowerArm.SetRotation(FQuat::Identity);
 		//setLowerArmLocalRotation(FQuat::Identity);
@@ -488,14 +486,21 @@ public:
 		FBeforePositioningSettings &s = beforePositioningSettings;
 		FVector localTargetPos = shoulderAnker().InverseTransformPosition(target.GetLocation()) / armTransforms.armLength;
 
-		float Devisor = 100.f;
-		float elbowOutsideFactor = 		
-			FMath::Clamp(
-			FMath::Clamp((s.startBelowZ / Devisor - localTargetPos.X / Devisor) / FMath::Abs(s.startBelowZ / Devisor) * .5f, 0.f, 1.f) * FMath::Clamp((localTargetPos.Z / Devisor - s.startAboveY / Devisor) / FMath::Abs(s.startAboveY / Devisor), 0.f, 1.f) * FMath::Clamp(1.f - (localTargetPos.Y / Devisor) * (left ? -1.f : 1.f), 0.f, 1.f)
-			, 0.f, 1.f) * s.weight;
+		float elbowOutsideFactor = FMath::Clamp(
+			FMath::Clamp((s.startBelowZ - localTargetPos.X) /
+				FMath::Abs(s.startBelowZ) * .5f, 0.f, 1.f) *
+			FMath::Clamp((localTargetPos.Z - s.startAboveY) /
+				FMath::Abs(s.startAboveY),0.f, 1.f) *
+			FMath::Clamp(1.f - localTargetPos.Y * (left ? -1.f : 1.f), 0.f, 1.f)
+		, 0.f, 1.f) * s.weight;
+		elbowOutsideFactor = 1.f;
+
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("OutsideFactor: %f"), elbowOutsideFactor));
 
 		FVector shoulderHandDirection = (upperArmPos() - handPos()).GetSafeNormal();
 		FVector targetDir = shoulder->Transform.GetRotation() * (FVector::UpVector + (s.correctElbowOutside ? (armDirection() + FVector::ForwardVector * -.2f) * elbowOutsideFactor : FVector::ZeroVector));
+		//Vector3 targetDir = shoulder.transform.rotation * (Vector3.up + (s.correctElbowOutside ? (armDirection + Vector3.forward * -.2f) * elbowOutsideFactor : Vector3.zero));
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Targetdir: %s"), *targetDir.ToString()));
 
 		FVector cross = FVector::CrossProduct(shoulderHandDirection, targetDir * 1000.f);//.GetSafeNormal());// *100000.f);
 		FVector upperArmUp = upperArmRotation().GetUpVector();
@@ -605,16 +610,16 @@ public:
 	void rotateElbowWithHandRight()
 	{
 		FHandSettings s = handSettings;
-		FVector handUpVec = target.GetRotation() * FVector::UpVector;
-		float forwardAngle = VectorHelpers::getAngleBetween(lowerArmRotation() * FVector::RightVector, target.GetRotation() * FVector::RightVector,
-			lowerArmRotation() * FVector::UpVector, lowerArmRotation() * FVector::ForwardVector);
+		FVector handUpVec = target.GetRotation().GetUpVector();
+		float forwardAngle = VectorHelpers::getAngleBetween(lowerArmRotation().GetRightVector(), target.GetRotation().GetRightVector(),
+			lowerArmRotation().GetUpVector(), lowerArmRotation().GetForwardVector());
 
 		// todo reduce influence if hand local forward rotation is high (hand tilted inside)
-		FQuat handForwardRotation = FQuat(lowerArmRotation() * FVector::ForwardVector, FMath::DegreesToRadians(-forwardAngle));
+		FQuat handForwardRotation = FQuat(lowerArmRotation().GetForwardVector(), FMath::DegreesToRadians(-forwardAngle));
 		handUpVec = handForwardRotation * handUpVec;
 
-		float elbowTargetAngle = VectorHelpers::getAngleBetween(lowerArmRotation() * FVector::UpVector, handUpVec,
-			lowerArmRotation() * FVector::ForwardVector, lowerArmRotation() * armDirection());
+		float elbowTargetAngle = VectorHelpers::getAngleBetween(lowerArmRotation().GetUpVector(), handUpVec,
+			lowerArmRotation().GetForwardVector(), lowerArmRotation() * armDirection());
 
 		float deltaElbow = (elbowTargetAngle + (left ? -s.handDeltaOffset : s.handDeltaOffset)) / 180.f;
 
@@ -774,7 +779,7 @@ public:
 *	A custom constraint component subclass that exposes additional missing functionality from the default one
 */
 UCLASS(meta = (BlueprintSpawnableComponent), HideCategories = (Activation, "Components|Activation", Physics, Mobility))
-class VREXPANSIONPLUGIN_API UVRArmIKActorComponent : public UActorComponent
+class VREXPANSIONPLUGIN_API UVRArmIKActorComponent : public USceneComponent
 {
 	
 	GENERATED_BODY()
@@ -821,7 +826,9 @@ public:
 			if (!OwningChar)
 				return;
 
-			FTransform ToLocalTrans = OwningChar->GetActorTransform().Inverse();
+			this->SetRelativeTransform(FTransform::Identity);
+
+			FTransform ToLocalTrans = this->GetComponentTransform().Inverse();
 
 			CurrentTransforms.CameraTransform = OwningChar->VRReplicatedCamera->GetComponentTransform() * ToLocalTrans;
 			CurrentTransforms.LeftHandTransform = OwningChar->LeftMotionController->GetComponentTransform() * ToLocalTrans;
@@ -834,7 +841,14 @@ public:
 
 			CurrentTransforms.PureCameraYaw = UVRExpansionFunctionLibrary::GetHMDPureYaw_I(CurrentTransforms.CameraTransform.GetRotation().Rotator());
 
-			UpdateShoulders();		
+			UpdateShoulders();
+
+			ToLocalTrans = this->GetRelativeTransform().Inverse();
+
+			CurrentTransforms.CameraTransform = CurrentTransforms.CameraTransform * ToLocalTrans;
+			CurrentTransforms.LeftHandTransform = CurrentTransforms.LeftHandTransform * ToLocalTrans;
+			CurrentTransforms.RightHandTransform = CurrentTransforms.RightHandTransform * ToLocalTrans;
+
 			LeftArm.Update(CurrentTransforms, &shoulder, true, GetWorld()->GetDeltaSeconds());
 			RightArm.Update(CurrentTransforms, &shoulder, false, GetWorld()->GetDeltaSeconds());
 
@@ -940,11 +954,11 @@ public:
 			//rotateShoulderUp();
 			//rotateShoulderRight();
 
-			if (bEnableDistinctShoulderRotation)
+			/*if (bEnableDistinctShoulderRotation)
 			{
 				rotateLeftShoulder();
 				rotateRightShoulder();
-			}
+			}*/
 
 			shoulder.leftShoulderAnchor = FTransform(leftShoulderAnkerStartLocalPosition) * shoulder.Transform;
 			shoulder.rightShoulderAnchor = FTransform(rightShoulderAnkerStartLocalPosition) * shoulder.Transform;
@@ -955,8 +969,6 @@ public:
 			//shoulder.rightShoulder.SetLocation(shoulder.rightShoulderAnchor.GetLocation());// = shoulder.rightShoulderAnchor; //
 			LeftArm.armTransforms.Transform = shoulder.leftShoulder;
 			RightArm.armTransforms.Transform = shoulder.rightShoulder;
-
-
 
 
 			if (bEnableShoulderDislocation)
@@ -1021,9 +1033,11 @@ public:
 			}
 
 			FQuat newRot = FQuat(FVector::UpVector, FMath::DegreesToRadians(TargetAngle)); // Make directly from up vec and angle instead
+			this->SetRelativeRotation(newRot);
 			//GetEstShoulderPitch(newRot);
 
-			shoulder.Transform.SetRotation(newRot);
+			//this->SetRelativeRotation(newRot);
+			//shoulder.Transform.SetRotation(newRot);
 		}
 
 		// Get combined direction angle up
@@ -1108,7 +1122,10 @@ public:
 
 			FVector headNeckOffset = CurrentTransforms.CameraTransform.GetRotation().RotateVector(headNeckDirectionVector);
 			FVector targetPosition = CurrentTransforms.CameraTransform.GetLocation() + headNeckOffset * headNeckDistance;
-			shoulder.Transform.SetLocation(targetPosition + CurrentTransforms.CameraTransform.GetRotation().RotateVector(neckShoulderDistance));
+			FVector newLoc = targetPosition + CurrentTransforms.CameraTransform.GetRotation().RotateVector(neckShoulderDistance);
+			this->SetRelativeLocation(FVector(newLoc.X, newLoc.Y, 0.f));
+			shoulder.Transform.SetLocation(FVector(0.f, 0.f, newLoc.Z));
+			///shoulder.Transform.SetLocation(targetPosition + CurrentTransforms.CameraTransform.GetRotation().RotateVector(neckShoulderDistance));
 			//shoulder.transform.localPosition =
 			//	shoulder.transform.parent.InverseTransformPoint(targetPosition) + neckShoulderDistance;
 		}
