@@ -232,6 +232,7 @@ class VREXPANSIONPLUGIN_API AVRBaseCharacter : public ACharacter
 	GENERATED_BODY()
 
 public:
+
 	AVRBaseCharacter(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
 
 	virtual void OnRep_PlayerState() override;
