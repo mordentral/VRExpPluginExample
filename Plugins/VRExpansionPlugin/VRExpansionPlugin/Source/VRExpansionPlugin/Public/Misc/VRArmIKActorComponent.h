@@ -196,9 +196,9 @@ public:
 		yWeight = -60.f;
 		zWeightTop = 260.f;
 		zWeightBottom = -100.f;
-		zDistanceStart = .6f * 100.f; // * world to meters?
+		zDistanceStart = .6f;// *100.f; // * world to meters?
 		xWeight = -50.f;
-		xDistanceStart = .1f * 100.f; // * world to meters?
+		xDistanceStart = .1f;// *100.f; // * world to meters?
 	}
 };
 
@@ -387,8 +387,9 @@ public:
 		correctElbowRotation();
 		if (elbowSettings.calcElbowAngle)
 		{
+			//positionElbow();
 			//if (elbowCorrectionSettings.useFixedElbowWhenNearShoulder)
-			//	correctElbowAfterPositioning();
+				//correctElbowAfterPositioning();
 			//if (handSettings.rotateElbowWithHandRight)
 			//	rotateElbowWithHandRight();
 			//if (handSettings.rotateElbowWithHandForward)
@@ -493,14 +494,14 @@ public:
 				FMath::Abs(s.startAboveY),0.f, 1.f) *
 			FMath::Clamp(1.f - localTargetPos.Y * (left ? -1.f : 1.f), 0.f, 1.f)
 		, 0.f, 1.f) * s.weight;
-		elbowOutsideFactor = 1.f;
+		//elbowOutsideFactor = 1.f;
 
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("OutsideFactor: %f"), elbowOutsideFactor));
+	//	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("OutsideFactor: %f"), elbowOutsideFactor));
 
 		FVector shoulderHandDirection = (upperArmPos() - handPos()).GetSafeNormal();
 		FVector targetDir = shoulder->Transform.GetRotation() * (FVector::UpVector + (s.correctElbowOutside ? (armDirection() + FVector::ForwardVector * -.2f) * elbowOutsideFactor : FVector::ZeroVector));
 		//Vector3 targetDir = shoulder.transform.rotation * (Vector3.up + (s.correctElbowOutside ? (armDirection + Vector3.forward * -.2f) * elbowOutsideFactor : Vector3.zero));
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Targetdir: %s"), *targetDir.ToString()));
+		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Targetdir: %s"), *targetDir.ToString()));
 
 		FVector cross = FVector::CrossProduct(shoulderHandDirection, targetDir * 1000.f);//.GetSafeNormal());// *100000.f);
 		FVector upperArmUp = upperArmRotation().GetUpVector();
@@ -519,19 +520,20 @@ public:
 
 		localHandPosNormalized = shoulderAnker().InverseTransformPosition(handPos()) / armTransforms.armLength;
 
-		float Devisor = 100.f;
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Dir: %s"), *localHandPosNormalized.ToString()));
 
 		// angle from Y
 		float angle = elbowSettings.yWeight * localHandPosNormalized.Z + elbowSettings.offsetAngle;
 
 		if (localHandPosNormalized.Z > 0.f)
-			angle += (elbowSettings.zWeightTop * ((FMath::Max(elbowSettings.zDistanceStart - localHandPosNormalized.X, 0.f) * FMath::Max(localHandPosNormalized.Z, 0.f)) / Devisor));
+			angle += (elbowSettings.zWeightTop * ((FMath::Max(elbowSettings.zDistanceStart - localHandPosNormalized.X, 0.f) * FMath::Max(localHandPosNormalized.Z, 0.f))));
 		else
-			angle += (elbowSettings.zWeightBottom * ((FMath::Max(elbowSettings.zDistanceStart - localHandPosNormalized.X, 0.f) * FMath::Max(-localHandPosNormalized.Z, 0.f)) / Devisor));
+			angle += (elbowSettings.zWeightBottom * ((FMath::Max(elbowSettings.zDistanceStart - localHandPosNormalized.X, 0.f) * FMath::Max(-localHandPosNormalized.Z, 0.f))));
 
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, FString::Printf(TEXT("Angle: %f"), angle));
 
 		// angle from X
-		angle += elbowSettings.xWeight * (FMath::Max(localHandPosNormalized.Y * (left ? 1.0f : -1.0f) + elbowSettings.xDistanceStart, 0.f) / Devisor);
+		angle += elbowSettings.xWeight * (FMath::Max(localHandPosNormalized.Y * (left ? 1.0f : -1.0f) + elbowSettings.xDistanceStart, 0.f));
 
 		if (elbowSettings.clampElbowAngle)
 		{
@@ -561,7 +563,7 @@ public:
 	void correctElbowAfterPositioning()
 	{
 		FElbowCorrectionSettings s = elbowCorrectionSettings;
-		FVector localTargetPos = (shoulderAnker().InverseTransformPosition(target.GetLocation()) / armTransforms.armLength) / 100.f;
+		FVector localTargetPos = (shoulderAnker().InverseTransformPosition(target.GetLocation()) / armTransforms.armLength);
 		FVector shoulderHandDirection = (upperArmPos() - handPos()).GetSafeNormal();
 		FVector elbowPos = s.localElbowPos;
 		
@@ -1033,8 +1035,12 @@ public:
 			}
 
 			FQuat newRot = FQuat(FVector::UpVector, FMath::DegreesToRadians(TargetAngle)); // Make directly from up vec and angle instead
+			GetEstShoulderPitch(newRot);
+
+			FVector shoulderloc = shoulder.Transform.GetLocation();
+			this->SetRelativeLocation(FVector(shoulderloc.X, shoulderloc.Y, 0.f));
+			shoulder.Transform.SetLocation(FVector(0.f, 0.f, shoulderloc.Z));
 			this->SetRelativeRotation(newRot);
-			//GetEstShoulderPitch(newRot);
 
 			//this->SetRelativeRotation(newRot);
 			//shoulder.Transform.SetRotation(newRot);
@@ -1123,8 +1129,7 @@ public:
 			FVector headNeckOffset = CurrentTransforms.CameraTransform.GetRotation().RotateVector(headNeckDirectionVector);
 			FVector targetPosition = CurrentTransforms.CameraTransform.GetLocation() + headNeckOffset * headNeckDistance;
 			FVector newLoc = targetPosition + CurrentTransforms.CameraTransform.GetRotation().RotateVector(neckShoulderDistance);
-			this->SetRelativeLocation(FVector(newLoc.X, newLoc.Y, 0.f));
-			shoulder.Transform.SetLocation(FVector(0.f, 0.f, newLoc.Z));
+			shoulder.Transform.SetLocation(newLoc);
 			///shoulder.Transform.SetLocation(targetPosition + CurrentTransforms.CameraTransform.GetRotation().RotateVector(neckShoulderDistance));
 			//shoulder.transform.localPosition =
 			//	shoulder.transform.parent.InverseTransformPoint(targetPosition) + neckShoulderDistance;
@@ -1254,10 +1259,10 @@ public:
 			shoulderRightRotation += FMath::Clamp(headPitchRotation * rightRotationHeadRotationFactor * heightFactor, 0.f, 50.f);
 
 
-			FQuat DeltaRot = FQuat(OrigRot.GetRightVector()/*FVector::RightVector*/, FMath::DegreesToRadians(shoulderRightRotation));
-
-			OrigRot = DeltaRot * OrigRot;
-
+			//FQuat DeltaRot = FQuat(OrigRot.GetRightVector()/*FVector::RightVector*/, FMath::DegreesToRadians(shoulderRightRotation));
+			//OrigRot = DeltaRot * OrigRot;
+			FQuat DeltaRot = FQuat(FVector::RightVector, FMath::DegreesToRadians(shoulderRightRotation));
+			shoulder.Transform.SetRotation(DeltaRot);
 			// Positionrelative(), offsets by the rot position
 		}
 };
