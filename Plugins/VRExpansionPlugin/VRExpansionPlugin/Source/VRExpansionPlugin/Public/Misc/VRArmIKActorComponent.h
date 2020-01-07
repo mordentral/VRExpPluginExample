@@ -484,6 +484,32 @@ public:
 
 	void correctElbowRotation()
 	{
+		FBeforePositioningSettings& s = beforePositioningSettings;
+
+		FVector localTargetPos = shoulderAnker().InverseTransformPosition(target.GetLocation()) / armTransforms.armLength;
+		
+		float elbowOutsideFactor = FMath::Clamp(
+			FMath::Clamp((s.startBelowZ - localTargetPos.X) /
+				FMath::Abs(s.startBelowZ) * .5f, 0.f, 1.f) *
+			FMath::Clamp((localTargetPos.Z - s.startAboveY) /
+				FMath::Abs(s.startAboveY), 0.f, 1.f) *
+			FMath::Clamp(1.f - localTargetPos.Y * (left ? -1.f : 1.f), 0.f, 1.f)
+		,0.f, 1.f) * s.weight;
+
+		FVector shoulderHandDirection = (upperArmPos() - handPos()).GetSafeNormal();
+		FVector targetDir = shoulder->Transform.GetRotation() * (FVector::UpVector + (s.correctElbowOutside ? (armDirection() + FVector::ForwardVector * -.2f) * elbowOutsideFactor : FVector::ZeroVector));
+		FVector cross = FVector::CrossProduct(shoulderHandDirection, targetDir * 100000.f);
+		
+		FVector upperArmUp = upperArmRotation().GetUpVector();
+
+		float elbowTargetUp = FVector::DotProduct(upperArmUp, targetDir);
+		float elbowAngle = FMath::RadiansToDegrees(FMath::Acos(FVector::DotProduct(cross, upperArmUp))) + (left ? 0.f : 180.f);
+		//float elbowAngle = FVector3.Angle(cross, upperArmUp) + (left ? 0f : 180f);
+		FQuat rotation = FQuat(shoulderHandDirection, elbowAngle * FMath::Sign(elbowTargetUp));
+		armTransforms.upperArm.SetRotation(rotation * armTransforms.upperArm.GetRotation());
+		//arm.upperArm.rotation = rotation * arm.upperArm.rotation;
+
+		/*
 		FBeforePositioningSettings &s = beforePositioningSettings;
 		FVector localTargetPos = shoulderAnker().InverseTransformPosition(target.GetLocation()) / armTransforms.armLength;
 
@@ -511,6 +537,7 @@ public:
 		float elbowAngle = FMath::RadiansToDegrees(FMath::Acos(FVector::DotProduct(cross, upperArmUp))) + (left ? 0.f : 180.f);
 		FQuat rotation = FQuat(shoulderHandDirection, FMath::DegreesToRadians(elbowAngle * FMath::Sign(elbowTargetUp)));
 		armTransforms.upperArm.SetRotation(rotation * armTransforms.upperArm.GetRotation());
+		*/
 	}
 
 	float getElbowTargetAngle()
@@ -956,22 +983,23 @@ public:
 			//rotateShoulderUp();
 			//rotateShoulderRight();
 
+			shoulder.leftShoulderAnchor = FTransform(leftShoulderAnkerStartLocalPosition) * shoulder.Transform;
+			shoulder.rightShoulderAnchor = FTransform(rightShoulderAnkerStartLocalPosition) * shoulder.Transform;
+			
+			// Update our shoulder anchors now as the shoulder is done computing
+			//shoulder.leftShoulder = shoulder.leftShoulderAnchor; //
+			//shoulder.rightShoulder = shoulder.rightShoulderAnchor; //
+			shoulder.leftShoulder.SetLocation(shoulder.leftShoulderAnchor.GetLocation());// = shoulder.leftShoulderAnchor; //
+			shoulder.rightShoulder.SetLocation(shoulder.rightShoulderAnchor.GetLocation());// = shoulder.rightShoulderAnchor; //
+
 			/*if (bEnableDistinctShoulderRotation)
 			{
 				rotateLeftShoulder();
 				rotateRightShoulder();
 			}*/
 
-			shoulder.leftShoulderAnchor = FTransform(leftShoulderAnkerStartLocalPosition) * shoulder.Transform;
-			shoulder.rightShoulderAnchor = FTransform(rightShoulderAnkerStartLocalPosition) * shoulder.Transform;
-			// Update our shoulder anchors now as the shoulder is done computing
-			shoulder.leftShoulder = shoulder.leftShoulderAnchor; //
-			shoulder.rightShoulder = shoulder.rightShoulderAnchor; //
-			//shoulder.leftShoulder.SetLocation(shoulder.leftShoulderAnchor.GetLocation());// = shoulder.leftShoulderAnchor; //
-			//shoulder.rightShoulder.SetLocation(shoulder.rightShoulderAnchor.GetLocation());// = shoulder.rightShoulderAnchor; //
 			LeftArm.armTransforms.Transform = shoulder.leftShoulder;
 			RightArm.armTransforms.Transform = shoulder.rightShoulder;
-
 
 			if (bEnableShoulderDislocation)
 			{
@@ -1117,7 +1145,7 @@ public:
 			targetAngle.X = FMath::Clamp(-(upwardDistanceRatio - 0.5f) * distinctShoulderRotationMultiplier,
 				-distinctShoulderRotationLimitUpward, 0.f);
 
-			shoulderSide.SetRotation((targetAngle * angleSign).Rotation().Quaternion());
+			shoulderSide.SetRotation(shoulderSide.GetRotation() * (targetAngle * angleSign).Rotation().Quaternion());
 		}
 
 
@@ -1291,6 +1319,7 @@ UVRArmIKActorComponent::UVRArmIKActorComponent(const FObjectInitializer& ObjectI
 	headNeckDistance = 0.03f * 100.f; // World To Meters idealy
 	neckShoulderDistance = FVector(-0.02f, 0.f, -.1f) * 100.f; // World To Meters idealy
 
+	bEnableDistinctShoulderRotation = true;
 	distinctShoulderRotationMultiplier = 30.f;
 	distinctShoulderRotationLimitForward = 33.f;
 	distinctShoulderRotationLimitBackward = 0.f;
