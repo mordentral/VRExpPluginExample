@@ -6,15 +6,6 @@
 #include "VRArmIKActorComponent.generated.h"
 
 
-/*
-#TODO: 
-
-Fix the arm length stuff to be precomputed when the positions change, or precalc based on arm width setting.
-No idea why they were dynamically getting it always
-
-
-*/
-
 namespace VectorHelpers
 {
 	inline static float axisAngle(FVector v, FVector forward, FVector axis)
@@ -30,7 +21,6 @@ namespace VectorHelpers
 		float angleB = axisAngle(b, forward, axis);
 
 		return FMath::FindDeltaAngleDegrees(angleA, angleB);
-		//return Mathf.DeltaAngle(angleA, angleB);
 	}
 }
 
@@ -60,20 +50,6 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = "VRArmIK Component Events")
 	FTransform hand;
 	
-	/*inline float upperArmLength
-	{
-		return FVector::Dist(upperArm.GetLocation(), lowerArm.GetLocation());
-	}
-
-	inline float lowerArmLength
-	{
-		return FVector::Dist(lowerArm.GetLocation(), hand.GetLocation());
-	}
-
-	inline float armLength
-	{
-		return upperArmLength + lowerArmLength;
-	}*/
 	UPROPERTY(BlueprintReadOnly, Category = "VRArmIK Component Events")
 	float upperArmLength;
 	UPROPERTY(BlueprintReadOnly, Category = "VRArmIK Component Events")
@@ -81,71 +57,22 @@ public:
 		UPROPERTY(BlueprintReadOnly, Category = "VRArmIK Component Events")
 	float armLength;
 
-	bool armLengthByScale;// = false;
-	FVector scaleAxis;// = FVector(1.f);
-	float scaleHandFactor;// = .7f;
+	bool armLengthByScale;
+	FVector scaleAxis;
+	float scaleHandFactor;
 
 	FArmTransforms()
 	{
-		//float upperArmLength;// = > distance(upperArm, lowerArm);
-		//float lowerArmLength;// = > distance(lowerArm, hand);
-		//float armLength;// = > upperArmLength + lowerArmLength;
 		armLengthByScale = false;
 		scaleAxis = FVector(1.f);
 		scaleHandFactor = .7f;
 	}
 
-	//float distance(FTransform a, FTransform b) = > (a.position - b.position).magnitude;
-
-	/*void Start()
-	{
-		PoseManager.Instance.onCalibrate += updateArmLengths;
-		updateArmLengths();
-	}*/
-
 	// Call on init / recalibration
 	void updateArmLengths(float ShoulderWidth, float TotalWingSpan)
 	{
-		//float shoulderWidth = (upperArm.GetLocation() - lowerArm.GetLocation()).Size();
-		/*float */armLength = (TotalWingSpan - ShoulderWidth) / 2.f;
+		armLength = (TotalWingSpan - ShoulderWidth) / 2.f;
 		setArmLength(armLength);
-	}
-
-	void setUpperArmLength(float length)
-	{
-		if (armLengthByScale)
-		{
-			//float oldLowerArmLength = (lowerArm.GetLocation() - hand.GetLocation()).Size();
-
-			// Scale is local scale, relative space
-			//FVector newScale = upperArm.GetScale3D() - (upperArm.GetScale3D() * scaleAxis).Size() * scaleAxis;
-			//float scaleFactor = (upperArm.GetScale3D() * scaleAxis).Size() / upperArmLength * length;
-			//newScale += scaleAxis * scaleFactor;
-			//upperArm.SetScale3D(newScale);
-
-			//setLowerArmLength(oldLowerArmLength);
-		}
-		else
-		{
-			// Local position for relative space
-			//FVector pos = lowerArm.GetLocation();
-			//pos.Y = FMath::Sign(pos.Y) * length;
-			//lowerArm.SetLocation(pos);
-		}
-	}
-
-	void setLowerArmLength(float length)
-	{
-		if (armLengthByScale)
-		{
-		}
-		else
-		{
-			// Relative position
-			//FVector pos = hand.GetLocation();
-		//	pos.Y = FMath::Sign(pos.Y) * length;
-			//hand.SetLocation(pos);
-		}
 	}
 
 
@@ -160,9 +87,7 @@ public:
 		else
 		{
 			upperArmLength = length * upperArmFactor;
-			setUpperArmLength(upperArmLength);
 			lowerArmLength = length * (1.f - upperArmFactor);
-			setLowerArmLength(lowerArmLength);
 		}
 	}
 };
@@ -196,9 +121,9 @@ public:
 		yWeight = -60.f;
 		zWeightTop = 260.f;
 		zWeightBottom = -100.f;
-		zDistanceStart = .6f;// *100.f; // * world to meters?
+		zDistanceStart = .6f; // * world to meters?
 		xWeight = -50.f;
-		xDistanceStart = .1f;// *100.f; // * world to meters?
+		xDistanceStart = .1f; // * world to meters?
 	}
 };
 
@@ -217,8 +142,8 @@ public:
 	{
 		correctElbowOutside = true;
 		weight = -0.5f;
-		startBelowZ = .4f;// *100.f; // * world to meters?
-		startAboveY = 0.1f;// *100.f; // * World to meters?
+		startBelowZ = .4f; // * world to meters?
+		startAboveY = 0.1f; // * World to meters?
 	}
 };
 
@@ -237,10 +162,10 @@ public:
 	FElbowCorrectionSettings()
 	{
 		useFixedElbowWhenNearShoulder = true;
-		startBelowDistance = .5f * 100.f;  // * world to meters?
-		startBelowY = 0.1f * 100.f; // * world to meters?
+		startBelowDistance = .5f; // * world to meters?
+		startBelowY = 0.1f;  // * world to meters?
 		weight = 2.f;
-		localElbowPos = FVector(-2.f, 0.3f, -1.f) * 100.f; // Check
+		localElbowPos = FVector(-2.f, 0.3f, -1.f); // Check
 	}
 };
 
@@ -296,22 +221,6 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = "VRArmIK Component Events")
 		FTransform rightShoulderAnchor;
 
-	void Start()
-	{
-		//setShoulderWidth(PoseManager.Instance.playerWidthShoulders);
-	}
-
-	void setShoulderWidth(float width)
-	{
-		/*FVector localScale = FVector(width * .5f, .05f, .05f);
-		FVector localPosition = FVector(width * .25f, 0.f, 0.f);
-
-		leftShoulderRenderer.SetScale3D(localScale);
-		leftShoulderRenderer.SetLocation(-localPosition);
-
-		rightShoulderRenderer.SetScale3D(localScale);
-		rightShoulderRenderer.SetLocation(localPosition);*/
-	}
 };
 
 USTRUCT(BlueprintType)
@@ -325,8 +234,6 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = "VRArmIK Component Events")
 	FArmTransforms armTransforms;
 	FShoulderTransforms *shoulder;
-	//float shoulderRightRotation; // Only value used from shoulder poser
-	//ShoulderPoser shoulderPoser;
 	FTransform target;
 	bool left;
 
@@ -358,26 +265,15 @@ public:
 
 	//////////////////////////////////////////////
 
-	void Awake()
-	{
-		/*upperArmStartRotation = arm.upperArm.rotation;
-		lowerArmStartRotation = arm.lowerArm.rotation;
-		wristStartRotation = Quaternion.identity;
-		if (arm.wrist1 != null)
-			wristStartRotation = arm.wrist1.rotation;
-		handStartRotation = arm.hand.rotation;*/
-	}
-
 	void Update(CurrentReferenceTransforms CurrentTrans, FShoulderTransforms * ShoulderTransforms, bool isLeft, float dTime)
 	{
-		//setUpperArmRotation(FQuat::Identity);
-		//setLowerArmRotation(FQuat::Identity);
+		setUpperArmRotation(FQuat::Identity);
+		setLowerArmRotation(FQuat::Identity);
 
 		DeltaTime = dTime;
 		left = isLeft;
 		CurrentTransforms = CurrentTrans;
 		shoulder = ShoulderTransforms;
-		//shoulderRightRotation = shoulderRRotation;
 
 		target = left ? CurrentTransforms.LeftHandTransform : CurrentTransforms.RightHandTransform;
 
@@ -385,11 +281,15 @@ public:
 		calcElbowInnerAngle();
 		rotateShoulder();
 		correctElbowRotation();
+
 		if (elbowSettings.calcElbowAngle)
 		{
 			positionElbow();
-			//if (elbowCorrectionSettings.useFixedElbowWhenNearShoulder)
-			//	correctElbowAfterPositioning();
+			if (elbowCorrectionSettings.useFixedElbowWhenNearShoulder)
+				correctElbowAfterPositioning();
+			
+			// Below still needs iteration, something is off with them
+			
 			//if (handSettings.rotateElbowWithHandRight)
 			//	rotateElbowWithHandRight();
 			//if (handSettings.rotateElbowWithHandForward)
@@ -409,25 +309,15 @@ public:
 		}
 	}
 
-	/*void updateArmAndTurnElbowUp()
-	{
-		updateUpperArmPosition();
-		calcElbowInnerAngle();
-		rotateShoulder();
-		correctElbowRotation();
-	}*/
-
 	void updateUpperArmPosition()
 	{
 		armTransforms.upperArm = armTransforms.Transform;
-		//armTransforms.upperArm.SetLocation(armTransforms.Transform.GetLocation());
 	}
 
 	void calcElbowInnerAngle()
 	{
-		FRotator eulerAngles = FRotator::ZeroRotator;
 		float targetShoulderDistance = (target.GetLocation() - upperArmPos()).Size();
-		float innerAngle;
+		float innerAngle = 0.f;
 
 		if (targetShoulderDistance > armTransforms.armLength)
 		{
@@ -454,34 +344,42 @@ public:
 			}
 		}
 
-		eulerAngles.Yaw = innerAngle;
-		nextLowerArmAngle = eulerAngles;
+		nextLowerArmAngle.Yaw = innerAngle;
 	}
 
 	//source: https://github.com/NickHardeman/ofxIKArm/blob/master/src/ofxIKArm.cpp
+	// this function appears to be working as intended currently
 	void rotateShoulder()
 	{
-		FRotator eulerAngles = FRotator::ZeroRotator;
+		// While this is listed as eulerAngles, our quat initializations take radians so I leave it unconverted
+		float YawAngle = 0.f;
 		FVector targetShoulderDirection = (target.GetLocation() - upperArmPos()).GetSafeNormal();
 		float targetShoulderDistance = (target.GetLocation() - upperArmPos()).Size();
 
-		eulerAngles.Yaw = (left ? -1.f : 1.f) *
+		YawAngle = (left ? -1.f : 1.f) *
 			FMath::Acos(FMath::Clamp((FMath::Pow(targetShoulderDistance, 2.f) + FMath::Pow(armTransforms.upperArmLength, 2.f) -
 				FMath::Pow(armTransforms.lowerArmLength, 2.f)) / (2.f * targetShoulderDistance * armTransforms.upperArmLength), -1.f, 1.f));
 		
-		if (FMath::IsNaN(eulerAngles.Yaw))
-			eulerAngles.Yaw = 0.f;
+		// Skipping the nan check, shouldn't happen?
+		// maybe add back in, but they do this same calc later and don't check it
+		// regardless I also skipped the degree conversion
+		//if (FMath::IsNaN(eulerAngles.Yaw))
+		//	eulerAngles.Yaw = 0.f;
 
-		FQuat shoulderRightRotation = FQuat::FindBetweenNormals(armDirection(), targetShoulderDirection);//Quaternion.FromToRotation(armDirection, targetShoulderDirection);
+		// This requires that the shoulder be in relative space to the neck
+		FQuat shoulderRightRotation = FQuat::FindBetweenNormals(armDirection(), targetShoulderDirection);
 		setUpperArmRotation(shoulderRightRotation);
-		armTransforms.lowerArm.SetRotation(FQuat::Identity);
-		//setLowerArmLocalRotation(FQuat::Identity);
-		setUpperArmRotation(FQuat(lowerArmRotation().GetUpVector(), eulerAngles.Yaw) * armTransforms.upperArm.GetRotation());
-		//armTransforms.upperArm.SetRotation(FQuat(lowerArmRotation().GetUpVector(), eulerAngles.Yaw) * armTransforms.upperArm.GetRotation());
+
+		// Rezero out our lower arm transform since I don't actually have it follow the upper arm
+		//armTransforms.lowerArm.SetRotation(FQuat::Identity);
+		// Rezero is handled at start of update now, don't bother
+
+		setUpperArmRotation(FQuat(lowerArmRotation().GetUpVector(), YawAngle) * armTransforms.upperArm.GetRotation());
 		setLowerArmRotation(nextLowerArmAngle.Quaternion());
-		//setLowerArmLocalRotation(nextLowerArmAngle.Quaternion()); // CHECK THIS
 	}
 
+	// There is a singularity near the shoulders from inaccuracies, from the paper it seems expected though, can assume that this function is working as intended
+	// Would need compared to the unity sample with both stopping on this function and checking results
 	void correctElbowRotation()
 	{
 		FBeforePositioningSettings& s = beforePositioningSettings;
@@ -492,6 +390,7 @@ public:
 		float val2 = localTargetPos.Z - 0.1f;
 		float val3 = 1.f - localTargetPos.Y * (left ? -1.f : 1.f);
 
+		// #TODO: unsure as to the specifics of this factor currently, its only currently coming into effect with hards near to above the shoulders
 		float elbowOutsideFactor = FMath::Clamp(
 			FMath::Clamp((s.startBelowZ - localTargetPos.X) /
 				FMath::Abs(s.startBelowZ) * .5f, 0.f, 1.f) *
@@ -500,10 +399,12 @@ public:
 			FMath::Clamp(1.f - localTargetPos.Y * (left ? -1.f : 1.f), 0.f, 1.f)
 		,0.f, 1.f) * s.weight;
 
-		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("outside factor: %f"), elbowOutsideFactor));
-
 		FVector shoulderHandDirection = (upperArmPos() - handPos()).GetSafeNormal();
 		FVector targetDir = shoulder->Transform.GetRotation() * (FVector::UpVector + (s.correctElbowOutside ? (armDirection() + FVector::ForwardVector * -.2f) * elbowOutsideFactor : FVector::ZeroVector));
+		targetDir.Normalize();
+
+
+		// Not sure why they increased targetDir in the cross here, but it screws up the dot product below if left unnormalized
 		FVector cross = FVector::CrossProduct(shoulderHandDirection, targetDir);// *1000.f);// *100000.f);
 		
 		FVector upperArmUp = upperArmRotation().GetUpVector();
@@ -511,47 +412,8 @@ public:
 		float elbowTargetUp = FVector::DotProduct(upperArmUp, targetDir);
 		float elbowAngle = FMath::RadiansToDegrees(FMath::Acos(FVector::DotProduct(cross, upperArmUp))) + (left ? 0.f : 180.f);
 
-		// sqrt(a) * sqrt(b) = sqrt(a * b) -- valid for real numbers
-		/*float denominator = (float)FMath::Sqrt(cross.Size() * upperArmUp.Size());
-		float dot2 = FMath::Clamp(FVector::DotProduct(cross, upperArmUp) / denominator, -1.f, 1.f);
-		float radians = FMath::Acos(dot2);
-		float degrees2 = FMath::RadiansToDegrees(radians);*/
-
-
-		//float elbowAngle = FVector3.Angle(cross, upperArmUp) + (left ? 0f : 180f);
 		FQuat rotation = FQuat(shoulderHandDirection, FMath::DegreesToRadians(elbowAngle * FMath::Sign(elbowTargetUp)));
 		armTransforms.upperArm.SetRotation(rotation * armTransforms.upperArm.GetRotation());
-		//arm.upperArm.rotation = rotation * arm.upperArm.rotation;
-
-		/*
-		FBeforePositioningSettings &s = beforePositioningSettings;
-		FVector localTargetPos = shoulderAnker().InverseTransformPosition(target.GetLocation()) / armTransforms.armLength;
-
-		float elbowOutsideFactor = FMath::Clamp(
-			FMath::Clamp((s.startBelowZ - localTargetPos.X) /
-				FMath::Abs(s.startBelowZ) * .5f, 0.f, 1.f) *
-			FMath::Clamp((localTargetPos.Z - s.startAboveY) /
-				FMath::Abs(s.startAboveY),0.f, 1.f) *
-			FMath::Clamp(1.f - localTargetPos.Y * (left ? -1.f : 1.f), 0.f, 1.f)
-		, 0.f, 1.f) * s.weight;
-		//elbowOutsideFactor = 1.f;
-
-	//	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("OutsideFactor: %f"), elbowOutsideFactor));
-
-		FVector shoulderHandDirection = (upperArmPos() - handPos()).GetSafeNormal();
-		FVector targetDir = shoulder->Transform.GetRotation() * (FVector::UpVector + (s.correctElbowOutside ? (armDirection() + FVector::ForwardVector * -.2f) * elbowOutsideFactor : FVector::ZeroVector));
-		//Vector3 targetDir = shoulder.transform.rotation * (Vector3.up + (s.correctElbowOutside ? (armDirection + Vector3.forward * -.2f) * elbowOutsideFactor : Vector3.zero));
-		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Targetdir: %s"), *targetDir.ToString()));
-
-		FVector cross = FVector::CrossProduct(shoulderHandDirection, targetDir * 1000.f);//.GetSafeNormal());// *100000.f);
-		FVector upperArmUp = upperArmRotation().GetUpVector();
-
-		float elbowTargetUp = FVector::DotProduct(upperArmUp, targetDir);
-
-		float elbowAngle = FMath::RadiansToDegrees(FMath::Acos(FVector::DotProduct(cross, upperArmUp))) + (left ? 0.f : 180.f);
-		FQuat rotation = FQuat(shoulderHandDirection, FMath::DegreesToRadians(elbowAngle * FMath::Sign(elbowTargetUp)));
-		armTransforms.upperArm.SetRotation(rotation * armTransforms.upperArm.GetRotation());
-		*/
 	}
 
 	float getElbowTargetAngle()
@@ -561,8 +423,6 @@ public:
 
 		localHandPosNormalized = shoulderAnker().InverseTransformPosition(handPos()) / armTransforms.armLength;
 
-		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Dir: %s"), *localHandPosNormalized.ToString()));
-
 		// angle from Y
 		float angle = elbowSettings.yWeight * localHandPosNormalized.Z + elbowSettings.offsetAngle;
 
@@ -570,8 +430,6 @@ public:
 			angle += (elbowSettings.zWeightTop * ((FMath::Max(elbowSettings.zDistanceStart - localHandPosNormalized.X, 0.f) * FMath::Max(localHandPosNormalized.Z, 0.f))));
 		else
 			angle += (elbowSettings.zWeightBottom * ((FMath::Max(elbowSettings.zDistanceStart - localHandPosNormalized.X, 0.f) * FMath::Max(-localHandPosNormalized.Z, 0.f))));
-
-		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, FString::Printf(TEXT("Angle: %f"), angle));
 
 		// angle from X
 		angle += elbowSettings.xWeight * (FMath::Max(localHandPosNormalized.Y * (left ? 1.0f : -1.0f) + elbowSettings.xDistanceStart, 0.f));
@@ -606,9 +464,10 @@ public:
 		FElbowCorrectionSettings s = elbowCorrectionSettings;
 		FVector localTargetPos = (shoulderAnker().InverseTransformPosition(target.GetLocation()) / armTransforms.armLength);
 		FVector shoulderHandDirection = (upperArmPos() - handPos()).GetSafeNormal();
-		FVector elbowPos = s.localElbowPos;
 		
-		float Devisor = 1.f;
+		// Is the local elbow pos a generic value or is it an actual relative position
+		// #TODO: check this as it make a rather large difference in the accuracy of these calculations
+		FVector elbowPos = s.localElbowPos;
 
 		if (left)
 			elbowPos.Y *= -1.f;
@@ -616,21 +475,25 @@ public:
 		FVector targetDir = shoulder->Transform.GetRotation() * elbowPos.GetSafeNormal();
 		FVector cross = FVector::CrossProduct(shoulderHandDirection, targetDir);
 
-		FVector upperArmUp = upperArmRotation() * FVector::UpVector;
+		FVector upperArmUp = upperArmRotation().GetUpVector();
 
 		FVector distance = target.GetLocation() - upperArmPos();
-		distance = distance.Size() * shoulder->Transform.InverseTransformVector(distance / distance.Size());
 
-		float weight = FMath::Clamp(FMath::Clamp(((s.startBelowDistance / Devisor) - (distance.Size2D() / Devisor) / (armTransforms.armLength / Devisor)) /
-			(s.startBelowDistance / Devisor), 0.f, 1.f) * s.weight + FMath::Clamp((-distance.X / Devisor + .1f) * 3.f, 0.f, 1.f), 0.f, 1.f) *
-			FMath::Clamp((s.startBelowY / Devisor - localTargetPos.Z / Devisor) /
-				(s.startBelowY / Devisor), 0.f, 1.f);
+		distance = distance.Size() * shoulder->Transform.InverseTransformVector(distance.GetSafeNormal());//distance / distance.Size());
+		distance /= 100.f;
+		float localarm = armTransforms.armLength / 100.f;
+
+		// #TODO: This weight needs work, need to remove the devisors, also its coming into effect far too far away from the actual shoulders
+		float weight = FMath::Clamp(FMath::Clamp((s.startBelowDistance - (distance.Size2D() / localarm)) /
+			s.startBelowDistance, 0.f, 1.f) * s.weight + FMath::Clamp((-distance.X + .1f) * 3, 0.f, 1.f), 0.f, 1.f) *
+			FMath::Clamp((s.startBelowY - localTargetPos.Z) /
+				s.startBelowY, 0.f, 1.f);
 
 		// This can be a sub function
 		float elbowTargetUp = FVector::DotProduct(upperArmUp, targetDir);
 		float elbowAngle2 = FMath::RadiansToDegrees(FMath::Acos(FVector::DotProduct(cross, upperArmUp))) + (left ? 0.f : 180.f);
-		//float elbowAngle2 = FMath::RadiansToDegrees(acosf(cross | upperArmUp))  + (left ? 0.f : 180.f);
-		FQuat rotation = FQuat(shoulderHandDirection, FMath::DegreesToRadians(toSignedEulerAngle((elbowAngle2 * FMath::Sign(elbowTargetUp))) * FMath::Clamp(weight, 0.f, 1.f)));
+
+		FQuat rotation = FQuat(shoulderHandDirection, FMath::DegreesToRadians(FRotator::NormalizeAxis((elbowAngle2 * FMath::Sign(elbowTargetUp))) * FMath::Clamp(weight, 0.f, 1.f)));
 		armTransforms.upperArm.SetRotation(rotation * armTransforms.upperArm.GetRotation());
 	}
 
@@ -649,7 +512,7 @@ public:
 		rotateElbow(targetElbowAngle);
 	}
 
-
+	// Needs work
 	void rotateElbowWithHandRight()
 	{
 		FHandSettings s = handSettings;
@@ -665,12 +528,28 @@ public:
 			lowerArmRotation().GetForwardVector(), lowerArmRotation() * armDirection());
 
 		float deltaElbow = (elbowTargetAngle + (left ? -s.handDeltaOffset : s.handDeltaOffset)) / 180.f;
-
 		deltaElbow = FMath::Sign(deltaElbow) * FMath::Pow(FMath::Abs(deltaElbow), s.handDeltaPow) * 180.f * s.handDeltaFactor;
-		interpolatedDeltaElbow = FRotator::ClampAxis(FMath::Lerp(interpolatedDeltaElbow, deltaElbow, DeltaTime / s.rotateElbowWithHandDelay));
+
+		interpolatedDeltaElbow = LerpAxisOver(interpolatedDeltaElbow, deltaElbow, DeltaTime / s.rotateElbowWithHandDelay);
+		//interpolatedDeltaElbow = FRotator::ClampAxis(FMath::Lerp(interpolatedDeltaElbow, deltaElbow, FMath::Clamp(DeltaTime / s.rotateElbowWithHandDelay, 0.f, 1.f)));
+
 		rotateElbow(interpolatedDeltaElbow);
 	}
 
+	// From unity, don't think this is what we want
+	inline float LerpAxisOver(float a, float b, float time)
+	{
+		time = FMath::Clamp(time, 0.f, 1.f);
+		b = (FRotator::ClampAxis(b) - FRotator::ClampAxis(a));
+
+		float delta = FMath::Clamp(b - FMath::FloorToFloat(b / 360.f) * 360.f, 0.0f, 360.f);
+
+		delta = FRotator::NormalizeAxis(delta);
+		delta = a + delta * FMath::Clamp(time, 0.f, 1.f);
+		return FRotator::NormalizeAxis(delta);
+	}
+
+	// Needs work
 	void rotateElbowWithHandFoward()
 	{
 		FHandSettings s = handSettings;
@@ -691,9 +570,11 @@ public:
 		}
 
 		deltaElbowForward = FMath::Sign(deltaElbowForward) * FMath::Pow(FMath::Abs(deltaElbowForward), s.handDeltaForwardPow) * 180.f;
-		interpolatedDeltaElbowForward = FRotator::ClampAxis(FMath::Lerp(interpolatedDeltaElbowForward, deltaElbowForward, DeltaTime / s.rotateElbowWithHandDelay));
+		
+		interpolatedDeltaElbowForward = LerpAxisOver(interpolatedDeltaElbowForward, deltaElbowForward, DeltaTime / s.rotateElbowWithHandDelay);
+		//interpolatedDeltaElbowForward = FRotator::ClampAxis(FMath::Lerp(interpolatedDeltaElbowForward, deltaElbowForward, DeltaTime / s.rotateElbowWithHandDelay));
 
-		float signedInterpolated = toSignedEulerAngle(interpolatedDeltaElbowForward);
+		float signedInterpolated = FRotator::NormalizeAxis(interpolatedDeltaElbowForward);
 		rotateElbow(signedInterpolated * s.handDeltaForwardFactor);
 	}
 
@@ -721,12 +602,6 @@ public:
 
 		setHandRotation(target.GetRotation());
 	}
-
-	/*FVector removeShoulderRightRotation(FVector direction)
-	{
-		FQuat::ToAxisAndAngle()
-		return FQuat(shoulder->Transform.GetRotation().GetRightVector(), -shoulderRightRotation) * direction;
-	}*/
 
 	void setUpperArmRotation(FQuat rotation)
 	{
@@ -768,33 +643,27 @@ public:
 		return armTransforms.upperArm.GetLocation();
 	}
 
-	/*inline FVector lowerArmPos()
-	{
-		return armTransforms.lowerArm.GetLocation();
-	}*/
-
 	inline FVector handPos()
 	{
 		return left ? CurrentTransforms.LeftHandTransform.GetLocation() : CurrentTransforms.RightHandTransform.GetLocation();
-		//return armTransforms.hand.GetLocation();
 	}
 
-	/*inline */FTransform shoulderAnker()
+	inline FTransform shoulderAnker()
 	{
 		return left ? shoulder->leftShoulderAnchor : shoulder->rightShoulderAnchor;
 	}
 	
-	/*inline */FQuat upperArmRotation()
+	inline FQuat upperArmRotation()
 	{
 		return armTransforms.upperArm.GetRotation();// *upperArmStartRotation.Inverse();
 	}
 
-	/*inline */FQuat lowerArmRotation()
+	inline FQuat lowerArmRotation()
 	{
 		return armTransforms.upperArm.GetRotation() * armTransforms.lowerArm.GetRotation();// *lowerArmStartRotation.Inverse();
 	}
 
-	/*inline*/ FQuat handRotation()
+	inline FQuat handRotation()
 	{
 		return armTransforms.hand.GetRotation();// *handStartRotation.Inverse();
 	}
@@ -802,19 +671,6 @@ public:
 	void setHandRotation(FQuat rotation)
 	{
 		armTransforms.hand.SetRotation(rotation);// *handStartRotation);
-	}
-
-	float toSignedEulerAngle(float InFloat)
-	{
-		float result = toPositiveEulerAngle(InFloat);
-		if (result > 180.f)
-			result = result - 360.f;
-		return result;
-	}
-
-	float toPositiveEulerAngle(float InFloat)
-	{
-		return FMath::Fmod(FMath::Fmod(InFloat, 360.f) + 360.f, 360.f);
 	}
 };
 
@@ -837,9 +693,6 @@ public:
 		RightArm.armTransforms.updateArmLengths(playerWidthShoulders, playerWidthWrist);
 	}
 
-		//	public delegate void OnCalibrateListener();
-
-		//	public event OnCalibrateListener onCalibrate;
 		float referencePlayerHeightHmd;
 		float referencePlayerWidthWrist;
 		float playerHeightHmd;
@@ -854,39 +707,34 @@ public:
 		FVRArmIK RightArm;
 
 		CurrentReferenceTransforms CurrentTransforms;
-		//FTransform CameraTransform;
-		//FTransform LeftHandTransform;
-		//FTransform RightHandTransform;
 		
 		virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override
 		{
 			Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-			//if (!bCalibrated)
-			//	return;
-
 			AVRBaseCharacter * OwningChar = Cast<AVRBaseCharacter>(GetOwner());
 			if (!OwningChar)
 				return;
 
+			// I'm using this comp as a proxy mesh component for testing
 			this->SetRelativeTransform(FTransform::Identity);
 
-			FTransform ToLocalTrans = this->GetComponentTransform().Inverse();
+			/*FTransform ToLocalTrans = this->GetComponentTransform().Inverse();
 
 			CurrentTransforms.CameraTransform = OwningChar->VRReplicatedCamera->GetComponentTransform() * ToLocalTrans;
 			CurrentTransforms.LeftHandTransform = OwningChar->LeftMotionController->GetComponentTransform() * ToLocalTrans;
 			CurrentTransforms.RightHandTransform = OwningChar->RightMotionController->GetComponentTransform() * ToLocalTrans;
-
-			/*CurrentTransforms.CameraTransform = OwningChar->VRReplicatedCamera->GetRelativeTransform();
+			*/
+			CurrentTransforms.CameraTransform = OwningChar->VRReplicatedCamera->GetRelativeTransform();
 			CurrentTransforms.LeftHandTransform = OwningChar->LeftMotionController->GetRelativeTransform();
-			CurrentTransforms.RightHandTransform = OwningChar->RightMotionController->GetRelativeTransform();*/
-
-
+			CurrentTransforms.RightHandTransform = OwningChar->RightMotionController->GetRelativeTransform();
+			
 			CurrentTransforms.PureCameraYaw = UVRExpansionFunctionLibrary::GetHMDPureYaw_I(CurrentTransforms.CameraTransform.GetRotation().Rotator());
 
 			UpdateShoulders();
 
-			ToLocalTrans = this->GetRelativeTransform().Inverse();
+			// Current moving them into relative space to this rotated component to simulate being in front of a rotated mesh
+			FTransform ToLocalTrans = this->GetRelativeTransform().Inverse();
 
 			CurrentTransforms.CameraTransform = CurrentTransforms.CameraTransform * ToLocalTrans;
 			CurrentTransforms.LeftHandTransform = CurrentTransforms.LeftHandTransform * ToLocalTrans;
@@ -895,36 +743,7 @@ public:
 			LeftArm.Update(CurrentTransforms, &shoulder, true, GetWorld()->GetDeltaSeconds());
 			RightArm.Update(CurrentTransforms, &shoulder, false, GetWorld()->GetDeltaSeconds());
 
-			// Update Arms
 			// Waist estimation?
-		}
-
-
-
-		// Init
-		void Awake()
-		{
-			if (loadPlayerSizeOnAwake)
-			{
-				loadPlayerSize();
-			}
-			//	var device = XRSettings.loadedDeviceName;
-			//	vrSystemOffsetHeight = string.IsNullOrEmpty(device) || device == "OpenVR" ? 0 : playerHeightHmd;
-		}
-
-		/*void Start()
-		{
-			onCalibrate += OnCalibrate;
-		}*/
-
-		void loadPlayerWidthShoulders()
-		{
-			playerWidthShoulders = 0.31f;// PlayerPrefs.GetFloat("VRArmIK_PlayerWidthShoulders", 0.31f);
-		}
-
-		void savePlayerWidthShoulders(float width)
-		{
-			//PlayerPrefs.SetFloat("VRArmIK_PlayerWidthShoulders", width);
 		}
 
 		UFUNCTION(BlueprintCallable, Category = "BaseVRCharacter|VRLocations")
@@ -937,24 +756,8 @@ public:
 			
 			LeftArm.armTransforms.updateArmLengths(playerWidthShoulders, playerWidthWrist);
 			RightArm.armTransforms.updateArmLengths(playerWidthShoulders, playerWidthWrist);
-			//savePlayerSize(playerHeightHmd, playerWidthWrist);
 		}
 
-		void savePlayerSize(float heightHmd, float widthWrist)
-		{
-			//PlayerPrefs.SetFloat("VRArmIK_PlayerHeightHmd", heightHmd);
-			//PlayerPrefs.SetFloat("VRArmIK_PlayerWidthWrist", widthWrist);
-			loadPlayerSize();
-			//onCalibrate ? .Invoke();
-		}
-
-		void loadPlayerSize()
-		{
-			//playerHeightHmd = PlayerPrefs.GetFloat("VRArmIK_PlayerHeightHmd", referencePlayerHeightHmd);
-			//playerWidthWrist = PlayerPrefs.GetFloat("VRArmIK_PlayerWidthWrist", referencePlayerWidthWrist);
-		}
-
-	//class ShoulderPoser
 	public:
 
 		float LastTargetRot;
@@ -1001,11 +804,12 @@ public:
 			shoulder.rightShoulderAnchor = FTransform(rightShoulderAnkerStartLocalPosition) * shoulder.Transform;
 			
 			// Update our shoulder anchors now as the shoulder is done computing
-			//shoulder.leftShoulder = shoulder.leftShoulderAnchor; //
-			//shoulder.rightShoulder = shoulder.rightShoulderAnchor; //
-			shoulder.leftShoulder.SetLocation(shoulder.leftShoulderAnchor.GetLocation());// = shoulder.leftShoulderAnchor; //
-			shoulder.rightShoulder.SetLocation(shoulder.rightShoulderAnchor.GetLocation());// = shoulder.rightShoulderAnchor; //
+			shoulder.leftShoulder = shoulder.leftShoulderAnchor; //
+			shoulder.rightShoulder = shoulder.rightShoulderAnchor; //
+			//shoulder.leftShoulder.SetLocation(shoulder.leftShoulderAnchor.GetLocation());// = shoulder.leftShoulderAnchor; //
+			//shoulder.rightShoulder.SetLocation(shoulder.rightShoulderAnchor.GetLocation());// = shoulder.rightShoulderAnchor; //
 
+			// Correct and use
 			/*if (bEnableDistinctShoulderRotation)
 			{
 				rotateLeftShoulder();
@@ -1023,37 +827,9 @@ public:
 			{
 				LeftArm.armTransforms.Transform = shoulder.leftShoulder;
 				RightArm.armTransforms.Transform = shoulder.rightShoulder;
-				//LeftArm.armTransforms.Transform.SetLocation(FVector::ZeroVector);
-				//RightArm.armTransforms.Transform.SetLocation(FVector::ZeroVector);
 			}
 
-			//Debug.DrawRay(shoulder.transform.position, shoulder.transform.forward);
 		}
-
-		void Start()
-		{
-			/*if (vrTrackingReferences == null)
-				vrTrackingReferences = PoseManager.Instance.vrTransforms;
-
-			leftShoulderAnkerStartLocalPosition = shoulder.transform.InverseTransformPoint(shoulder.leftShoulderAnchor.position);
-			rightShoulderAnkerStartLocalPosition =
-				shoulder.transform.InverseTransformPoint(shoulder.rightShoulderAnchor.position);*/
-		}
-
-		void onCalibrate()
-		{
-
-			//shoulder.leftShoulderAnchor = shoulder.leftShoulder;
-			//shoulder.rightShoulderAnchor = shoulder.rightShoulder;
-
-			/*shoulder.leftArm.setArmLength((avatarTrackingReferences.leftHand.transform.position - shoulder.leftShoulderAnchor.position)
-				.magnitude);
-			shoulder.rightArm.setArmLength((avatarTrackingReferences.rightHand.transform.position - shoulder.rightShoulderAnchor.position)
-				.magnitude);*/
-		}
-
-		// Gets the estimated shoulder position based on the head and hands
-		//UFUNCTION(BlueprintPure, Category = "BaseVRCharacter|VRLocations")
 
 		// Rotate shoulder up
 		void GetShoulderIKRot(bool bGetInWorldSpace = false)
@@ -1065,7 +841,6 @@ public:
 				DetectHandsBehindHead(TargetAngle);
 			}
 
-
 			if (true)
 			{
 				ClampHeadRotationDelta(TargetAngle);
@@ -1076,15 +851,19 @@ public:
 				// implement
 			}
 
+			// Gets the yaw, I split these functions for now as I am seperating things for testing
 			FQuat newRot = FQuat(FVector::UpVector, FMath::DegreesToRadians(TargetAngle)); // Make directly from up vec and angle instead
-			//GetEstShoulderPitch(newRot);
+			
+			// Adds pitch to the shoulder
+			GetEstShoulderPitch(newRot);
 
+			// Zero out the shoulder location and only apply Z for now, I split things for testing
 			FVector shoulderloc = shoulder.Transform.GetLocation();
 			this->SetRelativeLocation(FVector(shoulderloc.X, shoulderloc.Y, 0.f));
 			shoulder.Transform.SetLocation(FVector(0.f, 0.f, shoulderloc.Z));
 			this->SetRelativeRotation(newRot);
 
-			//this->SetRelativeRotation(newRot);
+			// originally pitch was applied to newrot and then here, need to go back to that eventually
 			//shoulder.Transform.SetRotation(newRot);
 		}
 
@@ -1095,17 +874,9 @@ public:
 			FVector RightHand = CurrentTransforms.RightHandTransform.GetLocation();
 
 			FRotator LeveledRel = CurrentTransforms.PureCameraYaw;
-			//shoulder.Transform.GetLocation();
-			FVector DistLeft = LeftHand - shoulder.Transform.GetLocation();//(CameraTransform.GetLocation() + LeveledRel.RotateVector(FVector(-8.f, 0.f, 0.f)));
-			FVector DistRight = RightHand - shoulder.Transform.GetLocation();//(CameraTransform.GetLocation() + LeveledRel.RotateVector(FVector(-8.f, 0.f, 0.f)));
 
-
-			/*
-						Transform leftHand = avatarTrackingReferences.leftHand.transform, rightHand = avatarTrackingReferences.rightHand.transform;
-
-			Vector3 distanceLeftHand = leftHand.position - shoulder.transform.position,
-				distanceRightHand = rightHand.position - shoulder.transform.position;
-			*/
+			FVector DistLeft = LeftHand - shoulder.Transform.GetLocation();
+			FVector DistRight = RightHand - shoulder.Transform.GetLocation();
 
 			if (bIgnoreZPos)
 			{
@@ -1165,52 +936,16 @@ public:
 
 		void positionShoulder()
 		{
-
-			//FRotator LeveledRel = CurrentTransforms.PureCameraYaw;
-
 			FVector headNeckOffset = CurrentTransforms.CameraTransform.GetRotation().RotateVector(headNeckDirectionVector);
-			FVector targetPosition = CurrentTransforms.CameraTransform.GetLocation() + headNeckOffset * headNeckDistance;
-			FVector newLoc = targetPosition + CurrentTransforms.CameraTransform.GetRotation().RotateVector(neckShoulderDistance);
-			shoulder.Transform.SetLocation(FVector(0.f, 0.f, newLoc.Z));
-			this->SetRelativeLocation(FVector(newLoc.X, newLoc.Y, 0.f));
-			
-			///shoulder.Transform.SetLocation(targetPosition + CurrentTransforms.CameraTransform.GetRotation().RotateVector(neckShoulderDistance));
-			//shoulder.transform.localPosition =
-			//	shoulder.transform.parent.InverseTransformPoint(targetPosition) + neckShoulderDistance;
+			FVector targetPosition = CurrentTransforms.CameraTransform.GetLocation() + headNeckOffset * headNeckDistance;		
+			shoulder.Transform.SetLocation(targetPosition + CurrentTransforms.CameraTransform.GetRotation().RotateVector(neckShoulderDistance));
 		}
-
-		// Shoulder yaw
-		//virtual void rotateShoulderUp()
-		//{
-
-
-			/*			float angle = getCombinedDirectionAngleUp();
-
-						Vector3 targetRotation = new Vector3(0f, angle, 0f);
-
-						if (autoDetectHandsBehindHead)
-						{
-							detectHandsBehindHead(ref targetRotation);
-						}
-
-						if (clampRotationToHead)
-						{
-							clampHeadRotationDeltaUp(ref targetRotation);
-						}
-
-						shoulder.transform.eulerAngles = targetRotation;*/
-		//}
-
 
 		void positionShoulderRelative()
 		{
 			FQuat deltaRot = FQuat(shoulder.Transform.GetRotation().GetRightVector(), FMath::DegreesToRadians(shoulderRightRotation));
 			FVector shoulderHeadDiff = shoulder.Transform.GetLocation() - CurrentTransforms.CameraTransform.GetLocation();
 			shoulder.Transform.SetLocation(deltaRot * shoulderHeadDiff + CurrentTransforms.CameraTransform.GetLocation());
-
-			/*Quaternion deltaRot = Quaternion.AngleAxis(shoulderRightRotation, shoulder.transform.right);
-			Vector3 shoulderHeadDiff = shoulder.transform.position - avatarTrackingReferences.head.transform.position;
-			shoulder.transform.position = deltaRot * shoulderHeadDiff + avatarTrackingReferences.head.transform.position;*/
 		}
 
 		void DetectHandsBehindHead(float & TargetRot)
@@ -1297,17 +1032,13 @@ public:
 			float relativeHeightDiff = HeightDiff / referencePlayerHeightHmd;
 			FQuat HMDRot = CurrentTransforms.CameraTransform.GetRotation();
 			float headPitchRotation = VectorHelpers::getAngleBetween(OrigRot.GetForwardVector(), HMDRot.GetForwardVector(), FVector::UpVector, OrigRot.GetRightVector()) + rightRotationHeadRotationOffset;
-			//axisAngle(HMDRot.GetForwardVector(), FVector::UpVector, OrigRot.GetRightVector());
+
 			float heightFactor = FMath::Clamp(relativeHeightDiff - 0.f, 0.f, 1.0f);
 			shoulderRightRotation = heightFactor * rightRotationHeightFactor;
 			shoulderRightRotation += FMath::Clamp(headPitchRotation * rightRotationHeadRotationFactor * heightFactor, 0.f, 50.f);
 
-
-			//FQuat DeltaRot = FQuat(OrigRot.GetRightVector()/*FVector::RightVector*/, FMath::DegreesToRadians(shoulderRightRotation));
-			//OrigRot = DeltaRot * OrigRot;
 			FQuat DeltaRot = FQuat(FVector::RightVector, FMath::DegreesToRadians(shoulderRightRotation));
 			shoulder.Transform.SetRotation(DeltaRot);
-			// Positionrelative(), offsets by the rot position
 		}
 };
 
@@ -1317,9 +1048,6 @@ UVRArmIKActorComponent::UVRArmIKActorComponent(const FObjectInitializer& ObjectI
 	PrimaryComponentTick.bStartWithTickEnabled = true;
 	PrimaryComponentTick.TickGroup = TG_PostPhysics;
 	PrimaryComponentTick.bTickEvenWhenPaused = true;
-
-	//OwningCharacter = nullptr;
-	//vrSystemOffsetHeight = 0.0f;
 
 	referencePlayerHeightHmd = 1.94f * 100.f; // World To Meters idealy
 	referencePlayerWidthWrist = /*1.39f*/ 2.f * 100.f; // World To Meters idealy
@@ -1347,6 +1075,6 @@ UVRArmIKActorComponent::UVRArmIKActorComponent(const FObjectInitializer& ObjectI
 	rightRotationHeadRotationFactor = 0.3f;
 	rightRotationHeadRotationOffset = -20.f;
 	startShoulderDislocationBefore = 0.005f * 100.f; // World To Meters idealy
-	headNeckDirectionVector = FVector(-.05f, 0.f, -1.f);// *100.f; // World To Meters idealy
+	headNeckDirectionVector = FVector(-.05f, 0.f, -1.f);
 	bIgnoreZPos = true;
 }
