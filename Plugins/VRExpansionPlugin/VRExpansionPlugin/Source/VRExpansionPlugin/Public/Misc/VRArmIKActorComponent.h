@@ -297,6 +297,7 @@ public:
 			//rotateHand();
 		}
 
+		// Set our lower arm positions to the elbow for easy use
 		if (left)
 		{
 			armTransforms.lowerArm.SetLocation(armTransforms.upperArm.GetLocation() + (armTransforms.upperArm.GetRotation().RotateVector(FVector(0.f, -1.f, 0.f) * armTransforms.upperArmLength)));
