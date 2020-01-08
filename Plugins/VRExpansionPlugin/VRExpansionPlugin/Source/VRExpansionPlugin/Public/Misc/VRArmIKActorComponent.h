@@ -2,7 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "UObject/ObjectMacros.h"
-
+#include "DrawDebugHelpers.h"
 #include "VRArmIKActorComponent.generated.h"
 
 
@@ -708,6 +708,34 @@ public:
 		FVRArmIK RightArm;
 
 		CurrentReferenceTransforms CurrentTransforms;
+
+		
+		void DrawJoint(FTransform &JointTransform, bool bDrawAxis = true)
+		{
+#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+			FTransform WorldTransform = JointTransform * this->GetComponentTransform();
+			
+			DrawDebugSphere(GetWorld(), WorldTransform.GetLocation(), 3.0f, 32.f, FColor::Silver);
+			
+			if (bDrawAxis)
+			{
+				FQuat WorldRot = WorldTransform.GetRotation();
+				DrawDebugLine(GetWorld(), WorldTransform.GetLocation(), WorldTransform.GetLocation() + (WorldRot.GetUpVector() * 10.f), FColor::Blue);
+				DrawDebugLine(GetWorld(), WorldTransform.GetLocation(), WorldTransform.GetLocation() + (WorldRot.GetForwardVector() * 10.f), FColor::Red);
+				DrawDebugLine(GetWorld(), WorldTransform.GetLocation(), WorldTransform.GetLocation() + (WorldRot.GetRightVector() * 10.f), FColor::Green);
+			}
+#endif
+		}
+
+		void DrawBone(FTransform &ParentBone, float BoneLength, FVector AxisToDraw)
+		{
+#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+			FTransform WorldTransform = ParentBone * this->GetComponentTransform();
+			FQuat WorldRot = WorldTransform.GetRotation();
+			DrawDebugLine(GetWorld(), WorldTransform.GetLocation(), WorldTransform.GetLocation() + ((WorldRot.RotateVector(AxisToDraw)) * BoneLength), FColor::Magenta, false, -1.f, 0, 2.f);
+#endif
+		}
+		
 		
 		virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override
 		{
@@ -720,22 +748,23 @@ public:
 			// I'm using this comp as a proxy mesh component for testing
 			this->SetRelativeTransform(FTransform::Identity);
 
-			/*FTransform ToLocalTrans = this->GetComponentTransform().Inverse();
+			// Doing this lets it work with my FPS pawn
+			FTransform ToLocalTrans = this->GetComponentTransform().Inverse();
 
 			CurrentTransforms.CameraTransform = OwningChar->VRReplicatedCamera->GetComponentTransform() * ToLocalTrans;
 			CurrentTransforms.LeftHandTransform = OwningChar->LeftMotionController->GetComponentTransform() * ToLocalTrans;
 			CurrentTransforms.RightHandTransform = OwningChar->RightMotionController->GetComponentTransform() * ToLocalTrans;
-			*/
-			CurrentTransforms.CameraTransform = OwningChar->VRReplicatedCamera->GetRelativeTransform();
+			
+			/*CurrentTransforms.CameraTransform = OwningChar->VRReplicatedCamera->GetRelativeTransform();
 			CurrentTransforms.LeftHandTransform = OwningChar->LeftMotionController->GetRelativeTransform();
-			CurrentTransforms.RightHandTransform = OwningChar->RightMotionController->GetRelativeTransform();
+			CurrentTransforms.RightHandTransform = OwningChar->RightMotionController->GetRelativeTransform();*/
 			
 			CurrentTransforms.PureCameraYaw = UVRExpansionFunctionLibrary::GetHMDPureYaw_I(CurrentTransforms.CameraTransform.GetRotation().Rotator());
 
 			UpdateShoulders();
 
 			// Current moving them into relative space to this rotated component to simulate being in front of a rotated mesh
-			FTransform ToLocalTrans = this->GetRelativeTransform().Inverse();
+			ToLocalTrans = this->GetRelativeTransform().Inverse();
 
 			CurrentTransforms.CameraTransform = CurrentTransforms.CameraTransform * ToLocalTrans;
 			CurrentTransforms.LeftHandTransform = CurrentTransforms.LeftHandTransform * ToLocalTrans;
@@ -744,6 +773,16 @@ public:
 			LeftArm.Update(CurrentTransforms, &shoulder, true, GetWorld()->GetDeltaSeconds());
 			RightArm.Update(CurrentTransforms, &shoulder, false, GetWorld()->GetDeltaSeconds());
 
+			DrawJoint(shoulder.leftShoulder);
+			DrawJoint(LeftArm.armTransforms.lowerArm);
+			DrawJoint(shoulder.rightShoulder);
+			DrawJoint(RightArm.armTransforms.lowerArm);
+
+			DrawBone(LeftArm.armTransforms.upperArm, LeftArm.armTransforms.upperArmLength, -FVector::RightVector);
+			DrawBone(RightArm.armTransforms.upperArm, RightArm.armTransforms.upperArmLength, FVector::RightVector);
+			DrawBone(LeftArm.armTransforms.lowerArm, LeftArm.armTransforms.lowerArmLength, -FVector::RightVector);
+			DrawBone(RightArm.armTransforms.lowerArm, RightArm.armTransforms.lowerArmLength, FVector::RightVector);
+			
 			// Waist estimation?
 		}
 
