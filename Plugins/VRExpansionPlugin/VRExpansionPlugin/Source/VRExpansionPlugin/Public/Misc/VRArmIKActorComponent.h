@@ -685,6 +685,22 @@ class VREXPANSIONPLUGIN_API UVRArmIKActorComponent : public USceneComponent
 	GENERATED_BODY()
 public:
 
+	// Input the name of the effector that you want to track, otherwise we will track the motion controllers directly
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRArmIK Effectors")
+		FName LeftArmEffector;
+	TWeakObjectPtr<USceneComponent> LeftArmEff;
+
+
+	// Input the name of the effector that you want to track, otherwise we will track the motion controllers directly
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRArmIK Effectors")
+		FName RightArmEffector;
+	TWeakObjectPtr<USceneComponent> RightArmEff;
+
+	// Input the name of the effector that you want to track, otherwise we will track the camera directly
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRArmIK Effectors")
+		FName HeadEffector;
+	TWeakObjectPtr<USceneComponent> HeadEff;
+
 	UVRArmIKActorComponent(const FObjectInitializer& ObjectInitializer);
 	virtual void BeginPlay() override
 	{
@@ -692,6 +708,79 @@ public:
 
 		LeftArm.armTransforms.updateArmLengths(playerWidthShoulders, playerWidthWrist);
 		RightArm.armTransforms.updateArmLengths(playerWidthShoulders, playerWidthWrist);
+
+
+		AVRBaseCharacter* OwningChar = Cast<AVRBaseCharacter>(GetOwner());
+		if (!OwningChar)
+			return;
+
+		FName localName = NAME_None;
+		int counter = 0;
+		for (UActorComponent* aComp : OwningChar->GetComponents())
+		{
+
+			localName = aComp->GetFName();
+
+			if (localName == LeftArmEffector)
+			{
+				if (USceneComponent * sComp = Cast<USceneComponent>(aComp))
+				{
+					LeftArmEff = sComp;
+					++counter;
+					if (counter >= 3)
+						break;
+					else
+						continue;
+				}
+				else
+					continue;
+			}
+
+			if (localName == RightArmEffector)
+			{
+				if (USceneComponent * sComp = Cast<USceneComponent>(aComp))
+				{
+					RightArmEff = sComp;
+					++counter;
+					if (counter >= 3)
+						break;
+					else
+						continue;
+				}
+				else
+					continue;
+			}
+
+			if (localName == HeadEffector)
+			{
+				if (USceneComponent * sComp = Cast<USceneComponent>(aComp))
+				{
+					HeadEff = sComp;
+					++counter;
+					if (counter >= 3)
+						break;
+					else
+						continue;
+				}
+				else
+					continue;
+			}
+		}
+
+		if (!LeftArmEff.IsValid())
+		{
+			LeftArmEff = OwningChar->LeftMotionController;
+		}
+
+		if (!RightArmEff.IsValid())
+		{
+			RightArmEff = OwningChar->RightMotionController;
+		}
+
+		if (!HeadEff.IsValid())
+		{
+			HeadEff = OwningChar->VRReplicatedCamera;
+		}
 	}
 
 		float referencePlayerHeightHmd;
@@ -741,8 +830,8 @@ public:
 		{
 			Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-			AVRBaseCharacter * OwningChar = Cast<AVRBaseCharacter>(GetOwner());
-			if (!OwningChar)
+
+			if (!HeadEff.IsValid() || !LeftArmEff.IsValid() || !RightArmEff.IsValid())
 				return;
 
 			// I'm using this comp as a proxy mesh component for testing
@@ -751,9 +840,9 @@ public:
 			// Doing this lets it work with my FPS pawn
 			FTransform ToLocalTrans = this->GetComponentTransform().Inverse();
 
-			CurrentTransforms.CameraTransform = OwningChar->VRReplicatedCamera->GetComponentTransform() * ToLocalTrans;
-			CurrentTransforms.LeftHandTransform = OwningChar->LeftMotionController->GetComponentTransform() * ToLocalTrans;
-			CurrentTransforms.RightHandTransform = OwningChar->RightMotionController->GetComponentTransform() * ToLocalTrans;
+			CurrentTransforms.CameraTransform = HeadEff->GetComponentTransform() * ToLocalTrans;
+			CurrentTransforms.LeftHandTransform = LeftArmEff->GetComponentTransform() * ToLocalTrans;
+			CurrentTransforms.RightHandTransform = RightArmEff->GetComponentTransform() * ToLocalTrans;
 			
 			/*CurrentTransforms.CameraTransform = OwningChar->VRReplicatedCamera->GetRelativeTransform();
 			CurrentTransforms.LeftHandTransform = OwningChar->LeftMotionController->GetRelativeTransform();
