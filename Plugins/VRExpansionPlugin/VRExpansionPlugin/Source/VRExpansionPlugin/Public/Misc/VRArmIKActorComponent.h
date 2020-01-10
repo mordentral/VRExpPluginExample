@@ -11,6 +11,7 @@ namespace VectorHelpers
 	inline static float axisAngle(FVector v, FVector forward, FVector axis)
 	{
 		FVector right = FVector::CrossProduct(axis, forward);
+		// Why are we reconstructing the same forward vector?
 		forward = FVector::CrossProduct(right, axis);
 		return FMath::RadiansToDegrees(FMath::Atan2(FVector::DotProduct(v, right), FVector::DotProduct(v, forward)));
 	}
@@ -19,7 +20,6 @@ namespace VectorHelpers
 	{
 		float angleA = axisAngle(a, forward, axis);
 		float angleB = axisAngle(b, forward, axis);
-
 		return FMath::FindDeltaAngleDegrees(angleA, angleB);
 	}
 }
@@ -386,10 +386,6 @@ public:
 		FBeforePositioningSettings& s = beforePositioningSettings;
 
 		FVector localTargetPos = shoulderAnker().InverseTransformPosition(target.GetLocation()) / armTransforms.armLength;
-		
-		float val = 0.4f - localTargetPos.X;
-		float val2 = localTargetPos.Z - 0.1f;
-		float val3 = 1.f - localTargetPos.Y * (left ? -1.f : 1.f);
 
 		// #TODO: unsure as to the specifics of this factor currently, its only currently coming into effect with hards near to above the shoulders
 		float elbowOutsideFactor = FMath::Clamp(
@@ -412,9 +408,11 @@ public:
 
 		float elbowTargetUp = FVector::DotProduct(upperArmUp, targetDir);
 		float elbowAngle = FMath::RadiansToDegrees(FMath::Acos(FVector::DotProduct(cross, upperArmUp))) + (left ? 0.f : 180.f);
-
 		FQuat rotation = FQuat(shoulderHandDirection, FMath::DegreesToRadians(elbowAngle * FMath::Sign(elbowTargetUp)));
 		armTransforms.upperArm.SetRotation(rotation * armTransforms.upperArm.GetRotation());
+
+		//FQuat DeltaRot = FQuat::FindBetweenNormals(upperArmUp, cross);
+		//armTransforms.upperArm.SetRotation(DeltaRot * armTransforms.upperArm.GetRotation());
 	}
 
 	float getElbowTargetAngle()
@@ -518,6 +516,7 @@ public:
 	{
 		FHandSettings s = handSettings;
 		FVector handUpVec = target.GetRotation().GetUpVector();
+
 		float forwardAngle = VectorHelpers::getAngleBetween(lowerArmRotation().GetRightVector(), target.GetRotation().GetRightVector(),
 			lowerArmRotation().GetUpVector(), lowerArmRotation().GetForwardVector());
 
@@ -1160,6 +1159,7 @@ public:
 			float HeightDiff = referencePlayerHeightHmd - CurrentTransforms.CameraTransform.GetLocation().Z;
 			float relativeHeightDiff = HeightDiff / referencePlayerHeightHmd;
 			FQuat HMDRot = CurrentTransforms.CameraTransform.GetRotation();
+			//float headpitchEst = FQuat::FindBetweenNormals(OrigRot.GetForwardVector(), HMDRot.GetForwardVector()).GetAngle() + rightRotationHeadRotationOffset;
 			float headPitchRotation = VectorHelpers::getAngleBetween(OrigRot.GetForwardVector(), HMDRot.GetForwardVector(), FVector::UpVector, OrigRot.GetRightVector()) + rightRotationHeadRotationOffset;
 
 			float heightFactor = FMath::Clamp(relativeHeightDiff - 0.f, 0.f, 1.0f);
