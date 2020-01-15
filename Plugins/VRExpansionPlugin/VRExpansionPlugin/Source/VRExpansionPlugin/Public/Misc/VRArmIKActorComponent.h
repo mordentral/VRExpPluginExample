@@ -12,7 +12,8 @@ namespace VectorHelpers
 	{
 		FVector right = FVector::CrossProduct(axis, forward);
 		// Why are we reconstructing the same forward vector?
-		forward = FVector::CrossProduct(right, axis);
+		//forward = FVector::CrossProduct(right, axis);
+
 		return FMath::RadiansToDegrees(FMath::Atan2(FVector::DotProduct(v, right), FVector::DotProduct(v, forward)));
 	}
 
@@ -20,6 +21,7 @@ namespace VectorHelpers
 	{
 		float angleA = axisAngle(a, forward, axis);
 		float angleB = axisAngle(b, forward, axis);
+
 		return FMath::FindDeltaAngleDegrees(angleA, angleB);
 	}
 }
@@ -300,12 +302,14 @@ public:
 		// Set our lower arm positions to the elbow for easy use
 		if (left)
 		{
-			armTransforms.lowerArm.SetLocation(armTransforms.upperArm.GetLocation() + (armTransforms.upperArm.GetRotation().RotateVector(FVector(0.f, -1.f, 0.f) * armTransforms.upperArmLength)));
+			armTransforms.lowerArm.SetLocation(armTransforms.upperArm.GetLocation() + (armTransforms.upperArm.GetRotation().GetForwardVector() * armTransforms.upperArmLength));
+			//armTransforms.lowerArm.SetLocation(armTransforms.upperArm.GetLocation() + (armTransforms.upperArm.GetRotation().RotateVector(FVector(0.f, -1.f, 0.f) * armTransforms.upperArmLength)));
 			armTransforms.lowerArm.SetRotation(lowerArmRotation());
 		}
 		else
 		{
-			armTransforms.lowerArm.SetLocation(armTransforms.upperArm.GetLocation() + ((armTransforms.upperArm.GetRotation().GetRightVector()) * armTransforms.upperArmLength));
+			armTransforms.lowerArm.SetLocation(armTransforms.upperArm.GetLocation() + (armTransforms.upperArm.GetRotation().GetForwardVector() * armTransforms.upperArmLength));
+			//armTransforms.lowerArm.SetLocation(armTransforms.upperArm.GetLocation() + ((armTransforms.upperArm.GetRotation().GetRightVector()) * armTransforms.upperArmLength));
 			armTransforms.lowerArm.SetRotation(lowerArmRotation());
 		}
 	}
@@ -368,7 +372,7 @@ public:
 		//	eulerAngles.Yaw = 0.f;
 
 		// This requires that the shoulder be in relative space to the neck
-		FQuat shoulderRightRotation = FQuat::FindBetweenNormals(armDirection(), targetShoulderDirection);
+		FQuat shoulderRightRotation = FQuat::FindBetweenNormals(/*armDirection()*/FVector::ForwardVector, targetShoulderDirection);
 		setUpperArmRotation(shoulderRightRotation);
 
 		// Rezero out our lower arm transform since I don't actually have it follow the upper arm
@@ -397,13 +401,13 @@ public:
 		,0.f, 1.f) * s.weight;
 
 		FVector shoulderHandDirection = (upperArmPos() - handPos()).GetSafeNormal();
-		FVector targetDir = shoulder->Transform.GetRotation() * (FVector::UpVector + (s.correctElbowOutside ? (armDirection() + FVector::ForwardVector * -.2f) * elbowOutsideFactor : FVector::ZeroVector));
+		FVector targetDir = upperArmRotation() /*shoulder->Transform.GetRotation()*/ * (FVector::UpVector + (s.correctElbowOutside ? (armDirection() + FVector::ForwardVector * -.2f) * elbowOutsideFactor : FVector::ZeroVector));
 		targetDir.Normalize();
 
 
 		// Not sure why they increased targetDir in the cross here, but it screws up the dot product below if left unnormalized
 		FVector cross = FVector::CrossProduct(shoulderHandDirection, targetDir);// *1000.f);// *100000.f);
-		
+
 		FVector upperArmUp = upperArmRotation().GetUpVector();
 
 		float elbowTargetUp = FVector::DotProduct(upperArmUp, targetDir);
@@ -517,20 +521,21 @@ public:
 		FHandSettings s = handSettings;
 		FVector handUpVec = target.GetRotation().GetUpVector();
 
-		float forwardAngle = VectorHelpers::getAngleBetween(lowerArmRotation().GetRightVector(), target.GetRotation().GetRightVector(),
-			lowerArmRotation().GetUpVector(), lowerArmRotation().GetForwardVector());
+		float forwardAngle = VectorHelpers::getAngleBetween(lowerArmRotation().GetForwardVector()/*.GetRightVector()*/, target.GetRotation().GetForwardVector()/*.GetRightVector()*/,
+			lowerArmRotation().GetUpVector(), lowerArmRotation().GetRightVector()/*.GetForwardVector()*/);
 
 		// todo reduce influence if hand local forward rotation is high (hand tilted inside)
-		FQuat handForwardRotation = FQuat(lowerArmRotation().GetForwardVector(), FMath::DegreesToRadians(-forwardAngle));
+		FQuat handForwardRotation = FQuat(/*lowerArmRotation().GetForwardVector()*/lowerArmRotation().GetRightVector(), FMath::DegreesToRadians(-forwardAngle));
 		handUpVec = handForwardRotation * handUpVec;
 
 		float elbowTargetAngle = VectorHelpers::getAngleBetween(lowerArmRotation().GetUpVector(), handUpVec,
-			lowerArmRotation().GetForwardVector(), lowerArmRotation() * armDirection());
+			lowerArmRotation()/*.GetForwardVector()*/.GetRightVector(), lowerArmRotation().GetForwardVector() /** armDirection()*/);
 
 		float deltaElbow = (elbowTargetAngle + (left ? -s.handDeltaOffset : s.handDeltaOffset)) / 180.f;
 		deltaElbow = FMath::Sign(deltaElbow) * FMath::Pow(FMath::Abs(deltaElbow), s.handDeltaPow) * 180.f * s.handDeltaFactor;
 
-		interpolatedDeltaElbow = deltaElbow;//LerpAxisOver(interpolatedDeltaElbow, deltaElbow, DeltaTime / s.rotateElbowWithHandDelay);
+		//interpolatedDeltaElbow = deltaElbow;
+		interpolatedDeltaElbow = LerpAxisOver(interpolatedDeltaElbow, deltaElbow, DeltaTime / s.rotateElbowWithHandDelay);
 		//interpolatedDeltaElbow = FRotator::ClampAxis(FMath::Lerp(interpolatedDeltaElbow, deltaElbow, FMath::Clamp(DeltaTime / s.rotateElbowWithHandDelay, 0.f, 1.f)));
 
 		rotateElbow(interpolatedDeltaElbow);
@@ -868,10 +873,15 @@ public:
 			DrawJoint(shoulder.rightShoulder);
 			DrawJoint(RightArm.armTransforms.lowerArm);
 
-			DrawBone(LeftArm.armTransforms.upperArm, LeftArm.armTransforms.upperArmLength, -FVector::RightVector);
+			DrawBone(LeftArm.armTransforms.upperArm, LeftArm.armTransforms.upperArmLength, FVector::ForwardVector);
+			DrawBone(RightArm.armTransforms.upperArm, RightArm.armTransforms.upperArmLength, FVector::ForwardVector);
+			DrawBone(LeftArm.armTransforms.lowerArm, LeftArm.armTransforms.lowerArmLength, FVector::ForwardVector);
+			DrawBone(RightArm.armTransforms.lowerArm, RightArm.armTransforms.lowerArmLength, FVector::ForwardVector);
+
+			/*DrawBone(LeftArm.armTransforms.upperArm, LeftArm.armTransforms.upperArmLength, -FVector::RightVector);
 			DrawBone(RightArm.armTransforms.upperArm, RightArm.armTransforms.upperArmLength, FVector::RightVector);
 			DrawBone(LeftArm.armTransforms.lowerArm, LeftArm.armTransforms.lowerArmLength, -FVector::RightVector);
-			DrawBone(RightArm.armTransforms.lowerArm, RightArm.armTransforms.lowerArmLength, FVector::RightVector);
+			DrawBone(RightArm.armTransforms.lowerArm, RightArm.armTransforms.lowerArmLength, FVector::RightVector);*/
 			
 			// Waist estimation?
 		}
