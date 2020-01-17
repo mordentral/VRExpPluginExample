@@ -401,12 +401,12 @@ public:
 		,0.f, 1.f) * s.weight;
 
 		FVector shoulderHandDirection = (upperArmPos() - handPos()).GetSafeNormal();
-		FVector targetDir = upperArmRotation() /*shoulder->Transform.GetRotation()*/ * (FVector::UpVector + (s.correctElbowOutside ? (armDirection() + FVector::ForwardVector * -.2f) * elbowOutsideFactor : FVector::ZeroVector));
+		FVector targetDir = /*upperArmRotation()*/ shoulder->Transform.GetRotation() * (FVector::UpVector + (s.correctElbowOutside ? (armDirection() + FVector::ForwardVector * -.2f) * elbowOutsideFactor : FVector::ZeroVector));
 		targetDir.Normalize();
-
 
 		// Not sure why they increased targetDir in the cross here, but it screws up the dot product below if left unnormalized
 		FVector cross = FVector::CrossProduct(shoulderHandDirection, targetDir);// *1000.f);// *100000.f);
+		cross.Normalize();
 
 		FVector upperArmUp = upperArmRotation().GetUpVector();
 
@@ -477,12 +477,13 @@ public:
 
 		FVector targetDir = shoulder->Transform.GetRotation() * elbowPos.GetSafeNormal();
 		FVector cross = FVector::CrossProduct(shoulderHandDirection, targetDir);
+		cross.Normalize();
 
 		FVector upperArmUp = upperArmRotation().GetUpVector();
 
 		FVector distance = target.GetLocation() - upperArmPos();
 
-		distance = distance.Size() * shoulder->Transform.InverseTransformVector(distance.GetSafeNormal());//distance / distance.Size());
+		distance = distance.Size() * shoulderAnker().InverseTransformVector(distance / distance.Size()); // .GetSafeNormal should work too right?
 		distance /= 100.f;
 		float localarm = armTransforms.armLength / 100.f;
 
@@ -497,6 +498,7 @@ public:
 		float elbowAngle2 = FMath::RadiansToDegrees(FMath::Acos(FVector::DotProduct(cross, upperArmUp))) + (left ? 0.f : 180.f);
 
 		FQuat rotation = FQuat(shoulderHandDirection, FMath::DegreesToRadians(FRotator::NormalizeAxis((elbowAngle2 * FMath::Sign(elbowTargetUp))) * FMath::Clamp(weight, 0.f, 1.f)));
+		rotation.Normalize();
 		armTransforms.upperArm.SetRotation(rotation * armTransforms.upperArm.GetRotation());
 	}
 
@@ -518,6 +520,7 @@ public:
 	// Needs work
 	void rotateElbowWithHandRight()
 	{
+
 		FHandSettings s = handSettings;
 		FVector handUpVec = target.GetRotation().GetUpVector();
 
@@ -534,9 +537,20 @@ public:
 		float deltaElbow = (elbowTargetAngle + (left ? -s.handDeltaOffset : s.handDeltaOffset)) / 180.f;
 		deltaElbow = FMath::Sign(deltaElbow) * FMath::Pow(FMath::Abs(deltaElbow), s.handDeltaPow) * 180.f * s.handDeltaFactor;
 
+
+		// Lower the weight the closer to straight right that the hand is
+		float WeightAwayFromInfluence = 0.2f;
+		float WeightTowardsInfluence = 2.0f;
+
+		float WeightedDot = FMath::Clamp((1.f - FMath::Abs(FVector::DotProduct(shoulderAnker().GetRotation().GetRightVector(), target.GetRotation().GetForwardVector()))) - WeightAwayFromInfluence, 0.f, 1.f);
+		float Weight = FMath::Clamp(WeightedDot * WeightTowardsInfluence, 0.f, 1.f);
+		deltaElbow = Weight * deltaElbow;
+
 		//interpolatedDeltaElbow = deltaElbow;
 		interpolatedDeltaElbow = LerpAxisOver(interpolatedDeltaElbow, deltaElbow, DeltaTime / s.rotateElbowWithHandDelay);
 		//interpolatedDeltaElbow = FRotator::ClampAxis(FMath::Lerp(interpolatedDeltaElbow, deltaElbow, FMath::Clamp(DeltaTime / s.rotateElbowWithHandDelay, 0.f, 1.f)));
+
+
 
 		rotateElbow(interpolatedDeltaElbow);
 	}
