@@ -451,8 +451,8 @@ void UGS_Melee::HandlePrePhysicsHandle(UGripMotionControllerComponent* GrippingC
 		//KinPose = ObjectRelativeGripCenter * KinPose;
 
 		//KinPose.SetLocation(GetOwner()->GetActorTransform().TransformPosition(ObjectRelativeGripCenter.GetLocation()));
-		KinPose.SetRotation(KinPose.GetRotation() * DeltaQuat);
-		HandleInfo->COMPosition.SetRotation(HandleInfo->COMPosition.GetRotation() * DeltaQuat);
+		KinPose.SetRotation(KinPose.GetRotation() * (HandleInfo->RootBoneRotation.GetRotation().Inverse() * DeltaQuat));
+		HandleInfo->COMPosition.SetRotation(HandleInfo->COMPosition.GetRotation() * (HandleInfo->RootBoneRotation.GetRotation().Inverse() * DeltaQuat));
 		//HandleInfo->COMPosition.SetLocation(ObjectRelativeGripCenter.GetLocation());// *HandleInfo->COMPosition;
 	}
 }
