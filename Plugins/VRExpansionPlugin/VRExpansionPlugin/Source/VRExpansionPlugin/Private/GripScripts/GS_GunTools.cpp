@@ -82,12 +82,12 @@ void UGS_GunTools::HandlePrePhysicsHandle(UGripMotionControllerComponent* Grippi
 		FQuat DeltaQuat = OrientationComponentRelativeFacing.GetRotation();
 		KinPose.SetRotation(KinPose.GetRotation() * DeltaQuat);
 		HandleInfo->COMPosition.SetRotation(HandleInfo->COMPosition.GetRotation() * DeltaQuat);
+	}
 
-		if (GripInfo.bIsSlotGrip && !PivotOffset.IsZero())
-		{
-			KinPose.SetLocation(KinPose.TransformPosition(PivotOffset));
-			HandleInfo->COMPosition.SetLocation(HandleInfo->COMPosition.TransformPosition(PivotOffset));
-		}
+	if (GripInfo.bIsSlotGrip && !PivotOffset.IsZero())
+	{
+		KinPose.SetLocation(KinPose.TransformPosition(PivotOffset));
+		HandleInfo->COMPosition.SetLocation(HandleInfo->COMPosition.TransformPosition(PivotOffset));
 	}
 }
 
