@@ -539,14 +539,12 @@ public:
 
 		FHandSettings s = handSettings;
 		FVector handUpVec = target.GetRotation() * armDirection();// .GetUpVector();
-		FRotator rot = target.Rotator();
 
 		float forwardAngle = VectorHelpers::getAngleBetween(lowerArmRotation().GetForwardVector()/*.GetRightVector()*/, target.GetRotation().GetForwardVector()/*.GetRightVector()*/,
 			lowerArmRotation().GetUpVector(), lowerArmRotation().GetRightVector()/*.GetForwardVector()*/);
 
 		// todo reduce influence if hand local forward rotation is high (hand tilted inside)
 		FQuat handForwardRotation = FQuat(/*lowerArmRotation().GetForwardVector()*/lowerArmRotation().GetRightVector(), FMath::DegreesToRadians(-forwardAngle));
-		FRotator forrot = handForwardRotation.Rotator();
 		handUpVec = handForwardRotation * handUpVec;
 
 		float elbowTargetAngle = VectorHelpers::getAngleBetween(lowerArmRotation().GetUpVector(), handUpVec,
@@ -576,6 +574,7 @@ public:
 			lastDeltaElbowForward = deltaElbowForward;
 		}
 		*/
+		//FMath::ClampAngle()
 
 		// Lower the weight the closer to straight right that the hand is
 		float WeightAwayFromInfluence = 0.2f;
