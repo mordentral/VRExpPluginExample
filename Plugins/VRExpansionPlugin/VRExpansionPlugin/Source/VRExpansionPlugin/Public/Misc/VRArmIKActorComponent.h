@@ -21,7 +21,7 @@ namespace VectorHelpers
 	{
 		float angleA = axisAngle(a, forward, axis);
 		float angleB = axisAngle(b, forward, axis);
-
+		
 		return FMath::FindDeltaAngleDegrees(angleA, angleB);
 	}
 }
@@ -255,6 +255,7 @@ public:
 
 	float interpolatedDeltaElbow;
 	float interpolatedDeltaElbowForward;
+	float lastDeltaElbowForward;
 
 	USceneComponent * OwningComp;
 
@@ -266,6 +267,9 @@ public:
 		setUpperArmRotation(FQuat::Identity);
 		setLowerArmRotation(FQuat::Identity);
 		setHandRotation(FQuat::Identity);
+		lastDeltaElbowForward = 0.f;
+		interpolatedDeltaElbowForward = 0.f;
+		interpolatedDeltaElbow = 0.f;
 	}
 
 	//////////////////////////////////////////////
@@ -297,8 +301,8 @@ public:
 			
 			// Below still needs iteration, something is off with them
 		
-			if (handSettings.rotateElbowWithHandRight)
-				rotateElbowWithHandRight();
+			//if (handSettings.rotateElbowWithHandRight)
+			//	rotateElbowWithHandRight();
 			if (handSettings.rotateElbowWithHandForward)
 				rotateElbowWithHandFoward();
 			//rotateHand();
@@ -535,12 +539,14 @@ public:
 
 		FHandSettings s = handSettings;
 		FVector handUpVec = target.GetRotation() * armDirection();// .GetUpVector();
+		FRotator rot = target.Rotator();
 
 		float forwardAngle = VectorHelpers::getAngleBetween(lowerArmRotation().GetForwardVector()/*.GetRightVector()*/, target.GetRotation().GetForwardVector()/*.GetRightVector()*/,
 			lowerArmRotation().GetUpVector(), lowerArmRotation().GetRightVector()/*.GetForwardVector()*/);
 
 		// todo reduce influence if hand local forward rotation is high (hand tilted inside)
 		FQuat handForwardRotation = FQuat(/*lowerArmRotation().GetForwardVector()*/lowerArmRotation().GetRightVector(), FMath::DegreesToRadians(-forwardAngle));
+		FRotator forrot = handForwardRotation.Rotator();
 		handUpVec = handForwardRotation * handUpVec;
 
 		float elbowTargetAngle = VectorHelpers::getAngleBetween(lowerArmRotation().GetUpVector(), handUpVec,
@@ -549,6 +555,27 @@ public:
 		float deltaElbow = (elbowTargetAngle + (left ? -s.handDeltaOffset : s.handDeltaOffset)) / 180.f;
 		deltaElbow = FMath::Sign(deltaElbow) * FMath::Pow(FMath::Abs(deltaElbow), s.handDeltaPow) * 180.f * s.handDeltaFactor;
 
+
+		// Like below but use the upper arm vector to define inward facing instead to weight this
+		/*
+				FQuat Base = lowerArmRotation();
+		FVector Plane = Base.GetUpVector();
+
+		FVector HandProj = FVector::VectorPlaneProject(target.GetRotation().GetForwardVector(), Plane);
+		FVector ElbowProj = FVector::VectorPlaneProject(-Base.GetRightVector(), Plane);
+
+		float Dot = FVector::DotProduct(HandProj, ElbowProj);
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("InwardDot: %f"), Dot));
+
+		if (Dot > 0.6f)
+		{
+			deltaElbowForward = lastDeltaElbowForward;
+		}
+		else
+		{
+			lastDeltaElbowForward = deltaElbowForward;
+		}
+		*/
 
 		// Lower the weight the closer to straight right that the hand is
 		float WeightAwayFromInfluence = 0.2f;
@@ -602,6 +629,23 @@ public:
 
 		deltaElbowForward = FMath::Sign(deltaElbowForward) * FMath::Pow(FMath::Abs(deltaElbowForward), s.handDeltaForwardPow) * 180.f;
 	
+		FQuat Base = lowerArmRotation();
+		FVector Plane = Base.GetUpVector();
+
+		FVector HandProj = FVector::VectorPlaneProject(target.GetRotation().GetForwardVector(), Plane);
+		FVector ElbowProj = FVector::VectorPlaneProject(-Base.GetRightVector(), Plane);
+
+		float Dot = FVector::DotProduct(HandProj, ElbowProj);
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("InwardDot: %f"), Dot));
+
+		if (Dot > 0.6f)
+		{
+			deltaElbowForward = lastDeltaElbowForward;
+		}
+		else
+		{
+			lastDeltaElbowForward = deltaElbowForward;
+		}
 		// Lower the weight the closer to straight right that the hand is
 		/*float WeightAwayFromInfluence = 0.1f;
 		float WeightTowardsInfluence = 100.0f;
@@ -907,7 +951,7 @@ public:
 			CurrentTransforms.LeftHandTransform = CurrentTransforms.LeftHandTransform * ToLocalTrans;
 			CurrentTransforms.RightHandTransform = CurrentTransforms.RightHandTransform * ToLocalTrans;
 
-			LeftArm.Update(CurrentTransforms, &shoulder, true, GetWorld()->GetDeltaSeconds(), this);
+			//LeftArm.Update(CurrentTransforms, &shoulder, true, GetWorld()->GetDeltaSeconds(), this);
 			RightArm.Update(CurrentTransforms, &shoulder, false, GetWorld()->GetDeltaSeconds(), this);
 
 			DrawJoint(shoulder.leftShoulder);
