@@ -167,7 +167,7 @@ public:
 		startBelowDistance = .5f; // * world to meters?
 		startBelowY = 0.1f;  // * world to meters?
 		weight = 2.f;
-		localElbowPos = FVector(-0.3f, 2.f, -1.f); // Check
+		localElbowPos = FVector(0.3f, 2.f, -2.f);//FVector(-0.3f, 2.f, -1.f);//FVector(-0.3f, 1.f, -2.f);// // Check
 		//public Vector3 localElbowPos = new Vector3(0.3f, -1f, -2f);
 	}
 };
@@ -523,7 +523,8 @@ public:
 
 		FQuat rotation = FQuat(shoulderHandDirection, FMath::DegreesToRadians(angle));
 		rotation.Normalize();
-		setUpperArmRotation(rotation * upperArmRotation());
+		
+		setUpperArmRotation((rotation * upperArmRotation()));
 	}
 
 	//source: https://github.com/NickHardeman/ofxIKArm/blob/master/src/ofxIKArm.cpp
@@ -536,7 +537,6 @@ public:
 	// Needs work
 	void rotateElbowWithHandRight()
 	{
-
 		FHandSettings s = handSettings;
 		FVector handUpVec = target.GetRotation() * armDirection();// .GetUpVector();
 
@@ -555,34 +555,30 @@ public:
 
 
 		// Like below but use the upper arm vector to define inward facing instead to weight this
-		/*
-				FQuat Base = lowerArmRotation();
+		FQuat Base = upperArmRotation();
 		FVector Plane = Base.GetUpVector();
 
-		FVector HandProj = FVector::VectorPlaneProject(target.GetRotation().GetForwardVector(), Plane);
-		FVector ElbowProj = FVector::VectorPlaneProject(-Base.GetRightVector(), Plane);
+		FVector HandProj = FVector::VectorPlaneProject(lowerArmRotation().GetForwardVector(), Plane);
+		FVector ElbowProj = FVector::VectorPlaneProject(-Base.GetForwardVector(), Plane);
 
 		float Dot = FVector::DotProduct(HandProj, ElbowProj);
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("InwardDot: %f"), Dot));
+		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("InwardDot Product Value: %f"), Dot));
 
-		if (Dot > 0.6f)
+		if (Dot > 0.72f)
 		{
-			deltaElbowForward = lastDeltaElbowForward;
+			deltaElbow = 0.0f;
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("InwardDot Product Value: %f"), Dot));
 		}
-		else
-		{
-			lastDeltaElbowForward = deltaElbowForward;
-		}
-		*/
-		//FMath::ClampAngle()
 
+		/*
 		// Lower the weight the closer to straight right that the hand is
 		float WeightAwayFromInfluence = 0.2f;
 		float WeightTowardsInfluence = 2.0f;
 
-		float WeightedDot = FMath::Clamp((1.f - /*FMath::Abs*/(FVector::DotProduct(shoulderAnker().GetRotation() * -armDirection(), target.GetRotation().GetForwardVector()))) - WeightAwayFromInfluence, 0.f, 1.f);
+		float WeightedDot = FMath::Clamp((1.f - (FVector::DotProduct(shoulderAnker().GetRotation() * -armDirection(), target.GetRotation().GetForwardVector()))) - WeightAwayFromInfluence, 0.f, 1.f);
 		float Weight = FMath::Clamp(WeightedDot * WeightTowardsInfluence, 0.f, 1.f);
 		deltaElbow = Weight * deltaElbow;
+		*/
 
 		//interpolatedDeltaElbow = deltaElbow;
 		interpolatedDeltaElbow = LerpAxisOver(interpolatedDeltaElbow, deltaElbow, DeltaTime / s.rotateElbowWithHandDelay);
@@ -626,9 +622,9 @@ public:
 			deltaElbowForward = (deltaElbowForward - FMath::Sign(deltaElbowForward) * s.handDeltaForwardDeadzone) / (1.f - s.handDeltaForwardDeadzone);
 		}
 
-		deltaElbowForward = FMath::Sign(deltaElbowForward) * FMath::Pow(FMath::Abs(deltaElbowForward), s.handDeltaForwardPow) * 180.f;
+		deltaElbowForward = (-FMath::Sign(deltaElbowForward)) * FMath::Pow(FMath::Abs(deltaElbowForward), s.handDeltaForwardPow) * 180.f;
 	
-		FQuat Base = lowerArmRotation();
+		/*FQuat Base = lowerArmRotation();
 		FVector Plane = Base.GetUpVector();
 
 		FVector HandProj = FVector::VectorPlaneProject(target.GetRotation().GetForwardVector(), Plane);
@@ -636,20 +632,35 @@ public:
 
 		float Dot = FVector::DotProduct(HandProj, ElbowProj);
 		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("InwardDot Product Value: %f"), Dot));
+		*/
+		FVector armHand = shoulderAnker().GetLocation() - target.GetLocation();
+		armHand.Normalize();
+		
+		float RearHandDot = FVector::DotProduct(target.GetRotation().GetForwardVector(), armHand);
 
-		if (Dot > 0.72f)
+
+
+		//if(left)
+		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("RearHandDot: %f"), RearHandDot));
+
+		float RotateDelta = 0.16f;//0.08f;
+
+		if (/*Dot > 0.72f ||*/ RearHandDot > 0.59f)
 		{
 			deltaElbowForward = lastDeltaElbowForward;
+			deltaElbowForward = LerpAxisOver(lastDeltaElbowForward, 0.0f, DeltaTime / RotateDelta);
 		}
-		else
-		{
-			lastDeltaElbowForward = deltaElbowForward;
-		}
+
+		lastDeltaElbowForward = deltaElbowForward;
+
+		//deltaElbowForward = 0.f;
+
+
 
 		interpolatedDeltaElbowForward = LerpAxisOver(interpolatedDeltaElbowForward, deltaElbowForward, DeltaTime / s.rotateElbowWithHandDelay);
 		//interpolatedDeltaElbowForward = FRotator::ClampAxis(FMath::Lerp(interpolatedDeltaElbowForward, deltaElbowForward, DeltaTime / s.rotateElbowWithHandDelay));
 
-		float signedInterpolated = -FRotator::NormalizeAxis(interpolatedDeltaElbowForward);
+		float signedInterpolated = /*-*/FRotator::NormalizeAxis(interpolatedDeltaElbowForward);
 		rotateElbow(signedInterpolated * s.handDeltaForwardFactor);
 	}
 
@@ -762,12 +773,16 @@ public:
 	// Input the name of the effector that you want to track, otherwise we will track the motion controllers directly
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRArmIK Effectors")
 		FName LeftArmEffector;
+
+	UPROPERTY(BlueprintReadWrite, Category = "VRArmIK Effectors")
 	TWeakObjectPtr<USceneComponent> LeftArmEff;
 
 
 	// Input the name of the effector that you want to track, otherwise we will track the motion controllers directly
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRArmIK Effectors")
 		FName RightArmEffector;
+
+	UPROPERTY(BlueprintReadWrite, Category = "VRArmIK Effectors")
 	TWeakObjectPtr<USceneComponent> RightArmEff;
 
 	// Input the name of the effector that you want to track, otherwise we will track the camera directly
@@ -783,6 +798,8 @@ public:
 		LeftArm.armTransforms.updateArmLengths(playerWidthShoulders, playerWidthWrist);
 		RightArm.armTransforms.updateArmLengths(playerWidthShoulders, playerWidthWrist);
 
+		if (LeftArmEff.IsValid() && RightArmEff.IsValid())
+			return;
 
 		AVRBaseCharacter* OwningChar = Cast<AVRBaseCharacter>(GetOwner());
 		if (!OwningChar)
@@ -864,10 +881,10 @@ public:
 		float playerWidthShoulders;
 		bool loadPlayerSizeOnAwake;
 
-		UPROPERTY(BlueprintReadOnly, Category = "VRArmIK Component Events")
+		UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRArmIK Component Events")
 		FVRArmIK LeftArm;
 
-		UPROPERTY(BlueprintReadOnly, Category = "VRArmIK Component Events")
+		UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRArmIK Component Events")
 		FVRArmIK RightArm;
 
 		CurrentReferenceTransforms CurrentTransforms;
