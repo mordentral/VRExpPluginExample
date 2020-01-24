@@ -301,8 +301,8 @@ public:
 			
 			// Below still needs iteration, something is off with them
 		
-			//if (handSettings.rotateElbowWithHandRight)
-			//	rotateElbowWithHandRight();
+			if (handSettings.rotateElbowWithHandRight)
+				rotateElbowWithHandRight();
 			if (handSettings.rotateElbowWithHandForward)
 				rotateElbowWithHandFoward();
 			//rotateHand();
@@ -632,12 +632,12 @@ public:
 		FVector Plane = Base.GetUpVector();
 
 		FVector HandProj = FVector::VectorPlaneProject(target.GetRotation().GetForwardVector(), Plane);
-		FVector ElbowProj = FVector::VectorPlaneProject(-Base.GetRightVector(), Plane);
+		FVector ElbowProj = FVector::VectorPlaneProject(left ? Base.GetRightVector() : -Base.GetRightVector(), Plane);
 
 		float Dot = FVector::DotProduct(HandProj, ElbowProj);
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("InwardDot: %f"), Dot));
+		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("InwardDot Product Value: %f"), Dot));
 
-		if (Dot > 0.6f)
+		if (Dot > 0.72f)
 		{
 			deltaElbowForward = lastDeltaElbowForward;
 		}
@@ -645,21 +645,6 @@ public:
 		{
 			lastDeltaElbowForward = deltaElbowForward;
 		}
-		// Lower the weight the closer to straight right that the hand is
-		/*float WeightAwayFromInfluence = 0.1f;
-		float WeightTowardsInfluence = 100.0f;
-
-		FVector forward = shoulderAnker().GetRotation().GetForwardVector();
-		forward.Z = 0.f;
-
-		FVector hand = target.GetLocation() - shoulderAnker().GetLocation();
-		hand = hand.GetSafeNormal2D();
-
-		float WeightedDot = FMath::Clamp((1.f - FMath::Abs(FVector::DotProduct(forward, hand))) - WeightAwayFromInfluence, 0.f, 1.f);
-		float Weight = FMath::Clamp(WeightedDot * WeightTowardsInfluence, 0.f, 1.f);
-		deltaElbowForward = Weight * deltaElbowForward;
-
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("CORRECTION WEIGHT: %f"), Weight));*/
 
 		interpolatedDeltaElbowForward = LerpAxisOver(interpolatedDeltaElbowForward, deltaElbowForward, DeltaTime / s.rotateElbowWithHandDelay);
 		//interpolatedDeltaElbowForward = FRotator::ClampAxis(FMath::Lerp(interpolatedDeltaElbowForward, deltaElbowForward, DeltaTime / s.rotateElbowWithHandDelay));
@@ -950,7 +935,7 @@ public:
 			CurrentTransforms.LeftHandTransform = CurrentTransforms.LeftHandTransform * ToLocalTrans;
 			CurrentTransforms.RightHandTransform = CurrentTransforms.RightHandTransform * ToLocalTrans;
 
-			//LeftArm.Update(CurrentTransforms, &shoulder, true, GetWorld()->GetDeltaSeconds(), this);
+			LeftArm.Update(CurrentTransforms, &shoulder, true, GetWorld()->GetDeltaSeconds(), this);
 			RightArm.Update(CurrentTransforms, &shoulder, false, GetWorld()->GetDeltaSeconds(), this);
 
 			DrawJoint(shoulder.leftShoulder);
