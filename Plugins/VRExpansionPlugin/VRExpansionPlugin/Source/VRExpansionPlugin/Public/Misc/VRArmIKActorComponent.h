@@ -167,7 +167,7 @@ public:
 		startBelowDistance = .5f; // * world to meters?
 		startBelowY = 0.1f;  // * world to meters?
 		weight = 2.f;
-		localElbowPos = FVector(0.3f, 2.f, -2.f);//FVector(-0.3f, 2.f, -1.f);//FVector(-0.3f, 1.f, -2.f);// // Check
+		localElbowPos = FVector(-0.3f, 1.f, -2.f);//FVector(0.3f, 2.f, -2.f);//FVector(-0.3f, 2.f, -1.f);//FVector(-0.3f, 1.f, -2.f);// // Check
 		//public Vector3 localElbowPos = new Vector3(0.3f, -1f, -2f);
 	}
 };
@@ -623,8 +623,8 @@ public:
 		}
 
 		deltaElbowForward = (-FMath::Sign(deltaElbowForward)) * FMath::Pow(FMath::Abs(deltaElbowForward), s.handDeltaForwardPow) * 180.f;
-	
-		/*FQuat Base = lowerArmRotation();
+		
+		FQuat Base = lowerArmRotation();
 		FVector Plane = Base.GetUpVector();
 
 		FVector HandProj = FVector::VectorPlaneProject(target.GetRotation().GetForwardVector(), Plane);
@@ -632,12 +632,12 @@ public:
 
 		float Dot = FVector::DotProduct(HandProj, ElbowProj);
 		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("InwardDot Product Value: %f"), Dot));
-		*/
-		FVector armHand = shoulderAnker().GetLocation() - target.GetLocation();
+		
+		/*FVector armHand = shoulderAnker().GetLocation() - target.GetLocation();
 		armHand.Normalize();
 		
 		float RearHandDot = FVector::DotProduct(target.GetRotation().GetForwardVector(), armHand);
-
+		*/
 
 
 		//if(left)
@@ -645,7 +645,7 @@ public:
 
 		float RotateDelta = 0.16f;//0.08f;
 
-		if (/*Dot > 0.72f ||*/ RearHandDot > 0.59f)
+		if (Dot > 0.72f /*|| RearHandDot > 0.59f*/)
 		{
 			deltaElbowForward = lastDeltaElbowForward;
 			deltaElbowForward = LerpAxisOver(lastDeltaElbowForward, 0.0f, DeltaTime / RotateDelta);
