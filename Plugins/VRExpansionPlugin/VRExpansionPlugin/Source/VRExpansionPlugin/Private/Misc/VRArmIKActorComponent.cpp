@@ -21,7 +21,7 @@ UVRArmIKActorComponent::UVRArmIKActorComponent(const FObjectInitializer& ObjectI
 	loadPlayerSizeOnAwake = false;
 
 	headNeckDistance = 0.03f * 100.f; // World To Meters idealy
-	neckShoulderDistance = FVector(-0.02f, 0.f, -.1f) * 100.f; // World To Meters idealy
+	neckShoulderDistance = FVector(-0.02f, 0.f, -.15f) * 100.f; // World To Meters idealy
 
 	bEnableDistinctShoulderRotation = true;
 	distinctShoulderRotationMultiplier = 30.f;
