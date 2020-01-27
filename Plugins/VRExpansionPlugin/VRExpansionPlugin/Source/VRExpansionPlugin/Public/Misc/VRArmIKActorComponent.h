@@ -226,6 +226,7 @@ public:
 
 };
 
+
 USTRUCT(BlueprintType)
 struct VREXPANSIONPLUGIN_API FVRArmIK
 {
@@ -234,7 +235,7 @@ public:
 
 	float DeltaTime;
 	CurrentReferenceTransforms CurrentTransforms;
-	UPROPERTY(BlueprintReadOnly, Category = "VRArmIK Component Events")
+	//UPROPERTY(BlueprintReadOnly, Category = "VRArmIK Component Events")
 	FArmTransforms armTransforms;
 	FShoulderTransforms *shoulder;
 	FTransform target;
@@ -769,6 +770,35 @@ public:
 	}
 };
 
+
+
+USTRUCT(BlueprintType)
+struct VREXPANSIONPLUGIN_API FBPIKResolvedTransforms
+{
+	GENERATED_USTRUCT_BODY()
+public:
+
+	UPROPERTY(BlueprintReadOnly, Category = "VRArmIK Transforms")
+	FTransform ShoulderBase;
+	UPROPERTY(BlueprintReadOnly, Category = "VRArmIK Transforms")
+	FTransform UpperArmLeft;
+	UPROPERTY(BlueprintReadOnly, Category = "VRArmIK Transforms")
+	FTransform LowerArmLeft;
+	UPROPERTY(BlueprintReadOnly, Category = "VRArmIK Transforms")
+	FTransform UpperArmRight;
+	UPROPERTY(BlueprintReadOnly, Category = "VRArmIK Transforms")
+	FTransform LowerArmRight;
+
+	FBPIKResolvedTransforms()
+	{
+		ShoulderBase = FTransform::Identity;
+		UpperArmLeft = FTransform::Identity;
+		LowerArmLeft = FTransform::Identity;
+		UpperArmRight = FTransform::Identity;
+		LowerArmRight = FTransform::Identity;
+	}
+};
+
 /**
 *	A custom constraint component subclass that exposes additional missing functionality from the default one
 */
@@ -780,6 +810,9 @@ class VREXPANSIONPLUGIN_API UVRArmIKActorComponent : public UActorComponent
 public:
 
 	FTransform BaseTransform;
+
+	UPROPERTY(BlueprintReadOnly, Category = "VRArmIK Transforms")
+		FBPIKResolvedTransforms FinalResolvedTransforms;
 
 	// Input the name of the effector that you want to track, otherwise we will track the motion controllers directly
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRArmIK Effectors")
@@ -899,8 +932,7 @@ public:
 		FVRArmIK RightArm;
 
 		CurrentReferenceTransforms CurrentTransforms;
-
-		
+	
 		void DrawJoint(FTransform &JointTransform, bool bDrawAxis = true)
 		{
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
@@ -968,24 +1000,28 @@ public:
 			LeftArm.Update(CurrentTransforms, &shoulder, true, GetWorld()->GetDeltaSeconds(), this);
 			RightArm.Update(CurrentTransforms, &shoulder, false, GetWorld()->GetDeltaSeconds(), this);
 
-			DrawJoint(shoulder.leftShoulder);
-			DrawJoint(LeftArm.armTransforms.lowerArm);
-			DrawJoint(shoulder.rightShoulder);
-			DrawJoint(RightArm.armTransforms.lowerArm);
+			FinalResolvedTransforms.ShoulderBase = shoulder.Transform;
+			FinalResolvedTransforms.UpperArmLeft = LeftArm.armTransforms.upperArm;
+			FinalResolvedTransforms.UpperArmRight = RightArm.armTransforms.upperArm;
+
+			FinalResolvedTransforms.LowerArmLeft = LeftArm.armTransforms.lowerArm;
+			FinalResolvedTransforms.LowerArmLeft.SetLocation(LeftArm.armTransforms.upperArm.GetLocation() + (LeftArm.armTransforms.upperArm.GetRotation().GetForwardVector() * LeftArm.armTransforms.lowerArmLength));
+			FinalResolvedTransforms.LowerArmRight = RightArm.armTransforms.lowerArm;
+			FinalResolvedTransforms.LowerArmRight.SetLocation(RightArm.armTransforms.upperArm.GetLocation() + (RightArm.armTransforms.upperArm.GetRotation().GetForwardVector() * RightArm.armTransforms.lowerArmLength));
+
+			DrawJoint(FinalResolvedTransforms.UpperArmLeft);
+			DrawJoint(FinalResolvedTransforms.LowerArmLeft);
+			DrawJoint(FinalResolvedTransforms.UpperArmRight);
+			DrawJoint(FinalResolvedTransforms.LowerArmRight);
 
 			//DrawJoint(CurrentTransforms.LeftHandTransform);
 			//DrawJoint(CurrentTransforms.RightHandTransform);
 
-			DrawBone(LeftArm.armTransforms.upperArm, LeftArm.armTransforms.upperArmLength, FVector::ForwardVector);
-			DrawBone(RightArm.armTransforms.upperArm, RightArm.armTransforms.upperArmLength, FVector::ForwardVector);
-			DrawBone(LeftArm.armTransforms.lowerArm, LeftArm.armTransforms.lowerArmLength, FVector::ForwardVector);
-			DrawBone(RightArm.armTransforms.lowerArm, RightArm.armTransforms.lowerArmLength, FVector::ForwardVector);
-
-			/*DrawBone(LeftArm.armTransforms.upperArm, LeftArm.armTransforms.upperArmLength, -FVector::RightVector);
-			DrawBone(RightArm.armTransforms.upperArm, RightArm.armTransforms.upperArmLength, FVector::RightVector);
-			DrawBone(LeftArm.armTransforms.lowerArm, LeftArm.armTransforms.lowerArmLength, -FVector::RightVector);
-			DrawBone(RightArm.armTransforms.lowerArm, RightArm.armTransforms.lowerArmLength, FVector::RightVector);*/
-			
+			DrawBone(FinalResolvedTransforms.UpperArmLeft, LeftArm.armTransforms.upperArmLength, FVector::ForwardVector);
+			DrawBone(FinalResolvedTransforms.UpperArmRight, RightArm.armTransforms.upperArmLength, FVector::ForwardVector);
+			DrawBone(FinalResolvedTransforms.LowerArmLeft, LeftArm.armTransforms.lowerArmLength, FVector::ForwardVector);
+			DrawBone(FinalResolvedTransforms.LowerArmRight, RightArm.armTransforms.lowerArmLength, FVector::ForwardVector);
+	
 			// Waist estimation?
 		}
 
@@ -1008,7 +1044,7 @@ public:
 		bool bHandsBehindHead;
 		float TargetAngle;
 
-		UPROPERTY(BlueprintReadOnly, Category = "VRArmIK Component Events")
+		//UPROPERTY(BlueprintReadOnly, Category = "VRArmIK Component Events")
 		FShoulderTransforms shoulder;
 		FVector leftShoulderAnkerStartLocalPosition;
 		FVector rightShoulderAnkerStartLocalPosition;
