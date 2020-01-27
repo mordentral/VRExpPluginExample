@@ -257,7 +257,7 @@ public:
 	float interpolatedDeltaElbowForward;
 	float lastDeltaElbowForward;
 
-	USceneComponent * OwningComp;
+	UActorComponent * OwningComp;
 
 
 	FVRArmIK()
@@ -274,7 +274,7 @@ public:
 
 	//////////////////////////////////////////////
 
-	void Update(CurrentReferenceTransforms CurrentTrans, FShoulderTransforms * ShoulderTransforms, bool isLeft, float dTime, USceneComponent * oComp)
+	void Update(CurrentReferenceTransforms CurrentTrans, FShoulderTransforms * ShoulderTransforms, bool isLeft, float dTime, UActorComponent * oComp)
 	{
 		OwningComp = oComp;
 
@@ -488,8 +488,9 @@ public:
 		if (left)
 			elbowPos.Y *= -1.f;
 
+		
 		FVector targetDir = shoulder->Transform.GetRotation() * elbowPos.GetSafeNormal();
-		DrawDebugSphere(OwningComp->GetWorld(), OwningComp->GetComponentTransform().TransformPosition(shoulderAnker().GetLocation() + targetDir * armTransforms.upperArmLength), 4.0f, 32, FColor::Orange);
+		//DrawDebugSphere(OwningComp->GetWorld(), (OwningComp->BaseTransform * OwningComp->GetOwner()->GetActorTransform()).TransformPosition(shoulderAnker().GetLocation() + targetDir * armTransforms.upperArmLength), 4.0f, 32, FColor::Orange);
 		FVector cross = FVector::CrossProduct(shoulderHandDirection, targetDir);
 		cross.Normalize();
 
@@ -772,11 +773,13 @@ public:
 *	A custom constraint component subclass that exposes additional missing functionality from the default one
 */
 UCLASS(meta = (BlueprintSpawnableComponent), HideCategories = (Activation, "Components|Activation", Physics, Mobility))
-class VREXPANSIONPLUGIN_API UVRArmIKActorComponent : public USceneComponent
+class VREXPANSIONPLUGIN_API UVRArmIKActorComponent : public UActorComponent
 {
 	
 	GENERATED_BODY()
 public:
+
+	FTransform BaseTransform;
 
 	// Input the name of the effector that you want to track, otherwise we will track the motion controllers directly
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRArmIK Effectors")
@@ -901,7 +904,7 @@ public:
 		void DrawJoint(FTransform &JointTransform, bool bDrawAxis = true)
 		{
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-			FTransform WorldTransform = JointTransform * this->GetComponentTransform();
+			FTransform WorldTransform = JointTransform * (BaseTransform * GetOwner()->GetActorTransform());
 			
 			DrawDebugSphere(GetWorld(), WorldTransform.GetLocation(), 3.0f, 32.f, FColor::Silver);
 			
@@ -918,7 +921,7 @@ public:
 		void DrawBone(FTransform &ParentBone, float BoneLength, FVector AxisToDraw)
 		{
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-			FTransform WorldTransform = ParentBone * this->GetComponentTransform();
+			FTransform WorldTransform = ParentBone * (BaseTransform * GetOwner()->GetActorTransform());
 			FQuat WorldRot = WorldTransform.GetRotation();
 			DrawDebugLine(GetWorld(), WorldTransform.GetLocation(), WorldTransform.GetLocation() + ((WorldRot.RotateVector(AxisToDraw)) * BoneLength), FColor::Magenta, false, -1.f, 0, 2.f);
 #endif
@@ -933,11 +936,13 @@ public:
 			if (!HeadEff.IsValid() || !LeftArmEff.IsValid() || !RightArmEff.IsValid())
 				return;
 
+			BaseTransform = GetOwner()->GetActorTransform();
+
 			// I'm using this comp as a proxy mesh component for testing
-			this->SetRelativeTransform(FTransform::Identity);
+			//this->SetRelativeTransform(FTransform::Identity);
 
 			// Doing this lets it work with my FPS pawn
-			FTransform ToLocalTrans = this->GetComponentTransform().Inverse();
+			FTransform ToLocalTrans = BaseTransform.Inverse();
 
 			CurrentTransforms.CameraTransform = HeadEff->GetComponentTransform() * ToLocalTrans;
 			CurrentTransforms.LeftHandTransform = LeftArmEff->GetComponentTransform() * ToLocalTrans;
@@ -954,7 +959,7 @@ public:
 			UpdateShoulders();
 
 			// Current moving them into relative space to this rotated component to simulate being in front of a rotated mesh
-			ToLocalTrans = this->GetRelativeTransform().Inverse();
+			ToLocalTrans = BaseTransform.Inverse();
 
 			CurrentTransforms.CameraTransform = CurrentTransforms.CameraTransform * ToLocalTrans;
 			CurrentTransforms.LeftHandTransform = CurrentTransforms.LeftHandTransform * ToLocalTrans;
@@ -1097,9 +1102,12 @@ public:
 
 			// Zero out the shoulder location and only apply Z for now, I split things for testing
 			FVector shoulderloc = shoulder.Transform.GetLocation();
-			this->SetRelativeLocation(FVector(shoulderloc.X, shoulderloc.Y, 0.f));
+			BaseTransform.SetLocation(FVector(shoulderloc.X, shoulderloc.Y, 0.f));
+			BaseTransform.SetScale3D(FVector(1.f));
+			//this->SetRelativeLocation(FVector(shoulderloc.X, shoulderloc.Y, 0.f));
 			shoulder.Transform.SetLocation(FVector(0.f, 0.f, shoulderloc.Z));
-			this->SetRelativeRotation(newRot);
+			BaseTransform.SetRotation(newRot);
+			//this->SetRelativeRotation(newRot);
 
 			// originally pitch was applied to newrot and then here, need to go back to that eventually
 			//shoulder.Transform.SetRotation(newRot);
