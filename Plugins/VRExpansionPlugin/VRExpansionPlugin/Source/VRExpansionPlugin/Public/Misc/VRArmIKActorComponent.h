@@ -1000,7 +1000,10 @@ public:
 			LeftArm.Update(CurrentTransforms, &shoulder, true, GetWorld()->GetDeltaSeconds(), this);
 			RightArm.Update(CurrentTransforms, &shoulder, false, GetWorld()->GetDeltaSeconds(), this);
 
-			FinalResolvedTransforms.ShoulderBase = shoulder.Transform;
+			FinalResolvedTransforms.ShoulderBase = shoulder.Transform * BaseTransform;
+			DrawBone(FinalResolvedTransforms.ShoulderBase, 100.f, FVector::ForwardVector);
+
+
 			FinalResolvedTransforms.UpperArmLeft = LeftArm.armTransforms.upperArm;
 			FinalResolvedTransforms.UpperArmRight = RightArm.armTransforms.upperArm;
 
