@@ -1040,6 +1040,19 @@ public:
 			RightArm.armTransforms.updateArmLengths(playerWidthShoulders, playerWidthWrist);
 		}
 
+		UFUNCTION(BlueprintCallable, Category = "BaseVRCharacter|VRLocations")
+			void SetArmLengths(float upperArm, float lowerArm)
+		{
+
+			LeftArm.armTransforms.upperArmLength = upperArm;
+			LeftArm.armTransforms.lowerArmLength = lowerArm;
+			RightArm.armTransforms.upperArmLength = upperArm;
+			RightArm.armTransforms.lowerArmLength = lowerArm;
+
+			LeftArm.armTransforms.armLength = upperArm + lowerArm;
+			RightArm.armTransforms.armLength = upperArm + lowerArm;
+		}
+
 	public:
 
 		float LastTargetRot;
