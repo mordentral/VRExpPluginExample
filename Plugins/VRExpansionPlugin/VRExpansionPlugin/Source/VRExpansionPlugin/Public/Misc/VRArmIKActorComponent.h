@@ -1004,26 +1004,29 @@ public:
 			DrawBone(FinalResolvedTransforms.ShoulderBase, 100.f, FVector::ForwardVector);
 
 
-			FinalResolvedTransforms.UpperArmLeft = LeftArm.armTransforms.upperArm;
-			FinalResolvedTransforms.UpperArmRight = RightArm.armTransforms.upperArm;
+
+			//FTransform WorldTransform = JointTransform * (BaseTransform * GetOwner()->GetActorTransform());
+
+			FinalResolvedTransforms.UpperArmLeft = LeftArm.armTransforms.upperArm * BaseTransform;
+			FinalResolvedTransforms.UpperArmRight = RightArm.armTransforms.upperArm * BaseTransform;
 
 			FinalResolvedTransforms.LowerArmLeft = LeftArm.armTransforms.lowerArm;
-			FinalResolvedTransforms.LowerArmLeft.SetLocation(LeftArm.armTransforms.upperArm.GetLocation() + (LeftArm.armTransforms.upperArm.GetRotation().GetForwardVector() * LeftArm.armTransforms.lowerArmLength));
+			FinalResolvedTransforms.LowerArmLeft.SetLocation(LeftArm.armTransforms.upperArm.GetLocation() + (LeftArm.armTransforms.upperArm.GetRotation().GetForwardVector() * LeftArm.armTransforms.upperArmLength));
 			FinalResolvedTransforms.LowerArmRight = RightArm.armTransforms.lowerArm;
-			FinalResolvedTransforms.LowerArmRight.SetLocation(RightArm.armTransforms.upperArm.GetLocation() + (RightArm.armTransforms.upperArm.GetRotation().GetForwardVector() * RightArm.armTransforms.lowerArmLength));
+			FinalResolvedTransforms.LowerArmRight.SetLocation(RightArm.armTransforms.upperArm.GetLocation() + (RightArm.armTransforms.upperArm.GetRotation().GetForwardVector() * RightArm.armTransforms.upperArmLength));
 
-			DrawJoint(FinalResolvedTransforms.UpperArmLeft);
-			DrawJoint(FinalResolvedTransforms.LowerArmLeft);
-			DrawJoint(FinalResolvedTransforms.UpperArmRight);
-			DrawJoint(FinalResolvedTransforms.LowerArmRight);
+			FinalResolvedTransforms.LowerArmRight = FinalResolvedTransforms.LowerArmRight * BaseTransform;
+			FinalResolvedTransforms.LowerArmLeft = FinalResolvedTransforms.LowerArmLeft * BaseTransform;
 
-			//DrawJoint(CurrentTransforms.LeftHandTransform);
-			//DrawJoint(CurrentTransforms.RightHandTransform);
+			DrawJoint(LeftArm.armTransforms.upperArm);
+			DrawJoint(LeftArm.armTransforms.lowerArm);
+			DrawJoint(RightArm.armTransforms.upperArm);
+			DrawJoint(RightArm.armTransforms.lowerArm);
 
-			DrawBone(FinalResolvedTransforms.UpperArmLeft, LeftArm.armTransforms.upperArmLength, FVector::ForwardVector);
-			DrawBone(FinalResolvedTransforms.UpperArmRight, RightArm.armTransforms.upperArmLength, FVector::ForwardVector);
-			DrawBone(FinalResolvedTransforms.LowerArmLeft, LeftArm.armTransforms.lowerArmLength, FVector::ForwardVector);
-			DrawBone(FinalResolvedTransforms.LowerArmRight, RightArm.armTransforms.lowerArmLength, FVector::ForwardVector);
+			DrawBone(LeftArm.armTransforms.upperArm, LeftArm.armTransforms.upperArmLength, FVector::ForwardVector);
+			DrawBone(RightArm.armTransforms.upperArm, RightArm.armTransforms.upperArmLength, FVector::ForwardVector);
+			DrawBone(LeftArm.armTransforms.lowerArm, LeftArm.armTransforms.lowerArmLength, FVector::ForwardVector);
+			DrawBone(RightArm.armTransforms.lowerArm, RightArm.armTransforms.lowerArmLength, FVector::ForwardVector);
 	
 			// Waist estimation?
 		}
@@ -1041,8 +1044,11 @@ public:
 		}
 
 		UFUNCTION(BlueprintCallable, Category = "BaseVRCharacter|VRLocations")
-			void SetArmLengths(float upperArm, float lowerArm)
+			void SetArmLengths(float upperArm, float lowerArm, float ShoulderWidth)
 		{
+
+			playerWidthShoulders = ShoulderWidth;
+			playerWidthWrist = upperArm + lowerArm + ShoulderWidth;
 
 			LeftArm.armTransforms.upperArmLength = upperArm;
 			LeftArm.armTransforms.lowerArmLength = lowerArm;
@@ -1050,7 +1056,7 @@ public:
 			RightArm.armTransforms.lowerArmLength = lowerArm;
 
 			LeftArm.armTransforms.armLength = upperArm + lowerArm;
-			RightArm.armTransforms.armLength = upperArm + lowerArm;
+			RightArm.armTransforms.armLength = upperArm + lowerArm;			
 		}
 
 	public:
