@@ -4888,8 +4888,6 @@ bool UGripMotionControllerComponent::GetPhysicsJointLength(const FBPActorGripInf
 	if (!HandleInfo->HandleData2.IsValid())
 		return false;
 
-	EPhysicsGripCOMType COMType = GrippedActor.AdvancedGripSettings.PhysicsSettings.PhysicsGripLocationSettings;
-
 	bool bUseComLoc = 
 		(
 			HandleInfo->bSetCOM || 
@@ -4908,7 +4906,7 @@ bool UGripMotionControllerComponent::GetPhysicsJointLength(const FBPActorGripInf
 	else
 	{
 		FTransform rr;
-		tran3 = FPhysicsInterface::GetLocalPose(HandleInfo->HandleData2, EConstraintFrame::Frame1);
+		tran3 = FPhysicsInterface::GetLocalPose(HandleInfo->HandleData2, EConstraintFrame::Frame2);
 
 		if (!rBodyInstance || !rBodyInstance->IsValidBodyInstance())
 		{
