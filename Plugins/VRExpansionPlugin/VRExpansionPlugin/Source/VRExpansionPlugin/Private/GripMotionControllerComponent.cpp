@@ -1990,8 +1990,7 @@ void UGripMotionControllerComponent::DropAndSocket_Implementation(const FBPActor
 					root->SetEnableGravity(NewDrop.bOriginalGravity);
 				
 				// Stop Physics sim for socketing
-				if (NewDrop.AdvancedGripSettings.PhysicsSettings.bUsePhysicsSettings && !NewDrop.AdvancedGripSettings.PhysicsSettings.bSkipSettingSimulating)
-					root->SetSimulatePhysics(false);
+				root->SetSimulatePhysics(false);
 			}
 
 			if (IsServer()) //&& !bSkipFullDrop)
@@ -2497,7 +2496,7 @@ void UGripMotionControllerComponent::Drop_Implementation(const FBPActorGripInfor
 					{
 						if (IsServer() || bHadGripAuthority || !NewDrop.bOriginalReplicatesMovement || !pActor->GetIsReplicated())
 						{
-							if (NewDrop.AdvancedGripSettings.PhysicsSettings.bUsePhysicsSettings && !NewDrop.AdvancedGripSettings.PhysicsSettings.bSkipSettingSimulating)
+							if (!NewDrop.AdvancedGripSettings.PhysicsSettings.bUsePhysicsSettings || !NewDrop.AdvancedGripSettings.PhysicsSettings.bSkipSettingSimulating)
 							{
 								if (root->IsSimulatingPhysics() != bSimulate)
 								{
@@ -2604,7 +2603,7 @@ void UGripMotionControllerComponent::Drop_Implementation(const FBPActorGripInfor
 					// Need to set simulation in all of these cases, including if it isn't the root component (simulation isn't replicated on non roots)
 					if (IsServer() || bHadGripAuthority || !NewDrop.bOriginalReplicatesMovement || (pActor && (pActor->GetRootComponent() != root || !pActor->GetIsReplicated())))
 					{
-						if (NewDrop.AdvancedGripSettings.PhysicsSettings.bUsePhysicsSettings && !NewDrop.AdvancedGripSettings.PhysicsSettings.bSkipSettingSimulating)
+						if (!NewDrop.AdvancedGripSettings.PhysicsSettings.bUsePhysicsSettings || !NewDrop.AdvancedGripSettings.PhysicsSettings.bSkipSettingSimulating)
 						{
 							if (root->IsSimulatingPhysics() != bSimulate)
 							{
@@ -4309,7 +4308,7 @@ bool UGripMotionControllerComponent::SetUpPhysicsHandle(const FBPActorGripInform
 
 
 	// Needs to be simulating in order to run physics
-	if (NewGrip.AdvancedGripSettings.PhysicsSettings.bUsePhysicsSettings && !NewGrip.AdvancedGripSettings.PhysicsSettings.bSkipSettingSimulating)
+	if (!NewGrip.AdvancedGripSettings.PhysicsSettings.bUsePhysicsSettings || !NewGrip.AdvancedGripSettings.PhysicsSettings.bSkipSettingSimulating)
 		root->SetSimulatePhysics(true);
 
 	/*if(NewGrip.GrippedBoneName == NAME_None)
