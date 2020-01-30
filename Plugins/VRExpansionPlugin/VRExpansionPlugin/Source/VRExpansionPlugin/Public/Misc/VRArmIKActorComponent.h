@@ -788,6 +788,10 @@ public:
 	FTransform UpperArmRight;
 	UPROPERTY(BlueprintReadOnly, Category = "VRArmIK Transforms")
 	FTransform LowerArmRight;
+	UPROPERTY(BlueprintReadOnly, Category = "VRArmIK Transforms")
+		FTransform LeftHand;
+	UPROPERTY(BlueprintReadOnly, Category = "VRArmIK Transforms")
+		FTransform RightHand;
 
 	FBPIKResolvedTransforms()
 	{
@@ -796,6 +800,8 @@ public:
 		LowerArmLeft = FTransform::Identity;
 		UpperArmRight = FTransform::Identity;
 		LowerArmRight = FTransform::Identity;
+		LeftHand = FTransform::Identity;
+		RightHand = FTransform::Identity;
 	}
 };
 
@@ -1001,9 +1007,6 @@ public:
 			RightArm.Update(CurrentTransforms, &shoulder, false, GetWorld()->GetDeltaSeconds(), this);
 
 			FinalResolvedTransforms.ShoulderBase = shoulder.Transform * BaseTransform;
-			DrawBone(FinalResolvedTransforms.ShoulderBase, 100.f, FVector::ForwardVector);
-
-
 
 			//FTransform WorldTransform = JointTransform * (BaseTransform * GetOwner()->GetActorTransform());
 
@@ -1017,6 +1020,14 @@ public:
 
 			FinalResolvedTransforms.LowerArmRight = FinalResolvedTransforms.LowerArmRight * BaseTransform;
 			FinalResolvedTransforms.LowerArmLeft = FinalResolvedTransforms.LowerArmLeft * BaseTransform;
+
+			FinalResolvedTransforms.LeftHand = LeftArm.target;
+			FinalResolvedTransforms.LeftHand.SetLocation(LeftArm.armTransforms.lowerArm.GetLocation() + (LeftArm.armTransforms.lowerArm.GetRotation().GetForwardVector() * LeftArm.armTransforms.lowerArmLength));
+			FinalResolvedTransforms.RightHand = RightArm.target;
+			FinalResolvedTransforms.RightHand.SetLocation(RightArm.armTransforms.lowerArm.GetLocation() + (RightArm.armTransforms.lowerArm.GetRotation().GetForwardVector() * RightArm.armTransforms.lowerArmLength));
+
+			FinalResolvedTransforms.LeftHand = FinalResolvedTransforms.LeftHand * BaseTransform;
+			FinalResolvedTransforms.RightHand = FinalResolvedTransforms.RightHand * BaseTransform;
 
 			DrawJoint(LeftArm.armTransforms.upperArm);
 			DrawJoint(LeftArm.armTransforms.lowerArm);
