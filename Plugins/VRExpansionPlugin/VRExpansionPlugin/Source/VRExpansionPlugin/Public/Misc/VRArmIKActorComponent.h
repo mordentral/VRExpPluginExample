@@ -779,6 +779,9 @@ struct VREXPANSIONPLUGIN_API FBPIKResolvedTransforms
 public:
 
 	UPROPERTY(BlueprintReadOnly, Category = "VRArmIK Transforms")
+		bool bHasValidPose;
+
+	UPROPERTY(BlueprintReadOnly, Category = "VRArmIK Transforms")
 	FTransform ShoulderBase;
 	UPROPERTY(BlueprintReadOnly, Category = "VRArmIK Transforms")
 	FTransform UpperArmLeft;
@@ -795,6 +798,7 @@ public:
 
 	FBPIKResolvedTransforms()
 	{
+		bHasValidPose = false;
 		ShoulderBase = FTransform::Identity;
 		UpperArmLeft = FTransform::Identity;
 		LowerArmLeft = FTransform::Identity;
@@ -1039,6 +1043,7 @@ public:
 			DrawBone(LeftArm.armTransforms.lowerArm, LeftArm.armTransforms.lowerArmLength, FVector::ForwardVector);
 			DrawBone(RightArm.armTransforms.lowerArm, RightArm.armTransforms.lowerArmLength, FVector::ForwardVector);
 	
+			FinalResolvedTransforms.bHasValidPose = true;
 			// Waist estimation?
 		}
 
