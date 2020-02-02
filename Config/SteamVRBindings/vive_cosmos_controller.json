@@ -118,6 +118,28 @@
 					}
 				},
 				{
+					"mode": "button",
+					"path": "/user/hand/left/input/trigger",
+					"inputs":
+					{
+						"click":
+						{
+							"output": "/actions/main/in/TriggerInteractionLEft"
+						}
+					}
+				},
+				{
+					"mode": "button",
+					"path": "/user/hand/right/input/trigger",
+					"inputs":
+					{
+						"click":
+						{
+							"output": "/actions/main/in/TriggerInteractionRight"
+						}
+					}
+				},
+				{
 					"mode": "joystick",
 					"path": "/user/hand/left/input/joystick",
 					"inputs":
@@ -195,5 +217,5 @@
 			]
 		}
 	},
-	"description": "Virtual Reality BP Game Template-10387632"
+	"description": "Virtual Reality BP Game Template-11100242"
 }

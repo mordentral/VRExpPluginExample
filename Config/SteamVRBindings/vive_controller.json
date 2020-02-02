@@ -75,6 +75,28 @@
 				},
 				{
 					"mode": "button",
+					"path": "/user/hand/right/input/application_menu",
+					"inputs":
+					{
+						"click":
+						{
+							"output": "/actions/main/in/LaserBeamRight"
+						}
+					}
+				},
+				{
+					"mode": "button",
+					"path": "/user/hand/left/input/application_menu",
+					"inputs":
+					{
+						"click":
+						{
+							"output": "/actions/main/in/LaserBeamLeft"
+						}
+					}
+				},
+				{
+					"mode": "button",
 					"path": "/user/hand/left/input/trigger",
 					"inputs":
 					{
@@ -92,6 +114,28 @@
 						"click":
 						{
 							"output": "/actions/main/in/UseHeldObjectRight"
+						}
+					}
+				},
+				{
+					"mode": "button",
+					"path": "/user/hand/left/input/trigger",
+					"inputs":
+					{
+						"click":
+						{
+							"output": "/actions/main/in/TriggerInteractionLEft"
+						}
+					}
+				},
+				{
+					"mode": "button",
+					"path": "/user/hand/right/input/trigger",
+					"inputs":
+					{
+						"click":
+						{
+							"output": "/actions/main/in/TriggerInteractionRight"
 						}
 					}
 				},
@@ -138,24 +182,6 @@
 							"output": "/actions/main/in/ControllerMovementRight axis"
 						}
 					}
-				},
-				{
-				   "inputs" : {
-					  "click" : {
-						 "output" : "/actions/main/in/laserbeamleft"
-					  }
-				   },
-				   "mode" : "button",
-				   "path" : "/user/hand/left/input/application_menu"
-				},
-				{
-				   "inputs" : {
-					  "click" : {
-						 "output" : "/actions/main/in/laserbeamright"
-					  }
-				   },
-				   "mode" : "button",
-				   "path" : "/user/hand/right/input/application_menu"
 				}
 			],
 			"poses": [
@@ -191,5 +217,5 @@
 			]
 		}
 	},
-	"description": "Virtual Reality BP Game Template-10387632"
+	"description": "Virtual Reality BP Game Template-11100242"
 }
