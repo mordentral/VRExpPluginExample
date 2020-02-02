@@ -78,7 +78,7 @@
 					"path": "/user/hand/right/input/joystick",
 					"parameters":
 					{
-						"sub_mode": "click"
+						"sub_mode": "touch"
 					},
 					"inputs":
 					{
@@ -93,7 +93,7 @@
 					"path": "/user/hand/left/input/joystick",
 					"parameters":
 					{
-						"sub_mode": "click"
+						"sub_mode": "touch"
 					},
 					"inputs":
 					{
@@ -122,6 +122,28 @@
 						"click":
 						{
 							"output": "/actions/main/in/UseHeldObjectRight"
+						}
+					}
+				},
+				{
+					"mode": "button",
+					"path": "/user/hand/left/input/trigger",
+					"inputs":
+					{
+						"click":
+						{
+							"output": "/actions/main/in/TriggerInteractionLEft"
+						}
+					}
+				},
+				{
+					"mode": "button",
+					"path": "/user/hand/right/input/trigger",
+					"inputs":
+					{
+						"click":
+						{
+							"output": "/actions/main/in/TriggerInteractionRight"
 						}
 					}
 				},
@@ -203,5 +225,5 @@
 			]
 		}
 	},
-	"description": "Virtual Reality BP Game Template-10387632"
+	"description": "Virtual Reality BP Game Template-11100242"
 }

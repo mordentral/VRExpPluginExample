@@ -118,6 +118,14 @@
 			"type": "boolean"
 		},
 		{
+			"name": "/actions/main/in/TriggerInteractionLEft",
+			"type": "boolean"
+		},
+		{
+			"name": "/actions/main/in/TriggerInteractionRight",
+			"type": "boolean"
+		},
+		{
 			"name": "/actions/main/in/MotionControllerThumbLeft_X,MotionControllerThumbLeft_Y X Y_axis2d",
 			"type": "vector2"
 		},
@@ -184,6 +192,10 @@
 		{
 			"controller_type": "vive_tracker_camera",
 			"binding_url": "vive_tracker_camera.json"
+		},
+		{
+			"controller_type": "knuckles",
+			"binding_url": "knuckles.json"
 		},
 		{
 			"controller_type": "vive_controller",
@@ -254,6 +266,8 @@
 			"/actions/main/in/LaserBeamLeft": "LaserBeamLeft",
 			"/actions/main/in/UseHeldObjectLeft": "UseHeldObjectLeft",
 			"/actions/main/in/UseHeldObjectRight": "UseHeldObjectRight",
+			"/actions/main/in/TriggerInteractionLEft": "TriggerInteractionLEft",
+			"/actions/main/in/TriggerInteractionRight": "TriggerInteractionRight",
 			"/actions/main/in/MotionControllerThumbLeft_X,MotionControllerThumbLeft_Y X Y_axis2d": "MotionControllerThumbLeft",
 			"/actions/main/in/MotionControllerThumbRight_X,MotionControllerThumbRight_Y X Y_axis2d": "MotionControllerThumbRight",
 			"/actions/main/in/ControllerMovementLeft axis": "ControllerMovementLeft",
