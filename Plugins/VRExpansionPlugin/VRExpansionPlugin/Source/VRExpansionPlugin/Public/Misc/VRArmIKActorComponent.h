@@ -951,8 +951,8 @@ spine 3 to pelvis distance (waist est)
 			HeadEff = OwningChar->VRReplicatedCamera;
 		}
 
-		float UpperArmLength;
-		float LowerArmLength;
+		float UpperArmLength = 0.f;
+		float LowerArmLength = 0.f;
 
 		if (TargetSkeletalMesh.IsValid())
 		{			
