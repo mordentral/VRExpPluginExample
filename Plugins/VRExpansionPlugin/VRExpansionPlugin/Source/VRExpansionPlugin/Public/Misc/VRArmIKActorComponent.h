@@ -782,6 +782,9 @@ public:
 		bool bHasValidPose;
 
 	UPROPERTY(BlueprintReadOnly, Category = "VRArmIK Transforms")
+		FTransform Pelvis;
+
+	UPROPERTY(BlueprintReadOnly, Category = "VRArmIK Transforms")
 	FTransform ShoulderBase;
 	UPROPERTY(BlueprintReadOnly, Category = "VRArmIK Transforms")
 	FTransform UpperArmLeft;
@@ -799,6 +802,7 @@ public:
 	FBPIKResolvedTransforms()
 	{
 		bHasValidPose = false;
+		Pelvis = FTransform::Identity;
 		ShoulderBase = FTransform::Identity;
 		UpperArmLeft = FTransform::Identity;
 		LowerArmLeft = FTransform::Identity;
@@ -819,38 +823,58 @@ class VREXPANSIONPLUGIN_API UVRArmIKActorComponent : public UActorComponent
 	GENERATED_BODY()
 public:
 
-	FTransform BaseTransform;
-
-	UPROPERTY(BlueprintReadOnly, Category = "VRArmIK Transforms")
-		FBPIKResolvedTransforms FinalResolvedTransforms;
-
-	// Input the name of the effector that you want to track, otherwise we will track the motion controllers directly
+	// Target skeletal mesh to calibrate to/from
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRArmIK Effectors")
-		FName LeftArmEffector;
+		FName TargetSkeletalMeshName;
 
-	UPROPERTY(BlueprintReadWrite, Category = "VRArmIK Effectors")
-	TWeakObjectPtr<USceneComponent> LeftArmEff;
+	TWeakObjectPtr<USkeletalMeshComponent> TargetSkeletalMesh;
 
+	/*
+	Upper Arm Length *
+Lower Arm Length *
+Head height (height adjustment)
+Height offset vector
+Head To Neck distance
+Neck To Spine 3 distance
+clavicle to spine 3 distance (shoulder offset)
+spine 3 to pelvis distance (waist est)
+	
+	*/
 
-	// Input the name of the effector that you want to track, otherwise we will track the motion controllers directly
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRArmIK Effectors")
-		FName RightArmEffector;
+	//float HeadHeight;
+	FVector HeadOffset;
+	//float HeadToNeckDistance;
+	//float NeckToSpine3Distance;
+	//float ClavicleToSpine3Distance;
+	FVector ShoulderToPelvisDistance;
 
-	UPROPERTY(BlueprintReadWrite, Category = "VRArmIK Effectors")
-	TWeakObjectPtr<USceneComponent> RightArmEff;
-
-	// Input the name of the effector that you want to track, otherwise we will track the camera directly
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRArmIK Effectors")
-		FName HeadEffector;
-	TWeakObjectPtr<USceneComponent> HeadEff;
-
-	UVRArmIKActorComponent(const FObjectInitializer& ObjectInitializer);
 	virtual void BeginPlay() override
 	{
 		Super::BeginPlay();
 
-		LeftArm.armTransforms.updateArmLengths(playerWidthShoulders, playerWidthWrist);
-		RightArm.armTransforms.updateArmLengths(playerWidthShoulders, playerWidthWrist);
+		if (TargetSkeletalMeshName.IsValid())
+		{
+			if (AActor * Owner = GetOwner())
+			{
+				FName CurrentCompName = NAME_None;
+				for (UActorComponent* ChildComp : Owner->GetComponents())
+				{
+					CurrentCompName = ChildComp->GetFName();
+					if (CurrentCompName == NAME_None)
+						continue;
+
+					if (CurrentCompName == TargetSkeletalMeshName)
+					{
+						if (USkeletalMeshComponent * SceneComp = Cast<USkeletalMeshComponent>(ChildComp))
+						{
+							TargetSkeletalMesh = SceneComp;
+						}
+
+						break;
+					}
+				}
+			}
+		}
 
 		if (LeftArmEff.IsValid() && RightArmEff.IsValid())
 			return;
@@ -926,7 +950,121 @@ public:
 		{
 			HeadEff = OwningChar->VRReplicatedCamera;
 		}
+
+		float UpperArmLength;
+		float LowerArmLength;
+
+		if (TargetSkeletalMesh.IsValid())
+		{			
+			int32 BoneIndex = TargetSkeletalMesh->GetBoneIndex("lowerarm_l");
+			if(BoneIndex != NAME_None)
+				UpperArmLength = TargetSkeletalMesh->GetRefPosePosition(BoneIndex).Size();
+
+			BoneIndex = TargetSkeletalMesh->GetBoneIndex("hand_l");
+			if (BoneIndex != NAME_None)
+				LowerArmLength = TargetSkeletalMesh->GetRefPosePosition(BoneIndex).Size();
+
+			FReferenceSkeleton refSkeleton = TargetSkeletalMesh->SkeletalMesh->RefSkeleton;
+
+
+			FVector PosRight = FVector::ZeroVector;
+			FVector PosLeft = FVector::ZeroVector;
+			FVector HeadLoc = FVector::ZeroVector;
+			FVector NeckLoc = FVector::ZeroVector;
+			FVector PelvisLoc = FVector::ZeroVector;
+
+			BoneIndex = TargetSkeletalMesh->GetBoneIndex("upperarm_l");
+			if (BoneIndex != NAME_None)
+				PosLeft = get_ref_pose_single_bone_comp_space_transform(refSkeleton, BoneIndex).GetLocation();
+
+			BoneIndex = TargetSkeletalMesh->GetBoneIndex("upperarm_r");
+			if (BoneIndex != NAME_None)
+				PosRight = get_ref_pose_single_bone_comp_space_transform(refSkeleton, BoneIndex).GetLocation();
+
+			SetArmLengths(UpperArmLength, LowerArmLength, (PosLeft - PosRight).Size());
+
+			BoneIndex = TargetSkeletalMesh->GetBoneIndex("head");
+			if (BoneIndex != NAME_None)
+				HeadLoc = get_ref_pose_single_bone_comp_space_transform(refSkeleton, BoneIndex).GetLocation();
+			playerHeightHmd = HeadLoc.Z - HeadOffset.Z;
+
+			BoneIndex = TargetSkeletalMesh->GetBoneIndex("neck_01");
+			if (BoneIndex != NAME_None)
+				NeckLoc = get_ref_pose_single_bone_comp_space_transform(refSkeleton, BoneIndex).GetLocation();
+
+			BoneIndex = TargetSkeletalMesh->GetBoneIndex("pelvis");
+			if (BoneIndex != NAME_None)
+				PelvisLoc = get_ref_pose_single_bone_comp_space_transform(refSkeleton, BoneIndex).GetLocation();
+
+			headNeckDirectionVector = FRotator(0.f, -90.f, 0.f).RotateVector(NeckLoc - HeadLoc).GetSafeNormal();
+			headNeckDistance = (HeadLoc - NeckLoc).Size();
+
+			neckShoulderDistance = FRotator(0.f, -90.f, 0.f).RotateVector(PosLeft - NeckLoc);
+			neckShoulderDistance.Y = 0.f;
+
+			ShoulderToPelvisDistance = FRotator(0.f, -90.f, 0.f).RotateVector(PelvisLoc - ((PosLeft + PosRight) / 2.f));
+
+			/*float UpperArmLength;
+			float LowerArmLength;
+			float HeadHeight;
+			FVector HeadOffset;
+			float HeadToNeckDistance;
+			float NeckToSpine3Distance;
+			float ClavicleToSpine3Distance;
+			float Spine3ToPelvisDistance;
+
+			FVector headNeckOffset = CurrentTransforms.CameraTransform.GetRotation().RotateVector(headNeckDirectionVector);
+			FVector targetPosition = CurrentTransforms.CameraTransform.GetLocation() + headNeckOffset * headNeckDistance;
+			shoulder.Transform.SetLocation(targetPosition + CurrentTransforms.CameraTransform.GetRotation().RotateVector(neckShoulderDistance));*/
+		}
+		else
+		{
+			LeftArm.armTransforms.updateArmLengths(playerWidthShoulders, playerWidthWrist);
+			RightArm.armTransforms.updateArmLengths(playerWidthShoulders, playerWidthWrist);
+		}
 	}
+
+	FTransform get_ref_pose_single_bone_comp_space_transform(FReferenceSkeleton& inSkel, int32 boneIdx)
+	{
+		FTransform resultBoneTransform = inSkel.GetRefBonePose()[boneIdx];
+
+		auto refBoneInfo = inSkel.GetRefBoneInfo();
+
+		while (boneIdx)
+		{
+			resultBoneTransform *= inSkel.GetRefBonePose()[refBoneInfo[boneIdx].ParentIndex];
+			boneIdx = refBoneInfo[boneIdx].ParentIndex;
+		}
+
+		return resultBoneTransform;
+	}
+
+	FTransform BaseTransform;
+
+	UPROPERTY(BlueprintReadOnly, Category = "VRArmIK Transforms")
+		FBPIKResolvedTransforms FinalResolvedTransforms;
+
+	// Input the name of the effector that you want to track, otherwise we will track the motion controllers directly
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRArmIK Effectors")
+		FName LeftArmEffector;
+
+	UPROPERTY(BlueprintReadWrite, Category = "VRArmIK Effectors")
+	TWeakObjectPtr<USceneComponent> LeftArmEff;
+
+
+	// Input the name of the effector that you want to track, otherwise we will track the motion controllers directly
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRArmIK Effectors")
+		FName RightArmEffector;
+
+	UPROPERTY(BlueprintReadWrite, Category = "VRArmIK Effectors")
+	TWeakObjectPtr<USceneComponent> RightArmEff;
+
+	// Input the name of the effector that you want to track, otherwise we will track the camera directly
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRArmIK Effectors")
+		FName HeadEffector;
+	TWeakObjectPtr<USceneComponent> HeadEff;
+
+	UVRArmIKActorComponent(const FObjectInitializer& ObjectInitializer);
 
 		float referencePlayerHeightHmd;
 		float referencePlayerWidthWrist;
@@ -1033,6 +1171,9 @@ public:
 			FinalResolvedTransforms.LeftHand = FinalResolvedTransforms.LeftHand * BaseTransform;
 			FinalResolvedTransforms.RightHand = FinalResolvedTransforms.RightHand * BaseTransform;
 
+			FinalResolvedTransforms.Pelvis = FTransform(ShoulderToPelvisDistance) * shoulder.Transform * BaseTransform;
+
+			DrawJoint(shoulder.Transform);
 			DrawJoint(LeftArm.armTransforms.upperArm);
 			DrawJoint(LeftArm.armTransforms.lowerArm);
 			DrawJoint(RightArm.armTransforms.upperArm);
@@ -1050,13 +1191,25 @@ public:
 		UFUNCTION(BlueprintCallable, Category = "BaseVRCharacter|VRLocations")
 		void CalibrateIK()
 		{
-			playerWidthWrist = (CurrentTransforms.LeftHandTransform.GetLocation() - CurrentTransforms.RightHandTransform.GetLocation()).Size();
-			playerHeightHmd = CurrentTransforms.CameraTransform.GetLocation().Z;
+			//playerWidthWrist = (CurrentTransforms.LeftHandTransform.GetLocation() - CurrentTransforms.RightHandTransform.GetLocation()).Size();
+			//playerHeightHmd = CurrentTransforms.CameraTransform.GetLocation().Z;
 
 			// Calibrate shoulders as well from frontal position?
 			
-			LeftArm.armTransforms.updateArmLengths(playerWidthShoulders, playerWidthWrist);
-			RightArm.armTransforms.updateArmLengths(playerWidthShoulders, playerWidthWrist);
+			//LeftArm.armTransforms.updateArmLengths(playerWidthShoulders, playerWidthWrist);
+			//RightArm.armTransforms.updateArmLengths(playerWidthShoulders, playerWidthWrist);
+
+
+
+			float ArmSpan = (CurrentTransforms.LeftHandTransform.GetLocation() - CurrentTransforms.RightHandTransform.GetLocation()).Size();
+			float RealHeight = CurrentTransforms.CameraTransform.GetLocation().Z;
+
+			float AssumedScale = RealHeight / playerHeightHmd;
+			if (TargetSkeletalMesh.IsValid())
+			{
+				TargetSkeletalMesh->SetRelativeScale3D(FVector(AssumedScale));
+			}
+			//playerHeightHmd = CurrentTransforms.CameraTransform.GetLocation().Z;
 		}
 
 		UFUNCTION(BlueprintCallable, Category = "BaseVRCharacter|VRLocations")

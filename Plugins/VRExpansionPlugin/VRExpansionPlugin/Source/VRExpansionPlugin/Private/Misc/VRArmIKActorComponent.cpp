@@ -37,4 +37,7 @@ UVRArmIKActorComponent::UVRArmIKActorComponent(const FObjectInitializer& ObjectI
 	startShoulderDislocationBefore = 0.005f * 100.f; // World To Meters idealy
 	headNeckDirectionVector = FVector(-.05f, 0.f, -1.f);
 	bIgnoreZPos = true;
+
+
+	HeadOffset = FVector(-5.f, 0.f, -5.f);
 }
