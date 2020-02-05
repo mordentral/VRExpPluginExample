@@ -138,11 +138,11 @@ public:
 
 	// Grip settings to use on the primary hand when multiple grips are active
 	// Falls back to the standard grip settings when only one grip is active
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon Settings")
+	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon Settings")
 		FBPAdvancedPhysicsHandleSettings PrimaryHandPhysicsSettings;
 
 	// Grip settings to use on the secondary hand when multiple grips are active
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon Settings")
+	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon Settings")
 		FBPAdvancedPhysicsHandleSettings SecondaryHandPhysicsSettings;
 
 
