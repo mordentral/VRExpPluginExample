@@ -134,6 +134,10 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = "Weapon Settings")
 	FBPGripPair SecondaryHand;
 
+	// If true then the COM will be between the hands
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon Settings")
+		bool bCOMBetweenHands;
+
 	FTransform ObjectRelativeGripCenter;
 
 	// Grip settings to use on the primary hand when multiple grips are active
