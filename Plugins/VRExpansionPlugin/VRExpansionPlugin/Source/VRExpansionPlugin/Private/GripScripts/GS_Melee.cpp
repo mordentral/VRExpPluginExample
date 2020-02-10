@@ -92,10 +92,18 @@ void UGS_Melee::UpdateDualHandInfo()
 
 			if (GripInfo && GripInfoS)
 			{
+				FVector Primary = FTransform(GripInfo->RelativeTransform.ToInverseMatrixWithScale()).GetLocation();
+				FVector Secondary = FTransform(GripInfoS->RelativeTransform.ToInverseMatrixWithScale()).GetLocation();
+
+				FVector Final = ((Primary + Secondary) / 2.f);
+
+				FTransform ownerTrans = GetOwner()->GetActorTransform();
+				DrawDebugSphere(GetWorld(), ownerTrans.TransformPosition(Final), 4.0f, 32, FColor::Orange, true);
 
 				ObjectRelativeGripCenter.SetLocation(FTransform(GripInfo->RelativeTransform.ToInverseMatrixWithScale()).GetLocation());
 				ObjectRelativeGripCenter.SetLocation((FTransform(GripInfo->RelativeTransform.ToInverseMatrixWithScale()).GetLocation() + ObjectRelativeGripCenter.GetLocation()) / 2.0f);
 				ObjectRelativeGripCenter.SetLocation(ObjectRelativeGripCenter.GetLocation() / GripInfo->RelativeTransform.GetScale3D());
+
 			}
 		}
 		else
@@ -134,6 +142,22 @@ void UGS_Melee::UpdateDualHandInfo()
 		}
 	}
 
+
+}
+
+
+void UGS_Melee::SetAndSlideHandOnGrip(bool bPrimaryHand)
+{
+/*	if (bPrimaryHand && PrimaryHand.IsValid())
+	{
+		float GripDistanceOnPrimaryAxis = 0.f;
+		FTransform relTransform(GripInfo->RelativeTransform.ToInverseMatrixWithScale());
+		relTransform = relTransform.GetRelativeTransform(OrientationComponentRelativeFacing);
+	}
+	else if (!bPrimaryHand && SecondaryHand.IsValid())
+	{
+
+	}*/
 
 }
 
@@ -255,7 +279,22 @@ void UGS_Melee::OnGrip_Implementation(UGripMotionControllerComponent* GrippingCo
 			if (HandleInfo)
 			{
 				FBPActorGripInformation * GripInfo = PrimaryHand.HoldingController->GetGripPtrByID(PrimaryHand.GripID);
-				GripInfo->AdvancedGripSettings.PhysicsSettings.PhysicsGripLocationSettings = EPhysicsGripCOMType::COM_SetAndGripAt;
+				//GripInfo->AdvancedGripSettings.PhysicsSettings.PhysicsGripLocationSettings = EPhysicsGripCOMType::COM_GripAtControllerLoc;
+				//GripInfo->AdvancedGripSettings.PhysicsSettings.PhysicsGripLocationSettings = EPhysicsGripCOMType::COM_SetAndGripAt;
+				GripInfo->AdvancedGripSettings.PhysicsSettings.PhysicsGripLocationSettings = EPhysicsGripCOMType::COM_GripAtControllerLoc;
+				PrimaryHandPhysicsSettings.FillTo(HandleInfo);
+				PrimaryHand.HoldingController->UpdatePhysicsHandle(PrimaryHand.GripID, true);
+			}
+		}
+		else
+		{
+			FBPActorPhysicsHandleInformation* HandleInfo = PrimaryHand.HoldingController->GetPhysicsGrip(PrimaryHand.GripID);
+			if (HandleInfo)
+			{
+				FBPActorGripInformation * GripInfo = PrimaryHand.HoldingController->GetGripPtrByID(PrimaryHand.GripID);
+				//GripInfo->AdvancedGripSettings.PhysicsSettings.PhysicsGripLocationSettings = EPhysicsGripCOMType::COM_GripAtControllerLoc;
+				//GripInfo->AdvancedGripSettings.PhysicsSettings.PhysicsGripLocationSettings = EPhysicsGripCOMType::COM_SetAndGripAt;
+				GripInfo->AdvancedGripSettings.PhysicsSettings.PhysicsGripLocationSettings = EPhysicsGripCOMType::COM_GripAtControllerLoc;
 				PrimaryHandPhysicsSettings.FillTo(HandleInfo);
 				PrimaryHand.HoldingController->UpdatePhysicsHandle(PrimaryHand.GripID, true);
 			}
@@ -448,12 +487,22 @@ void UGS_Melee::HandlePrePhysicsHandle(UGripMotionControllerComponent* GrippingC
 		FQuat DeltaQuat = OrientationComponentRelativeFacing.GetRotation();
 
 		// This moves the kinematic actor to face its X+ in the direction designated
-		//KinPose = ObjectRelativeGripCenter * KinPose;
-
-		//KinPose.SetLocation(GetOwner()->GetActorTransform().TransformPosition(ObjectRelativeGripCenter.GetLocation()));
 		KinPose.SetRotation(KinPose.GetRotation() * (HandleInfo->RootBoneRotation.GetRotation().Inverse() * DeltaQuat));
 		HandleInfo->COMPosition.SetRotation(HandleInfo->COMPosition.GetRotation() * (HandleInfo->RootBoneRotation.GetRotation().Inverse() * DeltaQuat));
-		//HandleInfo->COMPosition.SetLocation(ObjectRelativeGripCenter.GetLocation());// *HandleInfo->COMPosition;
+		
+
+		// Set the com between both hands if we have them
+		/*if (SecondaryHand.IsValid())
+		{
+			KinPose.SetLocation(GetOwner()->GetActorTransform().TransformPosition(ObjectRelativeGripCenter.GetLocation()));
+			HandleInfo->COMPosition.SetLocation(HandleInfo->RootBoneRotation.GetRotation().Inverse().RotateVector(ObjectRelativeGripCenter.GetLocation()));// *HandleInfo->COMPosition;
+		}*/
+
+		/*if (GripInfo.bIsSlotGrip && !PivotOffset.IsZero())
+		{
+			KinPose.SetLocation(KinPose.TransformPosition(PivotOffset));
+			HandleInfo->COMPosition.SetLocation(HandleInfo->COMPosition.TransformPosition(PivotOffset));
+		}*/
 	}
 }
 
@@ -472,6 +521,25 @@ void UGS_Melee::HandlePostPhysicsHandle(UGripMotionControllerComponent* Gripping
 		{
 			PrimaryHandPhysicsSettings.FillTo(HandleInfo);
 		}
+
+		if (UPrimitiveComponent * PrimComp = Cast<UPrimitiveComponent>(HandleInfo->HandledObject))
+		{
+			if (FBodyInstance * rBodyInstance = PrimComp->GetBodyInstance())
+			{
+				FPhysicsCommand::ExecuteWrite(rBodyInstance->ActorHandle, [&](const FPhysicsActorHandle& Actor)
+				{
+					//FVector Loc = (FTransform((RootBoneRotation * NewGrip.RelativeTransform).ToInverseMatrixWithScale())).GetLocation();
+					//Loc *= rBodyInstance->Scale3D;
+					FTransform localCom = FPhysicsInterface::GetComTransformLocal_AssumesLocked(Actor);
+					localCom.SetLocation((HandleInfo->RootBoneRotation * ObjectRelativeGripCenter).GetLocation());
+					FPhysicsInterface::SetComLocalPose_AssumesLocked(Actor, localCom);
+					HandleInfo->bSetCOM = true; // Should i remove this?
+				});
+			}
+		}
+
+		
+
 	}
 }
 
