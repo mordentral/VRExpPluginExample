@@ -492,7 +492,7 @@ void UGS_Melee::HandlePrePhysicsHandle(UGripMotionControllerComponent* GrippingC
 		KinPose.SetRotation(KinPose.GetRotation() * (HandleInfo->RootBoneRotation.GetRotation().Inverse() * DeltaQuat));
 		HandleInfo->COMPosition.SetRotation(HandleInfo->COMPosition.GetRotation() * (HandleInfo->RootBoneRotation.GetRotation().Inverse() * DeltaQuat));
 
-		if (bCOMBetweenHands && PrimaryHand.IsValid() && !SecondaryHand.IsValid())
+		/*if (bCOMBetweenHands && PrimaryHand.IsValid() && !SecondaryHand.IsValid())
 		{
 			FBPActorGripInformation* GripInfo = PrimaryHand.HoldingController->GetGripPtrByID(PrimaryHand.GripID);
 
@@ -504,7 +504,7 @@ void UGS_Melee::HandlePrePhysicsHandle(UGripMotionControllerComponent* GrippingC
 				HandleInfo->COMPosition.SetLocation(ObjectRelativeGripCenter.GetLocation());
 			}
 
-		}
+		}*/
 
 		// Handle offset here for if not physically grabbing twice
 	}
