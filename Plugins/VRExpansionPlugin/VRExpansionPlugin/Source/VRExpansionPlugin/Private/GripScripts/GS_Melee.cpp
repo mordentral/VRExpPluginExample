@@ -457,6 +457,9 @@ void UGS_Melee::OnLodgeHitCallback(AActor* SelfActor, AActor* OtherActor, FVecto
 
 	for(FBPLodgeComponentInfo &LodgeData : PenetrationNotifierComponents)
 	{
+		if (!LodgeData.TargetComponent.IsValid())
+			continue;
+
 		FBox LodgeBox = LodgeData.TargetComponent->Bounds.GetBox();
 		if (LodgeData.TargetComponent.IsValid() && LodgeBox.IsInsideOrOn(Hit.ImpactPoint))
 		{
@@ -537,7 +540,7 @@ void UGS_Melee::HandlePostPhysicsHandle(UGripMotionControllerComponent* Gripping
 							FTransform localCom = FPhysicsInterface::GetComTransformLocal_AssumesLocked(Actor);
 							localCom.SetLocation((HandleInfo->RootBoneRotation * ObjectRelativeGripCenter).GetLocation());
 							FPhysicsInterface::SetComLocalPose_AssumesLocked(Actor, localCom);
-							//HandleInfo->bSetCOM = true; // Should i remove this?
+							HandleInfo->bSetCOM = true; // Should i remove this?
 						});
 				}
 			}
