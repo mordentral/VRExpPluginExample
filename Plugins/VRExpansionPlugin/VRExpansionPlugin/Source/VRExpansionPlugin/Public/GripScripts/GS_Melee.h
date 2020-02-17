@@ -96,6 +96,11 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Melee|Lodging")
 		bool bAlwaysTickPenetration;
 
+	// Only penetrate with two hands on the weapon
+	// Mostly for very large weapons
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Melee|Lodging")
+		bool bOnlyPenetrateWithTwoHands;
+
 	FVector RollingVelocityAverage;
 	FVector RollingAngVelocityAverage;
 	float NumberOfFramesToAverageVelocity;
@@ -116,6 +121,11 @@ public:
 	bool bTickedAlready;
 	FVector RelativeBetweenGripsCenterPos;
 
+	// If true then we won't bind to the objects mass updates, we don't expect thing to attach to us
+	// This is a perf savings when possible
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon Settings")
+		bool bSkipGripMassChecks;
+
 	// When true, will auto set the primary and secondary hands by the WeaponRootOrientationComponents X Axis distance.
 	// Smallest value along the X Axis will be considered the primary hand.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon Settings")
@@ -134,49 +144,29 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = "Weapon Settings")
 	FBPGripPair SecondaryHand;
 
+	// If true then the COM will be between the hands
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon Settings")
+		bool bCOMBetweenHands;
+
 	FTransform ObjectRelativeGripCenter;
 
 	// Grip settings to use on the primary hand when multiple grips are active
 	// Falls back to the standard grip settings when only one grip is active
-	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon Settings")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon Settings")
 		FBPAdvancedPhysicsHandleSettings PrimaryHandPhysicsSettings;
 
 	// Grip settings to use on the secondary hand when multiple grips are active
-	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon Settings")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon Settings")
 		FBPAdvancedPhysicsHandleSettings SecondaryHandPhysicsSettings;
 
 
 	void UpdateDualHandInfo();
-
-
-	UFUNCTION(BlueprintCallable, Category = "Weapon Settings")
-		void SetCOMOffsetInLocalSpace(UGripMotionControllerComponent* GrippingController, UPARAM(ref) FBPActorGripInformation& Grip, FVector Offset, bool bOffsetIsInWorldSpace = true, bool bLimitToXOnly = true);
 
 	virtual void HandlePostPhysicsHandle(UGripMotionControllerComponent* GrippingController, FBPActorPhysicsHandleInformation* HandleInfo) override;
 	virtual void HandlePrePhysicsHandle(UGripMotionControllerComponent* GrippingController, const FBPActorGripInformation &GripInfo, FBPActorPhysicsHandleInformation* HandleInfo, FTransform& KinPose) override;
 	virtual void OnBeginPlay_Implementation(UObject* CallingOwner) override;
 	virtual void OnEndPlay_Implementation(const EEndPlayReason::Type EndPlayReason) override;
 	virtual void OnSecondaryGrip_Implementation(UGripMotionControllerComponent* Controller, USceneComponent* SecondaryGripComponent, const FBPActorGripInformation& GripInformation) override;
-
-	/*TArray<FBPMelee_SurfacePair> SurfaceTypesToPenetrate;
-	bool bAllowPenetration;
-	bool bUseDensityForPenetrationCalcs;
-	bool bTraceComplex;
-	bool bLodged;
-
-	FVector StrikeVelocity;
-	bool bSubstepTrace;
-	float MaxSubsteps;
-
-	float BaseDamage;
-	float VelocityDamageScaler;
-	float MaximumVelocityForDamage;
-
-	TWeakObjectPtr<class UPrimitiveComponent> LodgeParent;
-
-	// Amount of movement force to apply to the in/out action of penetration.
-	float PenetrationFrictionCoefficient;
-	*/
 
 	virtual void OnGrip_Implementation(UGripMotionControllerComponent* GrippingController, const FBPActorGripInformation& GripInformation) override;
 
