@@ -28,6 +28,7 @@ UGS_Melee::UGS_Melee(const FObjectInitializer& ObjectInitializer) :
 	bCanEverTick = true;
 	bAlwaysTickPenetration = true;
 	bCOMBetweenHands = false;
+	bSkipGripMassChecks = true;
 }
 
 void UGS_Melee::UpdateDualHandInfo()
@@ -290,14 +291,21 @@ void UGS_Melee::OnGrip_Implementation(UGripMotionControllerComponent* GrippingCo
 		}
 		else
 		{
-			FBPActorPhysicsHandleInformation* HandleInfo = PrimaryHand.HoldingController->GetPhysicsGrip(PrimaryHand.GripID);
-			if (HandleInfo)
-			{
-				FBPActorGripInformation * GripInfo = PrimaryHand.HoldingController->GetGripPtrByID(PrimaryHand.GripID);
+			//BPActorPhysicsHandleInformation* HandleInfo = PrimaryHand.HoldingController->GetPhysicsGrip(PrimaryHand.GripID);
+		//	if (HandleInfo)
+			//{
+				/*FBPActorGripInformation * GripInfo = PrimaryHand.HoldingController->GetGripPtrByID(PrimaryHand.GripID);
+				
+				if (GripInfo)
+				{
+					FBPAdvGripSettings AdvSettings = IVRGripInterface::Execute_AdvancedGripSettings(GripInfo->GrippedObject);				
+					GripInfo->AdvancedGripSettings.PhysicsSettings.PhysicsGripLocationSettings = AdvSettings.PhysicsSettings.PhysicsGripLocationSettings;
+				}*/
+
 				//GripInfo->AdvancedGripSettings.PhysicsSettings.PhysicsGripLocationSettings = EPhysicsGripCOMType::COM_SetAndGripAt;
-				PrimaryHandPhysicsSettings.FillTo(HandleInfo);
+				/*PrimaryHandPhysicsSettings.FillTo(HandleInfo);
 				PrimaryHand.HoldingController->UpdatePhysicsHandle(PrimaryHand.GripID, true);
-			}
+			}*/
 		}
 	}
 }
@@ -367,6 +375,9 @@ void UGS_Melee::OnGripRelease_Implementation(UGripMotionControllerComponent* Rel
 					HandleInfo->AngConstraint.SlerpDrive.Damping = GripInfo->Damping * 1.4f;
 					HandleInfo->AngConstraint.SlerpDrive.Stiffness = GripInfo->Stiffness * 1.5f;
 				}
+
+				FBPAdvGripSettings AdvSettings = IVRGripInterface::Execute_AdvancedGripSettings(GripInfo->GrippedObject);
+				GripInfo->AdvancedGripSettings.PhysicsSettings.PhysicsGripLocationSettings = EPhysicsGripCOMType::COM_GripAtControllerLoc; //AdvSettings.PhysicsSettings.PhysicsGripLocationSettings;
 
 				//GripInfo->AdvancedGripSettings.PhysicsSettings.PhysicsGripLocationSettings = EPhysicsGripCOMType::COM_SetAndGripAt;
 
@@ -445,6 +456,8 @@ void UGS_Melee::OnLodgeHitCallback(AActor* SelfActor, AActor* OtherActor, FVecto
 		if (FBodyInstance * rBodyInstance = root->GetBodyInstance())
 		{
 			RollingVelocityAverage += FVector::CrossProduct(RollingAngVelocityAverage, Hit.ImpactPoint - rBodyInstance->GetCOMPosition());
+
+			//GEngine->AddOnScreenDebugMessage(-1, 15.f, FColor::Red, FString::Printf(TEXT("------------Rolling Velocity On Hit: %s"), *RollingVelocityAverage.ToString()));
 		}
 	}
 
@@ -518,6 +531,9 @@ void UGS_Melee::HandlePostPhysicsHandle(UGripMotionControllerComponent* Gripping
 	if (!bIsActive)
 		return;
 
+	if(bSkipGripMassChecks)
+		HandleInfo->bSkipMassCheck = true;
+
 	if (SecondaryHand.IsValid())
 	{
 		if (GrippingController == SecondaryHand.HoldingController && HandleInfo->GripID == SecondaryHand.GripID)
@@ -529,7 +545,7 @@ void UGS_Melee::HandlePostPhysicsHandle(UGripMotionControllerComponent* Gripping
 			PrimaryHandPhysicsSettings.FillTo(HandleInfo);
 		}
 
-		if (bCOMBetweenHands)
+		if (bCOMBetweenHands && SecondaryHand.IsValid())
 		{
 			if (UPrimitiveComponent * PrimComp = Cast<UPrimitiveComponent>(GetParentSceneComp()))
 			{
@@ -541,6 +557,7 @@ void UGS_Melee::HandlePostPhysicsHandle(UGripMotionControllerComponent* Gripping
 							localCom.SetLocation((HandleInfo->RootBoneRotation * ObjectRelativeGripCenter).GetLocation());
 							FPhysicsInterface::SetComLocalPose_AssumesLocked(Actor, localCom);
 							HandleInfo->bSetCOM = true; // Should i remove this?
+							HandleInfo->bSkipResettingCom = true;
 						});
 				}
 			}

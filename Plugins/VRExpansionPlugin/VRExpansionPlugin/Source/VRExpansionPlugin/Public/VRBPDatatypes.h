@@ -1444,6 +1444,8 @@ public:
 	FTransform RootBoneRotation;
 
 	bool bSetCOM;
+	bool bSkipResettingCom;
+	bool bSkipMassCheck;
 
 	FBPActorPhysicsHandleInformation()
 	{	
@@ -1453,6 +1455,8 @@ public:
 		GripID = INVALID_VRGRIP_ID;
 		RootBoneRotation = FTransform::Identity;
 		bSetCOM = false;
+		bSkipResettingCom = false;
+		bSkipMassCheck = false;
 	}
 
 	FORCEINLINE bool operator==(const FBPActorGripInformation & Other) const
