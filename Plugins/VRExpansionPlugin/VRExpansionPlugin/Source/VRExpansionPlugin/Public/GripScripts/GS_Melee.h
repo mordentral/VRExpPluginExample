@@ -63,7 +63,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_SixParams(FVROnMeleeShouldLodgeSignature, FBP
 
 
 /**
-* A Melee grip script *CURRENTLY WIP, DO NOT USE!!!*
+* A Melee grip script that hands multi hand interactions and penetration notifications*
 */
 UCLASS(NotBlueprintable, ClassGroup = (VRExpansionPlugin), hideCategories = TickSettings)
 class VREXPANSIONPLUGIN_API UGS_Melee : public UGS_Default
