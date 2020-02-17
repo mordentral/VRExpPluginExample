@@ -96,6 +96,11 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Melee|Lodging")
 		bool bAlwaysTickPenetration;
 
+	// Only penetrate with two hands on the weapon
+	// Mostly for very large weapons
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Melee|Lodging")
+		bool bOnlyPenetrateWithTwoHands;
+
 	FVector RollingVelocityAverage;
 	FVector RollingAngVelocityAverage;
 	float NumberOfFramesToAverageVelocity;
@@ -157,39 +162,11 @@ public:
 
 	void UpdateDualHandInfo();
 
-
-	UFUNCTION(BlueprintCallable, Category = "Weapon Settings")
-		void SetAndSlideHandOnGrip(bool bPrimaryHand);
-
-
-	UFUNCTION(BlueprintCallable, Category = "Weapon Settings")
-		void SetCOMOffsetInLocalSpace(UGripMotionControllerComponent* GrippingController, UPARAM(ref) FBPActorGripInformation& Grip, FVector Offset, bool bOffsetIsInWorldSpace = true, bool bLimitToXOnly = true);
-
 	virtual void HandlePostPhysicsHandle(UGripMotionControllerComponent* GrippingController, FBPActorPhysicsHandleInformation* HandleInfo) override;
 	virtual void HandlePrePhysicsHandle(UGripMotionControllerComponent* GrippingController, const FBPActorGripInformation &GripInfo, FBPActorPhysicsHandleInformation* HandleInfo, FTransform& KinPose) override;
 	virtual void OnBeginPlay_Implementation(UObject* CallingOwner) override;
 	virtual void OnEndPlay_Implementation(const EEndPlayReason::Type EndPlayReason) override;
 	virtual void OnSecondaryGrip_Implementation(UGripMotionControllerComponent* Controller, USceneComponent* SecondaryGripComponent, const FBPActorGripInformation& GripInformation) override;
-
-	/*TArray<FBPMelee_SurfacePair> SurfaceTypesToPenetrate;
-	bool bAllowPenetration;
-	bool bUseDensityForPenetrationCalcs;
-	bool bTraceComplex;
-	bool bLodged;
-
-	FVector StrikeVelocity;
-	bool bSubstepTrace;
-	float MaxSubsteps;
-
-	float BaseDamage;
-	float VelocityDamageScaler;
-	float MaximumVelocityForDamage;
-
-	TWeakObjectPtr<class UPrimitiveComponent> LodgeParent;
-
-	// Amount of movement force to apply to the in/out action of penetration.
-	float PenetrationFrictionCoefficient;
-	*/
 
 	virtual void OnGrip_Implementation(UGripMotionControllerComponent* GrippingController, const FBPActorGripInformation& GripInformation) override;
 
