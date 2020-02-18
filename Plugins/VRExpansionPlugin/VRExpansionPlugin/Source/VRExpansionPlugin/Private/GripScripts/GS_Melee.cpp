@@ -131,6 +131,88 @@ void UGS_Melee::UpdateDualHandInfo()
 	}
 }
 
+
+void UGS_Melee::StartSlidingHandPosition(bool bPrimaryHand, float LocalMinX, float LocalMaxX)
+{
+	FBPGripPair HandPair = bPrimaryHand ? PrimaryHand : SecondaryHand;
+	
+	if (HandPair.IsValid())
+	{
+		if (FBPActorPhysicsHandleInformation * HandleInfo = HandPair.HoldingController->GetPhysicsGrip(HandPair.GripID))
+		{
+			//FLinearDriveConstraint LinConstraint;
+			//FAngularDriveConstraint AngConstraint;
+			//HandleInfo->LinConstraint.XDrive.bEnablePositionDrive = false;
+			//HandleInfo->LinConstraint.XDrive.bEnableVelocityDrive = false;
+
+			//FPhysicsInterface::SetLinearLimit()
+			//HandleInfo->
+
+			//FPhysicsInterface::UpdateLinearDrive_AssumesLocked(HandleInfo->HandleData2, HandleInfo->LinConstraint);
+			//FPhysicsInterface::UpdateAngularDrive_AssumesLocked(HandleInfo->HandleData2, HandleInfo->AngConstraint);
+		}
+	}
+}
+
+void UGS_Melee::UpdateHandPosition(bool bPrimaryHand, FVector HandWorldLocation)
+{
+	FBPGripPair HandPair = bPrimaryHand ? PrimaryHand : SecondaryHand;
+
+	if (HandPair.IsValid())
+	{
+		FBPActorGripInformation* GripInfo = HandPair.HoldingController->GetGripPtrByID(HandPair.GripID);
+
+		if (GripInfo)
+		{
+			// Make hand relative to object transform
+			FTransform RelativeTrans = GripInfo->RelativeTransform.Inverse();
+			
+			// Get our current parent transform
+			FTransform ParentTransform = GetParentTransform();
+
+			FQuat orientationRot = OrientationComponentRelativeFacing.GetRotation();
+			FVector currentRelVec = orientationRot.RotateVector(ParentTransform.InverseTransformPosition(HandWorldLocation));
+			//currentRelVec = OrientationComponentRelativeFacing.GetRotation().UnrotateVector(currentRelVec);
+
+			FVector currentLoc = orientationRot.RotateVector(RelativeTrans.GetLocation());
+			currentLoc.X = currentRelVec.X;
+
+			RelativeTrans.SetLocation(orientationRot.UnrotateVector(currentLoc));
+			GripInfo->RelativeTransform = RelativeTrans.Inverse();
+			HandPair.HoldingController->UpdatePhysicsHandle(*GripInfo, true);
+
+			// Instead of recreating, can directly set local pose here
+		}
+	}
+}
+
+void UGS_Melee::StopSlidingHandPosition(bool bPrimaryHand, bool bLockInNewPosition)
+{
+	FBPGripPair HandPair = bPrimaryHand ? PrimaryHand : SecondaryHand;
+	if (HandPair.IsValid())
+	{
+		if (FBPActorPhysicsHandleInformation * HandleInfo = HandPair.HoldingController->GetPhysicsGrip(HandPair.GripID))
+		{
+			//FLinearDriveConstraint LinConstraint;
+			//FAngularDriveConstraint AngConstraint;
+			//HandleInfo->LinConstraint.XDrive.bEnablePositionDrive = true;
+			//HandleInfo->LinConstraint.XDrive.bEnableVelocityDrive = true;
+
+			//FPhysicsInterface::UpdateLinearDrive_AssumesLocked(HandleInfo->HandleData2, HandleInfo->LinConstraint);
+			//FPhysicsInterface::UpdateAngularDrive_AssumesLocked(HandleInfo->HandleData2, HandleInfo->AngConstraint);
+		}
+
+		if (bLockInNewPosition)
+		{
+			UpdateHandPosition(bPrimaryHand, HandPair.HoldingController->GetPivotLocation());
+		}
+	}
+
+	UpdateDualHandInfo();
+}
+
+
+
 void UGS_Melee::SetPrimaryAndSecondaryHands(FBPGripPair& PrimaryGrip, FBPGripPair& SecondaryGrip)
 {
 
