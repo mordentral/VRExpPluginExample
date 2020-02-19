@@ -576,6 +576,16 @@ void UGS_Melee::Tick(float DeltaTime)
 	}
 }
 
+bool UGS_Melee::Wants_DenyTeleport_Implementation(UGripMotionControllerComponent* Controller)
+{
+	if (PrimaryHand.IsValid() && Controller != PrimaryHand.HoldingController)
+	{
+		return true;
+	}
+
+	return false;
+}
+
 bool UGS_Melee::GetWorldTransform_Implementation
 (
 	UGripMotionControllerComponent* GrippingController, 
