@@ -132,7 +132,7 @@ void UGS_Melee::UpdateDualHandInfo()
 }
 
 
-void UGS_Melee::StartSlidingHandPosition(bool bPrimaryHand, float LocalMinX, float LocalMaxX)
+/*void UGS_Melee::StartSlidingHandPosition(bool bPrimaryHand, float LocalMinX, float LocalMaxX)
 {
 	FBPGripPair HandPair = bPrimaryHand ? PrimaryHand : SecondaryHand;
 	
@@ -152,12 +152,10 @@ void UGS_Melee::StartSlidingHandPosition(bool bPrimaryHand, float LocalMinX, flo
 			//FPhysicsInterface::UpdateAngularDrive_AssumesLocked(HandleInfo->HandleData2, HandleInfo->AngConstraint);
 		}
 	}
-}
+}*/
 
-void UGS_Melee::UpdateHandPosition(bool bPrimaryHand, FVector HandWorldLocation)
+void UGS_Melee::UpdateHandPosition(FBPGripPair HandPair, FVector HandWorldPosition)
 {
-	FBPGripPair HandPair = bPrimaryHand ? PrimaryHand : SecondaryHand;
-
 	if (HandPair.IsValid())
 	{
 		FBPActorGripInformation* GripInfo = HandPair.HoldingController->GetGripPtrByID(HandPair.GripID);
@@ -171,7 +169,7 @@ void UGS_Melee::UpdateHandPosition(bool bPrimaryHand, FVector HandWorldLocation)
 			FTransform ParentTransform = GetParentTransform();
 
 			FQuat orientationRot = OrientationComponentRelativeFacing.GetRotation();
-			FVector currentRelVec = orientationRot.RotateVector(ParentTransform.InverseTransformPosition(HandWorldLocation));
+			FVector currentRelVec = orientationRot.RotateVector(ParentTransform.InverseTransformPosition(HandWorldPosition));
 			//currentRelVec = OrientationComponentRelativeFacing.GetRotation().UnrotateVector(currentRelVec);
 
 			FVector currentLoc = orientationRot.RotateVector(RelativeTrans.GetLocation());
@@ -182,11 +180,48 @@ void UGS_Melee::UpdateHandPosition(bool bPrimaryHand, FVector HandWorldLocation)
 			HandPair.HoldingController->UpdatePhysicsHandle(*GripInfo, true);
 
 			// Instead of recreating, can directly set local pose here
+
+
+			FBPGripPair SecHand = SecondaryHand;
+			UpdateDualHandInfo();
+
+			if (SecondaryHand.IsValid() && !(SecHand == SecondaryHand))
+			{
+
+				GripInfo = SecondaryHand.HoldingController->GetGripPtrByID(SecondaryHand.GripID);
+				GripInfo->AdvancedGripSettings.PhysicsSettings.PhysicsGripLocationSettings = EPhysicsGripCOMType::COM_GripAtControllerLoc;
+
+				FBPActorPhysicsHandleInformation* HandleInfo = SecondaryHand.HoldingController->GetPhysicsGrip(SecondaryHand.GripID);
+				if (HandleInfo)
+				{
+					SecondaryHandPhysicsSettings.FillTo(HandleInfo);
+					SecondaryHand.HoldingController->UpdatePhysicsHandle(SecondaryHand.GripID, true);
+				}
+
+
+				GripInfo = PrimaryHand.HoldingController->GetGripPtrByID(PrimaryHand.GripID);
+
+				if (bCOMBetweenHands)
+					GripInfo->AdvancedGripSettings.PhysicsSettings.PhysicsGripLocationSettings = EPhysicsGripCOMType::COM_GripAtControllerLoc;
+				//else
+				//	GripInfo->AdvancedGripSettings.PhysicsSettings.PhysicsGripLocationSettings = EPhysicsGripCOMType::COM_SetAndGripAt;
+
+
+				HandleInfo = PrimaryHand.HoldingController->GetPhysicsGrip(PrimaryHand.GripID);
+				if (HandleInfo)
+				{
+					PrimaryHandPhysicsSettings.FillTo(HandleInfo);
+					PrimaryHand.HoldingController->UpdatePhysicsHandle(PrimaryHand.GripID, true);
+				}
+			}
+			
+			if(bCOMBetweenHands)
+				SetComBetweenHands(HandPair.HoldingController, HandPair.HoldingController->GetPhysicsGrip(HandPair.GripID));
 		}
 	}
 }
 
-void UGS_Melee::StopSlidingHandPosition(bool bPrimaryHand, bool bLockInNewPosition)
+/*void UGS_Melee::StopSlidingHandPosition(bool bPrimaryHand, bool bLockInNewPosition)
 {
 	FBPGripPair HandPair = bPrimaryHand ? PrimaryHand : SecondaryHand;
 	if (HandPair.IsValid())
@@ -209,9 +244,7 @@ void UGS_Melee::StopSlidingHandPosition(bool bPrimaryHand, bool bLockInNewPositi
 	}
 
 	UpdateDualHandInfo();
-}
-
-
+}*/
 
 void UGS_Melee::SetPrimaryAndSecondaryHands(FBPGripPair& PrimaryGrip, FBPGripPair& SecondaryGrip)
 {
@@ -494,23 +527,37 @@ void UGS_Melee::HandlePostPhysicsHandle(UGripMotionControllerComponent* Gripping
 			PrimaryHandPhysicsSettings.FillTo(HandleInfo);
 		}
 
-		if (bCOMBetweenHands && SecondaryHand.IsValid())
+		SetComBetweenHands(GrippingController, HandleInfo);
+	}
+}
+
+void UGS_Melee::SetComBetweenHands(UGripMotionControllerComponent* GrippingController, FBPActorPhysicsHandleInformation * HandleInfo)
+{
+
+	if (!GrippingController || !HandleInfo)
+		return;
+
+	if (bCOMBetweenHands && SecondaryHand.IsValid())
+	{
+		//if (PrimaryHand.HoldingController == GrippingController)
 		{
 			if (UPrimitiveComponent * PrimComp = Cast<UPrimitiveComponent>(GetParentSceneComp()))
 			{
 				if (FBodyInstance * rBodyInstance = PrimComp->GetBodyInstance())
 				{
 					FPhysicsCommand::ExecuteWrite(rBodyInstance->ActorHandle, [&](const FPhysicsActorHandle& Actor)
-						{
-							FTransform localCom = FPhysicsInterface::GetComTransformLocal_AssumesLocked(Actor);
-							localCom.SetLocation((HandleInfo->RootBoneRotation * ObjectRelativeGripCenter).GetLocation());
-							FPhysicsInterface::SetComLocalPose_AssumesLocked(Actor, localCom);
-							HandleInfo->bSetCOM = true; // Should i remove this?
-							HandleInfo->bSkipResettingCom = true;
-						});
+					{
+						FTransform localCom = FPhysicsInterface::GetComTransformLocal_AssumesLocked(Actor);
+						localCom.SetLocation((HandleInfo->RootBoneRotation * ObjectRelativeGripCenter).GetLocation());
+						FPhysicsInterface::SetComLocalPose_AssumesLocked(Actor, localCom);
+
+					});
 				}
 			}
 		}
+
+		HandleInfo->bSetCOM = true; // Should i remove this?
+		HandleInfo->bSkipResettingCom = true;
 	}
 }
 
