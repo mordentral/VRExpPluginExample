@@ -14,6 +14,8 @@ UGS_Melee::UGS_Melee(const FObjectInitializer& ObjectInitializer) :
 {
 	bIsActive = true;
 	WorldTransformOverrideType = EGSTransformOverrideType::ModifiesWorldTransform;
+	bDenyLateUpdates = true;
+
 
 	bInjectPrePhysicsHandle = true;
 	bInjectPostPhysicsHandle = true;
