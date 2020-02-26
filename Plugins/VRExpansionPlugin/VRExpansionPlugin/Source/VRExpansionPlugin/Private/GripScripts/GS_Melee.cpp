@@ -452,6 +452,10 @@ void UGS_Melee::OnLodgeHitCallback(AActor* SelfActor, AActor* OtherActor, FVecto
 	if (!bIsActive || bIsLodged || OtherActor == SelfActor)
 		return;
 
+	// Reject bad surface types
+	if (AllowedPenetrationSurfaceTypes.Num() > 0 && (!Hit.PhysMaterial.IsValid() || !AllowedPenetrationSurfaceTypes.Contains(Hit.PhysMaterial->SurfaceType)))
+		return;
+
 	if (bOnlyPenetrateWithTwoHands && !SecondaryHand.IsValid())
 		return;
 
