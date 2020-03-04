@@ -270,7 +270,9 @@ bool UVRExpansionFunctionLibrary::IsInVREditorPreviewOrGame()
 	{
 		
 		UEditorEngine* EdEngine = Cast<UEditorEngine>(GEngine);
-		return EdEngine->bUseVRPreviewForPlayWorld;
+		FRequestPlaySessionParams PlayParams;
+		EdEngine->RequestPlaySession(PlayParams);
+		return PlayParams.SessionPreviewTypeOverride == EPlaySessionPreviewType::VRPreview;
 	}
 #endif
 
@@ -285,7 +287,10 @@ bool UVRExpansionFunctionLibrary::IsInVREditorPreview()
 	{
 
 		UEditorEngine* EdEngine = Cast<UEditorEngine>(GEngine);
-		return EdEngine->bUseVRPreviewForPlayWorld;
+		FRequestPlaySessionParams PlayParams;
+		EdEngine->RequestPlaySession(PlayParams);
+		return PlayParams.SessionPreviewTypeOverride == EPlaySessionPreviewType::VRPreview;
+		//return EdEngine->bUseVRPreviewForPlayWorld;
 	}
 #endif
 

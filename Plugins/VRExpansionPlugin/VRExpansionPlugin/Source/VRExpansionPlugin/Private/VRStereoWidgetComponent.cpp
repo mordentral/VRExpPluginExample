@@ -303,11 +303,12 @@ void UVRStereoWidgetComponent::TickComponent(float DeltaTime, enum ELevelTick Ti
 		const float Radius = GetDrawSize().X / ArcAngleRadians;
 
 		//LayerDsec.CylinderSize = FVector2D(/*CylinderRadius*/Radius, /*CylinderOverlayArc*/CylinderArcAngle);
-		LayerDsec.CylinderRadius = Radius;
-		LayerDsec.CylinderOverlayArc = CylinderArcAngle;
+// #TODO: 4.25 -> Fix the stereo layer shape stuff, it changed
+		//LayerDsec.CylinderRadius = Radius;
+		//LayerDsec.CylinderOverlayArc = CylinderArcAngle;
 
 		// This needs to be auto set from variables, need to work on it
-		LayerDsec.CylinderHeight = GetDrawSize().Y;//CylinderHeight;
+		//LayerDsec.CylinderHeight = GetDrawSize().Y;//CylinderHeight;
 
 		LayerDsec.Flags |= IStereoLayers::LAYER_FLAG_TEX_CONTINUOUS_UPDATE;// (/*bLiveTexture*/true) ? IStereoLayers::LAYER_FLAG_TEX_CONTINUOUS_UPDATE : 0;
 		LayerDsec.Flags |= (bNoAlphaChannel) ? IStereoLayers::LAYER_FLAG_TEX_NO_ALPHA_CHANNEL : 0;
@@ -339,12 +340,12 @@ void UVRStereoWidgetComponent::TickComponent(float DeltaTime, enum ELevelTick Ti
 		{
 		case EWidgetGeometryMode::Cylinder:
 		{
-			LayerDsec.ShapeType = IStereoLayers::CylinderLayer;
+			//LayerDsec.ShapeType = IStereoLayers::CylinderLayer;
 		}break;
 		case EWidgetGeometryMode::Plane:
 		default:
 		{
-			LayerDsec.ShapeType = IStereoLayers::QuadLayer;
+			//LayerDsec.ShapeType = IStereoLayers::QuadLayer;
 		}break;
 		}
 

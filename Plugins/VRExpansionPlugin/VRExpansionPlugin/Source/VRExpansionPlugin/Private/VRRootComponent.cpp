@@ -811,7 +811,7 @@ void UVRRootComponent::GetNavigationData(FNavigationRelevantData& Data) const
 }
 
 #if WITH_EDITOR
-void UVRRootComponent::PreEditChange(UProperty* PropertyThatWillChange)
+void UVRRootComponent::PreEditChange(FProperty* PropertyThatWillChange)
 {
 	// This is technically not correct at all to do...however when overloading a root component the preedit gets called twice for some reason.
 	// Calling it twice attempts to double register it in the list and causes an assert to be thrown.
