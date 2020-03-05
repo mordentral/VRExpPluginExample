@@ -13,12 +13,14 @@
 //#include "PhysXSupport.h"
 #endif // WITH_PHYSX
 
+
 #include "Components/PrimitiveComponent.h"
 
 DEFINE_LOG_CATEGORY(LogVRRootComponent);
 #define LOCTEXT_NAMESPACE "VRRootComponent"
 
 DECLARE_CYCLE_STAT(TEXT("VRRootMovement"), STAT_VRRootMovement, STATGROUP_VRRootComponent);
+DECLARE_CYCLE_STAT(TEXT("PerformOverlapQueryVR Time"), STAT_PerformOverlapQueryVR, STATGROUP_VRRootComponent);
 
 typedef TArray<const FOverlapInfo*, TInlineAllocator<8>> TInlineOverlapPointerArray;
 
@@ -1235,6 +1237,7 @@ bool UVRRootComponent::UpdateOverlapsImpl(const TOverlapArrayView* NewPendingOve
 				}
 				else
 				{
+					SCOPE_CYCLE_COUNTER(STAT_PerformOverlapQueryVR);
 					UE_LOG(LogVRRootComponent, VeryVerbose, TEXT("%s->%s Performing overlaps!"), *GetNameSafe(GetOwner()), *GetName());
 					UWorld* const MyWorld = GetWorld();
 					TArray<FOverlapResult> Overlaps;
