@@ -7,10 +7,10 @@
 #include "VRGlobalSettings.generated.h"
 
 
-namespace ControllerProfileStatics
+/*namespace ControllerProfileStatics
 {
 	static const FTransform OculusTouchStaticOffset(FRotator(-70.f, 0.f, 0.f));
-}
+}*/
 
 // As of 4.24 these do nothing, they are left for a few versions as a reference of old bindings
 // #TODO: Delete around 4.26
