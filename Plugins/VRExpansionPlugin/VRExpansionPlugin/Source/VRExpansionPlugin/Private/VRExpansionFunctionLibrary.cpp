@@ -268,11 +268,18 @@ bool UVRExpansionFunctionLibrary::IsInVREditorPreviewOrGame()
 #if WITH_EDITOR
 	if (GIsEditor)
 	{
-		
-		UEditorEngine* EdEngine = Cast<UEditorEngine>(GEngine);
-		FRequestPlaySessionParams PlayParams;
-		EdEngine->RequestPlaySession(PlayParams);
-		return PlayParams.SessionPreviewTypeOverride == EPlaySessionPreviewType::VRPreview;
+		if (UEditorEngine* EdEngine = Cast<UEditorEngine>(GEngine))
+		{
+			TOptional<FPlayInEditorSessionInfo> PlayInfo = EdEngine->GetPlayInEditorSessionInfo();
+			if (PlayInfo.IsSet())
+			{				
+				return PlayInfo->OriginalRequestParams.SessionPreviewTypeOverride == EPlaySessionPreviewType::VRPreview;
+			}
+			else
+			{
+				return false;
+			}
+		}
 	}
 #endif
 
@@ -285,12 +292,18 @@ bool UVRExpansionFunctionLibrary::IsInVREditorPreview()
 #if WITH_EDITOR
 	if (GIsEditor)
 	{
-
-		UEditorEngine* EdEngine = Cast<UEditorEngine>(GEngine);
-		FRequestPlaySessionParams PlayParams;
-		EdEngine->RequestPlaySession(PlayParams);
-		return PlayParams.SessionPreviewTypeOverride == EPlaySessionPreviewType::VRPreview;
-		//return EdEngine->bUseVRPreviewForPlayWorld;
+		if (UEditorEngine* EdEngine = Cast<UEditorEngine>(GEngine))
+		{
+			TOptional<FPlayInEditorSessionInfo> PlayInfo = EdEngine->GetPlayInEditorSessionInfo();
+			if (PlayInfo.IsSet())
+			{
+				return PlayInfo->OriginalRequestParams.SessionPreviewTypeOverride == EPlaySessionPreviewType::VRPreview;
+			}
+			else
+			{
+				return false;
+			}
+		}
 	}
 #endif
 
