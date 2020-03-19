@@ -147,6 +147,7 @@ void UVREPhysicalAnimationComponent::ApplyPhysicalAnimationProfileBelow(FName Bo
 	{
 		TArray<FPhysicalAnimationData>& NewDriveData = DriveData;
 		bool bNeedsUpdating = false;
+
 		SkeletalMeshComponent->ForEachBodyBelow(BodyName, bIncludeSelf, false, [bClearNotFound, ProfileName, PhysAsset, &NewDriveData, &bNeedsUpdating](const FBodyInstance* BI)
 		{
 			if(USkeletalBodySetup* BodySetup = Cast<USkeletalBodySetup>(BI->BodySetup.Get()))
@@ -310,7 +311,7 @@ void UVREPhysicalAnimationComponent::TickComponent(float DeltaTime, enum ELevelT
 		UpdatePhysicsEngineImp();
 	}
 
-	UpdateTargetActors(ETeleportType::None);
+	//UpdateTargetActors(ETeleportType::None);
 }
 
 void SetMotorStrength(FConstraintInstance& ConstraintInstance, const FPhysicalAnimationData& PhysAnimData, float StrengthMultiplyer)
@@ -351,7 +352,12 @@ void UVREPhysicalAnimationComponent::UpdatePhysicsEngineImp()
 
 #if WITH_PHYSX
 
-		FConstraintProfileProperties PhysicalAnimationProfileVR;
+		for (int32 DataIdx = 0; DataIdx < DriveData.Num(); ++DataIdx)
+		{
+			//bool bNewConstraint = false;
+			const FPhysicalAnimationData& PhysAnimData = DriveData[DataIdx];
+		}
+		/*FConstraintProfileProperties PhysicalAnimationProfileVR;
 			//Setup the default constraint profile for all joints created by physical animation system
 
 		PhysicalAnimationProfileVR.LinearLimit.XMotion = LCM_Free;
@@ -374,7 +380,25 @@ void UVREPhysicalAnimationComponent::UpdatePhysicsEngineImp()
 
 		PhysicalAnimationProfileVR.AngularDrive.SlerpDrive.bEnablePositionDrive = true;
 		PhysicalAnimationProfileVR.AngularDrive.SlerpDrive.bEnableVelocityDrive = true;
-		PhysicalAnimationProfileVR.AngularDrive.AngularDriveMode = EAngularDriveMode::SLERP;
+		PhysicalAnimationProfileVR.AngularDrive.AngularDriveMode = EAngularDriveMode::SLERP;*/
+
+
+		int32 ParentBodyIdx = PhysAsset->FindBodyIndex(FName(TEXT("hand_r")));
+
+
+		if (FBodyInstance * ParentBody = (ParentBodyIdx == INDEX_NONE ? nullptr : SkeletalMeshComponent->Bodies[ParentBodyIdx]))
+		{
+			for (int32 DataIdx = 0; DataIdx < DriveData.Num(); ++DataIdx)
+			{
+				//bool bNewConstraint = false;
+				const FPhysicalAnimationData& PhysAnimData = DriveData[DataIdx];
+				int32 ChildBodyIdx = PhysAsset->FindBodyIndex(PhysAnimData.BodyName);
+				if (FBodyInstance * ChildBody = (ChildBodyIdx == INDEX_NONE ? nullptr : SkeletalMeshComponent->Bodies[ChildBodyIdx]))
+				{					
+				//	ChildBody->Weld(ParentBody, ParentBody->GetUnrealWorldTransform().Inverse() * ChildBody->GetUnrealWorldTransform());
+				}
+			}
+		}
 
 		FPhysicsCommand::ExecuteWrite(SkeletalMeshComponent, [&]()
 		{
@@ -382,21 +406,70 @@ void UVREPhysicalAnimationComponent::UpdatePhysicsEngineImp()
 
 			for (int32 DataIdx = 0; DataIdx < DriveData.Num(); ++DataIdx)
 			{
-				bool bNewConstraint = false;
+				//bool bNewConstraint = false;
 				const FPhysicalAnimationData& PhysAnimData = DriveData[DataIdx];
-				FPhysicalAnimationInstanceDataVR& InstanceData = RuntimeInstanceData[DataIdx];
-				FConstraintInstance*& ConstraintInstance = InstanceData.ConstraintInstance;
-				if(ConstraintInstance == nullptr)
+
+
+
+
+#if WITH_CHAOS || WITH_IMMEDIATE_PHYSX
+				ensure(false);
+#else
+				int32 ChildBodyIdx = PhysAsset->FindBodyIndex(PhysAnimData.BodyName);
+				if (FBodyInstance * ChildBody = (ChildBodyIdx == INDEX_NONE ? nullptr : SkeletalMeshComponent->Bodies[ChildBodyIdx]))
+				{
+
+					//int32 ChildBodyIdx2 = PhysAsset->FindBodyIndex());
+
+					//ChildBody->SetWeldedBodyTransform()
+					/*if (PxRigidActor * PRigidActor = FPhysicsInterface_PhysX::GetPxRigidActor_AssumesLocked(ChildBody->ActorHandle))
+					{
+						ConstraintInstance->SetRefFrame(EConstraintFrame::Frame1, FTransform::Identity);
+						ConstraintInstance->SetRefFrame(EConstraintFrame::Frame2, FTransform::Identity);
+
+						const FTransform TargetTM = ComputeTargetTM(PhysAnimData, *SkeletalMeshComponent, *PhysAsset, LocalTransforms, SpaceBases, ChildBody->InstanceBoneIndex);
+
+						// Create kinematic actor we are going to create joint with. This will be moved around with calls to SetLocation/SetRotation.
+						PxScene* PScene = PRigidActor->getScene();
+						PxRigidDynamic* KineActor = PScene->getPhysics().createRigidDynamic(U2PTransform(TargetTM));
+						KineActor->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, true);
+						KineActor->setMass(1.0f);
+						KineActor->setMassSpaceInertiaTensor(PxVec3(1.0f, 1.0f, 1.0f));
+
+						// No bodyinstance
+						KineActor->userData = NULL;
+
+						// Add to Scene
+						PScene->addActor(*KineActor);
+
+						// Save reference to the kinematic actor.
+						InstanceData.TargetActor = KineActor;
+
+						FPhysicsActorHandle TargetRef;
+						TargetRef.SyncActor = InstanceData.TargetActor;
+
+						ConstraintInstance->InitConstraint_AssumesLocked(ChildBody->ActorHandle, TargetRef, 1.f);
+					}*/
+				}
+#endif
+				
+
+
+
+
+				//FPhysicalAnimationInstanceDataVR& InstanceData = RuntimeInstanceData[DataIdx];
+				//FConstraintInstance*& ConstraintInstance = InstanceData.ConstraintInstance;
+				/*if(ConstraintInstance == nullptr)
 				{
 					bNewConstraint = true;
 					ConstraintInstance = new FConstraintInstance();
 					ConstraintInstance->ProfileInstance = PhysicalAnimationProfileVR;
-				}
+				}*/
 
 				//Apply drive forces
-				SetMotorStrength(*ConstraintInstance, PhysAnimData, StrengthMultiplyer);
+				//SetMotorStrength(*ConstraintInstance, PhysAnimData, StrengthMultiplyer);
 				
-				if(bNewConstraint)
+				/*if(bNewConstraint)
 				{
 					//Find body instances
 					int32 ChildBodyIdx = PhysAsset->FindBodyIndex(PhysAnimData.BodyName);
@@ -405,6 +478,8 @@ void UVREPhysicalAnimationComponent::UpdatePhysicsEngineImp()
 #if WITH_CHAOS || WITH_IMMEDIATE_PHYSX
                         ensure(false);
 #else
+
+						//ChildBody->SetWeldedBodyTransform()
 						if (PxRigidActor* PRigidActor = FPhysicsInterface_PhysX::GetPxRigidActor_AssumesLocked(ChildBody->ActorHandle))
 						{
 							ConstraintInstance->SetRefFrame(EConstraintFrame::Frame1, FTransform::Identity);
@@ -435,7 +510,7 @@ void UVREPhysicalAnimationComponent::UpdatePhysicsEngineImp()
 						}
 #endif
 					}
-				}
+				}*/
 			}
 		});
 #endif
