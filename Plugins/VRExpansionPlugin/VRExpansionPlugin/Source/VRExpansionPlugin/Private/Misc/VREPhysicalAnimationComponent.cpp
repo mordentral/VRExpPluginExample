@@ -388,6 +388,36 @@ void UVREPhysicalAnimationComponent::UpdatePhysicsEngineImp()
 
 		if (FBodyInstance * ParentBody = (ParentBodyIdx == INDEX_NONE ? nullptr : SkeletalMeshComponent->Bodies[ParentBodyIdx]))
 		{
+			// Build map of bodies that we want to control.
+
+
+			TArray<FPhysicsShapeHandle> Shapes;
+			GetAllShapes_AssumesLocked(Shapes);
+
+
+			FPhysicsShapeHandle Shape = Shapes[0];
+			FKShapeElem* ShapeElem = FPhysxUserData::Get<FKShapeElem>(FPhysicsInterface::GetUserData(Shape));
+			
+			/*	const FTransform& FBodyInstance::GetRelativeBodyTransform(const FPhysicsShapeHandle & InShape) const
+{
+	check(IsInGameThread());
+	const FBodyInstance* BI = WeldParent ? WeldParent : this;
+	const FWeldInfo* Result = BI->ShapeToBodiesMap.IsValid() ? BI->ShapeToBodiesMap->Find(InShape) : nullptr;
+	return Result ? Result->RelativeTM : FTransform::Identity;
+}
+*/
+	//const FTransform& RelativeTM = GetRelativeBodyTransform(Shape);
+			FTransform RelativeTM;
+			FTransform LocalTransform = RelativeTM;
+
+			// If shape matches one of our updated bone names
+			FPhysicsCommand::ExecuteShapeWrite(this, Shape, [&](FPhysicsShapeHandle& InShape)
+			{
+				FPhysicsInterface::SetLocalTransform(InShape, LocalTransform);
+			//	FPhysicsInterface::SetGeometry(InShape, *UpdatedGeometry);
+			});
+
+
 			for (int32 DataIdx = 0; DataIdx < DriveData.Num(); ++DataIdx)
 			{
 				//bool bNewConstraint = false;
