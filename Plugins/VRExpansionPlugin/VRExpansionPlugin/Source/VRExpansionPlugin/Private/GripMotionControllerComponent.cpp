@@ -3283,7 +3283,7 @@ bool UGripMotionControllerComponent::TeleportMoveGrip_Impl(FBPActorGripInformati
 	{
 		PrimComp->SetWorldTransform(WorldTransform, false, NULL, ETeleportType::TeleportPhysics);
 	}
-	else if (Handle && Handle->KinActorData2.IsValid() && bTeleportPhysicsGrips)
+	else if (Handle && FPhysicsInterface::IsValid(Handle->KinActorData2) && bTeleportPhysicsGrips)
 	{
 		// Don't try to autodrop on next tick, let the physx constraint update its local frame first
 		if (HasGripAuthority(Grip))
@@ -3299,7 +3299,7 @@ bool UGripMotionControllerComponent::TeleportMoveGrip_Impl(FBPActorGripInformati
 		FTransform newTrans = Handle->COMPosition * (Handle->RootBoneRotation * physicsTrans);
 		FPhysicsCommand::ExecuteWrite(ActorHandle, [&](const FPhysicsActorHandle& Actor)
 		{
-			if (Actor.IsValid())
+			if (FPhysicsInterface::IsValid(Actor))
 			{
 				FPhysicsInterface::SetKinematicTarget_AssumesLocked(Actor, newTrans);
 				FPhysicsInterface::SetGlobalPose_AssumesLocked(Actor, newTrans);
@@ -4398,7 +4398,7 @@ bool UGripMotionControllerComponent::SetUpPhysicsHandle(const FBPActorGripInform
 
 	check(rBodyInstance->BodySetup->GetCollisionTraceFlag() != CTF_UseComplexAsSimple);
 	
-	if (!HandleInfo->bSkipResettingCom && !HandleInfo->KinActorData2.IsValid() && !rBodyInstance->OnRecalculatedMassProperties().IsBoundToObject(this))
+	if (!HandleInfo->bSkipResettingCom && !FPhysicsInterface::IsValid(HandleInfo->KinActorData2) && !rBodyInstance->OnRecalculatedMassProperties().IsBoundToObject(this))
 	{
 		// Reset the mass properties, this avoids an issue with some weird replication issues
 		// We only do this on initial grip
@@ -4531,7 +4531,7 @@ bool UGripMotionControllerComponent::SetUpPhysicsHandle(const FBPActorGripInform
 			}
 		}
 
-		if (!HandleInfo->KinActorData2.IsValid())
+		if (!FPhysicsInterface::IsValid(HandleInfo->KinActorData2))
 		{
 			// Create kinematic actor we are going to create joint with. This will be moved around with calls to SetLocation/SetRotation.
 				
@@ -4547,7 +4547,7 @@ bool UGripMotionControllerComponent::SetUpPhysicsHandle(const FBPActorGripInform
 			ActorParams.Scene = FPhysicsInterface::GetCurrentScene(Actor);
 			FPhysicsInterface::CreateActor(ActorParams, HandleInfo->KinActorData2);
 			
-			if (HandleInfo->KinActorData2.IsValid())
+			if (FPhysicsInterface::IsValid(HandleInfo->KinActorData2))
 			{
 				FPhysicsInterface::SetMass_AssumesLocked(HandleInfo->KinActorData2, 1.0f);
 				FPhysicsInterface::SetMassSpaceInertiaTensor_AssumesLocked(HandleInfo->KinActorData2, FVector(1.f));
@@ -4940,7 +4940,7 @@ bool UGripMotionControllerComponent::GetPhysicsJointLength(const FBPActorGripInf
 
 	FBPActorPhysicsHandleInformation * HandleInfo = GetPhysicsGrip(GrippedActor);
 
-	if (!HandleInfo || !HandleInfo->KinActorData2.IsValid())
+	if (!HandleInfo || !FPhysicsInterface::IsValid(HandleInfo->KinActorData2))
 		return false;
 
 	if (!HandleInfo->HandleData2.IsValid())
@@ -5003,7 +5003,7 @@ void UGripMotionControllerComponent::UpdatePhysicsHandleTransform(const FBPActor
 
 	FBPActorPhysicsHandleInformation * HandleInfo = GetPhysicsGrip(GrippedActor);
 
-	if (!HandleInfo || !HandleInfo->KinActorData2.IsValid())
+	if (!HandleInfo || !FPhysicsInterface::IsValid(HandleInfo->KinActorData2))
 		return;
 
 	// Don't call moveKinematic if it hasn't changed - that will stop bodies from going to sleep.
