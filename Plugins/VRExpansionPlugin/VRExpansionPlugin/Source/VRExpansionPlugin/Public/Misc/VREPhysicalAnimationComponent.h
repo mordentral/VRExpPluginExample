@@ -39,6 +39,14 @@ class VREXPANSIONPLUGIN_API UVREPhysicalAnimationComponent : public UPhysicalAni
 
 public:
 
+	/** IF true then we will auto adjust the sleep settings of the body so that it won't rest during welded bone driving */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = WeldedBoneDriver)
+		bool bAutoSetPhysicsSleepSensitivity;
+
+	/** IF true then we will auto adjust the sleep settings of the body so that it won't rest during welded bone driving */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = WeldedBoneDriver)
+		float SleepThresholdMultiplier;
+
 	/** The Base bone to use as the bone driver root */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = WeldedBoneDriver)
 		FName BaseWeldedBoneDriverName;
@@ -47,7 +55,7 @@ public:
 		TArray<FWeldedBoneDriverData> BoneDriverMap;
 
 	UFUNCTION(BlueprintCallable, Category = PhysicalAnimation)
-	void SetupWeldedBoneDriver();
+	void SetupWeldedBoneDriver(bool bReInit = false);
 
 	void UpdateWeldedBoneDriver(float DeltaTime);
 
