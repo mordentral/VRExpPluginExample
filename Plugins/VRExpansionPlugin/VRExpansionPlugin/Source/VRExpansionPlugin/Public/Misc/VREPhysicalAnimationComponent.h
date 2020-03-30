@@ -39,6 +39,11 @@ class VREXPANSIONPLUGIN_API UVREPhysicalAnimationComponent : public UPhysicalAni
 
 public:
 
+
+	/** */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = WeldedBoneDriver)
+		bool bIsPaused;
+
 	/** IF true then we will auto adjust the sleep settings of the body so that it won't rest during welded bone driving */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = WeldedBoneDriver)
 		bool bAutoSetPhysicsSleepSensitivity;
@@ -47,6 +52,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = WeldedBoneDriver)
 		float SleepThresholdMultiplier;
 
+	/** Speed at which we should attempt to reach our destination */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = WeldedBoneDriver)
+		float WeldedBoneInterpSpeed;
+
 	/** The Base bone to use as the bone driver root */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = WeldedBoneDriver)
 		FName BaseWeldedBoneDriverName;
@@ -54,10 +63,32 @@ public:
 	UPROPERTY()
 		TArray<FWeldedBoneDriverData> BoneDriverMap;
 
+	// Call to setup the welded body driver, initializes all mappings and caches shape contexts
+	// Requires that SetSkeletalMesh be called first
 	UFUNCTION(BlueprintCallable, Category = PhysicalAnimation)
-	void SetupWeldedBoneDriver(bool bReInit = false);
+	void SetupWeldedBoneDriver();
 
+	// Refreshes the welded bone driver, use this in cases where the body may have changed (such as welding to another body or switching physics)
+	UFUNCTION(BlueprintCallable, Category = PhysicalAnimation)
+		void RefreshWeldedBoneDriver();
+	
+	// Sets the welded bone driver to be paused, you can also stop the component from ticking but that will also stop any physical animations going on
+	UFUNCTION(BlueprintCallable, Category = PhysicalAnimation)
+		void SetWeldedBoneDriverPaused(bool bPaused);
+
+	UFUNCTION(BlueprintPure, Category = PhysicalAnimation)
+		bool IsWeldedBoneDriverPaused();
+
+	void SetupWeldedBoneDriver_Implementation(bool bReInit = false);
+
+	//void OnWeldedMassUpdated(FBodyInstance* BodyInstance);
 	void UpdateWeldedBoneDriver(float DeltaTime);
+
+	FTransform GetWorldSpaceRefBoneTransform(FReferenceSkeleton& RefSkel, int32 BoneIndex, int32 ParentBoneIndex);
+	FTransform GetRefPoseBoneRelativeTransform(USkeletalMeshComponent* SkeleMesh, FName BoneName, FName ParentBoneName);
+
+	//FCalculateCustomPhysics OnCalculateCustomPhysics;
+	//void CustomPhysics(float DeltaTime, FBodyInstance* BodyInstance);
 
 	virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction) override;
 };

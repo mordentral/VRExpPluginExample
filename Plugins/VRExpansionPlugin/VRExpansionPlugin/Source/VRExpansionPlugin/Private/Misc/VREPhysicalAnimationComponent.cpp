@@ -3,6 +3,7 @@
 #include "Components/SkeletalMeshComponent.h"
 #include "PhysicsEngine/PhysicsAsset.h"
 #include "PhysXPublic.h"
+#include "DrawDebugHelpers.h"
 #include "Physics/PhysicsInterfaceCore.h"
 #include "Physics/PhysicsInterfaceTypes.h"
 
@@ -12,10 +13,75 @@ UVREPhysicalAnimationComponent::UVREPhysicalAnimationComponent(const FObjectInit
 	BaseWeldedBoneDriverName = FName(TEXT("hand_r"));
 	bAutoSetPhysicsSleepSensitivity = true;
 	SleepThresholdMultiplier = 0.0f;
+	WeldedBoneInterpSpeed = 200.f;
 }
 
+/*void UVREPhysicalAnimationComponent::CustomPhysics(float DeltaTime, FBodyInstance* BodyInstance)
+{
+	//UpdateWeldedBoneDriver(DeltaTime);
+}*/
 
-void UVREPhysicalAnimationComponent::SetupWeldedBoneDriver(bool bReInit)
+/*void UVREPhysicalAnimationComponent::OnWeldedMassUpdated(FBodyInstance* BodyInstance)
+{
+	// If our mass changed then our body was altered, lets re-init
+	SetupWeldedBoneDriver(true);
+}*/
+
+void UVREPhysicalAnimationComponent::SetWeldedBoneDriverPaused(bool bPaused)
+{
+	bIsPaused = bPaused;
+}
+
+bool UVREPhysicalAnimationComponent::IsWeldedBoneDriverPaused()
+{
+	return bIsPaused;
+}
+
+void UVREPhysicalAnimationComponent::RefreshWeldedBoneDriver()
+{
+	SetupWeldedBoneDriver_Implementation(true);
+}
+
+void UVREPhysicalAnimationComponent::SetupWeldedBoneDriver()
+{
+	SetupWeldedBoneDriver_Implementation(false);
+}
+
+FTransform UVREPhysicalAnimationComponent::GetWorldSpaceRefBoneTransform(FReferenceSkeleton& RefSkel, int32 BoneIndex, int32 ParentBoneIndex)
+{
+	FTransform BoneTransform;
+
+	if (BoneIndex > 0 && BoneIndex != ParentBoneIndex)
+	{
+		BoneTransform = RefSkel.GetRefBonePose()[BoneIndex];
+
+		FMeshBoneInfo BoneInfo = RefSkel.GetRefBoneInfo()[BoneIndex];
+		if (BoneInfo.ParentIndex != 0 && BoneInfo.ParentIndex != ParentBoneIndex)
+		{
+			BoneTransform *= GetWorldSpaceRefBoneTransform(RefSkel, BoneInfo.ParentIndex, ParentBoneIndex);
+		}
+	}
+
+	return BoneTransform;
+}
+
+FTransform UVREPhysicalAnimationComponent::GetRefPoseBoneRelativeTransform(USkeletalMeshComponent* SkeleMesh, FName BoneName, FName ParentBoneName)
+{
+	FTransform BoneTransform;
+
+	if (SkeleMesh && !BoneName.IsNone() && !ParentBoneName.IsNone())
+	{
+		//SkelMesh->ClearRefPoseOverride();
+		FReferenceSkeleton RefSkel;
+		RefSkel = SkeleMesh->SkeletalMesh->RefSkeleton;
+
+		BoneTransform = GetWorldSpaceRefBoneTransform(RefSkel, RefSkel.FindBoneIndex(BoneName), RefSkel.FindBoneIndex(ParentBoneName));
+	}
+
+	return BoneTransform;
+}
+
+void UVREPhysicalAnimationComponent::SetupWeldedBoneDriver_Implementation(bool bReInit)
 {
 	TArray<FWeldedBoneDriverData> OriginalData;
 	if (bReInit)
@@ -30,6 +96,9 @@ void UVREPhysicalAnimationComponent::SetupWeldedBoneDriver(bool bReInit)
 	if (!SkeleMesh || !SkeleMesh->Bodies.Num())
 		return;
 
+	// Get ref pose position and walk up the tree to the welded root to get our relative base pose.
+	//SkeleMesh->GetRefPosePosition()
+
 	UPhysicsAsset* PhysAsset = SkeleMesh ? SkeleMesh->GetPhysicsAsset() : nullptr;
 	if (PhysAsset && SkeleMesh->SkeletalMesh)
 	{
@@ -40,8 +109,22 @@ void UVREPhysicalAnimationComponent::SetupWeldedBoneDriver(bool bReInit)
 
 		if (FBodyInstance * ParentBody = (ParentBodyIdx == INDEX_NONE ? nullptr : SkeleMesh->Bodies[ParentBodyIdx]))
 		{
+		
+		
+			// Bind to further updates in order to keep it alive
+			/*if (!ParentBody->OnRecalculatedMassProperties().IsBoundToObject(this))
+			{
+				ParentBody->OnRecalculatedMassProperties().AddUObject(this, &UVREPhysicalAnimationComponent::OnWeldedMassUpdated);
+			}*/
+
+
+			/*if (UPhysicsSettings::Get()->bSubstepping && !OnCalculateCustomPhysics.IsBound())
+			{
+				OnCalculateCustomPhysics.BindUObject(this, &UVREPhysicalAnimationComponent::CustomPhysics);
+			}*/
+
 			// Build map of bodies that we want to control.
-			FPhysicsActorHandle& ActorHandle = ParentBody->GetPhysicsActorHandle();
+			FPhysicsActorHandle& ActorHandle = ParentBody->WeldParent ? ParentBody->WeldParent->GetPhysicsActorHandle() : ParentBody->GetPhysicsActorHandle();
 
 			if (FPhysicsInterface::IsValid(ActorHandle) /*&& FPhysicsInterface::IsRigidBody(ActorHandle)*/)
 			{
@@ -72,12 +155,18 @@ void UVREPhysicalAnimationComponent::SetupWeldedBoneDriver(bool bReInit)
 									}
 									else
 									{
-										FTransform BoneTransform = SkeleMesh->GetSocketTransform(TargetBoneName, ERelativeTransformSpace::RTS_World);
-										// Calc shape global pose
-										FTransform RelativeTM = FPhysicsInterface::GetLocalTransform(Shape) * FPhysicsInterface::GetGlobalPose_AssumesLocked(ActorHandle);
+										FTransform BoneTransform = FTransform::Identity;
+										if(SkeleMesh->GetBoneIndex(TargetBoneName) != INDEX_NONE)
+											BoneTransform = GetRefPoseBoneRelativeTransform(SkeleMesh, TargetBoneName, BaseWeldedBoneDriverName).Inverse();
 
-										RelativeTM = RelativeTM * BoneTransform.Inverse();
-										DriverData.RelativeTransform = RelativeTM;
+										//FTransform BoneTransform = SkeleMesh->GetSocketTransform(TargetBoneName, ERelativeTransformSpace::RTS_World);
+										
+										// Calc shape global pose
+										//FTransform RelativeTM = FPhysicsInterface::GetLocalTransform(Shape) * FPhysicsInterface::GetGlobalPose_AssumesLocked(ActorHandle);
+
+										//RelativeTM = RelativeTM * BoneTransform.Inverse();
+
+										DriverData.RelativeTransform = FPhysicsInterface::GetLocalTransform(Shape) * BoneTransform;
 									}
 
 									BoneDriverMap.Add(DriverData);
@@ -85,7 +174,7 @@ void UVREPhysicalAnimationComponent::SetupWeldedBoneDriver(bool bReInit)
 							}
 						}
 
-						if (bAutoSetPhysicsSleepSensitivity && BoneDriverMap.Num() > 0)
+						if (bAutoSetPhysicsSleepSensitivity && !ParentBody->WeldParent && BoneDriverMap.Num() > 0)
 						{
 							ParentBody->SleepFamily = ESleepFamily::Custom;
 							ParentBody->CustomSleepThresholdMultiplier = SleepThresholdMultiplier;
@@ -94,23 +183,6 @@ void UVREPhysicalAnimationComponent::SetupWeldedBoneDriver(bool bReInit)
 							FPhysicsInterface::SetSleepEnergyThreshold_AssumesLocked(Actor, SleepEnergyThresh);
 						}
 					});
-
-				/*	const FTransform& FBodyInstance::GetRelativeBodyTransform(const FPhysicsShapeHandle & InShape) const
-{
-	check(IsInGameThread());
-	const FBodyInstance* BI = WeldParent ? WeldParent : this;
-	const FWeldInfo* Result = BI->ShapeToBodiesMap.IsValid() ? BI->ShapeToBodiesMap->Find(InShape) : nullptr;
-	return Result ? Result->RelativeTM : FTransform::Identity;
-}
-*/
-//const FTransform& RelativeTM = GetRelativeBodyTransform(Shape);
-
-		// If shape matches one of our updated bone names
-		/*FPhysicsCommand::ExecuteShapeWrite(ParentBody, Shape, [&](FPhysicsShapeHandle& InShape)
-		{
-			FPhysicsInterface::SetLocalTransform(InShape, LocalTransform);
-		//	FPhysicsInterface::SetGeometry(InShape, *UpdatedGeometry);
-		});*/
 			}
 		}
 #endif
@@ -122,9 +194,23 @@ void UVREPhysicalAnimationComponent::TickComponent(float DeltaTime, enum ELevelT
 
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 	
-	UpdateWeldedBoneDriver(DeltaTime);
 
-	//UpdateTargetActors(ETeleportType::None);
+	/*if (UPhysicsSettings::Get()->bSubstepping && OnCalculateCustomPhysics.IsBound())
+	{
+		if (USkeletalMeshComponent* SkeleMesh = GetSkeletalMesh())
+		{
+			if (FBodyInstance* ParentBody = SkeleMesh->GetBodyInstance(BaseWeldedBoneDriverName))
+			{
+			//	ParentBody->AddCustomPhysics(OnCalculateCustomPhysics);
+			}
+		}
+	}
+	//else
+	{
+		UpdateWeldedBoneDriver(DeltaTime);
+	}*/
+
+	UpdateWeldedBoneDriver(DeltaTime);
 }
 
 void UVREPhysicalAnimationComponent::UpdateWeldedBoneDriver(float DeltaTime)
@@ -142,7 +228,7 @@ void UVREPhysicalAnimationComponent::UpdateWeldedBoneDriver(float DeltaTime)
 
 	USkeletalMeshComponent* SkeleMesh = GetSkeletalMesh();
 
-	if (!SkeleMesh || !SkeleMesh->IsSimulatingPhysics(BaseWeldedBoneDriverName))
+	if (!SkeleMesh || !SkeleMesh->Bodies.Num())// || (!SkeleMesh->IsSimulatingPhysics(BaseWeldedBoneDriverName) && !SkeleMesh->IsWelded()))
 		return;
 
 	UPhysicsAsset* PhysAsset = SkeleMesh ? SkeleMesh->GetPhysicsAsset() : nullptr;
@@ -155,7 +241,11 @@ void UVREPhysicalAnimationComponent::UpdateWeldedBoneDriver(float DeltaTime)
 
 		if (FBodyInstance * ParentBody = (ParentBodyIdx == INDEX_NONE ? nullptr : SkeleMesh->Bodies[ParentBodyIdx]))
 		{
-			FPhysicsActorHandle& ActorHandle = ParentBody->GetPhysicsActorHandle();
+
+			if (!ParentBody->IsInstanceSimulatingPhysics() && !ParentBody->WeldParent)
+				return;
+
+			FPhysicsActorHandle& ActorHandle = ParentBody->WeldParent ? ParentBody->WeldParent->GetPhysicsActorHandle() : ParentBody->GetPhysicsActorHandle();
 
 			if (FPhysicsInterface::IsValid(ActorHandle) /*&& FPhysicsInterface::IsRigidBody(ActorHandle)*/)
 			{
@@ -163,18 +253,20 @@ void UVREPhysicalAnimationComponent::UpdateWeldedBoneDriver(float DeltaTime)
 				bool bModifiedBody = false;
 				FPhysicsCommand::ExecuteWrite(ActorHandle, [&](FPhysicsActorHandle& Actor)
 					{
-						//TArray<FPhysicsShapeHandle> Shapes;
 						PhysicsInterfaceTypes::FInlineShapeArray Shapes;
 						FPhysicsInterface::GetAllShapes_AssumedLocked(Actor, Shapes);
 
-						FTransform GlobalPose = FPhysicsInterface::GetGlobalPose_AssumesLocked(ActorHandle).Inverse();
+						FTransform GlobalPose = GlobalPose = FPhysicsInterface::GetGlobalPose_AssumesLocked(ActorHandle).Inverse();
 
 						for (FPhysicsShapeHandle& Shape : Shapes)
 						{
 							if (FWeldedBoneDriverData * WeldedData = BoneDriverMap.FindByKey(Shape))
 							{
 								bModifiedBody = true;
-								FTransform GlobalTransform = WeldedData->RelativeTransform * SkeleMesh->GetSocketTransform(WeldedData->BoneName, ERelativeTransformSpace::RTS_World);
+
+								FTransform Trans = SkeleMesh->GetSocketTransform(WeldedData->BoneName, ERelativeTransformSpace::RTS_World);
+								Trans.SetScale3D(FVector(1.f));
+								FTransform GlobalTransform = WeldedData->RelativeTransform * Trans;
 								FTransform RelativeTM = GlobalTransform * GlobalPose;
 
 								if (!WeldedData->LastLocal.Equals(RelativeTM))
