@@ -31,7 +31,7 @@ public:
 	}
 };
 
-
+// #TODO: Add two hand support for full body, TArray of base bones to work off of
 UCLASS(meta = (BlueprintSpawnableComponent), ClassGroup = Physics)
 class VREXPANSIONPLUGIN_API UVREPhysicalAnimationComponent : public UPhysicalAnimationComponent
 {
@@ -40,7 +40,9 @@ class VREXPANSIONPLUGIN_API UVREPhysicalAnimationComponent : public UPhysicalAni
 public:
 
 
-	/** */
+
+
+	/** Is the welded bone driver paused */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = WeldedBoneDriver)
 		bool bIsPaused;
 
@@ -48,13 +50,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = WeldedBoneDriver)
 		bool bAutoSetPhysicsSleepSensitivity;
 
-	/** IF true then we will auto adjust the sleep settings of the body so that it won't rest during welded bone driving */
+	/** The threshold multiplier to set on the body */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = WeldedBoneDriver)
 		float SleepThresholdMultiplier;
-
-	/** Speed at which we should attempt to reach our destination */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = WeldedBoneDriver)
-		float WeldedBoneInterpSpeed;
 
 	/** The Base bone to use as the bone driver root */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = WeldedBoneDriver)
@@ -66,7 +64,7 @@ public:
 	// Call to setup the welded body driver, initializes all mappings and caches shape contexts
 	// Requires that SetSkeletalMesh be called first
 	UFUNCTION(BlueprintCallable, Category = PhysicalAnimation)
-	void SetupWeldedBoneDriver();
+	void SetupWeldedBoneDriver(FName BaseBoneName);
 
 	// Refreshes the welded bone driver, use this in cases where the body may have changed (such as welding to another body or switching physics)
 	UFUNCTION(BlueprintCallable, Category = PhysicalAnimation)

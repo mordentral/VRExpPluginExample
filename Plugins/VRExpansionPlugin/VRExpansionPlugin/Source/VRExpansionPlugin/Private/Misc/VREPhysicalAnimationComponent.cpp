@@ -13,7 +13,6 @@ UVREPhysicalAnimationComponent::UVREPhysicalAnimationComponent(const FObjectInit
 	BaseWeldedBoneDriverName = FName(TEXT("hand_r"));
 	bAutoSetPhysicsSleepSensitivity = true;
 	SleepThresholdMultiplier = 0.0f;
-	WeldedBoneInterpSpeed = 200.f;
 }
 
 /*void UVREPhysicalAnimationComponent::CustomPhysics(float DeltaTime, FBodyInstance* BodyInstance)
@@ -42,8 +41,11 @@ void UVREPhysicalAnimationComponent::RefreshWeldedBoneDriver()
 	SetupWeldedBoneDriver_Implementation(true);
 }
 
-void UVREPhysicalAnimationComponent::SetupWeldedBoneDriver()
+void UVREPhysicalAnimationComponent::SetupWeldedBoneDriver(FName BaseBoneName)
 {
+	if (BaseBoneName != NAME_None)
+		BaseWeldedBoneDriverName = BaseBoneName;
+
 	SetupWeldedBoneDriver_Implementation(false);
 }
 
@@ -65,6 +67,7 @@ FTransform UVREPhysicalAnimationComponent::GetWorldSpaceRefBoneTransform(FRefere
 	return BoneTransform;
 }
 
+// #TODO: support off scaling
 FTransform UVREPhysicalAnimationComponent::GetRefPoseBoneRelativeTransform(USkeletalMeshComponent* SkeleMesh, FName BoneName, FName ParentBoneName)
 {
 	FTransform BoneTransform;
@@ -109,20 +112,6 @@ void UVREPhysicalAnimationComponent::SetupWeldedBoneDriver_Implementation(bool b
 
 		if (FBodyInstance * ParentBody = (ParentBodyIdx == INDEX_NONE ? nullptr : SkeleMesh->Bodies[ParentBodyIdx]))
 		{
-		
-		
-			// Bind to further updates in order to keep it alive
-			/*if (!ParentBody->OnRecalculatedMassProperties().IsBoundToObject(this))
-			{
-				ParentBody->OnRecalculatedMassProperties().AddUObject(this, &UVREPhysicalAnimationComponent::OnWeldedMassUpdated);
-			}*/
-
-
-			/*if (UPhysicsSettings::Get()->bSubstepping && !OnCalculateCustomPhysics.IsBound())
-			{
-				OnCalculateCustomPhysics.BindUObject(this, &UVREPhysicalAnimationComponent::CustomPhysics);
-			}*/
-
 			// Build map of bodies that we want to control.
 			FPhysicsActorHandle& ActorHandle = ParentBody->WeldParent ? ParentBody->WeldParent->GetPhysicsActorHandle() : ParentBody->GetPhysicsActorHandle();
 
@@ -191,25 +180,8 @@ void UVREPhysicalAnimationComponent::SetupWeldedBoneDriver_Implementation(bool b
 
 void UVREPhysicalAnimationComponent::TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction)
 {
-
+	// Make sure base physical animation component runs its logic
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-	
-
-	/*if (UPhysicsSettings::Get()->bSubstepping && OnCalculateCustomPhysics.IsBound())
-	{
-		if (USkeletalMeshComponent* SkeleMesh = GetSkeletalMesh())
-		{
-			if (FBodyInstance* ParentBody = SkeleMesh->GetBodyInstance(BaseWeldedBoneDriverName))
-			{
-			//	ParentBody->AddCustomPhysics(OnCalculateCustomPhysics);
-			}
-		}
-	}
-	//else
-	{
-		UpdateWeldedBoneDriver(DeltaTime);
-	}*/
-
 	UpdateWeldedBoneDriver(DeltaTime);
 }
 
