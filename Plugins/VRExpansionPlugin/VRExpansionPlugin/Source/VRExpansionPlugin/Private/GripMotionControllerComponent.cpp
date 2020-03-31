@@ -3490,7 +3490,7 @@ bool UGripMotionControllerComponent::TeleportMoveGrip_Impl(FBPActorGripInformati
 
 			for (FBPGripPair pair : HoldingControllers)
 			{
-				if (pair.HoldingController && pair.HoldingController != this)
+				if (pair.HoldingController && pair.HoldingController != this && pair.HoldingController->bIsPostTeleport)
 				{
 					FBPActorGripInformation* pGrip = pair.HoldingController->GetGripPtrByID(pair.GripID);
 
