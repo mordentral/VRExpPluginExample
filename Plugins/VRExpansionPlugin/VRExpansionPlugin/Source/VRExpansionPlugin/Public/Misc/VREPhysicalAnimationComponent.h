@@ -15,13 +15,15 @@ struct VREXPANSIONPLUGIN_API FWeldedBoneDriverData
 public:
 	FTransform RelativeTransform;
 	FName BoneName;
+	FName ParentBoneName;
 	FPhysicsShapeHandle ShapeHandle;
 
 	FTransform LastLocal;
 
 	FWeldedBoneDriverData() :
 		RelativeTransform(FTransform::Identity),
-		BoneName(NAME_None)
+		BoneName(NAME_None),
+		ParentBoneName(NAME_None)
 	{
 	}
 
@@ -39,9 +41,6 @@ class VREXPANSIONPLUGIN_API UVREPhysicalAnimationComponent : public UPhysicalAni
 
 public:
 
-
-
-
 	/** Is the welded bone driver paused */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = WeldedBoneDriver)
 		bool bIsPaused;
@@ -56,7 +55,7 @@ public:
 
 	/** The Base bone to use as the bone driver root */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = WeldedBoneDriver)
-		FName BaseWeldedBoneDriverName;
+		TArray<FName> BaseWeldedBoneDriverNames;
 
 	UPROPERTY()
 		TArray<FWeldedBoneDriverData> BoneDriverMap;
@@ -64,7 +63,7 @@ public:
 	// Call to setup the welded body driver, initializes all mappings and caches shape contexts
 	// Requires that SetSkeletalMesh be called first
 	UFUNCTION(BlueprintCallable, Category = PhysicalAnimation)
-	void SetupWeldedBoneDriver(FName BaseBoneName);
+	void SetupWeldedBoneDriver(TArray<FName> BaseBoneNames);
 
 	// Refreshes the welded bone driver, use this in cases where the body may have changed (such as welding to another body or switching physics)
 	UFUNCTION(BlueprintCallable, Category = PhysicalAnimation)

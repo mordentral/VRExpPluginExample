@@ -10,7 +10,6 @@
 UVREPhysicalAnimationComponent::UVREPhysicalAnimationComponent(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {
-	BaseWeldedBoneDriverName = FName(TEXT("hand_r"));
 	bAutoSetPhysicsSleepSensitivity = true;
 	SleepThresholdMultiplier = 0.0f;
 }
@@ -41,10 +40,10 @@ void UVREPhysicalAnimationComponent::RefreshWeldedBoneDriver()
 	SetupWeldedBoneDriver_Implementation(true);
 }
 
-void UVREPhysicalAnimationComponent::SetupWeldedBoneDriver(FName BaseBoneName)
+void UVREPhysicalAnimationComponent::SetupWeldedBoneDriver(TArray<FName> BaseBoneNames)
 {
-	if (BaseBoneName != NAME_None)
-		BaseWeldedBoneDriverName = BaseBoneName;
+	if (BaseBoneNames.Num())
+		BaseWeldedBoneDriverNames = BaseBoneNames;
 
 	SetupWeldedBoneDriver_Implementation(false);
 }
@@ -107,17 +106,18 @@ void UVREPhysicalAnimationComponent::SetupWeldedBoneDriver_Implementation(bool b
 	{
 
 #if WITH_PHYSX
-
-		int32 ParentBodyIdx = PhysAsset->FindBodyIndex(BaseWeldedBoneDriverName);
-
-		if (FBodyInstance * ParentBody = (ParentBodyIdx == INDEX_NONE ? nullptr : SkeleMesh->Bodies[ParentBodyIdx]))
+		for (FName BaseWeldedBoneDriverName : BaseWeldedBoneDriverNames)
 		{
-			// Build map of bodies that we want to control.
-			FPhysicsActorHandle& ActorHandle = ParentBody->WeldParent ? ParentBody->WeldParent->GetPhysicsActorHandle() : ParentBody->GetPhysicsActorHandle();
+			int32 ParentBodyIdx = PhysAsset->FindBodyIndex(BaseWeldedBoneDriverName);
 
-			if (FPhysicsInterface::IsValid(ActorHandle) /*&& FPhysicsInterface::IsRigidBody(ActorHandle)*/)
+			if (FBodyInstance* ParentBody = (ParentBodyIdx == INDEX_NONE ? nullptr : SkeleMesh->Bodies[ParentBodyIdx]))
 			{
-				FPhysicsCommand::ExecuteWrite(ActorHandle, [&](FPhysicsActorHandle& Actor)
+				// Build map of bodies that we want to control.
+				FPhysicsActorHandle& ActorHandle = ParentBody->WeldParent ? ParentBody->WeldParent->GetPhysicsActorHandle() : ParentBody->GetPhysicsActorHandle();
+
+				if (FPhysicsInterface::IsValid(ActorHandle) /*&& FPhysicsInterface::IsRigidBody(ActorHandle)*/)
+				{
+					FPhysicsCommand::ExecuteWrite(ActorHandle, [&](FPhysicsActorHandle& Actor)
 					{
 						//TArray<FPhysicsShapeHandle> Shapes;
 						PhysicsInterfaceTypes::FInlineShapeArray Shapes;
@@ -137,6 +137,7 @@ void UVREPhysicalAnimationComponent::SetupWeldedBoneDriver_Implementation(bool b
 									FWeldedBoneDriverData DriverData;
 									DriverData.BoneName = TargetBoneName;
 									DriverData.ShapeHandle = Shape;
+									DriverData.ParentBoneName = BaseWeldedBoneDriverName;
 
 									if (bReInit && OriginalData.Num() - 1 >= BoneDriverMap.Num())
 									{
@@ -145,11 +146,11 @@ void UVREPhysicalAnimationComponent::SetupWeldedBoneDriver_Implementation(bool b
 									else
 									{
 										FTransform BoneTransform = FTransform::Identity;
-										if(SkeleMesh->GetBoneIndex(TargetBoneName) != INDEX_NONE)
+										if (SkeleMesh->GetBoneIndex(TargetBoneName) != INDEX_NONE)
 											BoneTransform = GetRefPoseBoneRelativeTransform(SkeleMesh, TargetBoneName, BaseWeldedBoneDriverName).Inverse();
 
 										//FTransform BoneTransform = SkeleMesh->GetSocketTransform(TargetBoneName, ERelativeTransformSpace::RTS_World);
-										
+
 										// Calc shape global pose
 										//FTransform RelativeTM = FPhysicsInterface::GetLocalTransform(Shape) * FPhysicsInterface::GetGlobalPose_AssumesLocked(ActorHandle);
 
@@ -172,6 +173,7 @@ void UVREPhysicalAnimationComponent::SetupWeldedBoneDriver_Implementation(bool b
 							FPhysicsInterface::SetSleepEnergyThreshold_AssumesLocked(Actor, SleepEnergyThresh);
 						}
 					});
+				}
 			}
 		}
 #endif
@@ -200,7 +202,7 @@ void UVREPhysicalAnimationComponent::UpdateWeldedBoneDriver(float DeltaTime)
 
 	USkeletalMeshComponent* SkeleMesh = GetSkeletalMesh();
 
-	if (!SkeleMesh || !SkeleMesh->Bodies.Num())// || (!SkeleMesh->IsSimulatingPhysics(BaseWeldedBoneDriverName) && !SkeleMesh->IsWelded()))
+	if (!SkeleMesh || !SkeleMesh->Bodies.Num())// || (!SkeleMesh->IsSimulatingPhysics(BaseWeldedBoneDriverNames) && !SkeleMesh->IsWelded()))
 		return;
 
 	UPhysicsAsset* PhysAsset = SkeleMesh ? SkeleMesh->GetPhysicsAsset() : nullptr;
@@ -209,21 +211,23 @@ void UVREPhysicalAnimationComponent::UpdateWeldedBoneDriver(float DeltaTime)
 
 #if WITH_PHYSX
 
-		int32 ParentBodyIdx = PhysAsset->FindBodyIndex(BaseWeldedBoneDriverName);
-
-		if (FBodyInstance * ParentBody = (ParentBodyIdx == INDEX_NONE ? nullptr : SkeleMesh->Bodies[ParentBodyIdx]))
+		for (FName BaseWeldedBoneDriverName : BaseWeldedBoneDriverNames)
 		{
+			int32 ParentBodyIdx = PhysAsset->FindBodyIndex(BaseWeldedBoneDriverName);
 
-			if (!ParentBody->IsInstanceSimulatingPhysics() && !ParentBody->WeldParent)
-				return;
-
-			FPhysicsActorHandle& ActorHandle = ParentBody->WeldParent ? ParentBody->WeldParent->GetPhysicsActorHandle() : ParentBody->GetPhysicsActorHandle();
-
-			if (FPhysicsInterface::IsValid(ActorHandle) /*&& FPhysicsInterface::IsRigidBody(ActorHandle)*/)
+			if (FBodyInstance* ParentBody = (ParentBodyIdx == INDEX_NONE ? nullptr : SkeleMesh->Bodies[ParentBodyIdx]))
 			{
 
-				bool bModifiedBody = false;
-				FPhysicsCommand::ExecuteWrite(ActorHandle, [&](FPhysicsActorHandle& Actor)
+				if (!ParentBody->IsInstanceSimulatingPhysics() && !ParentBody->WeldParent)
+					return;
+
+				FPhysicsActorHandle& ActorHandle = ParentBody->WeldParent ? ParentBody->WeldParent->GetPhysicsActorHandle() : ParentBody->GetPhysicsActorHandle();
+
+				if (FPhysicsInterface::IsValid(ActorHandle) /*&& FPhysicsInterface::IsRigidBody(ActorHandle)*/)
+				{
+
+					bool bModifiedBody = false;
+					FPhysicsCommand::ExecuteWrite(ActorHandle, [&](FPhysicsActorHandle& Actor)
 					{
 						PhysicsInterfaceTypes::FInlineShapeArray Shapes;
 						FPhysicsInterface::GetAllShapes_AssumedLocked(Actor, Shapes);
@@ -232,7 +236,7 @@ void UVREPhysicalAnimationComponent::UpdateWeldedBoneDriver(float DeltaTime)
 
 						for (FPhysicsShapeHandle& Shape : Shapes)
 						{
-							if (FWeldedBoneDriverData * WeldedData = BoneDriverMap.FindByKey(Shape))
+							if (FWeldedBoneDriverData* WeldedData = BoneDriverMap.FindByKey(Shape))
 							{
 								bModifiedBody = true;
 
@@ -249,8 +253,9 @@ void UVREPhysicalAnimationComponent::UpdateWeldedBoneDriver(float DeltaTime)
 							}
 						}
 					});
+				}
+
 			}
-			
 		}
 #endif
 	}
