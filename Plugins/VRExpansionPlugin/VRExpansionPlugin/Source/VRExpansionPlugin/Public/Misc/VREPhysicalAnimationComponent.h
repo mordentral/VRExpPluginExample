@@ -15,15 +15,13 @@ struct VREXPANSIONPLUGIN_API FWeldedBoneDriverData
 public:
 	FTransform RelativeTransform;
 	FName BoneName;
-	FName ParentBoneName;
 	FPhysicsShapeHandle ShapeHandle;
 
 	FTransform LastLocal;
 
 	FWeldedBoneDriverData() :
 		RelativeTransform(FTransform::Identity),
-		BoneName(NAME_None),
-		ParentBoneName(NAME_None)
+		BoneName(NAME_None)
 	{
 	}
 

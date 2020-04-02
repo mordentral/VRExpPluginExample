@@ -137,7 +137,6 @@ void UVREPhysicalAnimationComponent::SetupWeldedBoneDriver_Implementation(bool b
 									FWeldedBoneDriverData DriverData;
 									DriverData.BoneName = TargetBoneName;
 									DriverData.ShapeHandle = Shape;
-									DriverData.ParentBoneName = BaseWeldedBoneDriverName;
 
 									if (bReInit && OriginalData.Num() - 1 >= BoneDriverMap.Num())
 									{
