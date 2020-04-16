@@ -105,6 +105,39 @@ public:
 };
 
 /**
+* Tick function that does post physics work. This executes in EndPhysics (after physics is done)
+**/
+USTRUCT()
+struct FGripComponentEndPhysicsTickFunction : public FTickFunction
+{
+	GENERATED_USTRUCT_BODY()
+
+		UGripMotionControllerComponent* Target;
+
+	/**
+	* Abstract function to execute the tick.
+	* @param DeltaTime - frame time to advance, in seconds.
+	* @param TickType - kind of tick for this frame.
+	* @param CurrentThread - thread we are executing on, useful to pass along as new tasks are created.
+	* @param MyCompletionGraphEvent - completion event for this task. Useful for holding the completetion of this task until certain child tasks are complete.
+	*/
+	virtual void ExecuteTick(float DeltaTime, enum ELevelTick TickType, ENamedThreads::Type CurrentThread, const FGraphEventRef& MyCompletionGraphEvent) override;
+	/** Abstract function to describe this tick. Used to print messages about illegal cycles in the dependency graph. */
+	virtual FString DiagnosticMessage() override;
+	/** Function used to describe this tick for active tick reporting. **/
+	virtual FName DiagnosticContext(bool bDetailed) override;
+};
+
+template<>
+struct TStructOpsTypeTraits<FGripComponentEndPhysicsTickFunction> : public TStructOpsTypeTraitsBase2<FGripComponentEndPhysicsTickFunction>
+{
+	enum
+	{
+		WithCopy = false
+	};
+};
+
+/**
 * An override of the MotionControllerComponent that implements position replication and Gripping with grip replication and controllable late updates per object.
 */
 UCLASS(Blueprintable, meta = (BlueprintSpawnableComponent), ClassGroup = MotionController)
@@ -112,6 +145,17 @@ class VREXPANSIONPLUGIN_API UGripMotionControllerComponent : public UMotionContr
 {
 
 public:
+
+	FGripComponentEndPhysicsTickFunction EndPhysicsTickFunction;
+	friend struct FGripComponentEndPhysicsTickFunction;
+
+	/** Update systems after physics sim is done */
+	void EndPhysicsTickComponent(FGripComponentEndPhysicsTickFunction& ThisTickFunction);
+	void RegisterEndPhysicsTick(bool bRegister);
+
+
+
+
 
 	// The grip script that defines the default behaviors of grips
 	// Don't edit this unless you really know what you are doing, leave it empty
@@ -140,6 +184,22 @@ public:
 
 	FVector LastLocationForLateUpdate;
 	FTransform LastRelativePosition;
+
+	// Type of velocity calculation to use for the motion controller
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GripMotionController|ComponentVelocity")
+		EVRVelocityType VelocityCalculationType;
+
+	// If we should sample the velocity in world or local space
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GripMotionController|ComponentVelocity")
+		bool bSampleVelocityInWorldSpace;
+
+	// If not using velocity mode "default" this is the number of sample to keep
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GripMotionController|ComponentVelocity")
+		int32 VelocitySamples;
+
+	FBPLowPassPeakFilter PeakFilter;
+
+	virtual FVector GetComponentVelocity() const override;
 
 	// If true will offset the tracked location of the controller by the controller profile that is currently loaded.
 	// Thows the event OnControllerProfileTransformChanged when it happens so that you can adjust specific components
@@ -178,6 +238,10 @@ public:
 	virtual void BeginDestroy() override;
 	virtual void BeginPlay() override;
 
+	/** Post-physics tick function for this character */
+	UPROPERTY()
+		FTickFunction PostPhysicsTickFunction;
+
 protected:
 	//~ Begin UActorComponent Interface.
 	virtual void CreateRenderState_Concurrent(FRegisterComponentContext* Context) override;
@@ -206,6 +270,14 @@ public:
 	// Called when a object is dropped
 	UPROPERTY(BlueprintAssignable, Category = "GripMotionController")
 		FVRGripControllerOnDropSignature OnDroppedObject;
+
+	// Called when an object we hold is secondary gripped
+	UPROPERTY(BlueprintAssignable, Category = "GripMotionController")
+		FVRGripControllerOnGripSignature OnSecondaryGripAdded;
+
+	// Called when an object we hold is secondary dropped
+	UPROPERTY(BlueprintAssignable, Category = "GripMotionController")
+		FVRGripControllerOnGripSignature OnSecondaryGripRemoved;
 
 	// Gets the hand enum
 	UFUNCTION(BlueprintPure, Category = "VRExpansionFunctions", meta = (bIgnoreSelf = "true", DisplayName = "HandType", CompactNodeTitle = "HandType"))
@@ -441,6 +513,8 @@ public:
 							}
 						}
 					}
+
+					OnSecondaryGripRemoved.Broadcast(Grip);
 				}
 
 				if (bSendGripEvent)
@@ -461,6 +535,8 @@ public:
 							}
 						}
 					}
+
+					OnSecondaryGripAdded.Broadcast(Grip);
 				}
 			}
 
@@ -839,6 +915,10 @@ public:
 	// Get the physics velocities of a grip
 	UFUNCTION(BlueprintPure, Category = "GripMotionController")
 		void GetPhysicsVelocities(const FBPActorGripInformation &Grip, FVector &AngularVelocity, FVector &LinearVelocity);
+
+	// Get the root components mass of a grip
+	UFUNCTION(BlueprintPure, Category = "GripMotionController")
+		void GetGripMass(const FBPActorGripInformation& Grip, float& Mass);
 
 	// Sets whether an active grip is paused or not (is not replicated by default as it is likely you will want to pass variables with this setting).
 	// If you want it server authed you should RPC a bool down with any additional information (ie: attach location).

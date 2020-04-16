@@ -205,6 +205,87 @@ private:
 
 };
 
+
+// The type of velocity tracking to perform on the motion controllers
+UENUM(BlueprintType)
+enum class EVRVelocityType : uint8
+{
+	// Gets the frame by frame velocity
+	VRLOCITY_Default UMETA(DisplayName = "Default"),
+
+	// Gets a running average velocity across a sample duration
+	VRLOCITY_RunningAverage  UMETA(DisplayName = "Running Average"),
+
+	// Gets the peak velocity across a sample duration
+	VRLOCITY_SamplePeak UMETA(DisplayName = "Sampled Peak")
+};
+
+// A structure used to store and calculate velocities in different ways
+USTRUCT(BlueprintType, Category = "VRExpansionLibrary")
+struct VREXPANSIONPLUGIN_API FBPLowPassPeakFilter
+{
+	GENERATED_BODY()
+public:
+
+	/** Default constructor */
+	FBPLowPassPeakFilter() :
+		VelocitySamples(30),
+		VelocitySampleLogCounter(0)
+	{}
+
+	// This is the number of samples to keep active
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Samples")
+		int32 VelocitySamples;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Samples")
+	TArray<FVector>VelocitySampleLog;
+	
+	int32 VelocitySampleLogCounter;
+
+	void Reset()
+	{
+		VelocitySampleLog.Reset(VelocitySamples);
+	}
+
+	void AddSample(FVector NewSample)
+	{
+		if (VelocitySamples <= 0)
+			return;
+
+		if (VelocitySampleLog.Num() != VelocitySamples)
+		{
+			VelocitySampleLog.Reset(VelocitySamples);
+			VelocitySampleLog.AddZeroed(VelocitySamples);
+			VelocitySampleLogCounter = 0;
+		}
+
+		VelocitySampleLog[VelocitySampleLogCounter] = NewSample;
+		++VelocitySampleLogCounter;
+
+		if (VelocitySampleLogCounter >= VelocitySamples)
+			VelocitySampleLogCounter = 0;
+	}
+
+	FVector GetPeak() const
+	{
+		FVector MaxValue = FVector::ZeroVector;
+		float ValueSizeSq = 0.f;
+		float CurSizeSq = 0.f;
+
+		for (int i = 0; i < VelocitySampleLog.Num(); i++)
+		{
+			CurSizeSq = VelocitySampleLog[i].SizeSquared();
+			if (CurSizeSq > ValueSizeSq)
+			{
+				MaxValue = VelocitySampleLog[i];
+				ValueSizeSq = CurSizeSq;
+			}
+		}
+
+		return MaxValue;
+	}
+};
+
 // Some static vars so we don't have to keep calculating these for our Smallest Three compression
 namespace TransNetQuant
 {
@@ -1156,6 +1237,9 @@ public:
 	FTransform LastWorldTransform;
 
 	// Need to skip one frame of length check post teleport with constrained objects, the constraint may have not been updated yet.
+	bool bSkipNextTeleportCheck;
+
+	// Need to skip one frame of length check post teleport with constrained objects, the constraint may have not been updated yet.
 	bool bSkipNextConstraintLengthCheck;
 
 	// Cached values - since not using a full serialize now the old array state may not contain what i need to diff
@@ -1179,6 +1263,7 @@ public:
 		bIsLocked = false;
 		LastLockedRotation = FQuat::Identity;
 		LastWorldTransform.SetIdentity();
+		bSkipNextTeleportCheck = false;
 		bSkipNextConstraintLengthCheck = false;
 		bIsPaused = false;
 		AdditionTransform = FTransform::Identity;
@@ -1287,6 +1372,7 @@ public:
 		bIsLocked(false),
 		LastLockedRotation(FRotator::ZeroRotator),
 		LastWorldTransform(FTransform::Identity),
+		bSkipNextTeleportCheck(false),
 		bSkipNextConstraintLengthCheck(false)
 	{
 	}	

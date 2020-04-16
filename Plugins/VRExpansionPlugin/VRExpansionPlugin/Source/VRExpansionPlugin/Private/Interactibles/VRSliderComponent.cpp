@@ -132,7 +132,6 @@ void UVRSliderComponent::TickComponent(float DeltaTime, enum ELevelTick TickType
 		else
 		{
 			MomentumAtDrop = FMath::FInterpTo(MomentumAtDrop, 0.0f, DeltaTime, SliderMomentumFriction);
-
 			float newProgress = CurrentSliderProgress + (MomentumAtDrop * DeltaTime);
 
 			if (newProgress < 0.0f || FMath::IsNearlyEqual(newProgress, 0.0f, 0.00001f))
@@ -563,6 +562,33 @@ FVector UVRSliderComponent::ClampSlideVector(FVector ValueToClamp)
 	return (Progress * Dist) - (MinScale);
 }
 
+float UVRSliderComponent::GetDistanceAlongSplineAtSplineInputKey(float InKey) const
+{
+
+	const int32 NumPoints = SplineComponentToFollow->SplineCurves.Position.Points.Num();
+	const int32 NumSegments = SplineComponentToFollow->IsClosedLoop() ? NumPoints : NumPoints - 1;
+
+	if ((InKey >= 0) && (InKey < NumSegments))
+	{
+		const int32 ReparamPrevIndex = static_cast<int32>(InKey * SplineComponentToFollow->ReparamStepsPerSegment);
+		const int32 ReparamNextIndex = ReparamPrevIndex + 1;
+
+		const float Alpha = (InKey * SplineComponentToFollow->ReparamStepsPerSegment) - static_cast<float>(ReparamPrevIndex);
+
+		const float PrevDistance = SplineComponentToFollow->SplineCurves.ReparamTable.Points[ReparamPrevIndex].InVal;
+		const float NextDistance = SplineComponentToFollow->SplineCurves.ReparamTable.Points[ReparamNextIndex].InVal;
+
+		// ReparamTable assumes that distance and input keys have a linear relationship in-between entries.
+		return FMath::Lerp(PrevDistance, NextDistance, Alpha);
+	}
+	else if (InKey >= NumSegments)
+	{
+		return SplineComponentToFollow->SplineCurves.GetSplineLength();
+	}
+
+	return 0.0f;
+}
+
 float UVRSliderComponent::GetCurrentSliderProgress(FVector CurLocation, bool bUseKeyInstead, float CurKey)
 {
 	if (SplineComponentToFollow != nullptr)
@@ -573,13 +599,15 @@ float UVRSliderComponent::GetCurrentSliderProgress(FVector CurLocation, bool bUs
 		if (!bUseKeyInstead)
 			ClosestKey = SplineComponentToFollow->FindInputKeyClosestToWorldLocation(CurLocation);
 
-		int32 primaryKey = FMath::TruncToInt(ClosestKey);
+		/*int32 primaryKey = FMath::TruncToInt(ClosestKey);
 
 		float distance1 = SplineComponentToFollow->GetDistanceAlongSplineAtSplinePoint(primaryKey);
 		float distance2 = SplineComponentToFollow->GetDistanceAlongSplineAtSplinePoint(primaryKey + 1);
 
 		float FinalDistance = ((distance2 - distance1) * (ClosestKey - (float)primaryKey)) + distance1;
-		return FMath::Clamp(FinalDistance / SplineComponentToFollow->GetSplineLength(), 0.0f, 1.0f);
+		return FMath::Clamp(FinalDistance / SplineComponentToFollow->GetSplineLength(), 0.0f, 1.0f);*/
+		float SplineLength = SplineComponentToFollow->GetSplineLength();
+		return GetDistanceAlongSplineAtSplineInputKey(ClosestKey) / SplineLength;
 	}
 
 	// Should need the clamp normally, but if someone is manually setting locations it could go out of bounds
