@@ -106,7 +106,7 @@ UGripMotionControllerComponent::UGripMotionControllerComponent(const FObjectInit
 	DefaultGripScript = nullptr;
 	DefaultGripScriptClass = UGS_Default::StaticClass();
 
-	bUpdateInCharacterMovement = true;
+	bUpdateInCharacterMovement = false;
 
 	VelocityCalculationType = EVRVelocityType::VRLOCITY_Default;
 	LastRelativePosition = FTransform::Identity;
