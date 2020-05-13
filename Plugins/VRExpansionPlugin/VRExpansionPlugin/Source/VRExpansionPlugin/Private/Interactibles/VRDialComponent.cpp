@@ -417,7 +417,7 @@ void UVRDialComponent::AddDialAngle(float DialAngleDelta, bool bCallEvents, bool
 				CurRotBackEnd = FMath::Clamp(CurRotBackEnd + DeltaRot, MaxCheckValue, 360.0f);
 		}
 	}
-	else if (tempCheck > ClockwiseMaximumDialAngle && tempCheck < MaxCheckValue)
+	else if(!bUseRollover && tempCheck > ClockwiseMaximumDialAngle && tempCheck < MaxCheckValue)
 	{
 		if (CurRotBackEnd < MaxCheckValue)
 		{
@@ -428,8 +428,25 @@ void UVRDialComponent::AddDialAngle(float DialAngleDelta, bool bCallEvents, bool
 			CurRotBackEnd = MaxCheckValue;
 		}
 	}
+	else if (bUseRollover)
+	{
+		if (tempCheck > ClockwiseMaximumDialAngle)
+		{
+			CurRotBackEnd = ClockwiseMaximumDialAngle;
+		}
+		else if (tempCheck < MaxCheckValue)
+		{
+			CurRotBackEnd = MaxCheckValue;
+		}
+		else
+		{
+			CurRotBackEnd = tempCheck;
+		}
+	}
 	else
+	{
 		CurRotBackEnd = tempCheck;
+	}
 
 	if (bDialUsesAngleSnap && SnapAngleIncrement > 0.f && FMath::Abs(FMath::Fmod(CurRotBackEnd, SnapAngleIncrement)) <= FMath::Min(SnapAngleIncrement, SnapAngleThreshold))
 	{

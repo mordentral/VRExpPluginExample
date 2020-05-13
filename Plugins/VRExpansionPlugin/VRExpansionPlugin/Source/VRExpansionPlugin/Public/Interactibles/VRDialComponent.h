@@ -66,6 +66,7 @@ public:
 	float CClockwiseMaximumDialAngle;
 
 	// If true then the dial can "roll over" past 360/0 degrees in a direction
+	// Allowing unlimited dial angle values
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRDialComponent")
 		bool bUseRollover;
 
