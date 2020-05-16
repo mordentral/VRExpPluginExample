@@ -268,8 +268,10 @@ void AGrippableStaticMeshActor::SetHeld_Implementation(UGripMotionControllerComp
 	}
 	else
 	{
+		AActor* myOwner = this->GetOwner();
+		bool bWasLocallyOwned = HoldingController ? HoldingController->IsLocallyControlled() : false;
 		VRGripInterfaceSettings.HoldingControllers.Remove(FBPGripPair(HoldingController, GripID));
-		if (ClientAuthReplicationData.bUseClientAuthThrowing && ShouldWeSkipAttachmentReplication(false))
+		if (bWasLocallyOwned && ClientAuthReplicationData.bUseClientAuthThrowing && ShouldWeSkipAttachmentReplication(false))
 		{
 			if (UPrimitiveComponent * PrimComp = Cast<UPrimitiveComponent>(GetRootComponent()))
 			{
