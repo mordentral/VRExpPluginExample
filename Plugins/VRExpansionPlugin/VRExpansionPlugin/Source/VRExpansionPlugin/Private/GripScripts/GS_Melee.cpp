@@ -473,7 +473,9 @@ void UGS_Melee::OnLodgeHitCallback(AActor* SelfActor, AActor* OtherActor, FVecto
 	if (UPrimitiveComponent * root = Cast<UPrimitiveComponent>(SelfActor->GetRootComponent()))
 	{	
 		if (FBodyInstance * rBodyInstance = root->GetBodyInstance())
-		{
+		{			
+			//float mass =rBodyInstance->GetBodyMass();
+			//ImpulseVelocity = (NormalImpulse / rBodyInstance->GetBodyMass()).SizeSquared();
 			RollingVelocityAverage += FVector::CrossProduct(RollingAngVelocityAverage, Hit.ImpactPoint - (rBodyInstance->GetCOMPosition()));
 		}
 	}
@@ -496,12 +498,13 @@ void UGS_Melee::OnLodgeHitCallback(AActor* SelfActor, AActor* OtherActor, FVecto
 
 			// Using swept objects hit normal as we are looking for a facing from ourselves
 			float DotValue = FMath::Abs(FVector::DotProduct(Hit.Normal, ForwardVec));
-			FVector Velocity = FrameToFrameVelocity.ProjectOnToNormal(ForwardVec);
-
+			FVector Velocity = NormalImpulse.ProjectOnToNormal(ForwardVec);//FrameToFrameVelocity.ProjectOnToNormal(ForwardVec);
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, FString::Printf(TEXT("Impulse: %f"), Velocity.Size()));
 			// Check if the velocity was strong enough along our axis to count as a lodge event
 			// Also that our facing was in the relatively correct direction
+
 			if(DotValue >= (1.0f - LodgeData.AcceptableForwardProductRange) && Velocity.SizeSquared() >= FMath::Square(LodgeData.PenetrationVelocity))
-			{
+			{			
 				OnShouldLodgeInObject.Broadcast(LodgeData, OtherActor, Hit.GetComponent(), Hit.GetComponent()->GetCollisionObjectType(), NormalImpulse, Hit);
 				break;
 			}
