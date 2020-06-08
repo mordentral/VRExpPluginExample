@@ -6,6 +6,8 @@ deriveddatacache/
 build/
 intermediate/
 PACKPLUGIN/
+COMPPLUGIN/
 saved/
 *.orig
 *.sln
+*.xlsx
