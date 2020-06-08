@@ -1,16 +1,40 @@
-***NOTICE - Branched off of original motion controller plugin***
-
 UE4 Forums Thread
-https://forums.unrealengine.com/showthread.php?116782-VR-(OpenVR)-Expansion-Plugin
+https://forums.unrealengine.com/development-discussion/vr-ar-development/89050-vr-openvr-expansion-plugin
 
 Example Template Project
-https://bitbucket.org/mordentral/vrexppluginexample
+https://github.com/mordentral/VRExpPluginExample
+
+[Consider supporting me on patreon](https://www.patreon.com/mordentral)
+
+***
 
 ### Use Of This Plugin ###
 
-This Plugin is intended to add additional functionality to Open/SteamVR/(All VR now) in UE4. 
+This Plugin is intended to add additional functionality to Open/SteamVR/(All VR now) in UE4.
+
+### Plugin Website ###
+[VREUE4.com](https://vreue4.com)
 
 ### How do I install it? ###
+
+##Wiki Pages for Installation##
+[Basic Installation Step-By-Step](https://bitbucket.org/mordentral/vrexpansionplugin/wiki/How%20to%20add%20the%20plugin%20to%20a%20blueprint%20only%20project%20-%20Step%20by%20Step)
+
+[Specific Commit Download Tutorial](https://bitbucket.org/mordentral/vrexpansionplugin/wiki/Retrieving%20specific%20commit%20version%20of%20the%20plugin%20or%20template)
+
+[Pre-built binary useage](https://bitbucket.org/mordentral/vrexpansionplugin/wiki/Getting%20pre-built%20binary%20packages)
+
+**Guides for migrating between different engine versions of the plugin:**
+
+* [**Migration Guides**](https://bitbucket.org/mordentral/vrexpansionplugin/wiki/Migration%20Guides%20(between%20engine%20versions))
+
+**Option 1:**
+
+Go to forum thread and downloaded the pre-built binary version for the engine version you are using (not updated with every daily change, only weekly or with large patches).
+
+Install it into your Engine/Plugins directoy or ProjectName/Plugins Directory.
+
+**Option 2 (More up to date - preferred if possible):**
 
 * Clone Or Download Zip and extract this repository to a folder named "VRExpansionPlugin" in your "ProjectName/Plugins" directory, create this directory if it is missing.
 
@@ -22,9 +46,19 @@ This Plugin is intended to add additional functionality to Open/SteamVR/(All VR 
 
 You need to have visual studio installed and follow the UE4 setup guide for it: https://docs.unrealengine.com/latest/INT/Programming/Development/VisualStudioSetup/
 
-I will offer pre-compiled binaries for all builds as well eventually when the plugin is stable enough for it, but until then installing it in the project instead of the engine is better.
-
 ### How do I use it? ###
+
+**KantanDocGen Automatic Documentation ([KantanDocGen](http://kantandev.com/free/kantan-doc-gen))** 
+
+**[VRExpansionPlugin](https://mordentral.bitbucket.io/VRExpansionPlugin/VR)**
+
+**[OpenVRExpansionPlugin](https://mordentral.bitbucket.io/OpenVRExpansionPlugin/VR)**
+
+**[Open Input Plugin (Until its more mainstream in the engine it is a seperate module)](https://bitbucket.org/mordentral/openinputmodule)**
+
+**[ExampleTemplate](https://mordentral.bitbucket.io/ExampleTemplate/VR)**  
+
+[Tips & Tricks](https://bitbucket.org/mordentral/vrexpansionplugin/wiki/Plugin%20Tips%20&%20Information)
 
 [VR Character Actor Information Page](https://bitbucket.org/mordentral/vrexpansionplugin/wiki/VR%20Character%20Actor)
 
@@ -48,6 +82,8 @@ https://bitbucket.org/mordentral/vrexpansionplugin/wiki/VR%20Player%20Controller
 
 [VR Grip Interface Information Page](https://bitbucket.org/mordentral/vrexpansionplugin/wiki/VRGripInterface)
 
+[VR Grippable Objects](https://bitbucket.org/mordentral/vrexpansionplugin/wiki/Grippable%20Objects)
+
 [Replicated VR Camera Information Page](https://bitbucket.org/mordentral/vrexpansionplugin/wiki/Replicated%20VR%20Camera)
 
 
@@ -63,10 +99,4 @@ https://bitbucket.org/mordentral/vrexpansionplugin/wiki/VR%20Player%20Controller
 
 ### How do I VR? ###
 
-Here is a list of VR quick tips  that I will begin to assemble
-
-
-For Temporal AA I found the following two console commands to greatly increase clarity and reduce blur.
-
- * r.temporalAAsamples 1
- * r.temporalAAsharpness 1
+The template project contains use examples of most of the features of the plugin as well as locomotion modes, interaction methods, and basic multiplayer.
