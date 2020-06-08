@@ -8,3 +8,4 @@ intermediate/
 PACKPLUGIN/
 saved/
 *.orig
+*.sln
