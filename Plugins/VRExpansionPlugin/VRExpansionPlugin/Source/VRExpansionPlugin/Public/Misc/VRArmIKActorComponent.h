@@ -1301,6 +1301,8 @@ spine 3 to pelvis distance (waist est)
 
 		}
 
+		float LastTargetAngle;
+
 		// Rotate shoulder up
 		void GetShoulderIKRot(bool bGetInWorldSpace = false)
 		{
@@ -1421,13 +1423,33 @@ spine 3 to pelvis distance (waist est)
 			shoulder.Transform.SetLocation(deltaRot * shoulderHeadDiff + CurrentTransforms.CameraTransform.GetLocation());
 		}
 
+		float BehindHeadAngle;
+
 		void DetectHandsBehindHead(float & TargetRot)
 		{
-			float delta = FRotator::ClampAxis(TargetRot - LastTargetRot);
+			float delta = FRotator::ClampAxis(FMath::FindDeltaAngleDegrees(TargetRot, LastTargetRot));// FRotator::ClampAxis(TargetRot - LastTargetRot);
 
 			if (delta > 150.f && delta < 210.0f && !FMath::IsNearlyZero(LastTargetRot) && !bClampingHeadRotation)
 			{
 				bHandsBehindHead = !bHandsBehindHead;
+				if (bHandsBehindHead)
+				{
+					BehindHeadAngle = TargetRot;
+				}
+				else
+				{
+					BehindHeadAngle = 0.f;
+				}
+			}
+			else if (bHandsBehindHead)
+			{
+				float delta2 = FMath::Abs(FMath::FindDeltaAngleDegrees(TargetRot, BehindHeadAngle));
+
+				if (delta2 > 90.f)
+				{
+					bHandsBehindHead = !bHandsBehindHead;
+					BehindHeadAngle = 0.f;
+				}
 			}
 
 			LastTargetRot = TargetRot;
