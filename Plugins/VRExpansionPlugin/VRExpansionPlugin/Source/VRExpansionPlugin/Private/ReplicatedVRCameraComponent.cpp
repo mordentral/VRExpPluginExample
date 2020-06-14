@@ -3,6 +3,7 @@
 #include "ReplicatedVRCameraComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "Engine/Engine.h"
+#include "VRBaseCharacter.h"
 #include "IXRTrackingSystem.h"
 #include "IXRCamera.h"
 #include "Rendering/MotionVectorSimulation.h"
@@ -109,14 +110,23 @@ bool UReplicatedVRCameraComponent::Server_SendCameraTransform_Validate(FBPVRComp
 	return false;
 }*/
 
-void UReplicatedVRCameraComponent::TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction)
+void UReplicatedVRCameraComponent::OnAttachmentChanged()
+{
+	if (AVRBaseCharacter* CharacterOwner = Cast<AVRBaseCharacter>(this->GetOwner()))
+	{
+		AttachChar = CharacterOwner;
+	}
+	else
+	{
+		AttachChar.Reset();
+	}
+
+	Super::OnAttachmentChanged();
+}
+
+void UReplicatedVRCameraComponent::UpdateTracking(float DeltaTime)
 {
 	bHasAuthority = IsLocallyControlled();
-	//bIsServer = IsServer();
-	
-	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-
-	// #TODO: 4.18 - use new late update code if required
 
 	// Don't do any of the below if we aren't the authority
 	if (bHasAuthority)
@@ -146,7 +156,7 @@ void UReplicatedVRCameraComponent::TickComponent(float DeltaTime, enum ELevelTic
 			FVector RelativeLoc = GetRelativeLocation();
 
 			// Don't rep if no changes
-			if (!RelativeLoc.Equals(ReplicatedCameraTransform.Position) ||  !RelativeRot.Equals(ReplicatedCameraTransform.Rotation))
+			if (!RelativeLoc.Equals(ReplicatedCameraTransform.Position) || !RelativeRot.Equals(ReplicatedCameraTransform.Rotation))
 			{
 				NetUpdateCount += DeltaTime;
 
@@ -159,7 +169,7 @@ void UReplicatedVRCameraComponent::TickComponent(float DeltaTime, enum ELevelTic
 
 					if (GetNetMode() == NM_Client)
 					{
-						AVRBaseCharacter * OwningChar = Cast<AVRBaseCharacter>(GetOwner());
+						AVRBaseCharacter* OwningChar = Cast<AVRBaseCharacter>(GetOwner());
 						if (OverrideSendTransform != nullptr && OwningChar != nullptr)
 						{
 							(OwningChar->* (OverrideSendTransform))(ReplicatedCameraTransform);
@@ -202,6 +212,26 @@ void UReplicatedVRCameraComponent::TickComponent(float DeltaTime, enum ELevelTic
 					FMath::Lerp(LastUpdatesRelativeRotation, ReplicatedCameraTransform.Rotation, LerpVal)
 				);
 			}
+		}
+	}
+}
+
+void UReplicatedVRCameraComponent::TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction)
+{
+	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+
+
+	if (!bUpdateInCharacterMovement || !AttachChar.IsValid())
+	{
+		UpdateTracking(DeltaTime);
+	}
+	else
+	{
+		UCharacterMovementComponent* CharMove = AttachChar->GetCharacterMovement();
+		if (!CharMove || !CharMove->IsComponentTickEnabled() || !CharMove->IsActive() || (!CharMove->PrimaryComponentTick.bTickEvenWhenPaused && GetWorld()->IsPaused()))
+		{
+			// Our character movement isn't handling our updates, lets do it ourself.
+			UpdateTracking(DeltaTime);
 		}
 	}
 }
