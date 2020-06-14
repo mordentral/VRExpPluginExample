@@ -148,42 +148,6 @@ void UReplicatedVRCameraComponent::UpdateTracking(float DeltaTime)
 				SetRelativeTransform(FTransform(Orientation, Position));
 			}
 		}
-
-		// Send changes
-		if (this->GetIsReplicated())
-		{
-			FRotator RelativeRot = GetRelativeRotation();
-			FVector RelativeLoc = GetRelativeLocation();
-
-			// Don't rep if no changes
-			if (!RelativeLoc.Equals(ReplicatedCameraTransform.Position) || !RelativeRot.Equals(ReplicatedCameraTransform.Rotation))
-			{
-				NetUpdateCount += DeltaTime;
-
-				if (NetUpdateCount >= (1.0f / NetUpdateRate))
-				{
-					NetUpdateCount = 0.0f;
-					ReplicatedCameraTransform.Position = RelativeLoc;
-					ReplicatedCameraTransform.Rotation = RelativeRot;
-
-
-					if (GetNetMode() == NM_Client)
-					{
-						AVRBaseCharacter* OwningChar = Cast<AVRBaseCharacter>(GetOwner());
-						if (OverrideSendTransform != nullptr && OwningChar != nullptr)
-						{
-							(OwningChar->* (OverrideSendTransform))(ReplicatedCameraTransform);
-						}
-						else
-						{
-							// Don't bother with any of this if not replicating transform
-							//if (bHasAuthority && bReplicateTransform)
-							Server_SendCameraTransform(ReplicatedCameraTransform);
-						}
-					}
-				}
-			}
-		}
 	}
 	else
 	{
@@ -232,6 +196,45 @@ void UReplicatedVRCameraComponent::TickComponent(float DeltaTime, enum ELevelTic
 		{
 			// Our character movement isn't handling our updates, lets do it ourself.
 			UpdateTracking(DeltaTime);
+		}
+	}
+
+	if (bHasAuthority)
+	{
+		// Send changes
+		if (this->GetIsReplicated())
+		{
+			FRotator RelativeRot = GetRelativeRotation();
+			FVector RelativeLoc = GetRelativeLocation();
+
+			// Don't rep if no changes
+			if (!RelativeLoc.Equals(ReplicatedCameraTransform.Position) || !RelativeRot.Equals(ReplicatedCameraTransform.Rotation))
+			{
+				NetUpdateCount += DeltaTime;
+
+				if (NetUpdateCount >= (1.0f / NetUpdateRate))
+				{
+					NetUpdateCount = 0.0f;
+					ReplicatedCameraTransform.Position = RelativeLoc;
+					ReplicatedCameraTransform.Rotation = RelativeRot;
+
+
+					if (GetNetMode() == NM_Client)
+					{
+						AVRBaseCharacter* OwningChar = Cast<AVRBaseCharacter>(GetOwner());
+						if (OverrideSendTransform != nullptr && OwningChar != nullptr)
+						{
+							(OwningChar->* (OverrideSendTransform))(ReplicatedCameraTransform);
+						}
+						else
+						{
+							// Don't bother with any of this if not replicating transform
+							//if (bHasAuthority && bReplicateTransform)
+							Server_SendCameraTransform(ReplicatedCameraTransform);
+						}
+					}
+				}
+			}
 		}
 	}
 }
