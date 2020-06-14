@@ -135,7 +135,7 @@ void UVRBaseCharacterMovementComponent::TickComponent(float DeltaTime, enum ELev
 		
 		{
 			UReplicatedVRCameraComponent* OuterScopeCamera = nullptr;
-			if (BaseVRCharacterOwner && BaseVRCharacterOwner->VRReplicatedCamera && BaseVRCharacterOwner->VRReplicatedCamera->bUsePawnControlRotation)
+			if (BaseVRCharacterOwner && BaseVRCharacterOwner->VRReplicatedCamera)
 			{
 				OuterScopeCamera = BaseVRCharacterOwner->VRReplicatedCamera;
 			}
