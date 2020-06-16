@@ -737,9 +737,6 @@ enum class EGripCollisionType : uint8
 	/** Attachment grips use native attachment and only sets location / rotation if they differ, this grip always late updates*/
 	AttachmentGrip,
 
-	/** Constraint grips constrain directly to the Pivot component and do not run custom logic*/
-	PivotConstraintGrip,
-
 	/** Custom grip is to be handled by the object itself, it just sends the TickGrip event every frame but doesn't move the object. */
 	CustomGrip,
 
