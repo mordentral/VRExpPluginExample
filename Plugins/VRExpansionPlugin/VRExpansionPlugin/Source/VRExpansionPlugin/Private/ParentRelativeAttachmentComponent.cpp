@@ -1,6 +1,7 @@
 // Copyright 1998-2016 Epic Games, Inc. All Rights Reserved.
 
 #include "ParentRelativeAttachmentComponent.h"
+#include "VRBaseCharacter.h"
 #include "VRCharacter.h"
 //#include "Runtime/Engine/Private/EnginePrivate.h"
 //#include "VRSimpleCharacter.h"
@@ -26,6 +27,9 @@ UParentRelativeAttachmentComponent::UParentRelativeAttachmentComponent(const FOb
 	LerpTarget = 0.0f;
 	bWasSetOnce = false;
 
+	LeftControllerTrans = FTransform::Identity;
+	RightControllerTrans = FTransform::Identity;
+
 	bIgnoreRotationFromParent = false;
 	bUpdateInCharacterMovement = true;
 
@@ -42,6 +46,15 @@ void UParentRelativeAttachmentComponent::OnAttachmentChanged()
 	else
 	{
 		AttachChar.Reset();
+	}
+
+	if (AVRBaseCharacter * BaseCharacterOwner = Cast<AVRBaseCharacter>(this->GetOwner()))
+	{
+		AttachBaseChar = BaseCharacterOwner;
+	}
+	else
+	{
+		AttachBaseChar.Reset();
 	}
 
 	Super::OnAttachmentChanged();
@@ -93,6 +106,19 @@ void UParentRelativeAttachmentComponent::UpdateTracking(float DeltaTime)
 			}
 			else
 				SetRelativeRotAndLoc(curCameraLoc, FRotator::ZeroRotator, DeltaTime);
+		}
+	}
+	else if (AttachBaseChar.IsValid())
+	{
+		if (AttachBaseChar->VRReplicatedCamera)
+		{
+			if (!bIgnoreRotationFromParent)
+			{
+				FRotator InverseRot = UVRExpansionFunctionLibrary::GetHMDPureYaw(AttachBaseChar->VRReplicatedCamera->GetRelativeRotation());
+				SetRelativeRotAndLoc(AttachBaseChar->VRReplicatedCamera->GetRelativeLocation(), InverseRot, DeltaTime);
+			}
+			else
+				SetRelativeRotAndLoc(AttachBaseChar->VRReplicatedCamera->GetRelativeLocation(), FRotator::ZeroRotator, DeltaTime);
 		}
 	}
 	else if (AActor* owner = this->GetOwner())
