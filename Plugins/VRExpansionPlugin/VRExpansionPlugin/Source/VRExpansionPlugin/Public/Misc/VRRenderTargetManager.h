@@ -57,7 +57,7 @@ struct FRenderDataStore {
 	}
 };
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FVROnRenderTargetSaved, TArray<uint8>, ColorData);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FVROnRenderTargetSaved, TArray<int32>, ColorData);
 
 /**
 * This class stores reading requests for rendertargets and iterates over them
@@ -76,6 +76,63 @@ public:
 	// List of 16 colors that we allow to draw on the render target with
 	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "RenderTargetManager")
 		TMap<FColor, uint8> ColorMap;
+
+	UPROPERTY()
+		TArray<TWeakObjectPtr<APlayerController>> NetRelevancyLog;
+
+	// Rate to poll for actor relevancy
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "RenderTargetManager")
+		float PollRelevancyTime;
+
+	UFUNCTION()
+	void UpdateRelevancyMap()
+	{
+
+		AActor* myOwner = GetOwner();
+
+		for (int i = NetRelevancyLog.Num() - 1; i >= 0; i--)
+		{
+			if (!NetRelevancyLog[i].IsValid() || NetRelevancyLog[i]->IsLocalController() || !NetRelevancyLog[i]->GetPawn())
+			{
+				NetRelevancyLog.RemoveAt(i);
+			}
+			else
+			{
+				if (APawn* pawn = NetRelevancyLog[i]->GetPawn())
+				{
+					if (!myOwner->IsNetRelevantFor(NetRelevancyLog[i].Get(), pawn, pawn->GetActorLocation()))
+					{
+						NetRelevancyLog.RemoveAt(i);
+					}
+				}
+			}
+		}
+
+		for (FConstPlayerControllerIterator PCIt = GetWorld()->GetPlayerControllerIterator(); PCIt; ++PCIt)
+		{
+			if (APlayerController* PC = PCIt->Get())
+			{
+				if (PC->IsLocalController())
+					continue;
+
+				if (APawn* pawn = PC->GetPawn())
+				{
+
+					if (myOwner->IsNetRelevantFor(PC, pawn, pawn->GetActorLocation()))
+					{
+						if (!NetRelevancyLog.Contains(PC))
+						{
+							NetRelevancyLog.Add(PC);
+							// Update this client with the new data
+						}
+					}
+				}
+
+			}
+		}
+	}
+
+	FTimerHandle NetRelevancyTimer_Handle;
 
 	UPROPERTY(BlueprintAssignable, Category = "RenderTargetManager")
 		FVROnRenderTargetSaved OnRenderTargetFinishedSave;
@@ -259,6 +316,8 @@ public:
 					TArray<uint8> RLEEncodedValue;
 					RLE_Funcs::RLEEncodeBuffer<uint16>(Test.GetData(), Test.Num(), &RLEEncodedValue);
 
+					Test.Empty();
+
 					/*for (uint16 CompColor : Test)
 					{
 						ColorVal.R = CompColor << 3;
@@ -293,9 +352,11 @@ public:
 
 					Compressor.Flush();
 
+					
+					RLEEncodedValue.Empty();
 					int32 Num = OutByteData.Num();
 
-					TArray<uint32> FinalValues;
+					TArray<int32> FinalValues;
 					FinalValues.AddUninitialized(Num / 4 + FMath::Clamp(Num % 4, 0, 1));
 
 					uint32 Value = 0;
@@ -341,7 +402,7 @@ public:
 
 					if (OnRenderTargetFinishedSave.IsBound())
 					{
-						OnRenderTargetFinishedSave.Broadcast(OutByteData);
+						OnRenderTargetFinishedSave.Broadcast(FinalValues);
 					}
                 }
             }
@@ -349,16 +410,31 @@ public:
 
     }
 
+	virtual void BeginPlay() override
+	{
+		Super::BeginPlay();
+
+		if(GetNetMode() < ENetMode::NM_Client)
+			GetWorld()->GetTimerManager().SetTimer(NetRelevancyTimer_Handle, this, &UVRRenderTargetManager::UpdateRelevancyMap, PollRelevancyTime, true);
+	}
+
     virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override
     {
         Super::EndPlay(EndPlayReason);
 
-        /*for (FRenderDataStore* Store : RenderDataQueue)
-        {
-            delete Store;
-        }*/
+		FRenderDataStore* Store = nullptr;
+		while (!RenderDataQueue.IsEmpty())
+		{
+			RenderDataQueue.Dequeue(Store);
 
-        RenderDataQueue.Empty();
+			if (Store)
+			{
+				delete Store;
+			}
+		}
+
+		if (GetNetMode() < ENetMode::NM_Client)
+			GetWorld()->GetTimerManager().ClearTimer(NetRelevancyTimer_Handle);
     }
 
 protected:
@@ -371,6 +447,8 @@ UVRRenderTargetManager::UVRRenderTargetManager(const FObjectInitializer& ObjectI
 {
 	PrimaryComponentTick.bCanEverTick = true;
 	PrimaryComponentTick.bStartWithTickEnabled = true;
+
+	PollRelevancyTime = 0.1f;
 
 	// http://alumni.media.mit.edu/~wad/color/palette.html
 
