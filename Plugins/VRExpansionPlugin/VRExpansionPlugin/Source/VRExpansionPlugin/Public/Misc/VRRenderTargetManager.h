@@ -1,11 +1,15 @@
-#include "Serialization/ArchiveSaveCompressedProxy.h"
-#include "Serialization/ArchiveLoadCompressedProxy.h"
-#include "Engine/TextureRenderTarget2D.h"
+//#include "Serialization/ArchiveSaveCompressedProxy.h"
+//#include "Serialization/ArchiveLoadCompressedProxy.h"
 
-#include "ImageWrapper/Public/IImageWrapper.h"
-#include "ImageWrapper/Public/IImageWrapperModule.h"
+#include "Engine/TextureRenderTarget2D.h"
+#include "Net/Core/PushModel/PushModel.h"
+//#include "ImageWrapper/Public/IImageWrapper.h"
+//#include "ImageWrapper/Public/IImageWrapperModule.h"
 
 #include "VRRenderTargetManager.generated.h"
+
+
+// #TODO: Dirty rects so don't have to send entire texture?
 
 namespace RLE_Funcs
 {
@@ -44,6 +48,92 @@ namespace RLE_Funcs
 	static inline void RLEWriteRunFlag(uint32 Count, uint8** loc, TArray<DataType>& Data, bool bCompressed);
 }
 
+
+
+USTRUCT(BlueprintType, Category = "VRExpansionLibrary")
+struct VREXPANSIONPLUGIN_API FBPVRReplicatedTextureStore
+{
+	GENERATED_BODY()
+public:
+
+	// Not automatically replicated, we are skipping it so that the array isn't checked
+	// We manually copy the data into the serialization buffer during netserialize and keep
+	// a flip flop dirty flag
+
+	UPROPERTY()
+		TArray<uint8> PackedData;
+	TArray<uint16> UnpackedData;
+
+	UPROPERTY()
+	uint32 Width;
+
+	UPROPERTY()
+	uint32 Height;
+
+	EPixelFormat PixelFormat;
+
+	void Reset()
+	{
+		PackedData.Reset();
+		UnpackedData.Reset();
+		Width = 0;
+		Height = 0;
+		PixelFormat = (EPixelFormat)0;
+	}
+
+	void PackData()
+	{
+		RLE_Funcs::RLEEncodeBuffer<uint16>(UnpackedData.GetData(), UnpackedData.Num(), &PackedData);
+		UnpackedData.Reset();
+	}
+
+
+	void UnPackData()
+	{
+		RLE_Funcs::RLEDecodeLine<uint16>(&PackedData, &UnpackedData, true);
+		PackedData.Reset();
+	}
+
+
+	/** Network serialization */
+	// Doing a custom NetSerialize here because this is sent via RPCs and should change on every update
+	bool NetSerialize(FArchive& Ar, class UPackageMap* Map, bool& bOutSuccess)
+	{
+		bOutSuccess = true;
+
+		Ar.SerializeIntPacked(Width);
+		Ar.SerializeIntPacked(Height);
+		Ar.SerializeBits(&PixelFormat, 8);
+
+		// Serialize the raw transaction
+		uint32 UncompressedBufferSize = PackedData.Num();
+		Ar.SerializeIntPacked(UncompressedBufferSize);
+		if (UncompressedBufferSize > 0)
+		{
+			Ar.SerializeCompressed(PackedData.GetData(), UncompressedBufferSize, NAME_Zlib, ECompressionFlags::COMPRESS_BiasSpeed);
+		}
+
+		if (Ar.IsLoading() && UncompressedBufferSize == 0)
+		{
+			PackedData.Empty();
+		}
+
+		return bOutSuccess;
+	}
+
+};
+
+template<>
+struct TStructOpsTypeTraits< FBPVRReplicatedTextureStore > : public TStructOpsTypeTraitsBase2<FBPVRReplicatedTextureStore>
+{
+	enum
+	{
+		WithNetSerializer = true,
+		WithNetSharedSerialization = true,
+	};
+};
+
+
 USTRUCT()
 struct FRenderDataStore {
 	GENERATED_BODY()
@@ -57,7 +147,7 @@ struct FRenderDataStore {
 	}
 };
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FVROnRenderTargetSaved, TArray<int32>, ColorData);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FVROnRenderTargetSaved, FBPVRReplicatedTextureStore, ColorData);
 
 /**
 * This class stores reading requests for rendertargets and iterates over them
@@ -83,6 +173,35 @@ public:
 	// Rate to poll for actor relevancy
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "RenderTargetManager")
 		float PollRelevancyTime;
+
+	FTimerHandle NetRelevancyTimer_Handle;
+
+	UPROPERTY(BlueprintAssignable, Category = "RenderTargetManager")
+		FVROnRenderTargetSaved OnRenderTargetFinishedSave;
+
+	UPROPERTY(Replicated, ReplicatedUsing = OnRep_TextureData)
+		FBPVRReplicatedTextureStore RenderTargetStore;
+
+	UFUNCTION()
+		virtual void OnRep_TextureData()
+	{
+		RenderTargetStore.UnPackData();
+		// Write to buffer now
+	}
+
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override
+	{
+		Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+#if WITH_PUSH_MODEL
+		FDoRepLifetimeParams Params;
+
+		Params.bIsPushBased = true;
+		DOREPLIFETIME_WITH_PARAMS_FAST(UVRRenderTargetManager, RenderTargetStore, Params);
+#else
+		DOREPLIFETIME(UVRRenderTargetManager, RenderTargetStore);
+#endif
+	}
 
 	UFUNCTION()
 	void UpdateRelevancyMap()
@@ -132,11 +251,6 @@ public:
 		}
 	}
 
-	FTimerHandle NetRelevancyTimer_Handle;
-
-	UPROPERTY(BlueprintAssignable, Category = "RenderTargetManager")
-		FVROnRenderTargetSaved OnRenderTargetFinishedSave;
-
 	// This function blocks the game thread and WILL be slow
 	UFUNCTION(BlueprintCallable, Category = "RenderTargetManager")
 	static bool CompressRenderTarget2D(UTextureRenderTarget2D* Texture, TArray<uint8>& OutByteData)
@@ -169,14 +283,14 @@ public:
 		TArray<uint8> TempData;
 
 		OutByteData.Reset();
-		FArchiveSaveCompressedProxy Compressor(OutByteData, NAME_Zlib, COMPRESS_BiasSpeed);
+		/*FArchiveSaveCompressedProxy Compressor(OutByteData, NAME_Zlib, COMPRESS_BiasSpeed);
 
 		Compressor << Width;
 		Compressor << Height;
 		Compressor << PixelFormat8;
 		Compressor << Test;
 
-		Compressor.Flush();
+		Compressor.Flush();*/
 		return true;
 	}
 
@@ -195,12 +309,12 @@ public:
 		TArray<FColor> TempData;
 		TArray<uint16> Test;
 
-		FArchiveLoadCompressedProxy DeCompressor(InByteData, NAME_Zlib, COMPRESS_BiasSpeed);
+		/*FArchiveLoadCompressedProxy DeCompressor(InByteData, NAME_Zlib, COMPRESS_BiasSpeed);
 
 		DeCompressor << Width;
 		DeCompressor << Height;
 		DeCompressor << PixelFormat8;
-		DeCompressor << Test;
+		DeCompressor << Test;*/
 
 		FColor ColorVal;
 		uint32 Counter = 0;
@@ -291,16 +405,17 @@ public:
             {
                 if (nextRenderData->RenderFence.IsFenceComplete())
                 {				
-					TArray<uint16> Test;
-					Test.AddUninitialized(nextRenderData->ColorData.Num());
+					RenderTargetStore.Reset();
+					RenderTargetStore.UnpackedData.AddUninitialized(nextRenderData->ColorData.Num());
 
 					uint16 ColorVal = 0;
 					uint32 Counter = 0;
 					
+					// Convert to 16bit color
 					for (FColor col : nextRenderData->ColorData)
 					{
 						ColorVal = (col.R >> 3) << 11 | (col.G >> 2) << 5 | (col.B >> 3);
-						Test[Counter++] = ColorVal;
+						RenderTargetStore.UnpackedData[Counter++] = ColorVal;
 
 						if (col.R != 255)
 						{
@@ -313,10 +428,16 @@ public:
 						col.A = 0xFF;
 					}
 
-					TArray<uint8> RLEEncodedValue;
-					RLE_Funcs::RLEEncodeBuffer<uint16>(Test.GetData(), Test.Num(), &RLEEncodedValue);
+					RenderTargetStore.PackData();
+					FIntPoint Size2D = nextRenderData->Size2D;
+					RenderTargetStore.Width = Size2D.X;
+					RenderTargetStore.Height = Size2D.Y;
+					RenderTargetStore.PixelFormat = nextRenderData->PixelFormat;
 
-					Test.Empty();
+#if WITH_PUSH_MODEL
+					MARK_PROPERTY_DIRTY_FROM_NAME(UVRRenderTargetManager, RenderTargetStore, this);
+#endif
+
 
 					/*for (uint16 CompColor : Test)
 					{
@@ -335,14 +456,10 @@ public:
 					*/
 					// 10x the byte cost of ZLib and color downscaling
 
-					FIntPoint Size2D = nextRenderData->Size2D;
-					int32 Width = Size2D.X;
-					int32 Height = Size2D.Y;
-					EPixelFormat PixelFormat = nextRenderData->PixelFormat;
-					uint8 PixelFormat8 = (uint8)PixelFormat;
-					int32 Size = 0;
-
-					TArray<uint8> OutByteData;
+					//TArray<uint8> OutByteData;
+					
+					// Not compressing it here, doing it during serialization now instead
+					/*
 					FArchiveSaveCompressedProxy Compressor(OutByteData, NAME_Zlib, COMPRESS_BiasSpeed);
 
 					Compressor << Width;
@@ -351,50 +468,7 @@ public:
 					Compressor << RLEEncodedValue;
 
 					Compressor.Flush();
-
-					
-					RLEEncodedValue.Empty();
-					int32 Num = OutByteData.Num();
-
-					TArray<int32> FinalValues;
-					FinalValues.AddUninitialized(Num / 4 + FMath::Clamp(Num % 4, 0, 1));
-
-					uint32 Value = 0;
-					Counter = 0;
-
-					for (int i = 0; i < Num / 4; i+=4)
-					{
-						Value = OutByteData[i] << 24 | OutByteData[i + 1] << 16 | OutByteData[i + 2] << 8 | OutByteData[i + 3];
-						FinalValues[Counter++] = Value;
-					}
-
-
-					int32 ModRemainer = Num % 4;
-
-					Value = 0;
-					switch(ModRemainer)
-					{
-						case 0:
-						{
-						}break;
-						case 1:
-						{
-							Value = OutByteData[(Num - ModRemainer) - 1] << 24;
-							FinalValues[Counter] = Value;
-						}break;
-						case 2:
-						{
-							Value = OutByteData[(Num - ModRemainer) - 1] << 24 | OutByteData[(Num - ModRemainer)] << 16 ;
-							FinalValues[Counter] = Value;
-						}break;
-						case 3:
-						{
-							Value = OutByteData[(Num - ModRemainer) - 1] << 24 | OutByteData[(Num - ModRemainer)] << 16 | OutByteData[(Num - ModRemainer) + 1] << 8;
-							FinalValues[Counter] = Value;
-						}break;
-
-					}
-
+					*/
 
                     // Delete the first element from RenderQueue
                     RenderDataQueue.Pop();
@@ -402,7 +476,7 @@ public:
 
 					if (OnRenderTargetFinishedSave.IsBound())
 					{
-						OnRenderTargetFinishedSave.Broadcast(FinalValues);
+						OnRenderTargetFinishedSave.Broadcast(RenderTargetStore);
 					}
                 }
             }
@@ -445,6 +519,7 @@ protected:
 UVRRenderTargetManager::UVRRenderTargetManager(const FObjectInitializer& ObjectInitializer)
     : Super(ObjectInitializer)
 {
+
 	PrimaryComponentTick.bCanEverTick = true;
 	PrimaryComponentTick.bStartWithTickEnabled = true;
 
@@ -474,7 +549,7 @@ UVRRenderTargetManager::UVRRenderTargetManager(const FObjectInitializer& ObjectI
 
 // Followed by a count of the following voxels
 template <typename DataType>
-void RLEDecodeLine(TArray<uint8>* LineToDecode, TArray<DataType>* DecodedLine, bool bCompressed)
+void RLE_Funcs::RLEDecodeLine(TArray<uint8>* LineToDecode, TArray<DataType>* DecodedLine, bool bCompressed)
 {
 	if (!LineToDecode || !DecodedLine)
 		return;
