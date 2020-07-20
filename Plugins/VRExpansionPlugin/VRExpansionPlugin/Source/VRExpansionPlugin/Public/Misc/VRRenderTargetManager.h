@@ -1,6 +1,8 @@
 //#include "Serialization/ArchiveSaveCompressedProxy.h"
 //#include "Serialization/ArchiveLoadCompressedProxy.h"
 
+#include "GeomTools.h"
+#include "Kismet/KismetMathLibrary.h"
 #include "Engine/TextureRenderTarget2D.h"
 #include "Net/Core/PushModel/PushModel.h"
 //#include "ImageWrapper/Public/IImageWrapper.h"
@@ -47,7 +49,6 @@ namespace RLE_Funcs
 	template <typename DataType>
 	static inline void RLEWriteRunFlag(uint32 Count, uint8** loc, TArray<DataType>& Data, bool bCompressed);
 }
-
 
 
 USTRUCT(BlueprintType, Category = "VRExpansionLibrary")
@@ -201,6 +202,168 @@ public:
 #else
 		DOREPLIFETIME(UVRRenderTargetManager, RenderTargetStore);
 #endif
+	}
+
+
+
+	UFUNCTION()
+	void GeneratePolygonsFromBoxOnPlane(FBox InputBox, FRotator BoxRotation, FTransform WorldTransformOfPlane, const FPlane & LocalProjectionPlane, FVector2D PlaneSize)
+	{
+		FVector Center = InputBox.GetCenter();
+		FVector Extent = BoxRotation.RotateVector(InputBox.GetExtent());
+
+		Center = WorldTransformOfPlane.InverseTransformPosition(Center);
+		Extent = WorldTransformOfPlane.InverseTransformPosition(Extent);
+
+		FVector BoxMin = Center - Extent;
+		FVector BoxMax = Center + Extent;
+
+		TArray<FUtilEdge3D> EdgeList;
+		EdgeList.Reserve(12);	
+
+		FUtilEdge3D EdgeStore;
+		
+		FVector Point1 = BoxMin;
+		FVector Point2 = BoxMax;
+		FVector Point3 = FVector(Point1.X, Point1.Y, Point2.Z);
+		FVector Point4 = FVector(Point1.X, Point2.Y, Point1.Z);
+		FVector Point5 = FVector(Point2.X, Point1.Y, Point1.Z);
+		FVector Point6 = FVector(Point1.X, Point2.Y, Point2.Z);
+		FVector Point7 = FVector(Point2.X, Point1.Y, Point2.Z);
+		FVector Point8 = FVector(Point2.X, Point2.Y, Point1.Z);
+
+		// Edge1
+		EdgeStore.V0 = Point1;
+		EdgeStore.V1 = Point4;
+		EdgeList.Add(EdgeStore);
+
+		// Edge2
+		EdgeStore.V0 = Point1;
+		EdgeStore.V1 = Point5;
+		EdgeList.Add(EdgeStore);
+
+		// Edge 3
+		EdgeStore.V0 = Point1;
+		EdgeStore.V1 = Point3;
+		EdgeList.Add(EdgeStore);
+
+		// Edge 4
+		EdgeStore.V0 = Point3;
+		EdgeStore.V1 = Point6;
+		EdgeList.Add(EdgeStore);
+
+		// Edge 5
+		EdgeStore.V0 = Point3;
+		EdgeStore.V1 = Point7;
+		EdgeList.Add(EdgeStore);
+
+		// Edge 6
+		EdgeStore.V0 = Point5;
+		EdgeStore.V1 = Point8;
+		EdgeList.Add(EdgeStore);
+
+		// Edge 7
+		EdgeStore.V0 = Point5;
+		EdgeStore.V1 = Point7;
+		EdgeList.Add(EdgeStore);
+
+		// Edge 8
+		EdgeStore.V0 = Point7;
+		EdgeStore.V1 = Point2;
+		EdgeList.Add(EdgeStore);
+
+		// Edge 9
+		EdgeStore.V0 = Point2;
+		EdgeStore.V1 = Point8;
+		EdgeList.Add(EdgeStore);
+
+		// Edge 10
+		EdgeStore.V0 = Point2;
+		EdgeStore.V1 = Point6;
+		EdgeList.Add(EdgeStore);
+
+		// Edge 11
+		EdgeStore.V0 = Point6;
+		EdgeStore.V1 = Point4;
+		EdgeList.Add(EdgeStore);
+
+		// Edge 12
+		EdgeStore.V0 = Point4;
+		EdgeStore.V1 = Point8;
+		EdgeList.Add(EdgeStore);
+
+		TArray<FVector2D> IntersectionPoints;
+
+		FVector Intersection;
+		float Time;
+
+		FVector2D HalfPlane = PlaneSize / 2.f;
+		FVector2D PtCenter;
+		FVector2D NewPt;
+		FVector PlanePoint;
+		int CenterCount = 0;
+		for(auto &Edge : EdgeList)
+		{
+
+			if (UKismetMathLibrary::LinePlaneIntersection(Edge.V0, Edge.V1, LocalProjectionPlane, Time, Intersection))
+			{				
+				PlanePoint = FVector::PointPlaneProject(Intersection, LocalProjectionPlane);
+				NewPt.X = (PlanePoint.X + HalfPlane.X) / PlaneSize.X;
+				NewPt.Y = (PlanePoint.Y + HalfPlane.Y) / PlaneSize.Y;
+
+				//if (PlanePoint.X >= 0 && PlanePoint.X <= 1.f && PlanePoint.Y >= 0 && PlanePoint.Y <= 1.f)
+				{
+					//PlanePoint.ClampAxes(0.f, 1.f);
+					IntersectionPoints.Add(NewPt);
+					PtCenter += NewPt;
+					CenterCount++;
+				}
+			}
+		}
+
+		// Get our center value
+		PtCenter /= CenterCount;
+
+		// Sort the points clockwise
+		struct FPointSortCompare
+		{
+		public:
+			FVector2D CenterPoint;
+			FPointSortCompare(const FVector2D& InCenterPoint)
+				: CenterPoint(InCenterPoint)
+			{
+
+			}
+
+			FORCEINLINE bool operator()(const FVector2D& A, const FVector2D& B) const
+			{
+				if (A.Y - CenterPoint.X >= 0 && B.X - CenterPoint.X < 0)
+					return true;
+				if (A.X - CenterPoint.X < 0 && B.X - CenterPoint.X >= 0)
+					return false;
+				if (A.X - CenterPoint.X == 0 && B.X - CenterPoint.X == 0) {
+					if (A.Y - CenterPoint.Y >= 0 || B.Y - CenterPoint.Y >= 0)
+						return A.Y > B.Y;
+					return B.Y > A.Y;
+				}
+
+				// compute the cross product of vectors (center -> a) x (center -> b)
+				int det = (A.X - CenterPoint.X) * (B.Y - CenterPoint.Y) - (B.X - CenterPoint.X) * (A.Y - CenterPoint.Y);
+				if (det < 0)
+					return true;
+				if (det > 0)
+					return false;
+
+				// points a and b are on the same line from the center
+				// check which point is closer to the center
+				int d1 = (A.X - CenterPoint.X) * (A.X - CenterPoint.X) + (A.Y - CenterPoint.Y) * (A.Y - CenterPoint.Y);
+				int d2 = (B.X - CenterPoint.X) * (B.X - CenterPoint.X) + (B.Y - CenterPoint.Y) * (B.Y - CenterPoint.Y);
+				return d1 > d2;
+			}
+		};
+
+		IntersectionPoints.Sort(FPointSortCompare(PtCenter));
+
 	}
 
 	UFUNCTION()
