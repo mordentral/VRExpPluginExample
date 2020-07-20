@@ -2,8 +2,9 @@
 //#include "Serialization/ArchiveLoadCompressedProxy.h"
 
 #include "GeomTools.h"
-#include "Kismet/KismetMathLibrary.h"
 #include "Engine/TextureRenderTarget2D.h"
+#include "Kismet/KismetMathLibrary.h"
+#include "Engine/CanvasRenderTarget2D.h"
 #include "Net/Core/PushModel/PushModel.h"
 //#include "ImageWrapper/Public/IImageWrapper.h"
 //#include "ImageWrapper/Public/IImageWrapperModule.h"
@@ -71,6 +72,9 @@ public:
 	UPROPERTY()
 	uint32 Height;
 
+	UPROPERTY()
+		bool bUseColorMap;
+
 	EPixelFormat PixelFormat;
 
 	void Reset()
@@ -80,6 +84,7 @@ public:
 		Width = 0;
 		Height = 0;
 		PixelFormat = (EPixelFormat)0;
+		bUseColorMap = false;
 	}
 
 	void PackData()
@@ -102,6 +107,7 @@ public:
 	{
 		bOutSuccess = true;
 
+		Ar.SerializeBits(&bUseColorMap, 1);
 		Ar.SerializeIntPacked(Width);
 		Ar.SerializeIntPacked(Height);
 		Ar.SerializeBits(&PixelFormat, 8);
@@ -164,9 +170,24 @@ public:
 
     UVRRenderTargetManager(const FObjectInitializer& ObjectInitializer);
 
-	// List of 16 colors that we allow to draw on the render target with
 	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "RenderTargetManager")
+		UCanvasRenderTarget2D* RenderTarget;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "RenderTargetManager")
+		int32 RenderTargetWidth;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "RenderTargetManager")
+		int32 RenderTargetHeight;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "RenderTargetManager")
+		FColor ClearColor;
+
+	// List of 16 colors that we allow to draw on the render target with
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "RenderTargetManager|ColorMap")
 		TMap<FColor, uint8> ColorMap;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "RenderTargetManager|ColorMap")
+		bool bUseColorMap;
 
 	UPROPERTY()
 		TArray<TWeakObjectPtr<APlayerController>> NetRelevancyLog;
@@ -186,7 +207,7 @@ public:
 	UFUNCTION()
 		virtual void OnRep_TextureData()
 	{
-		RenderTargetStore.UnPackData();
+		DeCompressRenderTarget2D();
 		// Write to buffer now
 	}
 
@@ -204,6 +225,43 @@ public:
 #endif
 	}
 
+
+	void InitRenderTarget()
+	{
+		UWorld* World = GetWorld();
+
+
+		if (RenderTargetWidth > 0 && RenderTargetHeight > 0 && World)
+		{
+			//UCanvasRenderTarget2D::CreateCanvasRenderTarget2D(this, UCanvasRenderTarget2D::StaticClass(), RenderTargetWidth, RenderTargetHeight)
+
+			RenderTarget = NewObject<UCanvasRenderTarget2D>(this);
+			if (RenderTarget)
+			{
+				//NewCanvasRenderTarget->World = World;
+				RenderTarget->InitAutoFormat(RenderTargetWidth, RenderTargetHeight);
+				RenderTarget->ClearColor = ClearColor;
+				RenderTarget->bAutoGenerateMips = false;
+				RenderTarget->UpdateResourceImmediate(true);
+			}
+			else
+			{
+				RenderTarget = nullptr;
+			}
+			/*RenderTarget = NewObject<UTextureRenderTarget2D>(this);
+			check(RenderTarget);
+			RenderTarget->RenderTargetFormat = ETextureRenderTargetFormat::RTF_RGBA8;
+			RenderTarget->ClearColor = ClearColor;
+			RenderTarget->bAutoGenerateMips = false;
+			RenderTarget->InitAutoFormat(RenderTargetWidth, RenderTargetHeight);
+			RenderTarget->UpdateResourceImmediate(true);*/
+
+		}
+		else
+		{
+			RenderTarget =  nullptr;
+		}
+	}
 
 
 	UFUNCTION()
@@ -416,14 +474,14 @@ public:
 
 	// This function blocks the game thread and WILL be slow
 	UFUNCTION(BlueprintCallable, Category = "RenderTargetManager")
-	static bool CompressRenderTarget2D(UTextureRenderTarget2D* Texture, TArray<uint8>& OutByteData)
+	bool CompressRenderTarget2D(TArray<uint8>& OutByteData)
 	{
-		if (!Texture)
+		if (!RenderTarget)
 			return false;
 
 		TArray<FColor> SurfData;
-		FRenderTarget* RenderTarget = Texture->GameThread_GetRenderTargetResource();
-		RenderTarget->ReadPixels(SurfData);
+		FRenderTarget* RenderTarget2D = RenderTarget->GameThread_GetRenderTargetResource();
+		RenderTarget2D->ReadPixels(SurfData);
 
 		TArray<uint16> Test;
 		Test.AddUninitialized(SurfData.Num());
@@ -437,10 +495,10 @@ public:
 			Test[Counter++] = ColorVal;
 		}
 
-		FIntPoint Size2D = RenderTarget->GetSizeXY();
+		FIntPoint Size2D = RenderTarget2D->GetSizeXY();
 		int32 Width = Size2D.X;
 		int32 Height = Size2D.Y;
-		EPixelFormat PixelFormat = Texture->GetFormat();
+		EPixelFormat PixelFormat = RenderTarget->GetFormat();
 		uint8 PixelFormat8 = (uint8)PixelFormat;
 		int32 Size = 0;
 		TArray<uint8> TempData;
@@ -458,50 +516,78 @@ public:
 	}
 
 	UFUNCTION(BlueprintCallable, Category = "RenderTargetManager")
-		static bool DeCompressRenderTarget2D(UTextureRenderTarget2D* Target, UPARAM(ref) TArray<uint8>& InByteData)
+		bool DeCompressRenderTarget2D()
 	{
-		if (!Target)
+		if (!RenderTarget)
 			return false;
 
+		RenderTargetStore.UnPackData();
 
-		int32 Width = 0;
-		int32 Height = 0;
-		EPixelFormat PixelFormat = EPixelFormat::PF_R8G8B8A8;
+
+		int32 Width = RenderTargetStore.Width;
+		int32 Height = RenderTargetStore.Height;
+		EPixelFormat PixelFormat = RenderTargetStore.PixelFormat;
 		uint8 PixelFormat8 = 0;
 
 		TArray<FColor> TempData;
 		TArray<uint16> Test;
 
-		/*FArchiveLoadCompressedProxy DeCompressor(InByteData, NAME_Zlib, COMPRESS_BiasSpeed);
 
-		DeCompressor << Width;
-		DeCompressor << Height;
-		DeCompressor << PixelFormat8;
-		DeCompressor << Test;*/
-
-		FColor ColorVal;
-		uint32 Counter = 0;
-
-		TempData.AddUninitialized(Test.Num());
-
-		for (uint16 CompColor : Test)
+		if (RenderTargetStore.bUseColorMap)
 		{
-			ColorVal.R = CompColor << 3;
-			ColorVal.G = CompColor >> 5 << 2;
-			ColorVal.B = CompColor >> 11 << 3;
-			ColorVal.A = 0xFF;
-			TempData[Counter++] = ColorVal;
+
 		}
+		else
+		{
+			TArray<FColor> FinalColorData;
+			FinalColorData.AddUninitialized(RenderTargetStore.UnpackedData.Num());
+
+			uint32 Counter = 0;
+			FColor ColorVal;
+			for (uint16 CompColor : RenderTargetStore.UnpackedData)
+			{
+				ColorVal.R = CompColor << 3;
+				ColorVal.G = CompColor >> 5 << 2;
+				ColorVal.B = CompColor >> 11 << 3;
+				ColorVal.A = 0xFF;
+				FinalColorData[Counter++] = ColorVal;
+			}
+
+			// Write this to a texture2d
+			UTexture2D* RenderBase = UTexture2D::CreateTransient(Width, Height, RenderTargetStore.PixelFormat);
+			// Switched to a Memcpy instead of byte by byte transer
+			uint8* MipData = (uint8*)RenderBase->PlatformData->Mips[0].BulkData.Lock(LOCK_READ_WRITE);
+			FMemory::Memcpy(MipData, (void*)FinalColorData.GetData(), Height * Width * 4);
+			RenderBase->PlatformData->Mips[0].BulkData.Unlock();
+
+			//Setting some Parameters for the Texture and finally returning it
+			RenderBase->PlatformData->SetNumSlices(1);
+			RenderBase->NeverStream = true;
+			//Avatar->CompressionSettings = TC_EditorIcon;
+
+			RenderBase->UpdateResource();
+
+			// Then canvas it to the render target
+
+		}
+
+
+		//FColor ColorVal;
+		//uint32 Counter = 0;
+
+		//TempData.AddUninitialized(Test.Num());
+
+
 
 		return true;
 	}
 
 
     UFUNCTION(BlueprintCallable, Category = "RenderTargetManager")
-    void QueueImageStore(UTextureRenderTarget2D * Target) 
+    void QueueImageStore() 
     {
 
-        if (!Target)
+        if (!RenderTarget)
         {
             return;
         }
@@ -510,10 +596,10 @@ public:
 		FRenderDataStore* renderData = new FRenderDataStore();
 
         // Get RenderContext
-        FTextureRenderTargetResource* renderTargetResource = Target->GameThread_GetRenderTargetResource();
+        FTextureRenderTargetResource* renderTargetResource = RenderTarget->GameThread_GetRenderTargetResource();
 
 		renderData->Size2D = renderTargetResource->GetSizeXY();
-        renderData->PixelFormat = Target->GetFormat();
+        renderData->PixelFormat = RenderTarget->GetFormat();
 
         struct FReadSurfaceContext {
             FRenderTarget* SrcRenderTarget;
@@ -651,6 +737,8 @@ public:
 	{
 		Super::BeginPlay();
 
+		InitRenderTarget();
+
 		if(GetNetMode() < ENetMode::NM_Client)
 			GetWorld()->GetTimerManager().SetTimer(NetRelevancyTimer_Handle, this, &UVRRenderTargetManager::UpdateRelevancyMap, PollRelevancyTime, true);
 	}
@@ -672,6 +760,14 @@ public:
 
 		if (GetNetMode() < ENetMode::NM_Client)
 			GetWorld()->GetTimerManager().ClearTimer(NetRelevancyTimer_Handle);
+
+		if (RenderTarget)
+		{
+			RenderTarget->ReleaseResource();
+			RenderTarget = nullptr;
+		}
+
+
     }
 
 protected:
@@ -707,6 +803,12 @@ UVRRenderTargetManager::UVRRenderTargetManager(const FObjectInitializer& ObjectI
 	ColorMap.Add(FColor(255, 238, 51), 13);		// Yellow
 	ColorMap.Add(FColor(233, 222, 187), 14);	// Tan
 	ColorMap.Add(FColor(255, 205, 243), 15);	// Pink
+
+
+	RenderTarget = nullptr;
+	RenderTargetWidth = 100;
+	RenderTargetHeight = 100;
+	ClearColor = FColor::White;
 }
 
 
