@@ -2,6 +2,7 @@
 //#include "Serialization/ArchiveLoadCompressedProxy.h"
 
 #include "GeomTools.h"
+#include "DrawDebugHelpers.h"
 #include "Engine/TextureRenderTarget2D.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Engine/CanvasRenderTarget2D.h"
@@ -264,14 +265,17 @@ public:
 	}
 
 
-	UFUNCTION()
-	void GeneratePolygonsFromBoxOnPlane(FBox InputBox, FRotator BoxRotation, FTransform WorldTransformOfPlane, const FPlane & LocalProjectionPlane, FVector2D PlaneSize)
+	UFUNCTION(BlueprintCallable, Category = "VRRenderTargetManager|UtilityFunctions")
+	bool GenerateTrisFromBoxPlaneIntersection(FBox InputBox, FTransform WorldTransformOfPlane, const FPlane & LocalProjectionPlane, FVector2D PlaneSize, FColor UVColor, TArray<FCanvasUVTri>& OutTris)
 	{
+
+		OutTris.Reset();
+
 		FVector Center = InputBox.GetCenter();
-		FVector Extent = BoxRotation.RotateVector(InputBox.GetExtent());
+		FVector Extent = InputBox.GetExtent();
 
 		Center = WorldTransformOfPlane.InverseTransformPosition(Center);
-		Extent = WorldTransformOfPlane.InverseTransformPosition(Extent);
+		Extent = WorldTransformOfPlane.InverseTransformVector(Extent);
 
 		FVector BoxMin = Center - Extent;
 		FVector BoxMax = Center + Extent;
@@ -362,12 +366,14 @@ public:
 		int CenterCount = 0;
 		for(auto &Edge : EdgeList)
 		{
-
 			if (UKismetMathLibrary::LinePlaneIntersection(Edge.V0, Edge.V1, LocalProjectionPlane, Time, Intersection))
 			{				
-				PlanePoint = FVector::PointPlaneProject(Intersection, LocalProjectionPlane);
-				NewPt.X = (PlanePoint.X + HalfPlane.X) / PlaneSize.X;
-				NewPt.Y = (PlanePoint.Y + HalfPlane.Y) / PlaneSize.Y;
+
+				DrawDebugSphere(GetWorld(), WorldTransformOfPlane.TransformPosition(Intersection), 2.f, 32.f, FColor::Black);
+				PlanePoint = Intersection;
+				//PlanePoint = FVector::PointPlaneProject(Intersection, LocalProjectionPlane);
+				NewPt.X = ((PlanePoint.X + HalfPlane.X) / PlaneSize.X) * RenderTargetWidth;
+				NewPt.Y = ((PlanePoint.Y + HalfPlane.Y) / PlaneSize.Y) * RenderTargetHeight;
 
 				//if (PlanePoint.X >= 0 && PlanePoint.X <= 1.f && PlanePoint.Y >= 0 && PlanePoint.Y <= 1.f)
 				{
@@ -377,6 +383,11 @@ public:
 					CenterCount++;
 				}
 			}
+		}
+
+		if (IntersectionPoints.Num() <= 2)
+		{
+			return false;
 		}
 
 		// Get our center value
@@ -421,6 +432,25 @@ public:
 		};
 
 		IntersectionPoints.Sort(FPointSortCompare(PtCenter));
+
+		FCanvasUVTri Tri;
+		Tri.V0_Color = UVColor;
+		Tri.V1_Color = UVColor;
+		Tri.V2_Color = UVColor;
+
+		OutTris.Reserve(IntersectionPoints.Num() - 2);
+
+		// Now that we have our sorted list, we can generate a tri map from it
+		for (int i = 1; i < IntersectionPoints.Num() - 1; i++)
+		{
+			Tri.V0_Pos = IntersectionPoints[0];
+			Tri.V1_Pos = IntersectionPoints[i];
+			Tri.V2_Pos = IntersectionPoints[i + 1];
+
+			OutTris.Add(Tri);
+		}
+
+		return true;
 
 	}
 
