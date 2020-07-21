@@ -249,14 +249,6 @@ public:
 			{
 				RenderTarget = nullptr;
 			}
-			/*RenderTarget = NewObject<UTextureRenderTarget2D>(this);
-			check(RenderTarget);
-			RenderTarget->RenderTargetFormat = ETextureRenderTargetFormat::RTF_RGBA8;
-			RenderTarget->ClearColor = ClearColor;
-			RenderTarget->bAutoGenerateMips = false;
-			RenderTarget->InitAutoFormat(RenderTargetWidth, RenderTargetHeight);
-			RenderTarget->UpdateResourceImmediate(true);*/
-
 		}
 		else
 		{
@@ -266,93 +258,52 @@ public:
 
 
 	UFUNCTION(BlueprintCallable, Category = "VRRenderTargetManager|UtilityFunctions")
-	bool GenerateTrisFromBoxPlaneIntersection(FBox InputBox, FTransform WorldTransformOfPlane, const FPlane & LocalProjectionPlane, FVector2D PlaneSize, FColor UVColor, TArray<FCanvasUVTri>& OutTris)
+	bool GenerateTrisFromBoxPlaneIntersection(UPrimitiveComponent * PrimToBoxCheck, FTransform WorldTransformOfPlane, const FPlane & LocalProjectionPlane, FVector2D PlaneSize, FColor UVColor, TArray<FCanvasUVTri>& OutTris)
 	{
+
+		if (!PrimToBoxCheck)
+			return false;
 
 		OutTris.Reset();
 
-		FVector Center = InputBox.GetCenter();
-		FVector Extent = InputBox.GetExtent();
-
-		Center = WorldTransformOfPlane.InverseTransformPosition(Center);
-		Extent = WorldTransformOfPlane.InverseTransformVector(Extent);
+		FBoxSphereBounds LocalBounds = PrimToBoxCheck->CalcLocalBounds();
+		FVector Center = LocalBounds.Origin;
+		FVector Extent = LocalBounds.BoxExtent;
+		 
+		// Transform into plane local space from our localspace
+		FTransform LocalTrans = PrimToBoxCheck->GetComponentTransform() * WorldTransformOfPlane.Inverse();
 
 		FVector BoxMin = Center - Extent;
 		FVector BoxMax = Center + Extent;
-
-		TArray<FUtilEdge3D> EdgeList;
-		EdgeList.Reserve(12);	
-
-		FUtilEdge3D EdgeStore;
 		
-		FVector Point1 = BoxMin;
-		FVector Point2 = BoxMax;
-		FVector Point3 = FVector(Point1.X, Point1.Y, Point2.Z);
-		FVector Point4 = FVector(Point1.X, Point2.Y, Point1.Z);
-		FVector Point5 = FVector(Point2.X, Point1.Y, Point1.Z);
-		FVector Point6 = FVector(Point1.X, Point2.Y, Point2.Z);
-		FVector Point7 = FVector(Point2.X, Point1.Y, Point2.Z);
-		FVector Point8 = FVector(Point2.X, Point2.Y, Point1.Z);
+		TArray<FVector> PointList;
+		PointList.AddUninitialized(8); // 8 Is number of points on box
 
-		// Edge1
-		EdgeStore.V0 = Point1;
-		EdgeStore.V1 = Point4;
-		EdgeList.Add(EdgeStore);
+		PointList[0] = LocalTrans.TransformPosition(BoxMin);
+		PointList[1] = LocalTrans.TransformPosition(BoxMax);
+		PointList[2] = LocalTrans.TransformPosition(FVector(BoxMin.X, BoxMin.Y, BoxMax.Z));
+		PointList[3] = LocalTrans.TransformPosition(FVector(BoxMin.X, BoxMax.Y, BoxMin.Z));
+		PointList[4] = LocalTrans.TransformPosition(FVector(BoxMax.X, BoxMin.Y, BoxMin.Z));
+		PointList[5] = LocalTrans.TransformPosition(FVector(BoxMin.X, BoxMax.Y, BoxMax.Z));
+		PointList[6] = LocalTrans.TransformPosition(FVector(BoxMax.X, BoxMin.Y, BoxMax.Z));
+		PointList[7] = LocalTrans.TransformPosition(FVector(BoxMax.X, BoxMax.Y, BoxMin.Z));
 
-		// Edge2
-		EdgeStore.V0 = Point1;
-		EdgeStore.V1 = Point5;
-		EdgeList.Add(EdgeStore);
-
-		// Edge 3
-		EdgeStore.V0 = Point1;
-		EdgeStore.V1 = Point3;
-		EdgeList.Add(EdgeStore);
-
-		// Edge 4
-		EdgeStore.V0 = Point3;
-		EdgeStore.V1 = Point6;
-		EdgeList.Add(EdgeStore);
-
-		// Edge 5
-		EdgeStore.V0 = Point3;
-		EdgeStore.V1 = Point7;
-		EdgeList.Add(EdgeStore);
-
-		// Edge 6
-		EdgeStore.V0 = Point5;
-		EdgeStore.V1 = Point8;
-		EdgeList.Add(EdgeStore);
-
-		// Edge 7
-		EdgeStore.V0 = Point5;
-		EdgeStore.V1 = Point7;
-		EdgeList.Add(EdgeStore);
-
-		// Edge 8
-		EdgeStore.V0 = Point7;
-		EdgeStore.V1 = Point2;
-		EdgeList.Add(EdgeStore);
-
-		// Edge 9
-		EdgeStore.V0 = Point2;
-		EdgeStore.V1 = Point8;
-		EdgeList.Add(EdgeStore);
-
-		// Edge 10
-		EdgeStore.V0 = Point2;
-		EdgeStore.V1 = Point6;
-		EdgeList.Add(EdgeStore);
-
-		// Edge 11
-		EdgeStore.V0 = Point6;
-		EdgeStore.V1 = Point4;
-		EdgeList.Add(EdgeStore);
-
-		// Edge 12
-		EdgeStore.V0 = Point4;
-		EdgeStore.V1 = Point8;
-		EdgeList.Add(EdgeStore);
+		// List of edges to check, 12 total, 2 points per edge
+		int EdgeList[24] = 
+		{ 
+			0, 3, 
+			0, 4,
+			0, 2,
+			2, 5,
+			2, 6,
+			4, 7,
+			4, 6,
+			6, 1,
+			1, 7,
+			1, 5,
+			5, 3,
+			3, 7
+		};
 
 		TArray<FVector2D> IntersectionPoints;
 
@@ -364,24 +315,20 @@ public:
 		FVector2D NewPt;
 		FVector PlanePoint;
 		int CenterCount = 0;
-		for(auto &Edge : EdgeList)
+		for(int i=0; i < 24; i+=2)
 		{
-			if (UKismetMathLibrary::LinePlaneIntersection(Edge.V0, Edge.V1, LocalProjectionPlane, Time, Intersection))
-			{				
 
-				DrawDebugSphere(GetWorld(), WorldTransformOfPlane.TransformPosition(Intersection), 2.f, 32.f, FColor::Black);
+			if (UKismetMathLibrary::LinePlaneIntersection(PointList[EdgeList[i]], PointList[EdgeList[i+1]], LocalProjectionPlane, Time, Intersection))
+			{				
+				//DrawDebugSphere(GetWorld(), WorldTransformOfPlane.TransformPosition(Intersection), 2.f, 32.f, FColor::Black);
 				PlanePoint = Intersection;
-				//PlanePoint = FVector::PointPlaneProject(Intersection, LocalProjectionPlane);
+				
 				NewPt.X = ((PlanePoint.X + HalfPlane.X) / PlaneSize.X) * RenderTargetWidth;
 				NewPt.Y = ((PlanePoint.Y + HalfPlane.Y) / PlaneSize.Y) * RenderTargetHeight;
 
-				//if (PlanePoint.X >= 0 && PlanePoint.X <= 1.f && PlanePoint.Y >= 0 && PlanePoint.Y <= 1.f)
-				{
-					//PlanePoint.ClampAxes(0.f, 1.f);
-					IntersectionPoints.Add(NewPt);
-					PtCenter += NewPt;
-					CenterCount++;
-				}
+				IntersectionPoints.Add(NewPt);
+				PtCenter += NewPt;
+				CenterCount++;
 			}
 		}
 
@@ -440,7 +387,7 @@ public:
 
 		OutTris.Reserve(IntersectionPoints.Num() - 2);
 
-		// Now that we have our sorted list, we can generate a tri map from it
+		// Now that we have our sorted list, we can generate a tri map from it, just doing a Fan from first to last
 		for (int i = 1; i < IntersectionPoints.Num() - 1; i++)
 		{
 			Tri.V0_Pos = IntersectionPoints[0];
@@ -451,7 +398,6 @@ public:
 		}
 
 		return true;
-
 	}
 
 	UFUNCTION()
