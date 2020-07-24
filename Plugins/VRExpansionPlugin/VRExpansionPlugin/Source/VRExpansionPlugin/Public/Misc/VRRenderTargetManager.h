@@ -1,18 +1,23 @@
-//#include "Serialization/ArchiveSaveCompressedProxy.h"
-//#include "Serialization/ArchiveLoadCompressedProxy.h"
+#include "Serialization/ArchiveSaveCompressedProxy.h"
+#include "Serialization/ArchiveLoadCompressedProxy.h"
 
+#include "RenderUtils.h"
 #include "GeomTools.h"
 #include "DrawDebugHelpers.h"
 #include "Engine/TextureRenderTarget2D.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "Kismet/KismetRenderingLibrary.h"
 #include "Engine/CanvasRenderTarget2D.h"
 #include "Net/Core/PushModel/PushModel.h"
 #include "TimerManager.h"
-//#include "ImageWrapper/Public/IImageWrapper.h"
-//#include "ImageWrapper/Public/IImageWrapperModule.h"
+#include "GameFramework/PlayerController.h"
+#include "Engine/Canvas.h"
+#include "ImageWrapper/Public/IImageWrapper.h"
+#include "ImageWrapper/Public/IImageWrapperModule.h"
 
 #include "VRRenderTargetManager.generated.h"
 
+class UVRRenderTargetManager;
 
 // #TODO: Dirty rects so don't have to send entire texture?
 
@@ -33,7 +38,6 @@ namespace RLE_Funcs
 		RLE_ContinueRun24 = 9
 	};
 
-	// #TODO: Think about endianess relevancy with the RLE encoding
 	template <typename DataType>
 	static bool RLEEncodeLine(TArray<DataType>* LineToEncode, TArray<uint8>* EncodedLine);
 
@@ -52,7 +56,6 @@ namespace RLE_Funcs
 	static inline void RLEWriteRunFlag(uint32 Count, uint8** loc, TArray<DataType>& Data, bool bCompressed);
 }
 
-
 USTRUCT(BlueprintType, Category = "VRExpansionLibrary")
 struct VREXPANSIONPLUGIN_API FBPVRReplicatedTextureStore
 {
@@ -65,7 +68,7 @@ public:
 
 	UPROPERTY()
 		TArray<uint8> PackedData;
-	TArray<uint16> UnpackedData;
+	TArray<uint8> UnpackedData;
 
 	UPROPERTY()
 	uint32 Width;
@@ -75,6 +78,9 @@ public:
 
 	UPROPERTY()
 		bool bUseColorMap;
+
+	UPROPERTY()
+		bool bIsZipped;
 
 	EPixelFormat PixelFormat;
 
@@ -86,19 +92,78 @@ public:
 		Height = 0;
 		PixelFormat = (EPixelFormat)0;
 		bUseColorMap = false;
+		bIsZipped = false;
 	}
 
 	void PackData()
 	{
-		RLE_Funcs::RLEEncodeBuffer<uint16>(UnpackedData.GetData(), UnpackedData.Num(), &PackedData);
-		UnpackedData.Reset();
+		if (UnpackedData.Num() > 0)
+		{
+
+			IImageWrapperModule& ImageWrapperModule = FModuleManager::LoadModuleChecked<IImageWrapperModule>(FName("ImageWrapper"));
+			TSharedPtr<IImageWrapper> imageWrapper = ImageWrapperModule.CreateImageWrapper(EImageFormat::JPEG);
+
+			imageWrapper->SetRaw(UnpackedData.GetData(), UnpackedData.Num(), Width, Height, ERGBFormat::RGBA, 8);
+			const TArray64<uint8>& ImgData = imageWrapper->GetCompressed(1);
+
+
+			PackedData.Reset(ImgData.Num());
+			PackedData.AddUninitialized(ImgData.Num());
+			FMemory::Memcpy(PackedData.GetData(), ImgData.GetData(), ImgData.Num());
+
+			/*TArray<uint8> TmpPacked;
+			RLE_Funcs::RLEEncodeBuffer<uint16>(UnpackedData.GetData(), UnpackedData.Num(), &TmpPacked);
+			UnpackedData.Reset();
+
+			if (TmpPacked.Num() > 512)
+			{	
+				FArchiveSaveCompressedProxy Compressor(PackedData, NAME_Zlib, COMPRESS_BiasSpeed);
+				Compressor << TmpPacked;
+				Compressor.Flush();
+				bIsZipped = true;
+			}
+			else
+			{
+				PackedData = TmpPacked;
+				bIsZipped = false;
+			}*/
+		}
 	}
 
 
 	void UnPackData()
 	{
-		RLE_Funcs::RLEDecodeLine<uint16>(&PackedData, &UnpackedData, true);
-		PackedData.Reset();
+		if (PackedData.Num() > 0)
+		{
+			IImageWrapperModule& ImageWrapperModule = FModuleManager::LoadModuleChecked<IImageWrapperModule>(FName("ImageWrapper"));
+			TSharedPtr<IImageWrapper> imageWrapper = ImageWrapperModule.CreateImageWrapper(EImageFormat::JPEG);
+			
+
+			if (imageWrapper.IsValid() && (PackedData.Num() > 0) && imageWrapper->SetCompressed(PackedData.GetData(), PackedData.Num()))
+			{
+				Width = imageWrapper->GetWidth();
+				Height = imageWrapper->GetHeight();
+
+				if (imageWrapper->GetRaw(ERGBFormat::BGRA, 8, UnpackedData))
+				{
+					//bSucceeded = true;
+				}
+			}
+
+			/*if (bIsZipped)
+			{
+				TArray<uint8> RLEEncodedData;
+				FArchiveLoadCompressedProxy DataArchive(PackedData, NAME_Zlib);
+				DataArchive << RLEEncodedData;
+				RLE_Funcs::RLEDecodeLine<uint16>(&RLEEncodedData, &UnpackedData, true);
+			}
+			else
+			{
+				RLE_Funcs::RLEDecodeLine<uint16>(&PackedData, &UnpackedData, true);
+			}*/
+			
+			PackedData.Reset();
+		}
 	}
 
 
@@ -109,22 +174,22 @@ public:
 		bOutSuccess = true;
 
 		Ar.SerializeBits(&bUseColorMap, 1);
-		Ar.SerializeIntPacked(Width);
-		Ar.SerializeIntPacked(Height);
+		Ar.SerializeBits(&bIsZipped, 1);
+		//Ar.SerializeIntPacked(Width);
+		//Ar.SerializeIntPacked(Height);
 		Ar.SerializeBits(&PixelFormat, 8);
 
 		// Serialize the raw transaction
+
+		//Ar.SerializeIntPacked(UncompressedBufferSize);
+
+		Ar << PackedData;
+
 		uint32 UncompressedBufferSize = PackedData.Num();
-		Ar.SerializeIntPacked(UncompressedBufferSize);
-		if (UncompressedBufferSize > 0)
+		/*if (UncompressedBufferSize > 0)
 		{
 			Ar.SerializeCompressed(PackedData.GetData(), UncompressedBufferSize, NAME_Zlib, ECompressionFlags::COMPRESS_BiasSpeed);
-		}
-
-		if (Ar.IsLoading() && UncompressedBufferSize == 0)
-		{
-			PackedData.Empty();
-		}
+		}*/
 
 		return bOutSuccess;
 	}
@@ -155,9 +220,6 @@ struct FRenderDataStore {
 	}
 };
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FVROnRenderTargetSaved, FBPVRReplicatedTextureStore, ColorData);
-
-
 /**
 * This class is used as a proxy to send owner only RPCs
 */
@@ -169,17 +231,13 @@ class VREXPANSIONPLUGIN_API ARenderTargetReplicationProxy : public AActor
 public:
 	ARenderTargetReplicationProxy(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
 
+
+	UFUNCTION(Reliable, Client, WithValidation)
+		void ReceiveTexture(const FBPVRReplicatedTextureStore&TextureData, UVRRenderTargetManager* OwningManager);
+
 };
 
-ARenderTargetReplicationProxy::ARenderTargetReplicationProxy(const FObjectInitializer& ObjectInitializer)
-	: Super(ObjectInitializer)
-{
-	bOnlyRelevantToOwner = true;
-	bNetUseOwnerRelevancy = true;
-	bReplicates = true;
-	PrimaryActorTick.bCanEverTick = false;
-	SetReplicateMovement(false);
-}
+
 
 USTRUCT()
 struct FClientRepData {
@@ -218,6 +276,7 @@ class VREXPANSIONPLUGIN_API UVRRenderTargetManager : public UActorComponent
 public:
 
     UVRRenderTargetManager(const FObjectInitializer& ObjectInitializer);
+	bool bIsStoringImage;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "RenderTargetManager")
 		bool bInitiallyReplicateTexture;
@@ -250,20 +309,17 @@ public:
 
 	FTimerHandle NetRelevancyTimer_Handle;
 
-	UPROPERTY(BlueprintAssignable, Category = "RenderTargetManager")
-		FVROnRenderTargetSaved OnRenderTargetFinishedSave;
-
-	UPROPERTY(Replicated, ReplicatedUsing = OnRep_TextureData)
+	UPROPERTY()
 		FBPVRReplicatedTextureStore RenderTargetStore;
 
-	UFUNCTION()
+	/*UFUNCTION()
 		virtual void OnRep_TextureData()
 	{
 		DeCompressRenderTarget2D();
 		// Write to buffer now
-	}
+	}*/
 
-	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override
+	/*virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override
 	{
 		Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
@@ -275,7 +331,7 @@ public:
 #else
 		DOREPLIFETIME(UVRRenderTargetManager, RenderTargetStore);
 #endif
-	}
+	}*/
 
 
 	void InitRenderTarget()
@@ -306,7 +362,6 @@ public:
 			RenderTarget =  nullptr;
 		}
 	}
-
 
 	UFUNCTION(BlueprintCallable, Category = "VRRenderTargetManager|UtilityFunctions")
 	bool GenerateTrisFromBoxPlaneIntersection(UPrimitiveComponent * PrimToBoxCheck, FTransform WorldTransformOfPlane, const FPlane & LocalProjectionPlane, FVector2D PlaneSize, FColor UVColor, TArray<FCanvasUVTri>& OutTris)
@@ -477,6 +532,9 @@ public:
 			}
 		}
 
+
+		bool bHadDirtyActors = false;
+
 		for (FConstPlayerControllerIterator PCIt = GetWorld()->GetPlayerControllerIterator(); PCIt; ++PCIt)
 		{
 			if (APlayerController* PC = PCIt->Get())
@@ -512,7 +570,7 @@ public:
 								ClientRepData.ReplicationProxy = RenderProxy;
 								ClientRepData.bIsRelevant = true;
 								ClientRepData.bIsDirty = true;
-
+								bHadDirtyActors = true;
 								NetRelevancyLog.Add(ClientRepData);
 							}
 							// Update this client with the new data
@@ -523,6 +581,7 @@ public:
 							{
 								RepData->bIsRelevant = true;
 								RepData->bIsDirty = true;
+								bHadDirtyActors = true;
 							}
 						}
 					}
@@ -530,52 +589,15 @@ public:
 
 			}
 		}
-	}
 
-	// This function blocks the game thread and WILL be slow
-	UFUNCTION(BlueprintCallable, Category = "RenderTargetManager")
-	bool CompressRenderTarget2D(TArray<uint8>& OutByteData)
-	{
-		if (!RenderTarget)
-			return false;
-
-		TArray<FColor> SurfData;
-		FRenderTarget* RenderTarget2D = RenderTarget->GameThread_GetRenderTargetResource();
-		RenderTarget2D->ReadPixels(SurfData);
-
-		TArray<uint16> Test;
-		Test.AddUninitialized(SurfData.Num());
-
-		uint16 ColorVal = 0;
-		uint32 Counter = 0;
-
-		for (FColor col : SurfData)
+		if (bHadDirtyActors)
 		{
-			ColorVal = col.R >> 3 | (col.G & 0xFC) << 3 | (col.B & 0xF8) << 8;
-			Test[Counter++] = ColorVal;
+			QueueImageStore();
 		}
-
-		FIntPoint Size2D = RenderTarget2D->GetSizeXY();
-		int32 Width = Size2D.X;
-		int32 Height = Size2D.Y;
-		EPixelFormat PixelFormat = RenderTarget->GetFormat();
-		uint8 PixelFormat8 = (uint8)PixelFormat;
-		int32 Size = 0;
-		TArray<uint8> TempData;
-
-		OutByteData.Reset();
-		/*FArchiveSaveCompressedProxy Compressor(OutByteData, NAME_Zlib, COMPRESS_BiasSpeed);
-
-		Compressor << Width;
-		Compressor << Height;
-		Compressor << PixelFormat8;
-		Compressor << Test;
-
-		Compressor.Flush();*/
-		return true;
 	}
 
-	UFUNCTION(BlueprintCallable, Category = "RenderTargetManager")
+
+	//UFUNCTION(BlueprintCallable, Category = "RenderTargetManager")
 		bool DeCompressRenderTarget2D()
 	{
 		if (!RenderTarget)
@@ -589,17 +611,13 @@ public:
 		EPixelFormat PixelFormat = RenderTargetStore.PixelFormat;
 		uint8 PixelFormat8 = 0;
 
-		TArray<FColor> TempData;
-		TArray<uint16> Test;
-
-
 		if (RenderTargetStore.bUseColorMap)
 		{
 
 		}
 		else
 		{
-			TArray<FColor> FinalColorData;
+			/*TArray<FColor> FinalColorData;
 			FinalColorData.AddUninitialized(RenderTargetStore.UnpackedData.Num());
 
 			uint32 Counter = 0;
@@ -611,33 +629,90 @@ public:
 				ColorVal.B = CompColor >> 11 << 3;
 				ColorVal.A = 0xFF;
 				FinalColorData[Counter++] = ColorVal;
-			}
+			}*/
 
 			// Write this to a texture2d
-			UTexture2D* RenderBase = UTexture2D::CreateTransient(Width, Height, RenderTargetStore.PixelFormat);
+			UTexture2D* RenderBase = UTexture2D::CreateTransient(Width, Height, PF_R8G8B8A8);// RenderTargetStore.PixelFormat);
+
 			// Switched to a Memcpy instead of byte by byte transer
 			uint8* MipData = (uint8*)RenderBase->PlatformData->Mips[0].BulkData.Lock(LOCK_READ_WRITE);
-			FMemory::Memcpy(MipData, (void*)FinalColorData.GetData(), Height * Width * 4);
+			FMemory::Memcpy(MipData, (void*)RenderTargetStore.UnpackedData.GetData(), RenderTargetStore.UnpackedData.Num());
 			RenderBase->PlatformData->Mips[0].BulkData.Unlock();
 
 			//Setting some Parameters for the Texture and finally returning it
 			RenderBase->PlatformData->SetNumSlices(1);
 			RenderBase->NeverStream = true;
+			RenderBase->SRGB = false;
 			//Avatar->CompressionSettings = TC_EditorIcon;
 
 			RenderBase->UpdateResource();
 
-			// Then canvas it to the render target
+			/*uint32 size = sizeof(FColor);
+
+			uint8* pData = new uint8[FinalColorData.Num() * sizeof(FColor)];
+			FMemory::Memcpy(pData, (void*)FinalColorData.GetData(), FinalColorData.Num() * sizeof(FColor));
+
+			UTexture2D* TexturePtr = RenderBase;
+			const uint8* TextureData = pData;
+			ENQUEUE_RENDER_COMMAND(VRRenderTargetManager_FillTexture)(
+				[TexturePtr, TextureData](FRHICommandList& RHICmdList)
+				{
+					FUpdateTextureRegion2D region;
+					region.SrcX = 0;
+					region.SrcY = 0;
+					region.DestX = 0;
+					region.DestY = 0;
+					region.Width = TexturePtr->GetSizeX();// TEX_WIDTH;
+					region.Height = TexturePtr->GetSizeY();//TEX_HEIGHT;
+
+					FTexture2DResource* resource = (FTexture2DResource*)TexturePtr->Resource;
+					RHIUpdateTexture2D(resource->GetTexture2DRHI(), 0, region, region.Width * GPixelFormats[TexturePtr->GetPixelFormat()].BlockBytes, TextureData);
+					delete[] TextureData;
+				});*/
+
+			FVector2D CanvasSize;
+			FDrawToRenderTargetContext Context;
+
+			// Using this as it saves custom implementation
+
+			UWorld *World = GetWorld();
+
+			// Reference to the Render Target resource
+			FTextureRenderTargetResource* RenderTargetResource = RenderTarget->GameThread_GetRenderTargetResource();
+
+			// Retrieve a UCanvas form the world to avoid creating a new one each time
+			UCanvas* CanvasToUse = World->GetCanvasForDrawMaterialToRenderTarget();
+
+			// Creates a new FCanvas for rendering
+			FCanvas RenderCanvas(
+				RenderTargetResource,
+				nullptr,
+				World,
+				World->FeatureLevel);
+
+			// Setup the canvas with the FCanvas reference
+			CanvasToUse->Init(RenderTarget->SizeX, RenderTarget->SizeY, nullptr, &RenderCanvas);
+			CanvasToUse->Update();
+
+			if (CanvasToUse)
+			{
+				FTexture* RenderTextureResource = (RenderBase) ? RenderBase->Resource : GWhiteTexture;
+				FCanvasTileItem TileItem(FVector2D(0, 0), RenderTextureResource, FVector2D(RenderTarget->SizeX, RenderTarget->SizeY), FVector2D(0, 0), FVector2D(1.f, 1.f), FLinearColor::White);
+				TileItem.BlendMode = FCanvas::BlendToSimpleElementBlend(EBlendMode::BLEND_Opaque);
+				CanvasToUse->DrawItem(TileItem);
+
+
+				// Perform the drawing
+				RenderCanvas.Flush_GameThread();
+
+				// Cleanup the FCanvas reference, to delete it
+				CanvasToUse->Canvas = NULL;
+			}
+
+			RenderBase->ReleaseResource();
+			RenderBase->MarkPendingKill();
 
 		}
-
-
-		//FColor ColorVal;
-		//uint32 Counter = 0;
-
-		//TempData.AddUninitialized(Test.Num());
-
-
 
 		return true;
 	}
@@ -647,10 +722,12 @@ public:
     void QueueImageStore() 
     {
 
-        if (!RenderTarget)
+        if (!RenderTarget || bIsStoringImage)
         {
             return;
         }
+
+		bIsStoringImage = true;
 
 		// Init new RenderRequest
 		FRenderDataStore* renderData = new FRenderDataStore();
@@ -698,7 +775,6 @@ public:
 
 	virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override
 	{
-
 		// Read pixels once RenderFence is completed
         if (RenderDataQueue.IsEmpty())
         {
@@ -714,79 +790,53 @@ public:
             {
                 if (nextRenderData->RenderFence.IsFenceComplete())
                 {				
+					bIsStoringImage = false;
 					RenderTargetStore.Reset();
-					RenderTargetStore.UnpackedData.AddUninitialized(nextRenderData->ColorData.Num());
+					uint32 SizeOfData = nextRenderData->ColorData.Num() * sizeof(FColor);
+
+					RenderTargetStore.UnpackedData.Reset(SizeOfData);
+					RenderTargetStore.UnpackedData.AddUninitialized(SizeOfData);
+					FMemory::Memcpy(RenderTargetStore.UnpackedData.GetData(), (void*)nextRenderData->ColorData.GetData(), SizeOfData);
 
 					uint16 ColorVal = 0;
 					uint32 Counter = 0;
 					
 					// Convert to 16bit color
-					for (FColor col : nextRenderData->ColorData)
+				/*	for (FColor col : nextRenderData->ColorData)
 					{
 						ColorVal = (col.R >> 3) << 11 | (col.G >> 2) << 5 | (col.B >> 3);
 						RenderTargetStore.UnpackedData[Counter++] = ColorVal;
+					}*/
 
-						if (col.R != 255)
-						{
-							int gg = 0;
-						}
-
-						col.R = ColorVal >> 11 << 3;
-						col.G = ColorVal >> 5 << 2;
-						col.B = ColorVal << 3;
-						col.A = 0xFF;
-					}
-
-					RenderTargetStore.PackData();
 					FIntPoint Size2D = nextRenderData->Size2D;
 					RenderTargetStore.Width = Size2D.X;
 					RenderTargetStore.Height = Size2D.Y;
 					RenderTargetStore.PixelFormat = nextRenderData->PixelFormat;
+					RenderTargetStore.PackData();
+
 
 #if WITH_PUSH_MODEL
 					MARK_PROPERTY_DIRTY_FROM_NAME(UVRRenderTargetManager, RenderTargetStore, this);
 #endif
 
-
-					/*for (uint16 CompColor : Test)
-					{
-						ColorVal.R = CompColor << 3;
-						ColorVal.G = CompColor >> 5 << 2;
-						ColorVal.B = CompColor >> 11 << 3;
-						ColorVal.A = 0xFF;
-						TempData[Counter++] = ColorVal;
-					}*/
-
-					/*IImageWrapperModule& ImageWrapperModule = FModuleManager::LoadModuleChecked<IImageWrapperModule>(FName("ImageWrapper"));
-					TSharedPtr<IImageWrapper> imageWrapper = ImageWrapperModule.CreateImageWrapper(EImageFormat::JPEG);
-
-					imageWrapper->SetRaw(nextRenderData->ColorData.GetData(), nextRenderData->ColorData.GetAllocatedSize(), nextRenderData->Size2D.X, nextRenderData->Size2D.Y, ERGBFormat::RGBA, 8);
-					const TArray64<uint8>& ImgData = imageWrapper->GetCompressed(0);
-					*/
-					// 10x the byte cost of ZLib and color downscaling
-
-					//TArray<uint8> OutByteData;
 					
-					// Not compressing it here, doing it during serialization now instead
-					/*
-					FArchiveSaveCompressedProxy Compressor(OutByteData, NAME_Zlib, COMPRESS_BiasSpeed);
-
-					Compressor << Width;
-					Compressor << Height;
-					Compressor << PixelFormat8;
-					Compressor << RLEEncodedValue;
-
-					Compressor.Flush();
-					*/
-
                     // Delete the first element from RenderQueue
                     RenderDataQueue.Pop();
                     delete nextRenderData;
 
-					if (OnRenderTargetFinishedSave.IsBound())
+					for (int i = NetRelevancyLog.Num() - 1; i >= 0; i--)
 					{
-						OnRenderTargetFinishedSave.Broadcast(RenderTargetStore);
+						if (NetRelevancyLog[i].bIsDirty && NetRelevancyLog[i].PC.IsValid() && !NetRelevancyLog[i].PC->IsLocalController())
+						{
+							if (NetRelevancyLog[i].ReplicationProxy.IsValid())
+							{
+								NetRelevancyLog[i].ReplicationProxy->ReceiveTexture(RenderTargetStore, this);
+								NetRelevancyLog[i].bIsDirty = false;
+							}
+						}
 					}
+
+
                 }
             }
 		}
@@ -845,44 +895,6 @@ protected:
 	TQueue<FRenderDataStore*> RenderDataQueue;
 
 };
-
-UVRRenderTargetManager::UVRRenderTargetManager(const FObjectInitializer& ObjectInitializer)
-    : Super(ObjectInitializer)
-{
-
-	PrimaryComponentTick.bCanEverTick = true;
-	PrimaryComponentTick.bStartWithTickEnabled = true;
-
-	PollRelevancyTime = 0.1f;
-
-	// http://alumni.media.mit.edu/~wad/color/palette.html
-
-	ColorMap.Reserve(16);
-	ColorMap.Add(FColor::Black, 0);
-	ColorMap.Add(FColor::White, 1);
-	ColorMap.Add(FColor(87, 87, 87), 2);		// DK Gray
-	ColorMap.Add(FColor(173, 35, 35), 3);		// Red
-	ColorMap.Add(FColor(42, 75, 215), 4);		// Blue
-	ColorMap.Add(FColor(29, 105, 20), 5);		// Green
-	ColorMap.Add(FColor(129, 74, 125), 6);		// Brown
-	ColorMap.Add(FColor(129, 38, 192), 7);		// Purple
-	ColorMap.Add(FColor(160, 160, 160), 8);		// Light Gray
-	ColorMap.Add(FColor(129, 197, 122), 9);		// Light Green
-	ColorMap.Add(FColor(157, 175, 255), 10);	// Light Blue
-	ColorMap.Add(FColor(41, 208, 208), 11);		// Cyan
-	ColorMap.Add(FColor(255, 146, 51), 12);		// Orange
-	ColorMap.Add(FColor(255, 238, 51), 13);		// Yellow
-	ColorMap.Add(FColor(233, 222, 187), 14);	// Tan
-	ColorMap.Add(FColor(255, 205, 243), 15);	// Pink
-
-
-	RenderTarget = nullptr;
-	RenderTargetWidth = 100;
-	RenderTargetHeight = 100;
-	ClearColor = FColor::White;
-
-	bInitiallyReplicateTexture = false;
-}
 
 
 // Followed by a count of the following voxels
