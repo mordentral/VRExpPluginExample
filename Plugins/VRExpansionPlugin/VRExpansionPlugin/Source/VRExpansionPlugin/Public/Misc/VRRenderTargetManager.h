@@ -12,8 +12,8 @@
 #include "TimerManager.h"
 #include "GameFramework/PlayerController.h"
 #include "Engine/Canvas.h"
-#include "ImageWrapper/Public/IImageWrapper.h"
-#include "ImageWrapper/Public/IImageWrapperModule.h"
+//#include "ImageWrapper/Public/IImageWrapper.h"
+//#include "ImageWrapper/Public/IImageWrapperModule.h"
 
 #include "VRRenderTargetManager.generated.h"
 
@@ -68,7 +68,7 @@ public:
 
 	UPROPERTY()
 		TArray<uint8> PackedData;
-	TArray<uint8> UnpackedData;
+	TArray<uint16> UnpackedData;
 
 	UPROPERTY()
 	uint32 Width;
@@ -100,8 +100,8 @@ public:
 		if (UnpackedData.Num() > 0)
 		{
 
-			IImageWrapperModule& ImageWrapperModule = FModuleManager::LoadModuleChecked<IImageWrapperModule>(FName("ImageWrapper"));
-			TSharedPtr<IImageWrapper> imageWrapper = ImageWrapperModule.CreateImageWrapper(EImageFormat::JPEG);
+			/*IImageWrapperModule& ImageWrapperModule = FModuleManager::LoadModuleChecked<IImageWrapperModule>(FName("ImageWrapper"));
+			TSharedPtr<IImageWrapper> imageWrapper = ImageWrapperModule.CreateImageWrapper(EImageFormat::PNG);
 
 			imageWrapper->SetRaw(UnpackedData.GetData(), UnpackedData.Num(), Width, Height, ERGBFormat::RGBA, 8);
 			const TArray64<uint8>& ImgData = imageWrapper->GetCompressed(1);
@@ -109,9 +109,9 @@ public:
 
 			PackedData.Reset(ImgData.Num());
 			PackedData.AddUninitialized(ImgData.Num());
-			FMemory::Memcpy(PackedData.GetData(), ImgData.GetData(), ImgData.Num());
+			FMemory::Memcpy(PackedData.GetData(), ImgData.GetData(), ImgData.Num());*/
 
-			/*TArray<uint8> TmpPacked;
+			TArray<uint8> TmpPacked;
 			RLE_Funcs::RLEEncodeBuffer<uint16>(UnpackedData.GetData(), UnpackedData.Num(), &TmpPacked);
 			UnpackedData.Reset();
 
@@ -126,7 +126,7 @@ public:
 			{
 				PackedData = TmpPacked;
 				bIsZipped = false;
-			}*/
+			}
 		}
 	}
 
@@ -135,8 +135,8 @@ public:
 	{
 		if (PackedData.Num() > 0)
 		{
-			IImageWrapperModule& ImageWrapperModule = FModuleManager::LoadModuleChecked<IImageWrapperModule>(FName("ImageWrapper"));
-			TSharedPtr<IImageWrapper> imageWrapper = ImageWrapperModule.CreateImageWrapper(EImageFormat::JPEG);
+			/*IImageWrapperModule& ImageWrapperModule = FModuleManager::LoadModuleChecked<IImageWrapperModule>(FName("ImageWrapper"));
+			TSharedPtr<IImageWrapper> imageWrapper = ImageWrapperModule.CreateImageWrapper(EImageFormat::PNG);
 			
 
 			if (imageWrapper.IsValid() && (PackedData.Num() > 0) && imageWrapper->SetCompressed(PackedData.GetData(), PackedData.Num()))
@@ -148,9 +148,9 @@ public:
 				{
 					//bSucceeded = true;
 				}
-			}
+			}*/
 
-			/*if (bIsZipped)
+			if (bIsZipped)
 			{
 				TArray<uint8> RLEEncodedData;
 				FArchiveLoadCompressedProxy DataArchive(PackedData, NAME_Zlib);
@@ -160,7 +160,7 @@ public:
 			else
 			{
 				RLE_Funcs::RLEDecodeLine<uint16>(&PackedData, &UnpackedData, true);
-			}*/
+			}
 			
 			PackedData.Reset();
 		}
@@ -175,8 +175,8 @@ public:
 
 		Ar.SerializeBits(&bUseColorMap, 1);
 		Ar.SerializeBits(&bIsZipped, 1);
-		//Ar.SerializeIntPacked(Width);
-		//Ar.SerializeIntPacked(Height);
+		Ar.SerializeIntPacked(Width);
+		Ar.SerializeIntPacked(Height);
 		Ar.SerializeBits(&PixelFormat, 8);
 
 		// Serialize the raw transaction
@@ -231,9 +231,55 @@ class VREXPANSIONPLUGIN_API ARenderTargetReplicationProxy : public AActor
 public:
 	ARenderTargetReplicationProxy(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
 
+	UPROPERTY(Replicated)
+		TWeakObjectPtr<UVRRenderTargetManager> OwningManager;
+
+	FBPVRReplicatedTextureStore TextureStore;
+	
+	UPROPERTY(Transient)
+		int32 BlobNum;
+
+	void SendInitMessage();
+
+	UFUNCTION()
+	void SendNextDataBlob();
+
+	FTimerHandle SendTimer_Handle;
+
+	// Maximum size of texture blobs to use for sending (size of chunks that it gets broken down into)
+	UPROPERTY()
+		int32 TextureBlobSize;
+
+	// Maximum bytes per second to send, you will want to play around with this and the
+	// MaxClientRate settings in config in order to balance the bandwidth and avoid saturation
+	// If you raise this above the max replication size of a 65k byte size then you will need
+	// To adjust the max size in engine network settings.
+	UPROPERTY()
+		int32 MaxBytesPerSecondRate;
+
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override
+	{
+		if(SendTimer_Handle.IsValid())
+			GetWorld()->GetTimerManager().ClearTimer(SendTimer_Handle);
+
+		Super::EndPlay(EndPlayReason);
+	}
+
 
 	UFUNCTION(Reliable, Client, WithValidation)
-		void ReceiveTexture(const FBPVRReplicatedTextureStore&TextureData, UVRRenderTargetManager* OwningManager);
+		void InitTextureSend(int32 Width, int32 Height, int32 TotalDataCount, int32 BlobCount, EPixelFormat PixelFormat, bool bIsZipped);
+
+	UFUNCTION(Reliable, Server, WithValidation)
+		void Ack_InitTextureSend(int32 TotalDataCount);
+
+	UFUNCTION(Reliable, Client, WithValidation)
+		void ReceiveTextureBlob(const TArray<uint8>& TextureBlob, int32 LocationInData, int32 BlobCount);
+
+	UFUNCTION(Reliable, Server, WithValidation)
+		void Ack_ReceiveTextureBlob(int32 BlobCount);
+
+	UFUNCTION(Reliable, Client, WithValidation)
+		void ReceiveTexture(const FBPVRReplicatedTextureStore&TextureData);
 
 };
 
@@ -280,6 +326,17 @@ public:
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "RenderTargetManager")
 		bool bInitiallyReplicateTexture;
+
+	// Maximum size of texture blobs to use for sending (size of chunks that it gets broken down into)
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "RenderTargetManager")
+		int32 TextureBlobSize;
+
+	// Maximum bytes per second to send, you will want to play around with this and the
+	// MaxClientRate settings in config in order to balance the bandwidth and avoid saturation
+	// If you raise this above the max replication size of a 65k byte size then you will need
+	// To adjust the max size in engine network settings.
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "RenderTargetManager")
+		int32 MaxBytesPerSecondRate;
 
 	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "RenderTargetManager")
 		UCanvasRenderTarget2D* RenderTarget;
@@ -560,6 +617,9 @@ public:
 							SpawnParams.Owner = PC;
 							FTransform NewTransform = this->GetOwner()->GetActorTransform();
 							ARenderTargetReplicationProxy* RenderProxy = GetWorld()->SpawnActor<ARenderTargetReplicationProxy>(ARenderTargetReplicationProxy::StaticClass(), NewTransform, SpawnParams);
+							RenderProxy->OwningManager = this;
+							RenderProxy->MaxBytesPerSecondRate = MaxBytesPerSecondRate;
+							RenderProxy->TextureBlobSize = TextureBlobSize;
 
 							if (RenderProxy)
 							{
@@ -617,7 +677,7 @@ public:
 		}
 		else
 		{
-			/*TArray<FColor> FinalColorData;
+			TArray<FColor> FinalColorData;
 			FinalColorData.AddUninitialized(RenderTargetStore.UnpackedData.Num());
 
 			uint32 Counter = 0;
@@ -629,14 +689,14 @@ public:
 				ColorVal.B = CompColor >> 11 << 3;
 				ColorVal.A = 0xFF;
 				FinalColorData[Counter++] = ColorVal;
-			}*/
+			}
 
 			// Write this to a texture2d
 			UTexture2D* RenderBase = UTexture2D::CreateTransient(Width, Height, PF_R8G8B8A8);// RenderTargetStore.PixelFormat);
 
 			// Switched to a Memcpy instead of byte by byte transer
 			uint8* MipData = (uint8*)RenderBase->PlatformData->Mips[0].BulkData.Lock(LOCK_READ_WRITE);
-			FMemory::Memcpy(MipData, (void*)RenderTargetStore.UnpackedData.GetData(), RenderTargetStore.UnpackedData.Num());
+			FMemory::Memcpy(MipData, (void*)FinalColorData.GetData(), FinalColorData.Num() * sizeof(FColor));
 			RenderBase->PlatformData->Mips[0].BulkData.Unlock();
 
 			//Setting some Parameters for the Texture and finally returning it
@@ -792,21 +852,21 @@ public:
                 {				
 					bIsStoringImage = false;
 					RenderTargetStore.Reset();
-					uint32 SizeOfData = nextRenderData->ColorData.Num() * sizeof(FColor);
+					uint32 SizeOfData = nextRenderData->ColorData.Num();
 
 					RenderTargetStore.UnpackedData.Reset(SizeOfData);
 					RenderTargetStore.UnpackedData.AddUninitialized(SizeOfData);
-					FMemory::Memcpy(RenderTargetStore.UnpackedData.GetData(), (void*)nextRenderData->ColorData.GetData(), SizeOfData);
+					//FMemory::Memcpy(RenderTargetStore.UnpackedData.GetData(), (void*)nextRenderData->ColorData.GetData(), SizeOfData);
 
 					uint16 ColorVal = 0;
 					uint32 Counter = 0;
 					
 					// Convert to 16bit color
-				/*	for (FColor col : nextRenderData->ColorData)
+					for (FColor col : nextRenderData->ColorData)
 					{
 						ColorVal = (col.R >> 3) << 11 | (col.G >> 2) << 5 | (col.B >> 3);
 						RenderTargetStore.UnpackedData[Counter++] = ColorVal;
-					}*/
+					}
 
 					FIntPoint Size2D = nextRenderData->Size2D;
 					RenderTargetStore.Width = Size2D.X;
@@ -830,7 +890,9 @@ public:
 						{
 							if (NetRelevancyLog[i].ReplicationProxy.IsValid())
 							{
-								NetRelevancyLog[i].ReplicationProxy->ReceiveTexture(RenderTargetStore, this);
+								NetRelevancyLog[i].ReplicationProxy->TextureStore = RenderTargetStore;
+								NetRelevancyLog[i].ReplicationProxy->SendInitMessage();
+								//NetRelevancyLog[i].ReplicationProxy->ReceiveTexture(RenderTargetStore);
 								NetRelevancyLog[i].bIsDirty = false;
 							}
 						}
