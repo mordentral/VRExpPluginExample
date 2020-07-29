@@ -204,7 +204,10 @@ public:
 	TArray<FRenderManagerTri> Tris;
 
 	UPROPERTY()
-	UTexture2D *Texture;
+		TSoftObjectPtr<UTexture2D> Texture;
+
+	UPROPERTY()
+		TSoftObjectPtr<UMaterial> Material;
 
 	FRenderManagerOperation() {
 	}
@@ -236,7 +239,7 @@ public:
 		case ERenderManagerOperationType::Op_TexDraw:
 		{
 			Ar << Texture;
-
+			
 			if (Ar.IsSaving())
 			{
 				bOutSuccess &= WritePackedVector2D<100, 30>(P1, Ar);
@@ -249,6 +252,7 @@ public:
 		case ERenderManagerOperationType::Op_TriDraw:
 		{
 			Ar << Color;
+			Ar << Material;
 
 			uint32 ArrayCt = Tris.Num();
 			Ar.SerializeIntPacked(ArrayCt);
@@ -428,18 +432,111 @@ public:
 		// Send to server now
 	}
 
+	UFUNCTION(BlueprintCallable, Category = "VRRenderTargetManager|DrawingFunctions")
+		void AddTextureDrawOperation(APlayerController* LocalController, FVector2D Position, UTexture2D * TextureToDisplay)
+	{
+
+		if (!LocalController || !TextureToDisplay)
+			return;
+
+		FRenderManagerOperation NewOperation;
+		NewOperation.OperationType = ERenderManagerOperationType::Op_TexDraw;
+		NewOperation.P1 = Position;
+		NewOperation.Texture = TextureToDisplay;
+
+		RenderOperationStore.Add(NewOperation);
+
+		if (!DrawHandle.IsValid())
+			GetWorld()->GetTimerManager().SetTimer(DrawHandle, this, &UVRRenderTargetManager::DrawPoll, DrawRate, true);
+
+		// Send to server now
+	}
+
+	// Adds a draw operation for a triangle list, only takes the first vertex's color
+	UFUNCTION(BlueprintCallable, Category = "VRRenderTargetManager|DrawingFunctions")
+		void AddMaterialTrianglesDrawOperation(APlayerController* LocalController, TArray<FCanvasUVTri> Tris, UMaterial * Material)
+	{
+
+		if (!LocalController || !Tris.Num())
+			return;
+
+		FRenderManagerOperation NewOperation;
+		NewOperation.OperationType = ERenderManagerOperationType::Op_TriDraw;
+		NewOperation.Color = Tris[0].V0_Color.ToFColor(true);
+
+		NewOperation.Tris.AddUninitialized(Tris.Num());
+		int Counter = 0;
+		FRenderManagerTri RenderTri;
+		for (FCanvasUVTri Tri : Tris)
+		{
+			RenderTri.P1 = Tri.V0_Pos;
+			RenderTri.P2 = Tri.V1_Pos;
+			RenderTri.P3 = Tri.V2_Pos;
+			NewOperation.Tris[Counter++] = RenderTri;
+		}
+
+		NewOperation.Material = Material;
+
+		RenderOperationStore.Add(NewOperation);
+
+		if (!DrawHandle.IsValid())
+			GetWorld()->GetTimerManager().SetTimer(DrawHandle, this, &UVRRenderTargetManager::DrawPoll, DrawRate, true);
+
+		// Send to server now
+	}
+
 	void DrawOperation(UCanvas * Canvas, const FRenderManagerOperation & Operation)
 	{
 		switch (Operation.OperationType)
 		{
 		case ERenderManagerOperationType::Op_LineDraw:
 		{
+			if (GetNetMode() == ENetMode::NM_Client)
+			{
+				int gg = 0;
+			}
 			FCanvasLineItem LineItem;
 			LineItem.Origin = FVector(Operation.P1.X, Operation.P1.Y, 0.f);
 			LineItem.EndPos = FVector(Operation.P2.X, Operation.P2.Y, 0.f);
 			LineItem.LineThickness = (float)Operation.Thickness;
 			LineItem.SetColor(Operation.Color.ReinterpretAsLinear());
 			Canvas->DrawItem(LineItem);
+		}break;
+		case ERenderManagerOperationType::Op_TexDraw:
+		{
+			if (Operation.Texture && Operation.Texture->Resource)
+			{
+				//FTexture* RenderTextureResource = (RenderBase) ? RenderBase->Resource : GWhiteTexture;
+				FCanvasTileItem TileItem(Operation.P1, Operation.Texture->Resource, FVector2D(Operation.Texture->GetSizeX(), Operation.Texture->GetSizeY()), FVector2D(0, 0), FVector2D(1.f, 1.f), ClearColor);
+				TileItem.BlendMode = FCanvas::BlendToSimpleElementBlend(EBlendMode::BLEND_Translucent);
+				Canvas->DrawItem(TileItem);
+			}
+		}break;
+		case ERenderManagerOperationType::Op_TriDraw:
+		{
+			if (Operation.Tris.Num() && Operation.Material)
+			{
+				FCanvasTriangleItem TriangleItem(FVector2D::ZeroVector, FVector2D::ZeroVector, FVector2D::ZeroVector, NULL);
+				TriangleItem.MaterialRenderProxy = Operation.Material->GetRenderProxy();
+
+				FCanvasUVTri triStore;
+				triStore.V0_Color = Operation.Color;
+				triStore.V1_Color = Operation.Color;
+				triStore.V2_Color = Operation.Color;
+
+				TriangleItem.TriangleList.Reset(Operation.Tris.Num());
+				TriangleItem.TriangleList.AddUninitialized(Operation.Tris.Num());
+				uint32 Counter = 0;
+				for (FRenderManagerTri Tri : Operation.Tris)
+				{
+					triStore.V0_Pos = Tri.P1;
+					triStore.V1_Pos = Tri.P2;
+					triStore.V2_Pos = Tri.P3;
+					TriangleItem.TriangleList[Counter++] = triStore;
+				}
+
+				Canvas->DrawItem(TriangleItem);
+			}
 		}break;
 		}
 
