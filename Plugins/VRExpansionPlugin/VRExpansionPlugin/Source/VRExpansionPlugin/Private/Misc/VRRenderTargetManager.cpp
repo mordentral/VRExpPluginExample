@@ -1,6 +1,8 @@
 // Copyright 1998-2016 Epic Games, Inc. All Rights Reserved.
 
 #include "Misc/VRRenderTargetManager.h"
+#include "Kismet/GameplayStatics.h"
+#include "GameFramework/PlayerState.h"
 #include "Net/UnrealNetwork.h"
 
 namespace RLE_Funcs
@@ -59,6 +61,8 @@ UVRRenderTargetManager::UVRRenderTargetManager(const FObjectInitializer& ObjectI
 
 	bInitiallyReplicateTexture = false;
 	bIsLoadingTextureBuffer = false;
+
+	OwnerIDCounter = 0;
 }
 
 bool UVRRenderTargetManager::SendDrawOperations_Validate(const TArray<FRenderManagerOperation>& RenderOperationStoreList)
@@ -76,19 +80,6 @@ void UVRRenderTargetManager::SendDrawOperations_Implementation(const TArray<FRen
 	DrawOperations();
 }
 
-bool UVRRenderTargetManager::SendLocalDrawOperations_Validate(const TArray<FRenderManagerOperation>& LocalRenderOperationStoreList)
-{
-	return true;
-}
-
-void UVRRenderTargetManager::SendLocalDrawOperations_Implementation(const TArray<FRenderManagerOperation>& LocalRenderOperationStoreList)
-{
-	RenderOperationStore.Append(LocalRenderOperationStoreList);
-
-	if (!DrawHandle.IsValid())
-		GetWorld()->GetTimerManager().SetTimer(DrawHandle, this, &UVRRenderTargetManager::DrawPoll, DrawRate, true);
-}
-
 ARenderTargetReplicationProxy::ARenderTargetReplicationProxy(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {
@@ -97,6 +88,40 @@ ARenderTargetReplicationProxy::ARenderTargetReplicationProxy(const FObjectInitia
 	bReplicates = true;
 	PrimaryActorTick.bCanEverTick = false;
 	SetReplicateMovement(false);
+}
+
+void ARenderTargetReplicationProxy::OnRep_Manager()
+{
+	// If our manager is valid, save off a reference to ourselves to the local copy.
+	if (OwningManager.IsValid())
+	{
+		OwningManager->LocalProxy = this;
+	}
+}
+
+bool ARenderTargetReplicationProxy::SendLocalDrawOperations_Validate(const TArray<FRenderManagerOperation>& LocalRenderOperationStoreList)
+{
+	return true;
+}
+
+void ARenderTargetReplicationProxy::SendLocalDrawOperations_Implementation(const TArray<FRenderManagerOperation>& LocalRenderOperationStoreList)
+{
+	if (OwningManager.IsValid())
+	{
+		OwningManager->RenderOperationStore.Append(LocalRenderOperationStoreList);
+
+		// ID the render operations to the player that sent them in
+		if (APlayerController* OwningPlayer = Cast<APlayerController>(GetOwner()))
+		{
+			for (int i = (OwningManager->RenderOperationStore.Num() - LocalRenderOperationStoreList.Num()); i < OwningManager->RenderOperationStore.Num(); i++)
+			{
+				OwningManager->RenderOperationStore[i].OwnerID = OwnersID;
+			}
+		}
+
+		if (!OwningManager->DrawHandle.IsValid())
+			GetWorld()->GetTimerManager().SetTimer(OwningManager->DrawHandle, OwningManager.Get(), &UVRRenderTargetManager::DrawPoll, OwningManager->DrawRate, true);
+	}
 }
 
 bool ARenderTargetReplicationProxy::ReceiveTexture_Validate(const FBPVRReplicatedTextureStore& TextureData)
@@ -109,7 +134,7 @@ void ARenderTargetReplicationProxy::ReceiveTexture_Implementation(const FBPVRRep
 	if (OwningManager.IsValid())
 	{
 		OwningManager->RenderTargetStore = TextureData;
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, FString::Printf(TEXT("Recieved Texture, byte count: %i"), TextureData.PackedData.Num()));
+		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, FString::Printf(TEXT("Recieved Texture, byte count: %i"), TextureData.PackedData.Num()));
 		OwningManager->DeCompressRenderTarget2D();
 	}
 }
@@ -218,6 +243,7 @@ void ARenderTargetReplicationProxy::GetLifetimeReplicatedProps(TArray< class FLi
 
 
 	DOREPLIFETIME(ARenderTargetReplicationProxy, OwningManager);
+	DOREPLIFETIME(ARenderTargetReplicationProxy, OwnersID);
 }
 
 bool ARenderTargetReplicationProxy::ReceiveTextureBlob_Validate(const TArray<uint8>& TextureBlob, int32 LocationInData, int32 BlobNumber)
@@ -233,7 +259,7 @@ void ARenderTargetReplicationProxy::ReceiveTextureBlob_Implementation(const TArr
 		MemLoc += LocationInData;
 		FMemory::Memcpy(MemLoc, TextureBlob.GetData(), TextureBlob.Num());
 
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, FString::Printf(TEXT("Recieved Texture blob, byte count: %i"), TextureBlob.Num()));
+		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, FString::Printf(TEXT("Recieved Texture blob, byte count: %i"), TextureBlob.Num()));
 	}
 
 	if (BlobNumber == BlobNum)
@@ -248,7 +274,7 @@ void ARenderTargetReplicationProxy::ReceiveTextureBlob_Implementation(const TArr
 			TextureStore.Reset();
 			TextureStore.PackedData.Empty();
 			TextureStore.UnpackedData.Empty();
-			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, FString::Printf(TEXT("Recieved Texture, total byte count: %i"), OwningManager->RenderTargetStore.PackedData.Num()));
+			//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, FString::Printf(TEXT("Recieved Texture, total byte count: %i"), OwningManager->RenderTargetStore.PackedData.Num()));
 			OwningManager->DeCompressRenderTarget2D();
 		}
 	}
@@ -316,13 +342,16 @@ void UVRRenderTargetManager::UpdateRelevancyMap()
 					{
 						FClientRepData ClientRepData;
 
-						FActorSpawnParameters SpawnParams;
-						SpawnParams.Owner = PC;
 						FTransform NewTransform = this->GetOwner()->GetActorTransform();
-						ARenderTargetReplicationProxy* RenderProxy = GetWorld()->SpawnActor<ARenderTargetReplicationProxy>(ARenderTargetReplicationProxy::StaticClass(), NewTransform, SpawnParams);
-						RenderProxy->OwningManager = this;
-						RenderProxy->MaxBytesPerSecondRate = MaxBytesPerSecondRate;
-						RenderProxy->TextureBlobSize = TextureBlobSize;
+						ARenderTargetReplicationProxy* RenderProxy = GetWorld()->SpawnActorDeferred<ARenderTargetReplicationProxy>(ARenderTargetReplicationProxy::StaticClass(), NewTransform, PC);
+						if (RenderProxy)
+						{
+							RenderProxy->OwnersID = OwnerIDCounter++;
+							RenderProxy->OwningManager = this;
+							RenderProxy->MaxBytesPerSecondRate = MaxBytesPerSecondRate;
+							RenderProxy->TextureBlobSize = TextureBlobSize;
+							UGameplayStatics::FinishSpawningActor(RenderProxy, NewTransform);
+						}
 
 						if (RenderProxy)
 						{

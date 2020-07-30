@@ -186,7 +186,7 @@ struct FRenderManagerOperation {
 public:
 
 	UPROPERTY()
-		APlayerController* Owner;
+		uint32 OwnerID;
 
 	UPROPERTY()
 	ERenderManagerOperationType OperationType;
@@ -219,8 +219,9 @@ public:
 	{
 		bOutSuccess = true;
 
-		Ar << Owner;
-		Ar << OperationType;
+		
+		Ar.SerializeIntPacked(OwnerID);
+		Ar.SerializeBits(&OperationType, 3);
 
 		switch (OperationType)
 		{
@@ -231,13 +232,13 @@ public:
 
 			if (Ar.IsSaving())
 			{
-				bOutSuccess &= WritePackedVector2D<100, 30>(P1, Ar);
-				bOutSuccess &= WritePackedVector2D<100, 30>(P2, Ar);
+				bOutSuccess &= WritePackedVector2D<1, 20>(P1, Ar);
+				bOutSuccess &= WritePackedVector2D<1, 20>(P2, Ar);
 			}
 			else
 			{
-				ReadPackedVector2D<100, 30>(P1, Ar);
-				ReadPackedVector2D<100, 30>(P2, Ar);
+				ReadPackedVector2D<1, 20>(P1, Ar);
+				ReadPackedVector2D<1, 20>(P2, Ar);
 			}
 		}break;
 		case ERenderManagerOperationType::Op_TexDraw:
@@ -246,11 +247,11 @@ public:
 			
 			if (Ar.IsSaving())
 			{
-				bOutSuccess &= WritePackedVector2D<100, 30>(P1, Ar);
+				bOutSuccess &= WritePackedVector2D<1, 20>(P1, Ar);
 			}
 			else
 			{
-				ReadPackedVector2D<100, 30>(P1, Ar);
+				ReadPackedVector2D<1, 20>(P1, Ar);
 			}
 		}break;
 		case ERenderManagerOperationType::Op_TriDraw:
@@ -269,9 +270,9 @@ public:
 				FRenderManagerTri TriTemp;
 				for (uint32 i = 0; i < ArrayCt; ++i)
 				{
-					ReadPackedVector2D<100, 30>(TriTemp.P1, Ar);
-					ReadPackedVector2D<100, 30>(TriTemp.P2, Ar);
-					ReadPackedVector2D<100, 30>(TriTemp.P3, Ar);
+					ReadPackedVector2D<1, 20>(TriTemp.P1, Ar);
+					ReadPackedVector2D<1, 20>(TriTemp.P2, Ar);
+					ReadPackedVector2D<1, 20>(TriTemp.P3, Ar);
 					Tris[i] = TriTemp;
 				}
 			}
@@ -279,9 +280,9 @@ public:
 			{
 				for (uint32 i = 0; i < ArrayCt; ++i)
 				{
-					WritePackedVector2D<100, 30>(Tris[i].P1, Ar);
-					WritePackedVector2D<100, 30>(Tris[i].P2, Ar);
-					WritePackedVector2D<100, 30>(Tris[i].P3, Ar);
+					WritePackedVector2D<1, 20>(Tris[i].P1, Ar);
+					WritePackedVector2D<1, 20>(Tris[i].P2, Ar);
+					WritePackedVector2D<1, 20>(Tris[i].P3, Ar);
 				}
 			}
 
@@ -312,9 +313,15 @@ class VREXPANSIONPLUGIN_API ARenderTargetReplicationProxy : public AActor
 public:
 	ARenderTargetReplicationProxy(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
 
-	UPROPERTY(Replicated)
+	UPROPERTY(Replicated, ReplicatedUsing = OnRep_Manager)
 		TWeakObjectPtr<UVRRenderTargetManager> OwningManager;
+
+	UPROPERTY(Replicated)
+		uint32 OwnersID;
 	
+	UFUNCTION()
+		void OnRep_Manager();
+
 	UPROPERTY(Transient)
 	FBPVRReplicatedTextureStore TextureStore;
 	
@@ -347,6 +354,9 @@ public:
 		Super::EndPlay(EndPlayReason);
 	}
 
+
+	UFUNCTION(Reliable, Server, WithValidation)
+		void SendLocalDrawOperations(const TArray<FRenderManagerOperation>& LocalRenderOperationStoreList);
 
 	UFUNCTION(Reliable, Client, WithValidation)
 		void InitTextureSend(int32 Width, int32 Height, int32 TotalDataCount, int32 BlobCount, EPixelFormat PixelFormat, bool bIsZipped);
@@ -405,6 +415,11 @@ public:
 
     UVRRenderTargetManager(const FObjectInitializer& ObjectInitializer);
 	
+	uint32 OwnerIDCounter;
+
+	UPROPERTY(Transient)
+		TWeakObjectPtr<ARenderTargetReplicationProxy> LocalProxy;
+
 	TArray<FRenderManagerOperation> RenderOperationStore;
 	TArray<FRenderManagerOperation> LocalRenderOperationStore;
 
@@ -415,18 +430,10 @@ public:
 	UFUNCTION(Reliable, NetMultiCast, WithValidation)
 		void SendDrawOperations(const TArray<FRenderManagerOperation>& RenderOperationStoreList);
 
-	UFUNCTION(Reliable, Server, WithValidation)
-		void SendLocalDrawOperations(const TArray<FRenderManagerOperation>& LocalRenderOperationStoreList);
-
 	UFUNCTION(BlueprintCallable, Category = "VRRenderTargetManager|DrawingFunctions")
-	void AddLineDrawOperation(APlayerController * LocalController, FVector2D Point1, FVector2D Point2, FColor Color, int32 Thickness)
+	void AddLineDrawOperation(FVector2D Point1, FVector2D Point2, FColor Color, int32 Thickness)
 	{
-
-		if (!LocalController)
-			return;
-
 		FRenderManagerOperation NewOperation;
-		NewOperation.Owner = LocalController;
 		NewOperation.OperationType = ERenderManagerOperationType::Op_LineDraw;
 		NewOperation.Color = Color;
 		NewOperation.P1 = Point1;
@@ -445,14 +452,13 @@ public:
 	}
 
 	UFUNCTION(BlueprintCallable, Category = "VRRenderTargetManager|DrawingFunctions")
-		void AddTextureDrawOperation(APlayerController* LocalController, FVector2D Position, UTexture2D * TextureToDisplay)
+		void AddTextureDrawOperation(FVector2D Position, UTexture2D * TextureToDisplay)
 	{
 
-		if (!LocalController || !TextureToDisplay)
+		if (!TextureToDisplay)
 			return;
 
 		FRenderManagerOperation NewOperation;
-		NewOperation.Owner = LocalController;
 		NewOperation.OperationType = ERenderManagerOperationType::Op_TexDraw;
 		NewOperation.P1 = Position;
 		NewOperation.Texture = TextureToDisplay;
@@ -470,14 +476,13 @@ public:
 
 	// Adds a draw operation for a triangle list, only takes the first vertex's color
 	UFUNCTION(BlueprintCallable, Category = "VRRenderTargetManager|DrawingFunctions")
-		void AddMaterialTrianglesDrawOperation(APlayerController* LocalController, TArray<FCanvasUVTri> Tris, UMaterial * Material)
+		void AddMaterialTrianglesDrawOperation(TArray<FCanvasUVTri> Tris, UMaterial * Material)
 	{
 
-		if (!LocalController || !Tris.Num())
+		if (!Tris.Num())
 			return;
 
 		FRenderManagerOperation NewOperation;
-		NewOperation.Owner = LocalController;
 		NewOperation.OperationType = ERenderManagerOperationType::Op_TriDraw;
 		NewOperation.Color = Tris[0].V0_Color.ToFColor(true);
 
@@ -505,9 +510,9 @@ public:
 		// Send to server now
 	}
 
-	void DrawOperation(UCanvas * Canvas, const FRenderManagerOperation & Operation)
-	{
-		if (Operation.Owner && Operation.Owner->IsLocalController())
+	void DrawOperation(UCanvas* Canvas, const FRenderManagerOperation & Operation)
+	{		
+		if (LocalProxy.IsValid() && LocalProxy->OwnersID == Operation.OwnerID)
 		{
 			return;
 		}
@@ -581,7 +586,11 @@ public:
 			if (LocalRenderOperationStore.Num())
 			{
 				// Send operations to server
-				SendLocalDrawOperations(LocalRenderOperationStore);
+				if (LocalProxy.IsValid())
+				{
+					LocalProxy->SendLocalDrawOperations(LocalRenderOperationStore);
+				}
+
 				RenderOperationStore.Append(LocalRenderOperationStore);
 				LocalRenderOperationStore.Empty();
 			}
