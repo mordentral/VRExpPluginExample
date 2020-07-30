@@ -58,6 +58,7 @@ UVRRenderTargetManager::UVRRenderTargetManager(const FObjectInitializer& ObjectI
 	MaxBytesPerSecondRate = 5000;
 
 	bInitiallyReplicateTexture = false;
+	bIsLoadingTextureBuffer = false;
 }
 
 bool UVRRenderTargetManager::SendDrawOperations_Validate(const TArray<FRenderManagerOperation>& RenderOperationStoreList)
@@ -73,6 +74,19 @@ void UVRRenderTargetManager::SendDrawOperations_Implementation(const TArray<FRen
 	}
 
 	DrawOperations();
+}
+
+bool UVRRenderTargetManager::SendLocalDrawOperations_Validate(const TArray<FRenderManagerOperation>& LocalRenderOperationStoreList)
+{
+	return true;
+}
+
+void UVRRenderTargetManager::SendLocalDrawOperations_Implementation(const TArray<FRenderManagerOperation>& LocalRenderOperationStoreList)
+{
+	RenderOperationStore.Append(LocalRenderOperationStoreList);
+
+	if (!DrawHandle.IsValid())
+		GetWorld()->GetTimerManager().SetTimer(DrawHandle, this, &UVRRenderTargetManager::DrawPoll, DrawRate, true);
 }
 
 ARenderTargetReplicationProxy::ARenderTargetReplicationProxy(const FObjectInitializer& ObjectInitializer)
@@ -117,6 +131,11 @@ void ARenderTargetReplicationProxy::InitTextureSend_Implementation(int32 Width, 
 	TextureStore.PackedData.AddUninitialized(TotalDataCount);
 
 	BlobNum = BlobCount;
+
+	if (OwningManager.IsValid())
+	{
+		OwningManager->bIsLoadingTextureBuffer = true;
+	}
 
 	Ack_InitTextureSend(TotalDataCount);
 }
@@ -224,6 +243,7 @@ void ARenderTargetReplicationProxy::ReceiveTextureBlob_Implementation(const TArr
 		// We finished, unpack and display
 		if (OwningManager.IsValid())
 		{
+			OwningManager->bIsLoadingTextureBuffer = false;
 			OwningManager->RenderTargetStore = TextureStore;
 			TextureStore.Reset();
 			TextureStore.PackedData.Empty();

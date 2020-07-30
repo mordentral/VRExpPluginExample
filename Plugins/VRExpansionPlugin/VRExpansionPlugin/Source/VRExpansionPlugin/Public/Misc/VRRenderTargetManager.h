@@ -186,6 +186,9 @@ struct FRenderManagerOperation {
 public:
 
 	UPROPERTY()
+		APlayerController* Owner;
+
+	UPROPERTY()
 	ERenderManagerOperationType OperationType;
 
 	UPROPERTY()
@@ -216,6 +219,7 @@ public:
 	{
 		bOutSuccess = true;
 
+		Ar << Owner;
 		Ar << OperationType;
 
 		switch (OperationType)
@@ -402,6 +406,7 @@ public:
     UVRRenderTargetManager(const FObjectInitializer& ObjectInitializer);
 	
 	TArray<FRenderManagerOperation> RenderOperationStore;
+	TArray<FRenderManagerOperation> LocalRenderOperationStore;
 
 	// Rate to poll for drawing new operations
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "RenderTargetManager")
@@ -409,6 +414,9 @@ public:
 
 	UFUNCTION(Reliable, NetMultiCast, WithValidation)
 		void SendDrawOperations(const TArray<FRenderManagerOperation>& RenderOperationStoreList);
+
+	UFUNCTION(Reliable, Server, WithValidation)
+		void SendLocalDrawOperations(const TArray<FRenderManagerOperation>& LocalRenderOperationStoreList);
 
 	UFUNCTION(BlueprintCallable, Category = "VRRenderTargetManager|DrawingFunctions")
 	void AddLineDrawOperation(APlayerController * LocalController, FVector2D Point1, FVector2D Point2, FColor Color, int32 Thickness)
@@ -418,13 +426,17 @@ public:
 			return;
 
 		FRenderManagerOperation NewOperation;
+		NewOperation.Owner = LocalController;
 		NewOperation.OperationType = ERenderManagerOperationType::Op_LineDraw;
 		NewOperation.Color = Color;
 		NewOperation.P1 = Point1;
 		NewOperation.P2 = Point2;
 		NewOperation.Thickness = (uint32)Thickness;
 
-		RenderOperationStore.Add(NewOperation);
+		if(GetNetMode() < ENetMode::NM_Client)
+			RenderOperationStore.Add(NewOperation);
+		else
+			LocalRenderOperationStore.Add(NewOperation);
 
 		if (!DrawHandle.IsValid())
 			GetWorld()->GetTimerManager().SetTimer(DrawHandle, this, &UVRRenderTargetManager::DrawPoll, DrawRate, true);
@@ -440,11 +452,15 @@ public:
 			return;
 
 		FRenderManagerOperation NewOperation;
+		NewOperation.Owner = LocalController;
 		NewOperation.OperationType = ERenderManagerOperationType::Op_TexDraw;
 		NewOperation.P1 = Position;
 		NewOperation.Texture = TextureToDisplay;
 
-		RenderOperationStore.Add(NewOperation);
+		if (GetNetMode() < ENetMode::NM_Client)
+			RenderOperationStore.Add(NewOperation);
+		else
+			LocalRenderOperationStore.Add(NewOperation);
 
 		if (!DrawHandle.IsValid())
 			GetWorld()->GetTimerManager().SetTimer(DrawHandle, this, &UVRRenderTargetManager::DrawPoll, DrawRate, true);
@@ -461,6 +477,7 @@ public:
 			return;
 
 		FRenderManagerOperation NewOperation;
+		NewOperation.Owner = LocalController;
 		NewOperation.OperationType = ERenderManagerOperationType::Op_TriDraw;
 		NewOperation.Color = Tris[0].V0_Color.ToFColor(true);
 
@@ -477,7 +494,10 @@ public:
 
 		NewOperation.Material = Material;
 
-		RenderOperationStore.Add(NewOperation);
+		if (GetNetMode() < ENetMode::NM_Client)
+			RenderOperationStore.Add(NewOperation);
+		else
+			LocalRenderOperationStore.Add(NewOperation);
 
 		if (!DrawHandle.IsValid())
 			GetWorld()->GetTimerManager().SetTimer(DrawHandle, this, &UVRRenderTargetManager::DrawPoll, DrawRate, true);
@@ -487,14 +507,15 @@ public:
 
 	void DrawOperation(UCanvas * Canvas, const FRenderManagerOperation & Operation)
 	{
+		if (Operation.Owner && Operation.Owner->IsLocalController())
+		{
+			return;
+		}
+
 		switch (Operation.OperationType)
 		{
 		case ERenderManagerOperationType::Op_LineDraw:
 		{
-			if (GetNetMode() == ENetMode::NM_Client)
-			{
-				int gg = 0;
-			}
 			FCanvasLineItem LineItem;
 			LineItem.Origin = FVector(Operation.P1.X, Operation.P1.Y, 0.f);
 			LineItem.EndPos = FVector(Operation.P2.X, Operation.P2.Y, 0.f);
@@ -545,7 +566,7 @@ public:
 	UFUNCTION()
 		void DrawPoll()
 	{
-		if (!RenderOperationStore.Num())
+		if (!RenderOperationStore.Num() && !LocalRenderOperationStore.Num())
 		{
 			GetWorld()->GetTimerManager().ClearTimer(DrawHandle);
 			return;
@@ -557,13 +578,29 @@ public:
 		}
 		else
 		{
-			// Send operations to server
+			if (LocalRenderOperationStore.Num())
+			{
+				// Send operations to server
+				SendLocalDrawOperations(LocalRenderOperationStore);
+				RenderOperationStore.Append(LocalRenderOperationStore);
+				LocalRenderOperationStore.Empty();
+			}
+			
 			DrawOperations();
 		}
 	}
 
 	void DrawOperations()
 	{
+
+		if (bIsLoadingTextureBuffer)
+		{
+			if(!DrawHandle.IsValid())
+				GetWorld()->GetTimerManager().SetTimer(DrawHandle, this, &UVRRenderTargetManager::DrawPoll, DrawRate, true);
+
+			return;
+		}
+
 		UWorld* World = GetWorld();
 
 		// Reference to the Render Target resource
@@ -604,10 +641,13 @@ public:
 		FTimerHandle DrawHandle;
 
 	UPROPERTY(Transient)
-	bool bIsStoringImage;
+		bool bIsStoringImage;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "RenderTargetManager")
 		bool bInitiallyReplicateTexture;
+
+	UPROPERTY(Transient)
+		bool bIsLoadingTextureBuffer;
 
 	// Maximum size of texture blobs to use for sending (size of chunks that it gets broken down into)
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "RenderTargetManager")
