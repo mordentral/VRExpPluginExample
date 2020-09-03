@@ -32,6 +32,11 @@ public:
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
+	UPROPERTY(Replicated, ReplicatedUsing = OnRep_AttachmentReplication)
+		FRepAttachmentWithWeld AttachmentWeldReplication;
+
+	virtual void GatherCurrentMovement() override;
+
 	UPROPERTY(EditAnywhere, Replicated, BlueprintReadOnly, Instanced, Category = "VRGripInterface")
 		TArray<class UVRGripScriptBase *> GripLogicScripts;
 
