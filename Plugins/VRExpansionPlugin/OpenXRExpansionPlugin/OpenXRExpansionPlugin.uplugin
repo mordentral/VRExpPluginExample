@@ -1,0 +1,30 @@
+{
+	"FileVersion": 3,
+	"Version": 4.25,
+	"VersionName": "4.25",
+	"FriendlyName": "OpenXRExpansionPlugin",
+	"Description": "Adds several new Open XR features & components to UE4",
+	"Category": "VRExpansion",
+	"CreatedBy": "Joshua (MordenTral) Statzer",
+	"CreatedByURL": "",
+	"DocsURL": "",
+	"MarketplaceURL": "",
+	"SupportURL": "",
+	"EnabledByDefault": true,
+	"CanContainContent": false,
+	"IsBetaVersion": false,
+	"Installed": true,
+	"Modules": [
+		{
+			"Name": "OpenXRExpansionPlugin",
+			"Type": "RunTime",
+			"LoadingPhase": "Default"
+		}
+		  ],
+  "Plugins": [
+    {
+      "Name": "OpenXR",
+      "Enabled": true
+    }
+  ]
+}
