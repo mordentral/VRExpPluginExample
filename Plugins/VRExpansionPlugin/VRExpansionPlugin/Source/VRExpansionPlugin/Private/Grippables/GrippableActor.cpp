@@ -186,6 +186,7 @@ void AGrippableActor::GatherCurrentMovement()
 			RepMovement.bRepPhysics = false;
 		}
 
+#if WITH_PUSH_MODEL
 		if (bWasRepMovementModified)
 		{
 			MARK_PROPERTY_DIRTY_FROM_NAME(AActor, ReplicatedMovement, this);
@@ -197,6 +198,7 @@ void AGrippableActor::GatherCurrentMovement()
 		{
 			MARK_PROPERTY_DIRTY_FROM_NAME(AActor, AttachmentWeldReplication, this);
 		}
+#endif
 	}
 }
 
