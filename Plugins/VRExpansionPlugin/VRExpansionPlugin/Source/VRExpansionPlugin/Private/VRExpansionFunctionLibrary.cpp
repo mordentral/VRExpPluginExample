@@ -14,7 +14,7 @@ DEFINE_LOG_CATEGORY(VRExpansionFunctionLibraryLog);
 
 void UVRExpansionFunctionLibrary::SetObjectsIgnoreCollision(UPrimitiveComponent* Prim1, FName OptionalBoneName1, UPrimitiveComponent* Prim2, FName OptionalBoneName2, bool bIgnoreCollision)
 {
-#if WITH_PHYSX
+#if PHYSICS_INTERFACE_PHYSX
 	if (Prim1 && Prim2)
 	{
 		FBodyInstance *Inst1 = Prim1->GetBodyInstance(OptionalBoneName1);

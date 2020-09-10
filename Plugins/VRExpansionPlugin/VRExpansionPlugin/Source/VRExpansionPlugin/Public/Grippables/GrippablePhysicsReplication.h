@@ -9,7 +9,7 @@
 #include "Engine/Player.h"
 #include "PhysicsEngine/PhysicsSettings.h"
 #include "Components/SkeletalMeshComponent.h"
-#if WITH_PHYSX
+#if PHYSICS_INTERFACE_PHYSX
 #include "Physics/PhysicsInterfaceUtils.h"
 #include "Physics/PhysScene_PhysX.h"
 #include "PhysXPublicCore.h"
@@ -36,7 +36,7 @@
 	TEXT(" 1: use the valve input controller. You will have to define input bindings for the controllers you want to support."),
 	ECVF_ReadOnly);*/
 
-#if WITH_PHYSX
+#if PHYSICS_INTERFACE_PHYSX
 
 class FPhysicsReplicationVR : public FPhysicsReplication
 {

@@ -16,7 +16,7 @@ FPhysicsReplicationVR::FPhysicsReplicationVR(FPhysScene* PhysScene) :
 {
 	VRPhysicsReplicationStatics::bHasVRPhysicsReplication = true;
 
-#if WITH_PHYSX
+#if PHYSICS_INTERFACE_PHYSX
 	const UVRGlobalSettings& VRSettings = *GetDefault<UVRGlobalSettings>();
 	if (VRSettings.MaxCCDPasses != 1)
 	{

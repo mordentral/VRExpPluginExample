@@ -573,7 +573,7 @@ public:
 		// Hate this but we really can't combine if I am sending a new capsule height
 		if (!FMath::IsNearlyEqual(LFDiff.Z, nMove->LFDiff.Z))
 			return false;
-
+		
 		if (!LFDiff.IsZero() && !nMove->LFDiff.IsZero() && !FVector::Coincident(LFDiff.GetSafeNormal2D(), nMove->LFDiff.GetSafeNormal2D(), AccelDotThresholdCombine))
 			return false;
 

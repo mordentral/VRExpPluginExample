@@ -15,7 +15,7 @@
 
 #include "PhysicsPublic.h"
 
-#if WITH_PHYSX
+#if PHYSICS_INTERFACE_PHYSX
 #include "PhysXPublic.h"
 #endif // WITH_PHYSX
 
@@ -311,7 +311,7 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Grip Events")
 		FVROnDropSignature OnDropped;
 
-#if WITH_PHYSX
+#if PHYSICS_INTERFACE_PHYSX
 	physx::PxD6Joint* HandleData;
 	//int32 SceneIndex;
 #endif

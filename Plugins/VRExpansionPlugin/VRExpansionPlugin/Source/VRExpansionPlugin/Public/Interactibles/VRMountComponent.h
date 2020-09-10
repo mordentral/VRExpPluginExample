@@ -13,7 +13,7 @@
 
 #include "PhysicsPublic.h"
 
-#if WITH_PHYSX
+#if PHYSICS_INTERFACE_PHYSX
 //#include "PhysXSupport.h"
 #endif // WITH_PHYSX
 

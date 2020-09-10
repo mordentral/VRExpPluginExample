@@ -106,7 +106,7 @@ void UVREPhysicalAnimationComponent::SetupWeldedBoneDriver_Implementation(bool b
 	if (PhysAsset && SkeleMesh->SkeletalMesh)
 	{
 
-#if WITH_PHYSX
+#if PHYSICS_INTERFACE_PHYSX
 		for (FName BaseWeldedBoneDriverName : BaseWeldedBoneDriverNames)
 		{
 			int32 ParentBodyIdx = PhysAsset->FindBodyIndex(BaseWeldedBoneDriverName);
@@ -209,7 +209,7 @@ void UVREPhysicalAnimationComponent::UpdateWeldedBoneDriver(float DeltaTime)
 	if(PhysAsset && SkeleMesh->SkeletalMesh)
 	{
 
-#if WITH_PHYSX
+#if PHYSICS_INTERFACE_PHYSX
 
 		for (FName BaseWeldedBoneDriverName : BaseWeldedBoneDriverNames)
 		{

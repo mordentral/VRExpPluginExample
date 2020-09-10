@@ -8,7 +8,7 @@
 #include "PhysicsPublic.h"
 #include "PhysicsEngine/ConstraintDrives.h"
 
-#if WITH_PHYSX
+#if PHYSICS_INTERFACE_PHYSX
 //#include "PhysXPublic.h"
 //#include "PhysicsEngine/PhysXSupport.h"
 #endif // WITH_PHYSX

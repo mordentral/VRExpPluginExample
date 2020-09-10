@@ -2,7 +2,7 @@
 
 #include "VRExpansionPlugin.h"
 
-#if WITH_PHYSX
+#if PHYSICS_INTERFACE_PHYSX
 #include "Grippables/GrippablePhysicsReplication.h"
 #endif
 
@@ -18,7 +18,7 @@ void FVRExpansionPluginModule::StartupModule()
 	// This code will execute after your module is loaded into memory; the exact timing is specified in the .uplugin file per-module
 	RegisterSettings();
 
-#if WITH_PHYSX
+#if PHYSICS_INTERFACE_PHYSX
 	FPhysScene_PhysX::PhysicsReplicationFactory = MakeShared<IPhysicsReplicationFactoryVR>();
 	FPhysScene_PhysX::ContactModifyCallbackFactory = MakeShared<IContactModifyCallbackFactoryVR>();
 	FPhysScene_PhysX::CCDContactModifyCallbackFactory = MakeShared<ICCDContactModifyCallbackFactoryVR>();

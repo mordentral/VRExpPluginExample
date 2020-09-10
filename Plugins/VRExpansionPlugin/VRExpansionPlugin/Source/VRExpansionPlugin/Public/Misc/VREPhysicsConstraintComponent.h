@@ -5,7 +5,7 @@
 #include "PhysicsEngine/PhysicsConstraintComponent.h"
 
 // Delete this eventually when the physics interface is fixed
-#if WITH_PHYSX
+#if PHYSICS_INTERFACE_PHYSX
 #include "PhysXPublic.h"
 #endif // WITH_PHYSX
 
@@ -28,7 +28,7 @@ public:
 		// This is a temp workaround until epic fixes the drive creation to allow force constraints
 		// I wanted to use the new interface and not directly set the drive so that it is ready to delete this section
 		// When its fixed
-		//#if WITH_PHYSX
+		//#if PHYSICS_INTERFACE_PHYSX
 
 
 		if (!ConstraintInstance.ConstraintHandle.ConstraintData)
