@@ -24,7 +24,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "VRE Physics Constraint Component")
 		void SetConstraintToForceBased(bool bUseForceConstraint)
 	{
-
+#if PHYSICS_INTERFACE_PHYSX
 		// This is a temp workaround until epic fixes the drive creation to allow force constraints
 		// I wanted to use the new interface and not directly set the drive so that it is ready to delete this section
 		// When its fixed
@@ -69,6 +69,7 @@ public:
 				ConstraintInstance.ConstraintHandle.ConstraintData->setDrive(PxD6Drive::Enum::eTWIST, driveVal);
 			}
 
+#endif
 		//#endif
 	}
 

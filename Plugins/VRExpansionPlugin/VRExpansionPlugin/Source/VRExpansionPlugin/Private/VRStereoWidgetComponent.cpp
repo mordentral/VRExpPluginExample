@@ -171,7 +171,7 @@ void UVRStereoWidgetComponent::TickComponent(float DeltaTime, enum ELevelTick Ti
 #if !UE_SERVER
 
 	// Same check that the widget runs prior to ticking
-	if (IsRunningDedicatedServer() || (Widget == nullptr && !SlateWidget.IsValid()))
+	if (IsRunningDedicatedServer() || (GetWidget() == nullptr && !GetSlateWidget().IsValid()))
 	{
 		return;
 	}
@@ -717,8 +717,8 @@ FPrimitiveSceneProxy* UVRStereoWidgetComponent::CreateSceneProxy()
 	{
 		return nullptr;
 	}
-
-	if (WidgetRenderer && CurrentSlateWidget.IsValid())
+	
+	if (WidgetRenderer && GetSlateWidget().IsValid())
 	{
 		RequestRedraw();
 		LastWidgetRenderTime = 0;

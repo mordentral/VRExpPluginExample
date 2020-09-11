@@ -109,7 +109,7 @@ void AGrippableSkeletalMeshActor::PreReplication(IRepChangedPropertyTracker & Ch
 #if WITH_PUSH_MODEL
 	if (UNLIKELY(OldAttachParent != AttachmentWeldReplication.AttachParent || OldAttachComponent != AttachmentWeldReplication.AttachComponent))
 	{
-		MARK_PROPERTY_DIRTY_FROM_NAME(AActor, AttachmentWeldReplication, this);
+		MARK_PROPERTY_DIRTY_FROM_NAME(AGrippableSkeletalMeshActor, AttachmentWeldReplication, this);
 	}
 #endif
 
@@ -216,7 +216,7 @@ void AGrippableSkeletalMeshActor::GatherCurrentMovement()
 			OldAttachParent != AttachmentWeldReplication.AttachParent ||
 			OldAttachComponent != AttachmentWeldReplication.AttachComponent)
 		{
-			MARK_PROPERTY_DIRTY_FROM_NAME(AActor, AttachmentWeldReplication, this);
+			MARK_PROPERTY_DIRTY_FROM_NAME(AGrippableSkeletalMeshActor, AttachmentWeldReplication, this);
 		}
 	}
 }

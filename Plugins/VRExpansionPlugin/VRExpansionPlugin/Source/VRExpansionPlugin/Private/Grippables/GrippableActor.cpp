@@ -88,7 +88,7 @@ void AGrippableActor::PreReplication(IRepChangedPropertyTracker & ChangedPropert
 #if WITH_PUSH_MODEL
 	if (UNLIKELY(OldAttachParent != AttachmentWeldReplication.AttachParent || OldAttachComponent != AttachmentWeldReplication.AttachComponent))
 	{
-		MARK_PROPERTY_DIRTY_FROM_NAME(AActor, AttachmentWeldReplication, this);
+		MARK_PROPERTY_DIRTY_FROM_NAME(AGrippableActor, AttachmentWeldReplication, this);
 	}
 #endif
 
@@ -196,7 +196,7 @@ void AGrippableActor::GatherCurrentMovement()
 			OldAttachParent != AttachmentWeldReplication.AttachParent ||
 			OldAttachComponent != AttachmentWeldReplication.AttachComponent)
 		{
-			MARK_PROPERTY_DIRTY_FROM_NAME(AActor, AttachmentWeldReplication, this);
+			MARK_PROPERTY_DIRTY_FROM_NAME(AGrippableActor, AttachmentWeldReplication, this);
 		}
 #endif
 	}
