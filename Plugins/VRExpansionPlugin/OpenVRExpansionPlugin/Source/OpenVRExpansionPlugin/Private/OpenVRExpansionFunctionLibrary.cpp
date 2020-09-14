@@ -4,7 +4,7 @@
 #include "Engine/Engine.h"
 #include "CoreMinimal.h"
 #include "Engine/Texture2D.h"
-#include "Engine/TextureResource.h"
+#include "Rendering/Texture2DResource.h"
 #include "RenderUtils.h"
 #include "IXRTrackingSystem.h"
 #include "IHeadMountedDisplay.h"

@@ -2,14 +2,14 @@
 
 #pragma once
 #include "CoreMinimal.h"
-#if WITH_CHAOS
+//#if WITH_CHAOS
 #include "WheeledVehiclePawn.h"
 #include "ChaosWheeledVehicleMovementComponent.h"
-#elseif PHYSICS_INTERFACE_PHYSX
-#include "WheeledVehicle.h"
-#include "WheeledVehicleMovementComponent.h"
-#include "SimpleWheeledVehicleMovementComponent.h"
-#endif
+//#else if PHYSICS_INTERFACE_PHYSX
+//#include "WheeledVehicle.h"
+//#include "WheeledVehicleMovementComponent.h"
+//#include "SimpleWheeledVehicleMovementComponent.h"
+//#endif
 
 #include "UObject/ObjectMacros.h"
 #include "GameFramework/Pawn.h"
@@ -24,13 +24,11 @@
 * It adds two new functions: SetBindToInput to bind input locally to the pawn and ForceSecondaryPossession which fakes possession so the 
 * player can control the vehicle as if they were locally possessed into it in a multiplayer enviroment (no lag).
 */
-#if PHYSICS_INTERFACE_PHYSX
-UCLASS(config = Game, BlueprintType)
-class VREXPANSIONPLUGIN_API AVRWheeledVehicle : public AWheeledVehicle
-#else
+//UCLASS(config = Game, BlueprintType)
+//class VREXPANSIONPLUGIN_API AVRWheeledVehicle : public AWheeledVehicle
 UCLASS(config = Game, BlueprintType)
 class VREXPANSIONPLUGIN_API AVRWheeledVehicle : public AWheeledVehiclePawn
-#endif
+//#endif
 {
 	GENERATED_BODY()
 
