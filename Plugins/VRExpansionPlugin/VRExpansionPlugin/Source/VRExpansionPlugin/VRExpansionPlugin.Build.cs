@@ -108,7 +108,7 @@ public class VRExpansionPlugin : ModuleRules
 
         if (Target.bCompilePhysX)
         {
-            PublicDependencyModuleNames.Add("PhysXVehicles");
+           // PublicDependencyModuleNames.Add("PhysXVehicles");
         }
 
         if (Target.bUseChaos)
