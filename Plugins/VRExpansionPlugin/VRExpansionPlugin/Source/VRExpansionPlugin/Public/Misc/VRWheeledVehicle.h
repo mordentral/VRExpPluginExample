@@ -3,8 +3,8 @@
 #pragma once
 #include "CoreMinimal.h"
 //#if WITH_CHAOS
-#include "WheeledVehiclePawn.h"
-#include "ChaosWheeledVehicleMovementComponent.h"
+//#include "WheeledVehiclePawn.h"
+//#include "ChaosWheeledVehicleMovementComponent.h"
 //#else if PHYSICS_INTERFACE_PHYSX
 //#include "WheeledVehicle.h"
 //#include "WheeledVehicleMovementComponent.h"
@@ -27,7 +27,7 @@
 //UCLASS(config = Game, BlueprintType)
 //class VREXPANSIONPLUGIN_API AVRWheeledVehicle : public AWheeledVehicle
 UCLASS(config = Game, BlueprintType)
-class VREXPANSIONPLUGIN_API AVRWheeledVehicle : public AWheeledVehiclePawn
+class VREXPANSIONPLUGIN_API AVRWheeledVehicle : public APawn//AWheeledVehiclePawn
 //#endif
 {
 	GENERATED_BODY()
@@ -135,17 +135,17 @@ public:
 		virtual bool SetOverrideController(AController * NewController)
 	{
 #if PHYSICS_INTERFACE_PHYSX
-		if (UWheeledVehicleMovementComponent * MoveComp = Cast<UWheeledVehicleMovementComponent>(this->GetMovementComponent()))
+		/*if (UWheeledVehicleMovementComponent * MoveComp = Cast<UWheeledVehicleMovementComponent>(this->GetMovementComponent()))
 		{
 			MoveComp->SetOverrideController(NewController);
 			return true;
-		}
+		}*/
 #else
-		if (UChaosWheeledVehicleMovementComponent* MoveComp = Cast<UChaosWheeledVehicleMovementComponent>(this->GetMovementComponent()))
+		/*if (UChaosWheeledVehicleMovementComponent* MoveComp = Cast<UChaosWheeledVehicleMovementComponent>(this->GetMovementComponent()))
 		{
 			MoveComp->SetOverrideController(NewController);
 			return true;
-		}
+		}*/
 #endif
 		
 		return false;
