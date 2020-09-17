@@ -1567,6 +1567,9 @@ public:
 		bSetCOM = false;
 		bSkipResettingCom = false;
 		bSkipMassCheck = false;
+#if WITH_CHAOS
+		KinActorData2 = nullptr;
+#endif
 	}
 
 	FORCEINLINE bool operator==(const FBPActorGripInformation & Other) const
