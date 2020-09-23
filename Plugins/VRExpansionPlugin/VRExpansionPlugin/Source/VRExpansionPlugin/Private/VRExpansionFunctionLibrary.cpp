@@ -57,11 +57,14 @@ void UVRExpansionFunctionLibrary::SetObjectsIgnoreCollision(UPrimitiveComponent*
 								TPBDRigidParticleHandle<FReal, 3>* ParticleHandle0 = Inst1->ActorHandle->Handle()->CastToRigidParticle();
 								TPBDRigidParticleHandle<FReal, 3>* ParticleHandle1 = Inst2->ActorHandle->Handle()->CastToRigidParticle();
 
-								ParticleHandle0->AddCollisionConstraintFlag(Chaos::ECollisionConstraintFlags::CCF_BroadPhaseIgnoreCollisions);
-								IgnoreCollisionManager.AddIgnoreCollisionsFor(ID0, ID1);
+								if (ParticleHandle0 && ParticleHandle1)
+								{
+									ParticleHandle0->AddCollisionConstraintFlag(Chaos::ECollisionConstraintFlags::CCF_BroadPhaseIgnoreCollisions);
+									IgnoreCollisionManager.AddIgnoreCollisionsFor(ID0, ID1);
 
-								ParticleHandle1->AddCollisionConstraintFlag(Chaos::ECollisionConstraintFlags::CCF_BroadPhaseIgnoreCollisions);
-								IgnoreCollisionManager.AddIgnoreCollisionsFor(ID1, ID0);
+									ParticleHandle1->AddCollisionConstraintFlag(Chaos::ECollisionConstraintFlags::CCF_BroadPhaseIgnoreCollisions);
+									IgnoreCollisionManager.AddIgnoreCollisionsFor(ID1, ID0);
+								}
 							}
 						}
 						else
@@ -71,17 +74,20 @@ void UVRExpansionFunctionLibrary::SetObjectsIgnoreCollision(UPrimitiveComponent*
 								TPBDRigidParticleHandle<FReal, 3>* ParticleHandle0 = Inst1->ActorHandle->Handle()->CastToRigidParticle();
 								TPBDRigidParticleHandle<FReal, 3>* ParticleHandle1 = Inst2->ActorHandle->Handle()->CastToRigidParticle();
 
-								IgnoreCollisionManager.RemoveIgnoreCollisionsFor(ID0, ID1);
-								IgnoreCollisionManager.RemoveIgnoreCollisionsFor(ID1, ID0);
-
-								if (IgnoreCollisionManager.NumIgnoredCollision(ID0) < 1)
+								if (ParticleHandle0 && ParticleHandle1)
 								{
-									ParticleHandle0->RemoveCollisionConstraintFlag(Chaos::ECollisionConstraintFlags::CCF_BroadPhaseIgnoreCollisions);
-								}
+									IgnoreCollisionManager.RemoveIgnoreCollisionsFor(ID0, ID1);
+									IgnoreCollisionManager.RemoveIgnoreCollisionsFor(ID1, ID0);
 
-								if (IgnoreCollisionManager.NumIgnoredCollision(ID1) < 1)
-								{
-									ParticleHandle1->RemoveCollisionConstraintFlag(Chaos::ECollisionConstraintFlags::CCF_BroadPhaseIgnoreCollisions);
+									if (IgnoreCollisionManager.NumIgnoredCollision(ID0) < 1)
+									{
+										ParticleHandle0->RemoveCollisionConstraintFlag(Chaos::ECollisionConstraintFlags::CCF_BroadPhaseIgnoreCollisions);
+									}
+
+									if (IgnoreCollisionManager.NumIgnoredCollision(ID1) < 1)
+									{
+										ParticleHandle1->RemoveCollisionConstraintFlag(Chaos::ECollisionConstraintFlags::CCF_BroadPhaseIgnoreCollisions);
+									}
 								}
 							}
 						}
