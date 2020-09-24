@@ -1563,7 +1563,7 @@ void UVRBaseCharacterMovementComponent::SimulatedTick(float DeltaSeconds)
 		PerformMovement(DeltaSeconds);
 
 		// After movement correction, smooth out error in position if any.
-		if (bCorrectedToServer)
+		if (bCorrectedToServer || CurrentRootMotion.NeedsSimulatedSmoothing())
 		{
 			SmoothCorrection(OldLocation, OldRotation, UpdatedComponent->GetComponentLocation(), UpdatedComponent->GetComponentQuat());
 		}

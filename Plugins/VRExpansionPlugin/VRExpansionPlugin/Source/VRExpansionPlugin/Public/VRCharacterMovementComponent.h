@@ -17,6 +17,7 @@
 #include "WorldCollision.h"
 #include "Runtime/Launch/Resources/Version.h"
 #include "VRBaseCharacterMovementComponent.h"
+#include "GameFramework/CharacterMovementReplication.h"
 #include "VRCharacterMovementComponent.generated.h"
 
 class FDebugDisplayInfo;
@@ -27,6 +28,119 @@ DECLARE_LOG_CATEGORY_EXTERN(LogVRCharacterMovement, Log, All);
 
 /** Shared pointer for easy memory management of FSavedMove_Character, for accumulating and replaying network moves. */
 //typedef TSharedPtr<class FSavedMove_Character> FSavedMovePtr;
+
+struct VREXPANSIONPLUGIN_API FVRCharacterNetworkMoveData : public FCharacterNetworkMoveData
+{
+public:
+
+	FVRCharacterNetworkMoveData() : FCharacterNetworkMoveData()
+	{
+
+	}
+
+	virtual ~FVRCharacterNetworkMoveData()
+	{
+	}
+
+	virtual void ClientFillNetworkMoveData(const FSavedMove_Character& ClientMove, ENetworkMoveType MoveType) override
+	{
+		NetworkMoveType = MoveType;
+
+		TimeStamp = ClientMove.TimeStamp;
+		Acceleration = ClientMove.Acceleration;
+		ControlRotation = ClientMove.SavedControlRotation;
+		CompressedMoveFlags = ClientMove.GetCompressedFlags();
+		MovementMode = ClientMove.MovementMode;
+
+		// Location, relative movement base, and ending movement mode is only used for error checking, so only fill in the more complex parts if actually required.
+		if (MoveType == ENetworkMoveType::NewMove)
+		{
+			// Determine if we send absolute or relative location
+			UPrimitiveComponent* ClientMovementBase = ClientMove.EndBase.Get();
+			const bool bDynamicBase = MovementBaseUtility::UseRelativeLocation(ClientMovementBase);
+			const FVector SendLocation = bDynamicBase ? ClientMove.SavedRelativeLocation : ClientMove.SavedLocation;
+
+			Location = SendLocation;
+			MovementBase = bDynamicBase ? ClientMovementBase : nullptr;
+			MovementBaseBoneName = bDynamicBase ? ClientMove.EndBoneName : NAME_None;
+		}
+		else
+		{
+			Location = ClientMove.SavedLocation;
+			MovementBase = nullptr;
+			MovementBaseBoneName = NAME_None;
+		}
+	}
+
+	virtual bool Serialize(UCharacterMovementComponent& CharacterMovement, FArchive& Ar, UPackageMap* PackageMap, ENetworkMoveType MoveType) override
+	{
+		NetworkMoveType = MoveType;
+
+		bool bLocalSuccess = true;
+		const bool bIsSaving = Ar.IsSaving();
+
+		Ar << TimeStamp;
+
+		// TODO: better packing with single bit per component indicating zero/non-zero
+		Acceleration.NetSerialize(Ar, PackageMap, bLocalSuccess);
+
+		Location.NetSerialize(Ar, PackageMap, bLocalSuccess);
+
+		// ControlRotation : FRotator handles each component zero/non-zero test; it uses a single signal bit for zero/non-zero, and uses 16 bits per component if non-zero.
+		ControlRotation.NetSerialize(Ar, PackageMap, bLocalSuccess);
+
+		SerializeOptionalValue<uint8>(bIsSaving, Ar, CompressedMoveFlags, 0);
+
+		if (MoveType == ENetworkMoveType::NewMove)
+		{
+			// Location, relative movement base, and ending movement mode is only used for error checking, so only save for the final move.
+			SerializeOptionalValue<UPrimitiveComponent*>(bIsSaving, Ar, MovementBase, nullptr);
+			SerializeOptionalValue<FName>(bIsSaving, Ar, MovementBaseBoneName, NAME_None);
+			SerializeOptionalValue<uint8>(bIsSaving, Ar, MovementMode, MOVE_Walking);
+		}
+
+		return !Ar.IsError();
+	}
+};
+
+struct VREXPANSIONPLUGIN_API FVRCharacterNetworkMoveDataContainer : public FCharacterNetworkMoveDataContainer
+{
+public:
+
+	/**
+	 * Default constructor. Sets data storage (NewMoveData, PendingMoveData, OldMoveData) to point to default data members. Override those pointers to instead point to custom data if you want to use derived classes.
+	 */
+	FVRCharacterNetworkMoveDataContainer() : FCharacterNetworkMoveDataContainer()
+	{
+		NewMoveData = &VRBaseDefaultMoveData[0];
+		PendingMoveData = &VRBaseDefaultMoveData[1];
+		OldMoveData = &VRBaseDefaultMoveData[2];
+	}
+
+	virtual ~FVRCharacterNetworkMoveDataContainer()
+	{
+	}
+
+	/**
+ * Passes through calls to ClientFillNetworkMoveData on each FCharacterNetworkMoveData matching the client moves. Note that ClientNewMove will never be null, but others may be.
+ */
+	//virtual void ClientFillNetworkMoveData(const FSavedMove_Character* ClientNewMove, const FSavedMove_Character* ClientPendingMove, const FSavedMove_Character* ClientOldMove);
+
+	/**
+	 * Serialize movement data. Passes Serialize calls to each FCharacterNetworkMoveData as applicable, based on bHasPendingMove and bHasOldMove.
+	 */
+	//virtual bool Serialize(UCharacterMovementComponent& CharacterMovement, FArchive& Ar, UPackageMap* PackageMap);
+
+
+
+protected:
+
+
+	FVRCharacterNetworkMoveData VRBaseDefaultMoveData[3];
+
+};
+
+//FCharacterMoveResponseDataContainer VRMoveResponseDataContainer;
 
 
 //=============================================================================
@@ -125,6 +239,8 @@ public:
 	// Client adjustment overrides to allow for rotation
 	///////////////////////////
 
+	virtual void ClientHandleMoveResponse(const FCharacterMoveResponseDataContainer& MoveResponse) override;
+
 	virtual void SendClientAdjustment() override;
 	/**
 	* Have the server check if the client is outside an error tolerance, and queue a client adjustment if so.
@@ -169,6 +285,12 @@ public:
 
 	// Using my own as I don't want to cast the standard fsavedmove
 	virtual void CallServerMove(const class FSavedMove_Character* NewMove, const class FSavedMove_Character* OldMove) override;
+
+
+	/** Default client to server move RPC data container. Can be bypassed via SetNetworkMoveDataContainer(). */
+	FVRCharacterNetworkMoveDataContainer VRNetworkMoveDataContainer;
+	FCharacterMoveResponseDataContainer VRMoveResponseDataContainer;
+
 
 	/* Resending an (important) old move. Process it if not already processed. */
 	virtual void ServerMoveVROld(float OldTimeStamp, FVector_NetQuantize10 OldAccel, uint8 OldMoveFlags, FVRConditionalMoveRep ConditionalReps);

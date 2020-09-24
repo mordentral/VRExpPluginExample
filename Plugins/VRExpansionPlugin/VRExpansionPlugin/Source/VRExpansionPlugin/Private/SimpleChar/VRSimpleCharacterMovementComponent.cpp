@@ -68,6 +68,9 @@ UVRSimpleCharacterMovementComponent::UVRSimpleCharacterMovementComponent(const F
 	AdditionalVRInputVector = FVector::ZeroVector;	
 	CustomVRInputVector = FVector::ZeroVector;
 
+	SetNetworkMoveDataContainer(VRNetworkMoveDataContainer);
+	SetMoveResponseDataContainer(VRMoveResponseDataContainer);
+
 	//bMaintainHorizontalGroundVelocity = true;
 }
 
@@ -1034,6 +1037,7 @@ void UVRSimpleCharacterMovementComponent::PhysWalking(float deltaTime, int32 Ite
 			{
 				// TODO-RootMotionSource: Allow this to happen during partial override Velocity, but only set allowed axes?
 				Velocity = (UpdatedComponent->GetComponentLocation() - OldLocation) / timeTick;
+				MaintainHorizontalGroundVelocity();
 			}
 		}
 
@@ -1156,8 +1160,8 @@ void UVRSimpleCharacterMovementComponent::SetUpdatedComponent(USceneComponent* N
 
 void UVRSimpleCharacterMovementComponent::CallServerMove
 (
-	const class FSavedMove_Character* NewCMove,
-	const class FSavedMove_Character* OldCMove
+	const FSavedMove_Character* NewCMove,
+	const FSavedMove_Character* OldCMove
 )
 {
 
@@ -1478,8 +1482,14 @@ void UVRSimpleCharacterMovementComponent::ReplicateMoveToServer(float DeltaTime,
 		if (bSendServerMove)
 		{
 			SCOPE_CYCLE_COUNTER(STAT_CharacterMovementCallServerMoveVRSimple);
-			//CallServerMove(NewMove.Get(), OldMove.Get());
-			CallServerMove(NewMove, OldMove.Get());
+			if (ShouldUsePackedMovementRPCs())
+			{
+				CallServerMovePacked(NewMove, ClientData->PendingMove.Get(), OldMove.Get());
+			}
+			else
+			{
+				CallServerMove(NewMove, OldMove.Get());
+			}
 		}
 	}
 
