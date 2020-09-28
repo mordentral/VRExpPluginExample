@@ -2,9 +2,7 @@
 
 #include "VRExpansionPlugin.h"
 
-#if PHYSICS_INTERFACE_PHYSX
 #include "Grippables/GrippablePhysicsReplication.h"
-#endif
 
 #include "VRGlobalSettings.h"
 #include "ISettingsContainer.h"
@@ -23,6 +21,8 @@ void FVRExpansionPluginModule::StartupModule()
 	FPhysScene_PhysX::ContactModifyCallbackFactory = MakeShared<IContactModifyCallbackFactoryVR>();
 	FPhysScene_PhysX::CCDContactModifyCallbackFactory = MakeShared<ICCDContactModifyCallbackFactoryVR>();
 	//FPhysScene_ImmediatePhysX::PhysicsReplicationFactory = MakeShared<IPhysicsReplicationFactoryVR>();
+#elif WITH_CHAOS
+	FPhysScene_Chaos::PhysicsReplicationFactory = MakeShared<IPhysicsReplicationFactoryVR>();
 #endif
 }
 

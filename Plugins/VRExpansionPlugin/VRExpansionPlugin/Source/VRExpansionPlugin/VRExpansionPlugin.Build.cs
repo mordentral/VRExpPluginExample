@@ -113,7 +113,7 @@ public class VRExpansionPlugin : ModuleRules
 
         if (Target.bUseChaos)
         {
-            //PublicDependencyModuleNames.Add("ChaosVehicles");
+            //PublicDependencyModuleNames.Add("ChaosVehiclesPlugin");
         }
 
 

@@ -3,8 +3,8 @@
 #pragma once
 #include "CoreMinimal.h"
 //#if WITH_CHAOS
-//#include "WheeledVehiclePawn.h"
-//#include "ChaosWheeledVehicleMovementComponent.h"
+//#include "Plugins/Experimental/ChaosVehicles/WheeledVehiclePawn.h"
+//#include "Plugins/Experimental/ChaosVehicles/ChaosWheeledVehicleMovementComponent.h"
 //#else if PHYSICS_INTERFACE_PHYSX
 //#include "WheeledVehicle.h"
 //#include "WheeledVehicleMovementComponent.h"

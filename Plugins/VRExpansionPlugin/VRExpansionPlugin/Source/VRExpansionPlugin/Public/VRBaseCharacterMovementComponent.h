@@ -335,6 +335,8 @@ public:
 	{
 		bOutSuccess = true;
 
+		bool bIsLoading = Ar.IsLoading();
+
 		bool bHasVRinput = !CustomVRInputVector.IsZero();
 		bool bHasRequestedVelocity = !RequestedVelocity.IsZero();
 		bool bHasMoveAction = MoveActionArray.MoveActions.Num() > 0;//MoveAction.MoveAction != EVRMoveAction::VRMOVEACTION_None;
@@ -349,13 +351,31 @@ public:
 			//Ar.SerializeBits(&bHasMoveAction, 1);
 
 			if (bHasVRinput)
+			{
 				bOutSuccess &= SerializePackedVector<100, 22/*30*/>(CustomVRInputVector, Ar);
+			}
+			else if (bIsLoading)
+			{
+				CustomVRInputVector = FVector::ZeroVector;
+			}
 
 			if (bHasRequestedVelocity)
+			{
 				bOutSuccess &= SerializePackedVector<100, 22/*30*/>(RequestedVelocity, Ar);
+			}
+			else if (bIsLoading)
+			{
+				RequestedVelocity = FVector::ZeroVector;
+			}
 
 			//if (bHasMoveAction)
 			MoveActionArray.NetSerialize(Ar, Map, bOutSuccess);
+		}
+		else if(bIsLoading)
+		{
+			CustomVRInputVector = FVector::ZeroVector;
+			RequestedVelocity = FVector::ZeroVector;
+			MoveActionArray.Clear();
 		}
 
 		return bOutSuccess;

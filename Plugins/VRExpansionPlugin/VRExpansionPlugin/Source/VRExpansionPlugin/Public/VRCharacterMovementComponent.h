@@ -33,9 +33,16 @@ struct VREXPANSIONPLUGIN_API FVRCharacterNetworkMoveData : public FCharacterNetw
 {
 public:
 
+	FVector_NetQuantize100 VRCapsuleLocation;
+	FVector_NetQuantize100 LFDiff;
+	uint16 VRCapsuleRotation;
+	FVRConditionalMoveRep ConditionalMoveReps;
+
 	FVRCharacterNetworkMoveData() : FCharacterNetworkMoveData()
 	{
-
+		VRCapsuleLocation = FVector::ZeroVector;
+		LFDiff = FVector::ZeroVector;
+		VRCapsuleRotation = 0;
 	}
 
 	virtual ~FVRCharacterNetworkMoveData()
@@ -44,31 +51,18 @@ public:
 
 	virtual void ClientFillNetworkMoveData(const FSavedMove_Character& ClientMove, ENetworkMoveType MoveType) override
 	{
-		NetworkMoveType = MoveType;
+		// Handles the movement base itself now	
+		FCharacterNetworkMoveData::ClientFillNetworkMoveData(ClientMove, MoveType);
 
-		TimeStamp = ClientMove.TimeStamp;
-		Acceleration = ClientMove.Acceleration;
-		ControlRotation = ClientMove.SavedControlRotation;
-		CompressedMoveFlags = ClientMove.GetCompressedFlags();
-		MovementMode = ClientMove.MovementMode;
-
-		// Location, relative movement base, and ending movement mode is only used for error checking, so only fill in the more complex parts if actually required.
-		if (MoveType == ENetworkMoveType::NewMove)
+		// I know that we overloaded this, so it should be our base type
+		if (const FSavedMove_VRBaseCharacter* SavedMove = (const FSavedMove_VRBaseCharacter*)(&ClientMove))
 		{
-			// Determine if we send absolute or relative location
-			UPrimitiveComponent* ClientMovementBase = ClientMove.EndBase.Get();
-			const bool bDynamicBase = MovementBaseUtility::UseRelativeLocation(ClientMovementBase);
-			const FVector SendLocation = bDynamicBase ? ClientMove.SavedRelativeLocation : ClientMove.SavedLocation;
+			ConditionalMoveReps = SavedMove->ConditionalValues;
 
-			Location = SendLocation;
-			MovementBase = bDynamicBase ? ClientMovementBase : nullptr;
-			MovementBaseBoneName = bDynamicBase ? ClientMove.EndBoneName : NAME_None;
-		}
-		else
-		{
-			Location = ClientMove.SavedLocation;
-			MovementBase = nullptr;
-			MovementBaseBoneName = NAME_None;
+			// #TODO: Roll these into the conditionals
+			VRCapsuleLocation = SavedMove->VRCapsuleLocation;
+			LFDiff = SavedMove->LFDiff;
+			VRCapsuleRotation = FRotator::CompressAxisToShort(SavedMove->VRCapsuleRotation.Yaw);
 		}
 	}
 
@@ -81,8 +75,22 @@ public:
 
 		Ar << TimeStamp;
 
-		// TODO: better packing with single bit per component indicating zero/non-zero
-		Acceleration.NetSerialize(Ar, PackageMap, bLocalSuccess);
+		// Handle switching the acceleration rep
+		// Can't use SerializeOptionalValue here as I don't want to bitwise compare floats
+		bool bRepAccel = bIsSaving ? !Acceleration.IsNearlyZero() : false;
+		Ar.SerializeBits(&bRepAccel, 1);
+
+		if (bRepAccel)
+		{
+			Acceleration.NetSerialize(Ar, PackageMap, bLocalSuccess);
+		}
+		else
+		{
+			if (!bIsSaving)
+			{
+				Acceleration = FVector::ZeroVector;
+			}
+		}
 
 		Location.NetSerialize(Ar, PackageMap, bLocalSuccess);
 
@@ -98,6 +106,13 @@ public:
 			SerializeOptionalValue<FName>(bIsSaving, Ar, MovementBaseBoneName, NAME_None);
 			SerializeOptionalValue<uint8>(bIsSaving, Ar, MovementMode, MOVE_Walking);
 		}
+
+		// Rep out our custom move settings
+		ConditionalMoveReps.NetSerialize(Ar, PackageMap, bLocalSuccess);
+
+		VRCapsuleLocation.NetSerialize(Ar, PackageMap, bLocalSuccess);
+		LFDiff.NetSerialize(Ar, PackageMap, bLocalSuccess);
+		Ar << VRCapsuleRotation;
 
 		return !Ar.IsError();
 	}
@@ -290,6 +305,8 @@ public:
 	/** Default client to server move RPC data container. Can be bypassed via SetNetworkMoveDataContainer(). */
 	FVRCharacterNetworkMoveDataContainer VRNetworkMoveDataContainer;
 	FCharacterMoveResponseDataContainer VRMoveResponseDataContainer;
+
+	virtual void ServerMove_PerformMovement(const FCharacterNetworkMoveData& MoveData) override;
 
 
 	/* Resending an (important) old move. Process it if not already processed. */
