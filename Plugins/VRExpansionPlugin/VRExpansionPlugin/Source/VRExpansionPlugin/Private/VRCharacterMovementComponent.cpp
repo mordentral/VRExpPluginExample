@@ -850,10 +850,10 @@ void UVRCharacterMovementComponent::ServerMove_PerformMovement(const FCharacterN
 		return;
 	}
 
+	bool bAutoAcceptPacket = false;
+
 	FNetworkPredictionData_Server_Character* ServerData = GetPredictionData_Server_Character();
 	check(ServerData);
-
-	bool bAutoAcceptPacket = false;
 
 	if (MovementMode == MOVE_Custom && CustomMovementMode == (uint8)EVRCustomMovementMode::VRMOVE_Seated)
 	{
@@ -873,10 +873,7 @@ void UVRCharacterMovementComponent::ServerMove_PerformMovement(const FCharacterN
 
 	if (!bAutoAcceptPacket && !VerifyClientTimeStamp(ClientTimeStamp, *ServerData))
 	{
-		FNetworkPredictionData_Server_Character* ServerPredData = GetPredictionData_Server_Character();
-		check(ServerPredData);
-
-		const float ServerTimeStamp = ServerPredData->CurrentClientTimeStamp;
+		const float ServerTimeStamp = ServerData->CurrentClientTimeStamp;
 		// This is more severe if the timestamp has a large discrepancy and hasn't been recently reset.
 		static const auto CVarNetServerMoveTimestampExpiredWarningThreshold = IConsoleManager::Get().FindConsoleVariable(TEXT("net.NetServerMoveTimestampExpiredWarningThreshold"));
 		if (ServerTimeStamp > 1.0f && FMath::Abs(ServerTimeStamp - ClientTimeStamp) > CVarNetServerMoveTimestampExpiredWarningThreshold->GetFloat())
@@ -1793,9 +1790,6 @@ UVRCharacterMovementComponent::UVRCharacterMovementComponent(const FObjectInitia
 	bUseClientControlRotation = false;
 	bAllowMovementMerging = true;
 	bRequestedMoveUseAcceleration = false;
-
-	SetNetworkMoveDataContainer(VRNetworkMoveDataContainer);
-	SetMoveResponseDataContainer(VRMoveResponseDataContainer);
 }
 
 

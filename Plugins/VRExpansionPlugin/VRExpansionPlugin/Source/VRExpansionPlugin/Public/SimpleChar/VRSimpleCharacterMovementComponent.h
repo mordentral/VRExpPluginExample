@@ -89,6 +89,8 @@ public:
 	///////////////////////////
 	virtual void CallServerMove(const class FSavedMove_Character* NewMove, const class FSavedMove_Character* OldMove) override;
 
+	virtual void ServerMove_PerformMovement(const FCharacterNetworkMoveData& MoveData) override;
+
 	/** Default client to server move RPC data container. Can be bypassed via SetNetworkMoveDataContainer(). */
 	FCharacterNetworkMoveDataContainer VRNetworkMoveDataContainer;
 	FCharacterMoveResponseDataContainer VRMoveResponseDataContainer;
