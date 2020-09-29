@@ -354,6 +354,7 @@ bool FVRCharacterNetworkMoveData::Serialize(UCharacterMovementComponent& Charact
 	}
 
 	// Rep out our custom move settings
+	// #TODO: should move the capsule loc and rot into the new move only for error checking as well
 	ConditionalMoveReps.NetSerialize(Ar, PackageMap, bLocalSuccess);
 
 	VRCapsuleLocation.NetSerialize(Ar, PackageMap, bLocalSuccess);
