@@ -338,28 +338,92 @@ bool FVRCharacterNetworkMoveData::Serialize(UCharacterMovementComponent& Charact
 		}
 	}
 
-	Location.NetSerialize(Ar, PackageMap, bLocalSuccess);
+	/*
+		NewMoveConds.ClientMovementBase = ClientMovementBase;
+	NewMoveConds.ClientBaseBoneName = ClientBaseBone;
+
+	if (CharacterOwner && (CharacterOwner->bUseControllerRotationRoll || CharacterOwner->bUseControllerRotationPitch))
+	{
+		NewMoveConds.ClientPitch = FRotator::CompressAxisToShort(NewMove->SavedControlRotation.Pitch);
+		NewMoveConds.ClientRoll = FRotator::CompressAxisToByte(NewMove->SavedControlRotation.Roll);
+	}
+	*/
+
+	//Location.NetSerialize(Ar, PackageMap, bLocalSuccess);
+
+	uint16 Yaw = bIsSaving ? FRotator::CompressAxisToShort(ControlRotation.Yaw) : 0;
+	uint16 Pitch = bIsSaving ? FRotator::CompressAxisToShort(ControlRotation.Pitch) : 0;
+	uint16 Roll = bIsSaving ? FRotator::CompressAxisToShort(ControlRotation.Roll) : 0;
+	bool bRepYaw = Yaw != 0;
+
+	ACharacter* CharacterOwner = CharacterMovement.GetCharacterOwner();
+
+	bool bCanRepRollAndPitch = (CharacterOwner && (CharacterOwner->bUseControllerRotationRoll || CharacterOwner->bUseControllerRotationPitch));
+	bool bRepRollAndPitch = bCanRepRollAndPitch && (Roll != 0 || Pitch != 0);
+	Ar.SerializeBits(&bRepRollAndPitch, 1);
+
+	if (bRepRollAndPitch)
+	{
+		// Reversed the order of these
+		uint32 Rotation32 = 0;
+		uint32 Yaw32 = bIsSaving ? Yaw : 0;
+
+		if (bIsSaving)
+		{
+			Rotation32 = (((uint32)Roll) << 16) | ((uint32)Pitch);
+			Ar.SerializeIntPacked(Rotation32);
+		}
+		else
+		{
+			Ar.SerializeIntPacked(Rotation32);
+
+			// Reversed the order of these so it costs less to replicate
+			Pitch = (Rotation32 & 65535);
+			Roll = (Rotation32 >> 16);
+		}
+	}
+
+	uint32 Yaw32 = bIsSaving ? Yaw : 0;
+
+	Ar.SerializeBits(&bRepYaw, 1);
+	if (bRepYaw)
+	{
+		Ar.SerializeIntPacked(Yaw32);
+		Yaw = (uint16)Yaw32;
+	}
+
+	if (!bIsSaving)
+	{
+		ControlRotation.Yaw = bRepYaw ? FRotator::DecompressAxisFromShort(Yaw) : 0;
+		ControlRotation.Pitch = bRepRollAndPitch ? FRotator::DecompressAxisFromShort(Pitch) : 0;
+		ControlRotation.Roll = bRepRollAndPitch ? FRotator::DecompressAxisFromShort(Roll) : 0;
+	}
 
 	// ControlRotation : FRotator handles each component zero/non-zero test; it uses a single signal bit for zero/non-zero, and uses 16 bits per component if non-zero.
-	ControlRotation.NetSerialize(Ar, PackageMap, bLocalSuccess);
+	//ControlRotation.NetSerialize(Ar, PackageMap, bLocalSuccess);
 
 	SerializeOptionalValue<uint8>(bIsSaving, Ar, CompressedMoveFlags, 0);
 
 	if (MoveType == ENetworkMoveType::NewMove)
 	{
+		Location.NetSerialize(Ar, PackageMap, bLocalSuccess);
+
 		// Location, relative movement base, and ending movement mode is only used for error checking, so only save for the final move.
 		SerializeOptionalValue<UPrimitiveComponent*>(bIsSaving, Ar, MovementBase, nullptr);
 		SerializeOptionalValue<FName>(bIsSaving, Ar, MovementBaseBoneName, NAME_None);
 		SerializeOptionalValue<uint8>(bIsSaving, Ar, MovementMode, MOVE_Walking);
+		
+		// Moved here since only used for error checks, they are right
+		VRCapsuleLocation.NetSerialize(Ar, PackageMap, bLocalSuccess);
+		Ar << VRCapsuleRotation;
 	}
 
 	// Rep out our custom move settings
-	// #TODO: should move the capsule loc and rot into the new move only for error checking as well
 	ConditionalMoveReps.NetSerialize(Ar, PackageMap, bLocalSuccess);
 
-	VRCapsuleLocation.NetSerialize(Ar, PackageMap, bLocalSuccess);
+	//VRCapsuleLocation.NetSerialize(Ar, PackageMap, bLocalSuccess);
 	LFDiff.NetSerialize(Ar, PackageMap, bLocalSuccess);
-	Ar << VRCapsuleRotation;
+	//Ar << VRCapsuleRotation;
 
 	return !Ar.IsError();
 }
