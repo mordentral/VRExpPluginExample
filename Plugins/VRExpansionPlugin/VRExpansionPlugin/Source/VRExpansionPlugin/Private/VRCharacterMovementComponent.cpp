@@ -915,7 +915,7 @@ void UVRCharacterMovementComponent::ServerMove_PerformMovement(const FCharacterN
 		ServerData->ServerTimeStamp = MyWorld->GetTimeSeconds();
 		ServerData->ServerTimeStampLastServerMove = ServerData->ServerTimeStamp;
 
-		if (PC)
+		if (PC && bUseClientControlRotation)
 		{
 			PC->SetControlRotation(ClientControlRotation);
 		}

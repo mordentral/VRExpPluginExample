@@ -2598,7 +2598,7 @@ bool UGripMotionControllerComponent::NotifyGrip(FBPActorGripInformation &NewGrip
 
 				// #TODO: This is a hack until Epic fixes their new physics replication code
 				//		  It forces the replication target to null on grip if we aren't repping movement.
-#if PHYSICS_INTERFACE_PHYSX
+//#if PHYSICS_INTERFACE_PHYSX
 				if (UWorld* World = GetWorld())
 				{
 					if (FPhysScene* PhysScene = World->GetPhysicsScene())
@@ -2614,7 +2614,7 @@ bool UGripMotionControllerComponent::NotifyGrip(FBPActorGripInformation &NewGrip
 						}
 					}
 				}
-#endif
+//#endif
 			}
 		}
 
@@ -3028,7 +3028,7 @@ void UGripMotionControllerComponent::Drop_Implementation(const FBPActorGripInfor
 			{
 				// #TODO: This is a hack until Epic fixes their new physics replication code
 				//		  It forces the replication target to null on grip if we aren't repping movement.
-#if PHYSICS_INTERFACE_PHYSX
+//#if PHYSICS_INTERFACE_PHYSX
 				if (UWorld * World = GetWorld())
 				{
 					if (FPhysScene * PhysScene = World->GetPhysicsScene())
@@ -3044,7 +3044,7 @@ void UGripMotionControllerComponent::Drop_Implementation(const FBPActorGripInfor
 						}
 					}
 				}
-#endif
+//#endif
 			}
 		}
 
@@ -5527,9 +5527,9 @@ void UGripMotionControllerComponent::UpdatePhysicsHandleTransform(const FBPActor
 		return;
 
 	// Don't call moveKinematic if it hasn't changed - that will stop bodies from going to sleep.
-#if PHYSICS_INTERFACE_PHYSX
+//#if PHYSICS_INTERFACE_PHYSX
 	if (!HandleInfo->LastPhysicsTransform.EqualsNoScale(NewTransform))
-#endif
+//#endif
 	{
 		HandleInfo->LastPhysicsTransform = NewTransform;
 		HandleInfo->LastPhysicsTransform.SetScale3D(FVector(1.0f));
