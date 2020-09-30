@@ -52,11 +52,6 @@ public:
 	// Skip force updating position if we are seated.
 	virtual bool ForcePositionUpdate(float DeltaTime) override;
 
-	virtual void ClientAckGoodMove_Implementation(float TimeStamp) override 
-	{
-		Super::ClientAckGoodMove_Implementation(TimeStamp);
-	}
-
 	// When true will use the default engines behavior of setting rotation to match the clients instead of simulating rotations, this is really only here for FPS test pawns
 	// And non VRCharacter classes (simple character will use this)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRBaseCharacterMovementComponent")
