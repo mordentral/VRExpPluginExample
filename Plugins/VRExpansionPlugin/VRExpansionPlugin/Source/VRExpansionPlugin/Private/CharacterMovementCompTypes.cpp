@@ -338,17 +338,6 @@ bool FVRCharacterNetworkMoveData::Serialize(UCharacterMovementComponent& Charact
 		}
 	}
 
-	/*
-		NewMoveConds.ClientMovementBase = ClientMovementBase;
-	NewMoveConds.ClientBaseBoneName = ClientBaseBone;
-
-	if (CharacterOwner && (CharacterOwner->bUseControllerRotationRoll || CharacterOwner->bUseControllerRotationPitch))
-	{
-		NewMoveConds.ClientPitch = FRotator::CompressAxisToShort(NewMove->SavedControlRotation.Pitch);
-		NewMoveConds.ClientRoll = FRotator::CompressAxisToByte(NewMove->SavedControlRotation.Roll);
-	}
-	*/
-
 	//Location.NetSerialize(Ar, PackageMap, bLocalSuccess);
 
 	uint16 Yaw = bIsSaving ? FRotator::CompressAxisToShort(ControlRotation.Yaw) : 0;
