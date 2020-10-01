@@ -340,7 +340,7 @@ void UVRStereoWidgetComponent::TickComponent(float DeltaTime, enum ELevelTick Ti
 				if (Shape)
 				{
 					Shape->MarkPendingKill();
-					Shape = NewObject<UStereoLayerShapeCylinder>(this);
+					Shape = NewObject<UStereoLayerShapeCylinder>(this, NAME_None, RF_Public);
 				}
 			}
 
@@ -365,7 +365,7 @@ void UVRStereoWidgetComponent::TickComponent(float DeltaTime, enum ELevelTick Ti
 				if (Shape)
 				{
 					Shape->MarkPendingKill();
-					Shape = NewObject<UStereoLayerShapeQuad>(this);
+					Shape = NewObject<UStereoLayerShapeQuad>(this, NAME_None, RF_Public);
 				}
 			}
 			//LayerDsec.ShapeType = IStereoLayers::QuadLayer;

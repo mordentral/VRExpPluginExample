@@ -1043,7 +1043,7 @@ bool UVRRootComponent::MoveComponentImpl(const FVector& Delta, const FQuat& NewR
 					{
 						if (!ShouldIgnoreHitResult(MyWorld, bAllowSimulatingCollision, TestHit, Delta, Actor, MoveFlags))
 						{
-							if (TestHit.Time == 0.f)
+							if (TestHit.bStartPenetrating)
 							{
 								// We may have multiple initial hits, and want to choose the one with the normal most opposed to our movement.
 								const float NormalDotDelta = (TestHit.ImpactNormal | Delta);
