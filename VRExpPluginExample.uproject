@@ -1,6 +1,6 @@
 {
 	"FileVersion": 3,
-	"EngineAssociation": "{369D6FDC-4560-4BAC-D85A-5A86AD2FA650}",
+	"EngineAssociation": "4.26",
 	"Category": "",
 	"Description": "",
 	"Modules": [
@@ -26,6 +26,14 @@
 		{
 			"Name": "AdvancedSteamSessions",
 			"Enabled": false
+		},
+		{
+			"Name": "ControlRig",
+			"Enabled": true
+		},
+		{
+			"Name": "FullBodyIK",
+			"Enabled": true
 		}
 	],
 	"TargetPlatforms": [
