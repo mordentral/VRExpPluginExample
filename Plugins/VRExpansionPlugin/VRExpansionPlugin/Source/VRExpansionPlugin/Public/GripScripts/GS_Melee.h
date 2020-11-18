@@ -64,6 +64,10 @@ struct VREXPANSIONPLUGIN_API FBPHitSurfaceProperties
 	GENERATED_BODY()
 public:
 
+	// Does this surface type allow penetration
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Surface Property")
+		bool bSurfaceAllowsPenetration;
+
 	// Scaler to damage applied from hitting this surface with blunt damage
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Surface Property")
 		float BluntDamageScaler;
@@ -81,6 +85,8 @@ public:
 
 	FBPHitSurfaceProperties()
 	{
+		// Default to true on this
+		bSurfaceAllowsPenetration = true;
 		BluntDamageScaler = 1.f;
 		SharpDamageScaler = 1.f;
 		StabVelocityScaler = 1.f;
@@ -164,6 +170,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_SevenParams(FVROnMeleeOnHit, FBPLodgeComponen
 
 /**
 * A Melee grip script that hands multi hand interactions and penetration notifications*
+* The per surface damage and penetration options have been moved to the project settings.
 */
 UCLASS(NotBlueprintable, ClassGroup = (VRExpansionPlugin), hideCategories = TickSettings)
 class VREXPANSIONPLUGIN_API UGS_Melee : public UGS_Default
@@ -203,11 +210,6 @@ public:
 	// Mostly for very large weapons
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Melee|Lodging")
 		bool bOnlyPenetrateWithTwoHands;
-
-	// A list of surface types that allow penetration
-	// If empty then the script will not attempt to filter what was impacted
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Melee|Lodging")
-		TArray<FBPHitSurfaceProperties> AllowedPenetrationSurfaceTypes;
 
 //	FVector RollingVelocityAverage;
 	//FVector RollingAngVelocityAverage;

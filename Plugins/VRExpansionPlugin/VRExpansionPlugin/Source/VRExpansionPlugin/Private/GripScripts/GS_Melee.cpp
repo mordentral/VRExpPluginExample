@@ -6,6 +6,7 @@
 #include "PhysicsEngine/PhysicsConstraintActor.h"
 #include "PhysicsEngine/PhysicsConstraintComponent.h"
 #include "VRExpansionFunctionLibrary.h"
+#include "VRGlobalSettings.h"
 #include "DrawDebugHelpers.h"
 #include "GripMotionControllerComponent.h"
 
@@ -568,7 +569,9 @@ void UGS_Melee::OnLodgeHitCallback(AActor* SelfActor, AActor* OtherActor, FVecto
 	if (!bCheckLodge || !bIsActive || bIsLodged || OtherActor == SelfActor)
 		return;
 
-
+	TArray<FBPHitSurfaceProperties> AllowedPenetrationSurfaceTypes;
+	UVRGlobalSettings::GetMeleeSurfaceGlobalSettings(AllowedPenetrationSurfaceTypes);
+	
 	FBPHitSurfaceProperties HitSurfaceProperties;
 	HitSurfaceProperties.SurfaceType = Hit.PhysMaterial->SurfaceType;
 
@@ -587,8 +590,10 @@ void UGS_Melee::OnLodgeHitCallback(AActor* SelfActor, AActor* OtherActor, FVecto
 		}
 		else
 		{
+			// Surface is not part of our default list, don't allow penetration
+			HitSurfaceProperties.bSurfaceAllowsPenetration = false;
 			// Not a valid surface type to throw an event
-			return;
+			//return;
 		}
 	}
 
@@ -631,7 +636,7 @@ void UGS_Melee::OnLodgeHitCallback(AActor* SelfActor, AActor* OtherActor, FVecto
 			// Check if the velocity was strong enough along our axis to count as a lodge event
 			// Also that our facing was in the relatively correct direction
 
-			if (!bOnlyPenetrateWithTwoHands || SecondaryHand.IsValid())
+			if (HitSurfaceProperties.bSurfaceAllowsPenetration && !bOnlyPenetrateWithTwoHands || SecondaryHand.IsValid())
 			{
 				if (LodgeData.ZoneType != EVRMeleeZoneType::VRPMELLE_ZONETYPE_Hit && DotValue >= (1.0f - LodgeData.AcceptableForwardProductRange) && (Velocity * HitSurfaceProperties.StabVelocityScaler) >= FMath::Square(LodgeData.PenetrationVelocity))
 				{
