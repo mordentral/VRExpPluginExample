@@ -570,7 +570,17 @@ void UGS_Melee::OnLodgeHitCallback(AActor* SelfActor, AActor* OtherActor, FVecto
 		return;
 
 	TArray<FBPHitSurfaceProperties> AllowedPenetrationSurfaceTypes;
-	UVRGlobalSettings::GetMeleeSurfaceGlobalSettings(AllowedPenetrationSurfaceTypes);
+
+	if (OverrideMeleeSurfaceSettings.Num() > 0)
+	{
+		// Use our local copy
+		AllowedPenetrationSurfaceTypes = OverrideMeleeSurfaceSettings;
+	}
+	else
+	{
+		// Use the global settings
+		UVRGlobalSettings::GetMeleeSurfaceGlobalSettings(AllowedPenetrationSurfaceTypes);
+	}
 	
 	FBPHitSurfaceProperties HitSurfaceProperties;
 	HitSurfaceProperties.SurfaceType = Hit.PhysMaterial->SurfaceType;

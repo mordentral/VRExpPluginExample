@@ -170,7 +170,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_SevenParams(FVROnMeleeOnHit, FBPLodgeComponen
 
 /**
 * A Melee grip script that hands multi hand interactions and penetration notifications*
-* The per surface damage and penetration options have been moved to the project settings.
+* The per surface damage and penetration options have been moved to the project settings unless the per script override is set
 */
 UCLASS(NotBlueprintable, ClassGroup = (VRExpansionPlugin), hideCategories = TickSettings)
 class VREXPANSIONPLUGIN_API UGS_Melee : public UGS_Default
@@ -210,6 +210,11 @@ public:
 	// Mostly for very large weapons
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Melee|Lodging")
 		bool bOnlyPenetrateWithTwoHands;
+
+	// A list of surface types that allow penetration and their properties
+	// If empty then the script will use the global settings, if filled with anything then it will override the global settings
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Melee|Lodging")
+		TArray<FBPHitSurfaceProperties> OverrideMeleeSurfaceSettings;
 
 //	FVector RollingVelocityAverage;
 	//FVector RollingAngVelocityAverage;
