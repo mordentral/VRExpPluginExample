@@ -51,7 +51,32 @@ public:
 
 				if (xrGetSystemProperties(XRInstance, XRSysID, &systemProperties) == XR_SUCCESS)
 				{
-					
+					XrSession XRSesh = pOpenXRHMD->GetSession();
+					XrPath myPath;
+					XrResult PathResult = xrStringToPath(XRInstance, "/user/hand/left", &myPath);
+					XrInteractionProfileState interactionProfile{ XR_TYPE_INTERACTION_PROFILE_STATE };
+					interactionProfile.next = nullptr;
+					if (xrGetCurrentInteractionProfile(XRSesh, myPath, &interactionProfile) == XR_SUCCESS)
+					{
+						char myPathy[XR_MAX_SYSTEM_NAME_SIZE];
+						uint32_t outputsize;
+						xrPathToString(XRInstance, interactionProfile.interactionProfile, XR_MAX_SYSTEM_NAME_SIZE, &outputsize, myPathy);
+						int gg = 0;
+
+						// Not working currently?
+						/*XrInputSourceLocalizedNameGetInfo InputSourceInfo{ XR_TYPE_INPUT_SOURCE_LOCALIZED_NAME_GET_INFO };
+						InputSourceInfo.next = nullptr;
+						InputSourceInfo.whichComponents = XR_INPUT_SOURCE_LOCALIZED_NAME_INTERACTION_PROFILE_BIT;
+						InputSourceInfo.sourcePath = interactionProfile.interactionProfile;
+
+						char buffer[XR_MAX_SYSTEM_NAME_SIZE];
+						uint32_t usedBufferCount = 0;
+						if (xrGetInputSourceLocalizedName(XRSesh, &InputSourceInfo, XR_MAX_SYSTEM_NAME_SIZE, &usedBufferCount, (char*)&buffer) == XR_SUCCESS)
+						{
+							int g = 0;
+						}*/
+					}
+
 
 					/*XrInputSourceLocalizedNameGetInfo InputSourceInfo{ XR_TYPE_INPUT_SOURCE_LOCALIZED_NAME_GET_INFO };
 					InputSourceInfo.next = nullptr;
