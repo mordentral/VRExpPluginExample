@@ -10,7 +10,7 @@
 	"DocsURL": "http://www.vreue4.com",
 	"MarketplaceURL": "",
 	"SupportURL": "http://www.vreue4.com",
-	"EnabledByDefault": true,
+	"EnabledByDefault": false,
 	"CanContainContent": false,
 	"IsBetaVersion": false,
 	"Installed": true,
