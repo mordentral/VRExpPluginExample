@@ -118,14 +118,6 @@
 			"type": "boolean"
 		},
 		{
-			"name": "/actions/main/in/TriggerInteractionLEft",
-			"type": "boolean"
-		},
-		{
-			"name": "/actions/main/in/TriggerInteractionRight",
-			"type": "boolean"
-		},
-		{
 			"name": "/actions/main/in/MotionControllerThumbLeft_X,MotionControllerThumbLeft_Y X Y_axis2d",
 			"type": "vector2"
 		},

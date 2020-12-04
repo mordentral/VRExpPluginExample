@@ -1,7 +1,7 @@
 {
    "action_manifest_version" : 0,
    "alias_info" : {},
-   "app_key" : "application.generated.ue.virtual-reality-bp-game-template-11100242.ue4editor-win64-debuggame.exe",
+   "app_key" : "application.generated.ue.virtual-reality-bp-game-template-14627614.ue4editor-win64-debuggame.exe",
    "bindings" : {
       "/actions/main" : {
          "haptics" : [
@@ -60,7 +60,7 @@
             {
                "inputs" : {
                   "east" : {
-                     "output" : "/actions/main/in/TeleportRight"
+                     "output" : "/actions/main/in/teleportright"
                   },
                   "north" : {
                      "output" : "/actions/main/in/teleportright"
@@ -99,32 +99,6 @@
             {
                "inputs" : {
                   "click" : {
-                     "output" : "/actions/main/in/PrimaryGripLeft"
-                  }
-               },
-               "mode" : "button",
-               "parameters" : {
-                  "click_activate_threshold" : "1",
-                  "click_deactivate_threshold" : "1"
-               },
-               "path" : "/user/hand/left/input/grip"
-            },
-            {
-               "inputs" : {
-                  "click" : {
-                     "output" : "/actions/main/in/PrimaryGripRight"
-                  }
-               },
-               "mode" : "button",
-               "parameters" : {
-                  "click_activate_threshold" : "1",
-                  "click_deactivate_threshold" : "1"
-               },
-               "path" : "/user/hand/right/input/grip"
-            },
-            {
-               "inputs" : {
-                  "click" : {
                      "output" : "/actions/main/in/LaserBeamRight"
                   }
                },
@@ -146,7 +120,7 @@
                      "output" : "/actions/main/in/UseHeldObjectLeft"
                   }
                },
-               "mode" : "button",
+               "mode" : "trigger",
                "path" : "/user/hand/left/input/trigger"
             },
             {
@@ -155,70 +129,72 @@
                      "output" : "/actions/main/in/UseHeldObjectRight"
                   }
                },
-               "mode" : "button",
-               "path" : "/user/hand/right/input/trigger"
-            },
-            {
-               "inputs" : {
-                  "click" : {
-                     "output" : "/actions/main/in/TriggerInteractionLEft"
-                  }
-               },
-               "mode" : "button",
-               "path" : "/user/hand/left/input/trigger"
-            },
-            {
-               "inputs" : {
-                  "click" : {
-                     "output" : "/actions/main/in/TriggerInteractionRight"
-                  }
-               },
-               "mode" : "button",
+               "mode" : "trigger",
                "path" : "/user/hand/right/input/trigger"
             },
             {
                "inputs" : {
                   "position" : {
-                     "output" : "/actions/main/in/MotionControllerThumbLeft_X,MotionControllerThumbLeft_Y X Y_axis2d"
+                     "output" : "/actions/main/in/motioncontrollerthumbleft_x,motioncontrollerthumbleft_y x y_axis2d"
+                  },
+                  "touch" : {
+                     "output" : "/actions/main/in/controllermovementleft axis"
                   }
                },
                "mode" : "joystick",
+               "parameters" : {
+                  "deadzone_pct" : "10"
+               },
                "path" : "/user/hand/left/input/thumbstick"
             },
             {
                "inputs" : {
                   "position" : {
                      "output" : "/actions/main/in/MotionControllerThumbRight_X,MotionControllerThumbRight_Y X Y_axis2d"
-                  }
-               },
-               "mode" : "joystick",
-               "path" : "/user/hand/right/input/thumbstick"
-            },
-            {
-               "inputs" : {
+                  },
                   "touch" : {
                      "output" : "/actions/main/in/controllermovementright axis"
                   }
                },
                "mode" : "joystick",
+               "parameters" : {
+                  "deadzone_pct" : "10"
+               },
                "path" : "/user/hand/right/input/thumbstick"
             },
             {
                "inputs" : {
-                  "touch" : {
-                     "output" : "/actions/main/in/controllermovementleft axis"
+                  "click" : {
+                     "output" : "/actions/main/in/primarygripleft"
                   }
                },
-               "mode" : "joystick",
-               "path" : "/user/hand/left/input/thumbstick"
+               "mode" : "button",
+               "parameters" : {
+                  "click_activate_threshold" : "1",
+                  "click_deactivate_threshold" : "1"
+               },
+               "path" : "/user/hand/left/input/grip"
+            },
+            {
+               "inputs" : {
+                  "click" : {
+                     "output" : "/actions/main/in/primarygripright"
+                  }
+               },
+               "mode" : "button",
+               "parameters" : {
+                  "click_activate_threshold" : "1",
+                  "click_deactivate_threshold" : "1"
+               },
+               "path" : "/user/hand/right/input/grip"
             }
          ]
       }
    },
    "category" : "steamvr_input",
    "controller_type" : "knuckles",
-   "description" : "Virtual Reality BP Game Template-11100242",
-   "name" : "My Virtual Reality BP Game Template-11100242 [UE Editor] configuration for Index Controller",
+   "description" : "Virtual Reality BP Game Template-14627614",
+   "name" : "Default bindings for ValveIndex",
    "options" : {},
    "simulated_actions" : []
 }
