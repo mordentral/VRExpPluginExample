@@ -61,6 +61,7 @@ EBPOpenVRHMDDeviceType UOpenVRExpansionFunctionLibrary::GetOpenVRHMDType()
 	}
 
 #if !STEAMVR_SUPPORTED_PLATFORM
+	UE_LOG(OpenVRExpansionFunctionLibraryLog, Warning, TEXT("Get OpenVRHMDType returning default value as this is not a steamvr supported platform!!!"));
 	return DeviceType;
 #else
 
@@ -139,6 +140,10 @@ EBPOpenVRHMDDeviceType UOpenVRExpansionFunctionLibrary::GetOpenVRHMDType()
 #endif
 				}
 			}
+		}
+		else
+		{
+			UE_LOG(OpenVRExpansionFunctionLibraryLog, Warning, TEXT("Get OpenVRHMDType failed to get the OpenVR property string!!!"));
 		}
 	}
 
