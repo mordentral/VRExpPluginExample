@@ -105,7 +105,8 @@ EBPOpenVRHMDDeviceType UOpenVRExpansionFunctionLibrary::GetOpenVRHMDType()
 			{
 				DeviceType = EBPOpenVRHMDDeviceType::DT_Vive;
 			}
-			else if (DeviceModelNumber.Find("oculus quest", ESearchCase::IgnoreCase) != INDEX_NONE)
+			else if ((DeviceModelNumber.Find("oculus quest", ESearchCase::IgnoreCase) != INDEX_NONE) ||
+					(DeviceModelNumber.Find("miramar", ESearchCase::IgnoreCase) != INDEX_NONE))
 			{
 				DeviceType = EBPOpenVRHMDDeviceType::DT_OculusQuestHMD;
 			}
@@ -215,7 +216,8 @@ EBPOpenVRControllerDeviceType UOpenVRExpansionFunctionLibrary::GetOpenVRControll
 		{
 			DeviceType = EBPOpenVRControllerDeviceType::DT_ViveController;
 		}
-		else if (DeviceModelNumber.Find("oculus quest", ESearchCase::IgnoreCase) != INDEX_NONE) // Vive Wand
+		else if ((DeviceModelNumber.Find("oculus quest", ESearchCase::IgnoreCase) != INDEX_NONE) ||
+				(DeviceModelNumber.Find("miramar", ESearchCase::IgnoreCase) != INDEX_NONE))
 		{
 			DeviceType = EBPOpenVRControllerDeviceType::DT_QuestController;
 		}
