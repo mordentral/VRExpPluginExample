@@ -72,6 +72,17 @@ UVRSimpleCharacterMovementComponent::UVRSimpleCharacterMovementComponent(const F
 	//SetMoveResponseDataContainer(VRMoveResponseDataContainer);
 
 	//bMaintainHorizontalGroundVelocity = true;
+
+	defaultFriction = 8.0f;
+	currentFriction = 8.0f;
+	minDecayFriction=0.1f;
+	lowAngleFriction=8.0f;
+	highAngleFriction=3.0f;
+	frictionTransitionThreshold=25.0f;
+	frictionDecayRate=0.95f;
+	frictionReviveRate=1.25f;
+	maxSpeed=1100.0f;
+
 }
 
 bool UVRSimpleCharacterMovementComponent::VRClimbStepUp(const FVector& GravDir, const FVector& Delta, const FHitResult &InHit, FStepDownResult* OutStepDownResult)
@@ -296,6 +307,7 @@ bool UVRSimpleCharacterMovementComponent::VRClimbStepUp(const FVector& GravDir, 
 
 void UVRSimpleCharacterMovementComponent::PhysFlying(float deltaTime, int32 Iterations)
 {
+
 	if (deltaTime < MIN_TICK_TIME)
 	{
 		return;

@@ -152,7 +152,7 @@ void UVRBaseCharacterMovementComponent::TickComponent(float DeltaTime, enum ELev
 			OuterScopePRC = BaseVRCharacterOwner->ParentRelativeAttachment;
 		}
 
-		FScopedMovementUpdate ScopedPRCMovementUpdate(OuterScopePRC, EScopedUpdate::DeferredUpdates);
+	//	FScopedMovementUpdate ScopedPRCMovementUpdate(OuterScopePRC, EScopedUpdate::DeferredUpdates);
 		
 		{
 			UReplicatedVRCameraComponent* OuterScopeCamera = nullptr;
@@ -161,12 +161,12 @@ void UVRBaseCharacterMovementComponent::TickComponent(float DeltaTime, enum ELev
 				OuterScopeCamera = BaseVRCharacterOwner->VRReplicatedCamera;
 			}
 
-			FScopedMovementUpdate ScopedCameraMovementUpdate(OuterScopeCamera, EScopedUpdate::DeferredUpdates);
+			//FScopedMovementUpdate ScopedCameraMovementUpdate(OuterScopeCamera, EScopedUpdate::DeferredUpdates);
 
 			// Scope in the character movements first
 			{
 				// Scope these, they nest with Outer references so it should work fine
-				FVRCharacterScopedMovementUpdate ScopedMovementUpdate(UpdatedComponent, bEnableScopedMovementUpdates ? EScopedUpdate::DeferredUpdates : EScopedUpdate::ImmediateUpdates);
+				//FVRCharacterScopedMovementUpdate ScopedMovementUpdate(UpdatedComponent, bEnableScopedMovementUpdates ? EScopedUpdate::DeferredUpdates : EScopedUpdate::ImmediateUpdates);
 
 				if (MovementMode == MOVE_Custom && CustomMovementMode == (uint8)EVRCustomMovementMode::VRMOVE_Seated)
 				{
@@ -1371,7 +1371,6 @@ void UVRBaseCharacterMovementComponent::OnClientCorrectionReceived(class FNetwor
 
 void UVRBaseCharacterMovementComponent::SimulatedTick(float DeltaSeconds)
 {
-	//return Super::SimulatedTick(DeltaSeconds);
 
 	QUICK_SCOPE_CYCLE_COUNTER(STAT_Character_CharacterMovementSimulated);
 	checkSlow(CharacterOwner != nullptr);
@@ -1585,7 +1584,6 @@ void UVRBaseCharacterMovementComponent::SimulatedTick(float DeltaSeconds)
 
 void UVRBaseCharacterMovementComponent::SmoothCorrection(const FVector& OldLocation, const FQuat& OldRotation, const FVector& NewLocation, const FQuat& NewRotation)
 {
-
 	//SCOPE_CYCLE_COUNTER(STAT_CharacterMovementSmoothCorrection);
 	if (!HasValidData())
 	{
