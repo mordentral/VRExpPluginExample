@@ -55,11 +55,13 @@ public:
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif
-	virtual void OnAttachmentChanged() override;
-	virtual void PostInitProperties() override;
-	virtual void BeginPlay() override;
+#if WITH_EDITORONLY_DATA
+	static void AddReferencedObjects(UObject* InThis, FReferenceCollector& Collector);
 	virtual void OnComponentDestroyed(bool bDestroyingHierarchy) override;
-	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
+	bool bTickedPose;
+#endif
+	virtual void OnRegister() override;
 	virtual void PreReplication(IRepChangedPropertyTracker& ChangedPropertyTracker) override;
 
 	// ------------------------------------------------
@@ -88,7 +90,7 @@ public:
 
 	/** mesh component to indicate hand placement */
 #if WITH_EDITORONLY_DATA
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, /*Transient,*/ Category = "Hand Visualization")
+	//UPROPERTY(EditAnywhere, BlueprintReadOnly, Transient, Category = "Hand Visualization")
 		class USkeletalMeshComponent* HandVisualizerComponent;
 
 	UPROPERTY(EditAnywhere, Transient, BlueprintReadOnly, Category = "Hand Visualization")

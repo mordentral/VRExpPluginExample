@@ -1,6 +1,7 @@
 // Copyright 1998-2016 Epic Games, Inc. All Rights Reserved.
 
 #include "Grippables/HandSocketComponent.h"
+#include "Engine/CollisionProfile.h"
 #include "Net/UnrealNetwork.h"
 
   //=============================================================================
@@ -8,22 +9,14 @@ UHandSocketComponent::UHandSocketComponent(const FObjectInitializer& ObjectIniti
 	: Super(ObjectInitializer)
 {
 	bReplicateMovement = false;
+	PrimaryComponentTick.bCanEverTick = false;
 	PrimaryComponentTick.bStartWithTickEnabled = false;
 	//this->bReplicates = true;
 
 	bRepGameplayTags = true;
 
 #if WITH_EDITORONLY_DATA
-	//if (!IsTemplate())
-	{
-		if (!IsRunningCommandlet())
-		{
-			HandVisualizerComponent = ObjectInitializer.CreateEditorOnlyDefaultSubobject<USkeletalMeshComponent>(this, FName("HandVisualization"));
-			HandVisualizerComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-			HandVisualizerComponent->SetComponentTickEnabled(false);
-			HandVisualizerComponent->SetHiddenInGame(true);
-		}
-	}
+	bTickedPose = false;
 #endif
 
 
@@ -42,6 +35,92 @@ FTransform UHandSocketComponent::GetHandRelativePlacement()
 {
 	return HandRelativePlacement;
 }
+
+void UHandSocketComponent::OnRegister()
+{
+#if WITH_EDITORONLY_DATA
+	AActor* MyOwner = GetOwner();
+	if ((MyOwner != nullptr) && !IsRunningCommandlet())
+	{
+		if (HandVisualizerComponent == nullptr)
+		{
+			HandVisualizerComponent = NewObject<USkeletalMeshComponent>(MyOwner, NAME_None, RF_Transactional | RF_TextExportTransient);
+			if (HandVisualizerComponent)
+			{
+				HandVisualizerComponent->SetupAttachment(this);
+				HandVisualizerComponent->SetIsVisualizationComponent(true);
+				HandVisualizerComponent->SetCollisionProfileName(UCollisionProfile::NoCollision_ProfileName);
+				HandVisualizerComponent->CastShadow = false;
+				HandVisualizerComponent->CreationMethod = CreationMethod;
+				//HandVisualizerComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+				HandVisualizerComponent->SetComponentTickEnabled(false);
+				HandVisualizerComponent->SetHiddenInGame(true);
+				HandVisualizerComponent->RegisterComponentWithWorld(GetWorld());
+
+				if (VisualizationMesh)
+				{
+					HandVisualizerComponent->SetSkeletalMesh(VisualizationMesh);
+					if (HandPreviewMaterial)
+					{
+						HandVisualizerComponent->SetMaterial(0, HandPreviewMaterial);
+					}
+				}
+
+				HandVisualizerComponent->SetRelativeTransform(HandRelativePlacement);
+
+				if (HandTargetAnimation)
+				{
+					HandVisualizerComponent->SetAnimationMode(EAnimationMode::AnimationSingleNode);
+					HandVisualizerComponent->PlayAnimation(HandTargetAnimation, false);
+					HandVisualizerComponent->AnimationData.AnimToPlay = HandTargetAnimation;
+
+					if (HandVisualizerComponent && !bTickedPose)
+					{
+						// Tick Pose first
+						if (HandVisualizerComponent->ShouldTickPose() && HandVisualizerComponent->IsRegistered())
+						{
+							bTickedPose = true;
+							HandVisualizerComponent->TickPose(1.0f, false);
+							if (HandVisualizerComponent->MasterPoseComponent.IsValid())
+							{
+								HandVisualizerComponent->UpdateSlaveComponent();
+							}
+							else
+							{
+								HandVisualizerComponent->RefreshBoneTransforms(&HandVisualizerComponent->PrimaryComponentTick);
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+#endif	// WITH_EDITORONLY_DATA
+
+	Super::OnRegister();
+}
+
+#if WITH_EDITORONLY_DATA
+void UHandSocketComponent::AddReferencedObjects(UObject* InThis, FReferenceCollector& Collector)
+{
+	UHandSocketComponent* This = CastChecked<UHandSocketComponent>(InThis);
+	Collector.AddReferencedObject(This->HandVisualizerComponent);
+
+	Super::AddReferencedObjects(InThis, Collector);
+}
+
+void UHandSocketComponent::OnComponentDestroyed(bool bDestroyingHierarchy)
+{
+	Super::OnComponentDestroyed(bDestroyingHierarchy);
+
+	if (HandVisualizerComponent)
+	{
+		HandVisualizerComponent->DestroyComponent();
+	}
+}
+
+#endif
 
 void UHandSocketComponent::GetLifetimeReplicatedProps(TArray< class FLifetimeProperty > & OutLifetimeProps) const
 {
@@ -67,11 +146,6 @@ void UHandSocketComponent::PreReplication(IRepChangedPropertyTracker & ChangedPr
 //=============================================================================
 UHandSocketComponent::~UHandSocketComponent()
 {
-}
-
-void UHandSocketComponent::PostInitProperties()
-{
-	Super::PostInitProperties();
 }
 
 #if WITH_EDITOR
@@ -100,6 +174,7 @@ void UHandSocketComponent::PostEditChangeProperty(FPropertyChangedEvent& Propert
 				if (HandTargetAnimation != nullptr && HandVisualizerComponent->SkeletalMesh && HandTargetAnimation->GetSkeleton() == HandVisualizerComponent->SkeletalMesh->Skeleton)
 				{
 					HandVisualizerComponent->AnimationData.AnimToPlay = HandTargetAnimation;
+					HandVisualizerComponent->PlayAnimation(HandTargetAnimation, false);
 				}
 			}
 		}
@@ -108,70 +183,3 @@ void UHandSocketComponent::PostEditChangeProperty(FPropertyChangedEvent& Propert
 }
 #endif
 
-void UHandSocketComponent::OnAttachmentChanged()
-{
-	Super::OnAttachmentChanged();
-
-#if WITH_EDITORONLY_DATA
-	//if (!IsTemplate())
-	if (HandVisualizerComponent)
-	{
-		HandVisualizerComponent->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetIncludingScale);
-
-		if (VisualizationMesh)
-		{
-			HandVisualizerComponent->SetSkeletalMesh(VisualizationMesh);
-			if (HandPreviewMaterial)
-			{
-				HandVisualizerComponent->SetMaterial(0, HandPreviewMaterial);
-			}
-		}
-
-		HandVisualizerComponent->SetRelativeTransform(HandRelativePlacement);
-
-		if (HandTargetAnimation)
-		{
-			HandVisualizerComponent->SetAnimationMode(EAnimationMode::AnimationSingleNode);
-			//HandVisualizerComponent->PlayAnimation(HandTargetAnimation, false);
-			HandVisualizerComponent->AnimationData.AnimToPlay = HandTargetAnimation;
-		}
-	}
-#endif
-}
-
-void UHandSocketComponent::BeginPlay()
-{
-	// Call the base class 
-	Super::BeginPlay();
-
-
-}
-
-void UHandSocketComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
-{
-	// Call the base class 
-	Super::EndPlay(EndPlayReason);
-
-#if WITH_EDITORONLY_DATA
-	if (HandVisualizerComponent)
-	{
-		HandVisualizerComponent->MarkPendingKill();
-		HandVisualizerComponent = nullptr;
-	}
-#endif
-}
-
-void UHandSocketComponent::OnComponentDestroyed(bool bDestroyingHierarchy)
-{
-	// Call the super at the end, after we've done what we needed to do
-	Super::OnComponentDestroyed(bDestroyingHierarchy);
-
-#if WITH_EDITORONLY_DATA
-	if (HandVisualizerComponent)
-	{
-		HandVisualizerComponent->MarkPendingKill();
-		HandVisualizerComponent = nullptr;
-	}
-#endif
-
-}
