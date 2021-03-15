@@ -28,6 +28,8 @@ public:
 	UHandSocketComponent(const FObjectInitializer& ObjectInitializer);
 	~UHandSocketComponent();
 
+	//static get socket compoonent
+
 	// Relative placement of the hand to this socket
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Hand Socket Data")
 		FTransform HandRelativePlacement;
@@ -36,21 +38,37 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Hand Socket Data")
 		FName SlotPrefix;
 
+	// If true we should only be used to snap mesh to us, not for the actual socket transform
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Hand Socket Data")
+		bool bOnlySnapMesh;
+
+	// If true we will mirror ourselves automatically for the left hand
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Hand Socket Data")
+		bool bFlipForLeftHand;
+
 	// Snap distance to use if you want to override the defaults.
 	// Will be ignored if == 0.0f
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Hand Socket Data")
 		float OverrideDistance;
 
+	// Primary hand animation, for both hands if they share animations, right hand if they don't
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Hand Socket Data")
 		UAnimSequence* HandTargetAnimation;
 
+	// If we have a seperate left hand animation then set it here
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Hand Socket Data")
+		UAnimSequence* HandTargetAnimationLeft;
+
 	// Returns the target animation of the hand
 	UFUNCTION(BlueprintCallable, Category = "Hand Socket Data")
-		virtual UAnimSequence* GetTargetAnimation();
+		UAnimSequence* GetTargetAnimation(bool bIsRightHand);
 
 	// Returns the target relative transform of the hand
 	UFUNCTION(BlueprintCallable, Category = "Hand Socket Data")
-		virtual FTransform GetHandRelativePlacement();
+		FTransform GetHandRelativePlacement(bool bIsRightHand);
+
+	virtual FTransform GetSocketTransform(UGripMotionControllerComponent* QueryController);
+	virtual FTransform GetMeshRelativeTransform(UGripMotionControllerComponent* QueryController);
 
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;

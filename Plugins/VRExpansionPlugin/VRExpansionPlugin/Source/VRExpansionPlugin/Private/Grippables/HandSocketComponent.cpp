@@ -17,23 +17,37 @@ UHandSocketComponent::UHandSocketComponent(const FObjectInitializer& ObjectIniti
 
 #if WITH_EDITORONLY_DATA
 	bTickedPose = false;
+	bShowVisualizationMesh = true;
 #endif
-
 
 	HandRelativePlacement = FTransform::Identity;
 	OverrideDistance = 0.0f;
 	SlotPrefix = FName("VRGripP");
 	HandTargetAnimation = nullptr;
-	bShowVisualizationMesh = true;
+	bOnlySnapMesh = false;
+	bFlipForLeftHand = false;
 }
 
-UAnimSequence* UHandSocketComponent::GetTargetAnimation()
+UAnimSequence* UHandSocketComponent::GetTargetAnimation(bool bIsRightHand)
 {
-	return HandTargetAnimation;
+	return (bIsRightHand || (!bIsRightHand && !HandTargetAnimationLeft)) ? HandTargetAnimation : HandTargetAnimationLeft;
 }
 
-FTransform UHandSocketComponent::GetHandRelativePlacement()
+FTransform UHandSocketComponent::GetHandRelativePlacement(bool bIsRightHand)
 {
+	// Optionally mirror for left hand
+	return HandRelativePlacement;
+}
+
+FTransform UHandSocketComponent::GetSocketTransform(UGripMotionControllerComponent* QueryController)
+{
+	// Optionally mirror for left hand
+	return this->GetComponentTransform();
+}
+
+FTransform UHandSocketComponent::GetMeshRelativeTransform(UGripMotionControllerComponent* QueryController)
+{
+	// Optionally mirror for left hand
 	return HandRelativePlacement;
 }
 

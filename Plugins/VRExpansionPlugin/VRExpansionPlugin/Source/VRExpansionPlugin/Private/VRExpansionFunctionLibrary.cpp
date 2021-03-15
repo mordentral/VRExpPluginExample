@@ -166,7 +166,7 @@ bool UVRExpansionFunctionLibrary::GetIsActorMovable(AActor * ActorToCheck)
 	return false;
 }
 
-void UVRExpansionFunctionLibrary::GetGripSlotInRangeByTypeName(FName SlotType, AActor * Actor, FVector WorldLocation, float MaxRange, bool & bHadSlotInRange, FTransform & SlotWorldTransform, FName & SlotName)
+void UVRExpansionFunctionLibrary::GetGripSlotInRangeByTypeName(FName SlotType, AActor * Actor, FVector WorldLocation, float MaxRange, bool & bHadSlotInRange, FTransform & SlotWorldTransform, FName & SlotName, UGripMotionControllerComponent* QueryController)
 {
 	bHadSlotInRange = false;
 	SlotWorldTransform = FTransform::Identity;
@@ -234,7 +234,7 @@ void UVRExpansionFunctionLibrary::GetGripSlotInRangeByTypeName(FName SlotType, A
 		{
 			if (TargetHandSocket)
 			{
-				SlotWorldTransform = TargetHandSocket->GetComponentTransform();			
+				SlotWorldTransform = TargetHandSocket->GetSocketTransform(QueryController);
 				SlotName = TargetHandSocket->GetFName();
 				SlotWorldTransform.SetScale3D(FVector(1.0f));
 			}
@@ -248,7 +248,7 @@ void UVRExpansionFunctionLibrary::GetGripSlotInRangeByTypeName(FName SlotType, A
 	}
 }
 
-void UVRExpansionFunctionLibrary::GetGripSlotInRangeByTypeName_Component(FName SlotType, UPrimitiveComponent * Component, FVector WorldLocation, float MaxRange, bool & bHadSlotInRange, FTransform & SlotWorldTransform, FName & SlotName)
+void UVRExpansionFunctionLibrary::GetGripSlotInRangeByTypeName_Component(FName SlotType, UPrimitiveComponent * Component, FVector WorldLocation, float MaxRange, bool & bHadSlotInRange, FTransform & SlotWorldTransform, FName & SlotName, UGripMotionControllerComponent* QueryController)
 {
 	bHadSlotInRange = false;
 	SlotWorldTransform = FTransform::Identity;
@@ -311,7 +311,7 @@ void UVRExpansionFunctionLibrary::GetGripSlotInRangeByTypeName_Component(FName S
 	{
 		if (TargetHandSocket)
 		{
-			SlotWorldTransform = TargetHandSocket->GetComponentTransform();
+			SlotWorldTransform = TargetHandSocket->GetSocketTransform(QueryController);
 			SlotName = TargetHandSocket->GetFName();
 			SlotWorldTransform.SetScale3D(FVector(1.0f));
 		}
