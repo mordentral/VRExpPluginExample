@@ -24,6 +24,7 @@ UHandSocketComponent::UHandSocketComponent(const FObjectInitializer& ObjectIniti
 	OverrideDistance = 0.0f;
 	SlotPrefix = FName("VRGripP");
 	HandTargetAnimation = nullptr;
+	bShowVisualizationMesh = true;
 }
 
 UAnimSequence* UHandSocketComponent::GetTargetAnimation()
@@ -40,7 +41,7 @@ void UHandSocketComponent::OnRegister()
 {
 #if WITH_EDITORONLY_DATA
 	AActor* MyOwner = GetOwner();
-	if ((MyOwner != nullptr) && !IsRunningCommandlet())
+	if (bShowVisualizationMesh && (MyOwner != nullptr) && !IsRunningCommandlet())
 	{
 		if (HandVisualizerComponent == nullptr)
 		{

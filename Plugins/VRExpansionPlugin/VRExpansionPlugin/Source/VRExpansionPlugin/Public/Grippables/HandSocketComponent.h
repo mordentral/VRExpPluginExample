@@ -93,8 +93,11 @@ public:
 	//UPROPERTY(EditAnywhere, BlueprintReadOnly, Transient, Category = "Hand Visualization")
 		class USkeletalMeshComponent* HandVisualizerComponent;
 
-	UPROPERTY(EditAnywhere, Transient, BlueprintReadOnly, Category = "Hand Visualization")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hand Visualization")
 		class USkeletalMesh* VisualizationMesh;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hand Visualization")
+		bool bShowVisualizationMesh;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Hand Visualization")
 		UMaterial* HandPreviewMaterial;
