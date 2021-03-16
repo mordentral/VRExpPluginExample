@@ -8,10 +8,41 @@
 #include "Net/Core/PushModel/PushModel.h"
 #endif
 
+void FSkeletalMeshComponentEndPhysicsTickFunctionVR::ExecuteTick(float DeltaTime, enum ELevelTick TickType, ENamedThreads::Type CurrentThread, const FGraphEventRef& MyCompletionGraphEvent)
+{
+	//QUICK_SCOPE_CYCLE_COUNTER(FSkeletalMeshComponentEndPhysicsTickFunction_ExecuteTick);
+	//CSV_SCOPED_TIMING_STAT_EXCLUSIVE(Physics);
+
+	FActorComponentTickFunction::ExecuteTickHelper(TargetVR, /*bTickInEditor=*/ false, DeltaTime, TickType, [this](float DilatedTime)
+		{
+			TargetVR->EndPhysicsTickComponentVR(*this);
+		});
+}
+
+FString FSkeletalMeshComponentEndPhysicsTickFunctionVR::DiagnosticMessage()
+{
+	if (TargetVR)
+	{
+		return TargetVR->GetFullName() + TEXT("[EndPhysicsTickVR]");
+	}
+	return TEXT("<NULL>[EndPhysicsTick]");
+}
+
+FName FSkeletalMeshComponentEndPhysicsTickFunctionVR::DiagnosticContext(bool bDetailed)
+{
+	return FName(TEXT("SkeletalMeshComponentEndPhysicsTickVR"));
+}
+
+
 UOptionalRepSkeletalMeshComponent::UOptionalRepSkeletalMeshComponent(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {
 	bReplicateMovement = true;
+	this->EndPhysicsTickFunction.bCanEverTick = false;
+
+	EndPhysicsTickFunctionVR.TickGroup = TG_EndPhysics;
+	EndPhysicsTickFunctionVR.bCanEverTick = true;
+	EndPhysicsTickFunctionVR.bStartWithTickEnabled = true;
 }
 
 void UOptionalRepSkeletalMeshComponent::PreReplication(IRepChangedPropertyTracker& ChangedPropertyTracker)
@@ -32,7 +63,7 @@ void UOptionalRepSkeletalMeshComponent::GetLifetimeReplicatedProps(TArray< class
 }
 
 AOptionalRepGrippableSkeletalMeshActor::AOptionalRepGrippableSkeletalMeshActor(const FObjectInitializer& ObjectInitializer) :
-	Super(ObjectInitializer)
+	Super(ObjectInitializer.SetDefaultSubobjectClass<UOptionalRepSkeletalMeshComponent>(TEXT("SkeletalMeshComponent0")))
 {
 	bIgnoreAttachmentReplication = false;
 	bIgnorePhysicsReplication = false;
