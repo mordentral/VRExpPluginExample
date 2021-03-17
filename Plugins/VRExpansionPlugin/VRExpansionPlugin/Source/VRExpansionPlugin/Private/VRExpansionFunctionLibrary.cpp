@@ -234,7 +234,7 @@ void UVRExpansionFunctionLibrary::GetGripSlotInRangeByTypeName(FName SlotType, A
 		{
 			if (TargetHandSocket)
 			{
-				SlotWorldTransform = TargetHandSocket->GetSocketTransform(QueryController);
+				SlotWorldTransform = TargetHandSocket->GetHandSocketTransform(QueryController);
 				SlotName = TargetHandSocket->GetFName();
 				SlotWorldTransform.SetScale3D(FVector(1.0f));
 			}
@@ -311,7 +311,7 @@ void UVRExpansionFunctionLibrary::GetGripSlotInRangeByTypeName_Component(FName S
 	{
 		if (TargetHandSocket)
 		{
-			SlotWorldTransform = TargetHandSocket->GetSocketTransform(QueryController);
+			SlotWorldTransform = TargetHandSocket->GetHandSocketTransform(QueryController);
 			SlotName = TargetHandSocket->GetFName();
 			SlotWorldTransform.SetScale3D(FVector(1.0f));
 		}

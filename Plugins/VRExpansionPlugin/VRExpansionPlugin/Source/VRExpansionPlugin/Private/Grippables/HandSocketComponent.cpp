@@ -39,7 +39,7 @@ FTransform UHandSocketComponent::GetHandRelativePlacement(bool bIsRightHand)
 	return HandRelativePlacement;
 }
 
-FTransform UHandSocketComponent::GetSocketTransform(UGripMotionControllerComponent* QueryController)
+FTransform UHandSocketComponent::GetHandSocketTransform(UGripMotionControllerComponent* QueryController)
 {
 	// Optionally mirror for left hand
 	return this->GetComponentTransform();

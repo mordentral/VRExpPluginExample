@@ -67,7 +67,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Hand Socket Data")
 		FTransform GetHandRelativePlacement(bool bIsRightHand);
 
-	virtual FTransform GetSocketTransform(UGripMotionControllerComponent* QueryController);
+	virtual FTransform GetHandSocketTransform(UGripMotionControllerComponent* QueryController);
 	virtual FTransform GetMeshRelativeTransform(UGripMotionControllerComponent* QueryController);
 
 #if WITH_EDITOR
