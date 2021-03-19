@@ -21,6 +21,28 @@
 #include "GrippableSkeletalMeshActor.generated.h"
 
 /**
+* A component specifically for being able to turn off movement replication in the component at will
+* Has the upside of also being a blueprintable base since UE4 doesn't allow that with std ones
+*/
+UCLASS(Blueprintable, meta = (BlueprintSpawnableComponent, ChildCanTick), ClassGroup = (VRExpansionPlugin))
+class VREXPANSIONPLUGIN_API UOptionalRepSkeletalMeshComponent : public USkeletalMeshComponent
+{
+	GENERATED_BODY()
+
+public:
+	UOptionalRepSkeletalMeshComponent(const FObjectInitializer& ObjectInitializer);
+
+public:
+
+	// Overrides the default of : true and allows for controlling it like in an actor, should be default of off normally with grippable components
+	UPROPERTY(EditAnywhere, Replicated, BlueprintReadWrite, Category = "Component Replication")
+		bool bReplicateMovement;
+
+	virtual void PreReplication(IRepChangedPropertyTracker& ChangedPropertyTracker) override;
+
+};
+
+/**
 *
 */
 UCLASS(Blueprintable, meta = (BlueprintSpawnableComponent, ChildCanTick), ClassGroup = (VRExpansionPlugin))
@@ -42,9 +64,9 @@ public:
 	virtual void GatherCurrentMovement() override;
 
 	UPROPERTY(EditAnywhere, Replicated, BlueprintReadOnly, Instanced, Category = "VRGripInterface")
-		TArray<class UVRGripScriptBase *> GripLogicScripts;
+		TArray<class UVRGripScriptBase*> GripLogicScripts;
 
-	bool ReplicateSubobjects(UActorChannel* Channel, class FOutBunch *Bunch, FReplicationFlags *RepFlags) override;
+	bool ReplicateSubobjects(UActorChannel* Channel, class FOutBunch* Bunch, FReplicationFlags* RepFlags) override;
 
 	// Sets the Deny Gripping variable on the FBPInterfaceSettings struct
 	UFUNCTION(BlueprintCallable, Category = "VRGripInterface")
@@ -90,7 +112,7 @@ public:
 		bool RemoveFromClientReplicationBucket();
 
 	UFUNCTION()
-	bool PollReplicationEvent();
+		bool PollReplicationEvent();
 
 	UFUNCTION(Category = "Networking")
 		void CeaseReplicationBlocking();
@@ -128,7 +150,7 @@ public:
 
 	// End Gameplay Tag Interface
 
-	virtual void PreReplication(IRepChangedPropertyTracker & ChangedPropertyTracker) override;
+	virtual void PreReplication(IRepChangedPropertyTracker& ChangedPropertyTracker) override;
 
 	// Skips the attachment replication if we are locally owned and our grip settings say that we are a client authed grip.
 	UPROPERTY(EditAnywhere, Replicated, BlueprintReadWrite, Category = "Replication")
