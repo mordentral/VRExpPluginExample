@@ -10,8 +10,6 @@
 #include "Engine/ActorChannel.h"
 #include "OptionalRepSkeletalMeshActor.generated.h"
 
-class UOptionalRepSkeletalMeshComponent;
-
 /**
 * A component specifically for being able to turn off movement replication in the component at will
 * Has the upside of also being a blueprintable base since UE4 doesn't allow that with std ones
