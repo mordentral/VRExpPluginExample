@@ -37,7 +37,6 @@ FName FSkeletalMeshComponentEndPhysicsTickFunctionVR::DiagnosticContext(bool bDe
 UInversePhysicsSkeletalMeshComponent::UInversePhysicsSkeletalMeshComponent(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {
-	this->bWantsOnUpdateTransform = true;
 	bReplicateMovement = true;
 	this->EndPhysicsTickFunction.bCanEverTick = false;
 

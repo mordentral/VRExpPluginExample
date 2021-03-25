@@ -64,35 +64,6 @@ public:
 	virtual void RegisterEndPhysicsTick(bool bRegister) override;
 	virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 	// END INVERSED MESH FIX
-	
-	virtual void OnUpdateTransform(EUpdateTransformFlags UpdateTransformFlags, ETeleportType Teleport = ETeleportType::None) override 
-	{
-		if (this->GetComponentScale().GetMin() < 0 && this->GetAttachParent())
-		{
-			FName SocketName = GetAttachSocketName();
-			USceneComponent * Parent = GetAttachParent();
-			if (Parent)
-			{
-				//const bool bGeneral = IsUsingAbsoluteLocation() || IsUsingAbsoluteRotation() || IsUsingAbsoluteScale();
-				//if (!bGeneral)
-				{
-					FTransform RelTransform = this->GetRelativeTransform();
-					//RelTransform.RemoveScaling();
-					//FTransform NewCTW = FTransform(RelTransform.ToMatrixWithScale() * Parent->GetSocketTransform(SocketName).ToMatrixWithScale());
-					FTransform NewCTW = RelTransform * Parent->GetSocketTransform(SocketName);
-					//NewCTW.SetScale3D(FVector(1.0f, 1.0f, 1.0f));
-					this->SetComponentToWorld(NewCTW);
-					UpdateBounds();
-				}
-
-				//return CalcNewComponentToWorld_GeneralCase(NewRelativeTransform, Parent, SocketName);
-			}
-
-			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("CallingUpdateComponentToWorld"));
-		}
-
-		Super::OnUpdateTransform(UpdateTransformFlags, Teleport);
-	}
 
 	virtual void PreReplication(IRepChangedPropertyTracker & ChangedPropertyTracker) override;
 
