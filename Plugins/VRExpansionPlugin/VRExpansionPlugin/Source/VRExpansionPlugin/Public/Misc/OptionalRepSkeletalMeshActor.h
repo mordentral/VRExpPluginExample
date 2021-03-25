@@ -7,8 +7,24 @@
 #include "Engine/Engine.h"
 #include "Animation/SkeletalMeshActor.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "Components/SphereComponent.h"
 #include "Engine/ActorChannel.h"
 #include "OptionalRepSkeletalMeshActor.generated.h"
+
+// Temp comp to avoid some engine issues, exists only until a bug fix happens
+UCLASS(Blueprintable, meta = (BlueprintSpawnableComponent, ChildCanTick), ClassGroup = (VRExpansionPlugin))
+class VREXPANSIONPLUGIN_API UNoRepSphereComponent : public USphereComponent
+{
+	GENERATED_BODY()
+
+public:
+	UNoRepSphereComponent(const FObjectInitializer& ObjectInitializer);
+
+	UPROPERTY(EditAnywhere, Replicated, BlueprintReadWrite, Category = "Component Replication")
+		bool bReplicateMovement;
+
+	virtual void PreReplication(IRepChangedPropertyTracker& ChangedPropertyTracker) override;
+};
 
 /**
 * A component specifically for being able to turn off movement replication in the component at will
