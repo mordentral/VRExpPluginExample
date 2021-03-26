@@ -24,13 +24,17 @@ UHandSocketComponent::UHandSocketComponent(const FObjectInitializer& ObjectIniti
 	OverrideDistance = 0.0f;
 	SlotPrefix = FName("VRGripP");
 	HandTargetAnimation = nullptr;
+	HandTargetAnimationLeft = nullptr;
 	bOnlySnapMesh = false;
 	bFlipForLeftHand = false;
+
+	MirrorAxis = EAxis::X;
+	FlipAxis = EAxis::Y;
 }
 
 UAnimSequence* UHandSocketComponent::GetTargetAnimation(bool bIsRightHand)
 {
-	return (bIsRightHand || (!bIsRightHand && !HandTargetAnimationLeft)) ? HandTargetAnimation : HandTargetAnimationLeft;
+	return (bIsRightHand || !HandTargetAnimationLeft) ? HandTargetAnimation : HandTargetAnimationLeft;
 }
 
 FTransform UHandSocketComponent::GetHandRelativePlacement(bool bIsRightHand)
@@ -42,13 +46,46 @@ FTransform UHandSocketComponent::GetHandRelativePlacement(bool bIsRightHand)
 FTransform UHandSocketComponent::GetHandSocketTransform(UGripMotionControllerComponent* QueryController)
 {
 	// Optionally mirror for left hand
+
+	if (bFlipForLeftHand)
+	{
+		EControllerHand HandType;
+		QueryController->GetHandType(HandType);
+		if (HandType == EControllerHand::Left)
+		{
+			FTransform ReturnTrans = this->GetRelativeTransform();
+			ReturnTrans.Mirror(MirrorAxis, FlipAxis);
+			if (USceneComponent* AttParent = this->GetAttachParent())
+			{
+				ReturnTrans = ReturnTrans * AttParent->GetComponentTransform();
+			}
+			return ReturnTrans;
+		}
+	}
+
 	return this->GetComponentTransform();
 }
 
 FTransform UHandSocketComponent::GetMeshRelativeTransform(UGripMotionControllerComponent* QueryController)
 {
 	// Optionally mirror for left hand
-	return HandRelativePlacement;
+	if (bFlipForLeftHand)
+	{
+		EControllerHand HandType;
+		QueryController->GetHandType(HandType);
+		if (HandType == EControllerHand::Left)
+		{
+			FTransform ReturnTrans = (HandRelativePlacement * this->GetRelativeTransform());
+			ReturnTrans.Mirror(MirrorAxis, FlipAxis);
+			if (USceneComponent* AttParent = this->GetAttachParent())
+			{
+				ReturnTrans = ReturnTrans * AttParent->GetComponentTransform();
+			}
+			return ReturnTrans;
+		}
+	}
+
+	return (HandRelativePlacement * this->GetComponentTransform());
 }
 
 void UHandSocketComponent::OnRegister()

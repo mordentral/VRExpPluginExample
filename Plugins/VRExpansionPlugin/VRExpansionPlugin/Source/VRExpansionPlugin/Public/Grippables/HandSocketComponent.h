@@ -30,6 +30,11 @@ public:
 
 	//static get socket compoonent
 
+	UPROPERTY(/*Category = "Hand Socket Data"*/)
+		TEnumAsByte<EAxis::Type> MirrorAxis;
+	UPROPERTY(/*Category = "Hand Socket Data"*/)
+		TEnumAsByte<EAxis::Type> FlipAxis;
+
 	// Relative placement of the hand to this socket
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Hand Socket Data")
 		FTransform HandRelativePlacement;
