@@ -42,6 +42,15 @@ namespace StereoWidgetCvars
 		ECVF_Default);
 }
 
+UVRStereoWidgetRenderComponent::UVRStereoWidgetRenderComponent(const FObjectInitializer& ObjectInitializer)
+	: Super(ObjectInitializer)
+{
+	Widget = nullptr;
+	WidgetRenderScale = 1.0f;
+	WidgetRenderer = nullptr;
+	RenderTarget = nullptr;
+}
+
   //=============================================================================
 UVRStereoWidgetComponent::UVRStereoWidgetComponent(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
