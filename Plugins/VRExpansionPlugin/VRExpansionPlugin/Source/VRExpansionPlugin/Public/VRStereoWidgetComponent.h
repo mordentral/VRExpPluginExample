@@ -12,7 +12,7 @@
 #include "Blueprint/UserWidget.h"
 #include "Components/StereoLayerComponent.h"
 #include "Engine/TextureRenderTarget2D.h"
-#include "Animation/UMGSequencePlayer.h"
+//#include "Animation/UMGSequencePlayer.h"
 #include "Engine/GameViewportClient.h"
 #include "Widgets/SViewport.h"
 #include "StereoLayerShapes.h"
