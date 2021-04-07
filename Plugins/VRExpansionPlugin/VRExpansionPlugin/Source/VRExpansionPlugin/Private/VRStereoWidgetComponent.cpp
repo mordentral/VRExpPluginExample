@@ -51,7 +51,7 @@ UVRStereoWidgetRenderComponent::UVRStereoWidgetRenderComponent(const FObjectInit
 	WidgetRenderer = nullptr;
 	RenderTarget = nullptr;
 	bDrawAtDesiredSize = true;
-	RenderTargetClearColor = FLinearColor::Transparent;
+	RenderTargetClearColor = FLinearColor::Black;
 	bDrawWithoutStereo = false;
 	DrawRate = 60.0f;
 	DrawCounter = 0.0f;
@@ -88,7 +88,7 @@ void UVRStereoWidgetRenderComponent::TickComponent(float DeltaTime, enum ELevelT
 	if (bDrawWithoutStereo)
 	{
 		// Skip the stereo comps setup, we are just drawing to the texture
-		Super::Super::TickComponent(DeltaTime, ThisTickFunction);
+		Super::Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 	}
 	else
 	{
