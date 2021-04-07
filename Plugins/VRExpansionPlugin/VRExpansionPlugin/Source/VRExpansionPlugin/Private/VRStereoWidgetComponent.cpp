@@ -85,7 +85,15 @@ void UVRStereoWidgetRenderComponent::TickComponent(float DeltaTime, enum ELevelT
 		}
 	}
 
-	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+	if (bDrawWithoutStereo)
+	{
+		// Skip the stereo comps setup, we are just drawing to the texture
+		Super::Super::TickComponent(DeltaTime, ThisTickFunction);
+	}
+	else
+	{
+		Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+	}
 }
 
 void UVRStereoWidgetRenderComponent::BeginPlay()

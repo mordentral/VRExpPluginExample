@@ -53,7 +53,7 @@ public:
 	UPROPERTY(EditAnywhere, Category = "WidgetSettings")
 		FLinearColor RenderTargetClearColor;
 
-	/** If true we will draw to the render target even without active stereo layers */
+	/** If true we will draw to the render target even without active stereo layers and skip the stereo tick*/
 	UPROPERTY(EditAnywhere, Category = "WidgetSettings")
 		bool bDrawWithoutStereo;
 
@@ -61,7 +61,7 @@ public:
 	UPROPERTY(EditAnywhere, Category = "WidgetSettings")
 		float DrawRate;
 
-	// Counters how long until next draw
+	// Counts how long until next draw
 	float DrawCounter;
 
 	/** The Slate widget to be displayed by this component.  Only one of either Widget or SlateWidget can be used */
