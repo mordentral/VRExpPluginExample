@@ -240,6 +240,13 @@ void UHandSocketComponent::PostEditChangeProperty(FPropertyChangedEvent& Propert
 				}
 			}
 		}
+		/*else if (PropertyThatChanged->GetFName() == GET_MEMBER_NAME_CHECKED(UHandSocketComponent, HandRelativePlacement))
+		{
+			if (HandVisualizerComponent)
+			{
+				HandVisualizerComponent->SetRelativeTransform(HandRelativePlacement);
+			}
+		}*/
 #endif
 	}
 }

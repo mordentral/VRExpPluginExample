@@ -39,7 +39,7 @@ public:
 		TEnumAsByte<EAxis::Type> FlipAxis;
 
 	// Relative placement of the hand to this socket
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Hand Socket Data")
+	UPROPERTY(EditAnywhere, /*BlueprintReadWrite, */Category = "Hand Socket Data")
 		FTransform HandRelativePlacement;
 
 	// Target Slot Prefix
