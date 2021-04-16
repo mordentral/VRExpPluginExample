@@ -12,6 +12,8 @@
 #include "Components/SceneComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Animation/AnimSequence.h"
+#include "Animation/AnimInstance.h"
+#include "Animation/AnimInstanceProxy.h"
 #include "HandSocketComponent.generated.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(LogVRHandSocketComponent, Log, All);
@@ -20,6 +22,22 @@ DECLARE_LOG_CATEGORY_EXTERN(LogVRHandSocketComponent, Log, All);
 * A base class for custom hand socket objects
 * Not directly blueprint spawnable as you are supposed to subclass this to add on top your own custom data
 */
+
+USTRUCT(BlueprintType, Category = "VRExpansionLibrary")
+struct VREXPANSIONPLUGIN_API FBPVRHandPoseBonePair
+{
+	GENERATED_BODY()
+public:
+
+	// Distance to offset to get center of waist from tracked parent location
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Settings")
+		FName BoneName;
+
+	// Initial "Resting" location of the tracker parent, assumed to be the calibration zero
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Settings")
+		FQuat DeltaPose;
+};
+
 
 UCLASS(Blueprintable, /*meta = (BlueprintSpawnableComponent, ChildCanTick),*/ ClassGroup = (VRExpansionPlugin))
 class VREXPANSIONPLUGIN_API UHandSocketComponent : public USceneComponent, public IGameplayTagAssetInterface
@@ -59,12 +77,21 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Hand Socket Data")
 		float OverrideDistance;
 
+	// If true we are expected to have a list of custom deltas for bones to overlay onto our base pose
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Hand Animation")
+		bool bUseCustomPoseDeltas;
+
+	// The custom pose deltas
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Hand Animation")
+		TArray<FBPVRHandPoseBonePair> CustomPoseDeltas;
+
 	// Primary hand animation, for both hands if they share animations, right hand if they don't
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Hand Socket Data")
+	// If using a custom pose delta this is expected to be the base pose
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Hand Animation")
 		UAnimSequence* HandTargetAnimation;
 
 	// If we have a seperate left hand animation then set it here
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Hand Socket Data")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Hand Animation")
 		UAnimSequence* HandTargetAnimationLeft;
 
 	// Returns the target animation of the hand
@@ -161,5 +188,34 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Hand Visualization")
 		UMaterial* HandPreviewMaterial;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Hand Visualization")
+		class TSubclassOf<UAnimInstance> HandPreviewAnimClass;
 #endif
+};
+
+UCLASS(transient, Blueprintable, hideCategories = AnimInstance, BlueprintType)
+class VREXPANSIONPLUGIN_API UHandSocketAnimInstance : public UAnimInstance
+{
+	GENERATED_BODY()
+
+public:
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, transient, Category = "Socket Data")
+		UHandSocketComponent* OwningSocket;
+
+	//FOpenInputAnimInstanceProxy AnimInstanceProxy;
+
+	/*virtual FAnimInstanceProxy* CreateAnimInstanceProxy() override
+	{
+		return new FHandSocketAnimInstanceProxy(this);
+		//return &AnimInstanceProxy;
+	}*/
+
+	virtual void NativeInitializeAnimation() override
+	{
+		Super::NativeInitializeAnimation();
+
+		OwningSocket = Cast<UHandSocketComponent>(GetOwningComponent()->GetAttachParent());
+	}
 };

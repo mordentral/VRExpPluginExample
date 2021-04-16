@@ -25,6 +25,7 @@ UHandSocketComponent::UHandSocketComponent(const FObjectInitializer& ObjectIniti
 	HandRelativePlacement = FTransform::Identity;
 	OverrideDistance = 0.0f;
 	SlotPrefix = FName("VRGripP");
+	bUseCustomPoseDeltas = false;
 	HandTargetAnimation = nullptr;
 	HandTargetAnimationLeft = nullptr;
 	bOnlySnapMesh = false;
@@ -130,7 +131,12 @@ void UHandSocketComponent::OnRegister()
 
 				HandVisualizerComponent->SetRelativeTransform(HandRelativePlacement);
 
-				if (HandTargetAnimation)
+				if (HandPreviewAnimClass.Get())
+				{
+					HandVisualizerComponent->SetAnimInstanceClass(HandPreviewAnimClass);
+					HandVisualizerComponent->SetAnimationMode(EAnimationMode::AnimationBlueprint);
+				}
+				else if (HandTargetAnimation)
 				{
 					HandVisualizerComponent->SetAnimationMode(EAnimationMode::AnimationSingleNode);
 					HandVisualizerComponent->PlayAnimation(HandTargetAnimation, false);
@@ -233,7 +239,11 @@ void UHandSocketComponent::PostEditChangeProperty(FPropertyChangedEvent& Propert
 				}
 
 				// make sure the animation skeleton matches the current skeletalmesh
-				if (HandTargetAnimation != nullptr && HandVisualizerComponent->SkeletalMesh && HandTargetAnimation->GetSkeleton() == HandVisualizerComponent->SkeletalMesh->Skeleton)
+				if (HandPreviewAnimClass.Get())
+				{
+
+				}
+				else if (HandTargetAnimation != nullptr && HandVisualizerComponent->SkeletalMesh && HandTargetAnimation->GetSkeleton() == HandVisualizerComponent->SkeletalMesh->Skeleton)
 				{
 					HandVisualizerComponent->AnimationData.AnimToPlay = HandTargetAnimation;
 					HandVisualizerComponent->PlayAnimation(HandTargetAnimation, false);

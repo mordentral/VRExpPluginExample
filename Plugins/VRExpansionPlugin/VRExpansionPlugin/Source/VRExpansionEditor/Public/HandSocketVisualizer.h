@@ -13,10 +13,12 @@ struct VREXPANSIONEDITOR_API HHandSocketVisProxy : public HComponentVisProxy
     HHandSocketVisProxy(const UActorComponent* InComponent)
 		: HComponentVisProxy(InComponent, HPP_Wireframe)
 	{
-		bIsCore = false;
+		BoneIdx = 0;
+		TargetBoneName = NAME_None;
 	}
 
-	bool bIsCore;
+	uint32 BoneIdx;
+	FName TargetBoneName;
 };
 
 IMPLEMENT_HIT_PROXY(HHandSocketVisProxy, HComponentVisProxy);
@@ -27,7 +29,6 @@ class VREXPANSIONEDITOR_API FHandSocketVisualizer : public FComponentVisualizer
 public:
 	FHandSocketVisualizer()
 	{
-		bIsSelected = false;
 		CurrentlyEditingComponent = nullptr;
 	}
 
@@ -36,9 +37,11 @@ public:
 
 	}
 
-	bool bIsSelected;
 	TWeakObjectPtr<UHandSocketComponent> CurrentlyEditingComponent;
+	//TWeakObjectPtr<HHandSocketVisProxy> LastVisProxy;
 	FQuat CachedRotation;
+	FName CurrentlySelectedBone;
+	uint32 CurrentlySelectedBoneIdx;
 
 	UHandSocketComponent* GetEditedHandComponent() const
 	{ 
@@ -47,13 +50,32 @@ public:
 
 	bool GetCustomInputCoordinateSystem(const FEditorViewportClient* ViewportClient, FMatrix& OutMatrix) const override
 	{
-		if (CurrentlyEditingComponent.IsValid() && bIsSelected)
+		if (CurrentlyEditingComponent.IsValid() && CurrentlySelectedBone != NAME_None && CurrentlySelectedBone != "HandSocket")
 		{
 			if (ViewportClient->GetWidgetCoordSystemSpace() == COORD_Local || ViewportClient->GetWidgetMode() == FWidget::WM_Rotate)
 			{
-				//USplineComponent* SplineComp = GetEditedSplineComponent();
-				FTransform newTrans = CurrentlyEditingComponent->HandRelativePlacement * CurrentlyEditingComponent->GetComponentTransform();
-				OutMatrix = FRotationMatrix::Make(newTrans.GetRotation());
+
+				if (CurrentlySelectedBone == "Visualizer")
+				{
+					FTransform newTrans = CurrentlyEditingComponent->HandRelativePlacement * CurrentlyEditingComponent->GetComponentTransform();
+					OutMatrix = FRotationMatrix::Make(newTrans.GetRotation());
+				}
+				else
+				{
+					FQuat DeltaQuat = FQuat::Identity;
+					for (FBPVRHandPoseBonePair & HandPair : CurrentlyEditingComponent->CustomPoseDeltas)
+					{
+						if (HandPair.BoneName == CurrentlySelectedBone)
+						{
+							DeltaQuat = HandPair.DeltaPose;
+						}
+					}
+
+					FTransform newTrans = CurrentlyEditingComponent->HandVisualizerComponent->GetBoneTransform(CurrentlySelectedBoneIdx);
+					newTrans.ConcatenateRotation(DeltaQuat);
+					OutMatrix = FRotationMatrix::Make(newTrans.GetRotation());
+				}
+
 				return true;
 			}
 		}
@@ -89,30 +111,41 @@ public:
 			const FLinearColor SelectedColor = FLinearColor::Yellow;//TargetingComponent->EditorSelectedColor;
 			const FLinearColor UnselectedColor = FLinearColor::White;//TargetingComponent->EditorUnselectedColor;
 
-			FLinearColor Color = bIsSelected ? SelectedColor : UnselectedColor;
 			const FVector Location = HandComponent->HandVisualizerComponent->GetComponentLocation();
-			PDI->SetHitProxy(new HHandSocketVisProxy(Component));
-			PDI->DrawPoint(Location, Color, 20.f, SDPG_Foreground);
-			PDI->SetHitProxy(NULL);
-
 			HHandSocketVisProxy* newHitProxy = new HHandSocketVisProxy(Component);
-			newHitProxy->bIsCore = true;
+			newHitProxy->TargetBoneName = "Visualizer";
+			PDI->SetHitProxy(newHitProxy);
+			PDI->DrawPoint(Location, CurrentlySelectedBone == newHitProxy->TargetBoneName ? SelectedColor : UnselectedColor, 20.f, SDPG_Foreground);
+			PDI->SetHitProxy(NULL);
+			newHitProxy = nullptr;
+
+			newHitProxy = new HHandSocketVisProxy(Component);
+			newHitProxy->TargetBoneName = "HandSocket";
 			PDI->SetHitProxy(newHitProxy);
 			PDI->DrawPoint(HandComponent->GetComponentLocation(), FLinearColor::Red, 20.f, SDPG_Foreground);
 			PDI->SetHitProxy(NULL);
+			newHitProxy = nullptr;
 
-			TArray<FTransform> BoneTransforms = HandComponent->HandVisualizerComponent->GetBoneSpaceTransforms();
-			FTransform ParentTrans = HandComponent->HandVisualizerComponent->GetComponentTransform();
-			for (int i=0; i<HandComponent->HandVisualizerComponent->GetNumBones(); i++)
+			if (HandComponent->bUseCustomPoseDeltas)
 			{
-				FName BoneName = HandComponent->HandVisualizerComponent->GetBoneName(i);
-				FTransform BoneTransform = HandComponent->HandVisualizerComponent->GetBoneTransform(i);
-				FVector BoneLoc = BoneTransform.GetLocation();
-				float BoneScale = 1.0f - ((View->ViewLocation - BoneLoc).SizeSquared() / FMath::Square(100.0f));
-				BoneScale = FMath::Clamp(BoneScale, 0.1f, 1.0f);
-				PDI->SetHitProxy(new HHandSocketVisProxy(Component));
-				PDI->DrawPoint(BoneLoc, Color, 20.f * BoneScale, SDPG_Foreground);
-				PDI->SetHitProxy(NULL);
+				TArray<FTransform> BoneTransforms = HandComponent->HandVisualizerComponent->GetBoneSpaceTransforms();
+				FTransform ParentTrans = HandComponent->HandVisualizerComponent->GetComponentTransform();
+				// We skip root bone, moving the visualizer itself handles that
+				for (int i = 1; i < HandComponent->HandVisualizerComponent->GetNumBones(); i++)
+				{
+					FName BoneName = HandComponent->HandVisualizerComponent->GetBoneName(i);
+					FTransform BoneTransform = HandComponent->HandVisualizerComponent->GetBoneTransform(i);
+					FVector BoneLoc = BoneTransform.GetLocation();
+					float BoneScale = 1.0f - ((View->ViewLocation - BoneLoc).SizeSquared() / FMath::Square(100.0f));
+					BoneScale = FMath::Clamp(BoneScale, 0.1f, 1.0f);
+					newHitProxy = new HHandSocketVisProxy(Component);
+					newHitProxy->TargetBoneName = BoneName;
+					newHitProxy->BoneIdx = i;
+					PDI->SetHitProxy(newHitProxy);
+					PDI->DrawPoint(BoneLoc, CurrentlySelectedBone == newHitProxy->TargetBoneName ? SelectedColor : UnselectedColor, 20.f * BoneScale, SDPG_Foreground);
+					PDI->SetHitProxy(NULL);
+					newHitProxy = nullptr;
+				}
 			}
 			//HandComponent->HandVisualizerComponent->TransformFromBoneSpace()
 
@@ -138,9 +171,15 @@ public:
 			bEditing = true;
 			if (VisProxy->IsA(HHandSocketVisProxy::StaticGetType()))
 			{
-				HHandSocketVisProxy* Proxy = (HHandSocketVisProxy*)VisProxy;
+				//if (LastVisProxy.IsValid() && VisProxy != LastVisProxy.Get())
+				{
 
-				bIsSelected = !Proxy->bIsCore;
+					HHandSocketVisProxy* Proxy = (HHandSocketVisProxy*)VisProxy;
+					//CurrentlySelectedBone = Proxy->TargetBoneName;
+					CurrentlySelectedBone = Proxy->TargetBoneName;
+					CurrentlySelectedBoneIdx = Proxy->BoneIdx;
+					//LastVisProxy = Proxy;
+				}
 				//const UHandSocketComponent* targetComp = Cast<const UHandSocketComponent>(VisProxy->Component.Get());
 				//UHandSocketComponent * currentHand = const_cast<UHandSocketComponent*>(targetComp);
 				//CurrentlyEditingComponent = currentHand;
@@ -149,7 +188,6 @@ public:
 		}
 		else
 		{
-			bIsSelected = false;
 			//SelectedTargetIndex = INDEX_NONE;
 		}
 
@@ -158,9 +196,17 @@ public:
 
 	bool GetWidgetLocation(const FEditorViewportClient* ViewportClient, FVector& OutLocation) const override
 	{
-		if (CurrentlyEditingComponent.IsValid() && bIsSelected)
+		if (CurrentlyEditingComponent.IsValid() && CurrentlySelectedBone != NAME_None && CurrentlySelectedBone != "HandSocket")
 		{
-			OutLocation = (CurrentlyEditingComponent->HandRelativePlacement * CurrentlyEditingComponent->GetComponentTransform()).GetLocation();// HandVisualizerComponent->GetComponentLocation();
+			if (CurrentlySelectedBone == "Visualizer")
+			{
+				OutLocation = (CurrentlyEditingComponent->HandRelativePlacement * CurrentlyEditingComponent->GetComponentTransform()).GetLocation();// HandVisualizerComponent->GetComponentLocation();
+			}
+			else
+			{
+				OutLocation = CurrentlyEditingComponent->HandVisualizerComponent->GetBoneTransform(CurrentlySelectedBoneIdx).GetLocation();
+			}
+
 			return true;
 		}
 
@@ -171,32 +217,80 @@ public:
 	{
 		bool bHandled = false;
 
-		if (CurrentlyEditingComponent.IsValid() && bIsSelected)
-		{
-			const FScopedTransaction Transaction(LOCTEXT("ChangingComp", "ChangingComp"));
-
-			CurrentlyEditingComponent->Modify();
-			if (AActor* Owner = CurrentlyEditingComponent->GetOwner())
+		if (CurrentlyEditingComponent.IsValid())
+		{	
+			if (CurrentlySelectedBone == "HandSocket")
 			{
-				Owner->Modify();
+
 			}
-			bool bLevelEdit = ViewportClient->IsLevelEditorClient();
-			//FTransform DeltaTrans(DeltaRotate.Quaternion(), DeltaTranslate, DeltaScale);
-			//CurrentlyEditingComponent->HandRelativePlacement = DeltaTrans * CurrentlyEditingComponent->HandRelativePlacement;
-
-			if (!DeltaTranslate.IsNearlyZero())
+			else if (CurrentlySelectedBone == "Visualizer")
 			{
-				CurrentlyEditingComponent->HandRelativePlacement.AddToTranslation(DeltaTranslate);
+				const FScopedTransaction Transaction(LOCTEXT("ChangingComp", "ChangingComp"));
+
+				CurrentlyEditingComponent->Modify();
+				if (AActor* Owner = CurrentlyEditingComponent->GetOwner())
+				{
+					Owner->Modify();
+				}
+				bool bLevelEdit = ViewportClient->IsLevelEditorClient();
+				//FTransform DeltaTrans(DeltaRotate.Quaternion(), DeltaTranslate, DeltaScale);
+				//CurrentlyEditingComponent->HandRelativePlacement = DeltaTrans * CurrentlyEditingComponent->HandRelativePlacement;
+
+				if (!DeltaTranslate.IsNearlyZero())
+				{
+					CurrentlyEditingComponent->HandRelativePlacement.AddToTranslation(DeltaTranslate);
+				}
+
+				if (!DeltaRotate.IsNearlyZero())
+				{
+					CurrentlyEditingComponent->HandRelativePlacement.ConcatenateRotation(DeltaRotate.Quaternion());
+				}
+
+				if (!DeltaScale.IsNearlyZero())
+				{
+					CurrentlyEditingComponent->HandRelativePlacement.MultiplyScale3D(DeltaScale);
+				}
+
+				NotifyPropertyModified(CurrentlyEditingComponent.Get(), FindFProperty<FProperty>(UHandSocketComponent::StaticClass(), GET_MEMBER_NAME_CHECKED(UHandSocketComponent, HandRelativePlacement)));
+
 			}
-
-			if (!DeltaRotate.IsNearlyZero())
+			else
 			{
-				CurrentlyEditingComponent->HandRelativePlacement.ConcatenateRotation(DeltaRotate.Quaternion());
-			}
+				const FScopedTransaction Transaction(LOCTEXT("ChangingComp", "ChangingComp"));
 
-			if (!DeltaScale.IsNearlyZero())
-			{
-				CurrentlyEditingComponent->HandRelativePlacement.MultiplyScale3D(DeltaScale);
+				CurrentlyEditingComponent->Modify();
+				if (AActor* Owner = CurrentlyEditingComponent->GetOwner())
+				{
+					Owner->Modify();
+				}
+				bool bLevelEdit = ViewportClient->IsLevelEditorClient();
+				//FTransform DeltaTrans(DeltaRotate.Quaternion(), DeltaTranslate, DeltaScale);
+				//CurrentlyEditingComponent->HandRelativePlacement = DeltaTrans * CurrentlyEditingComponent->HandRelativePlacement;
+
+				bool bFoundBone = false;
+				for (FBPVRHandPoseBonePair& BonePair : CurrentlyEditingComponent->CustomPoseDeltas)
+				{
+					if (BonePair.BoneName == CurrentlySelectedBone)
+					{
+						bFoundBone = true;
+						BonePair.DeltaPose *= DeltaRotate.Quaternion();
+						break;
+					}
+				}
+
+				if (!bFoundBone)
+				{
+					FBPVRHandPoseBonePair newBonePair;
+					newBonePair.BoneName = CurrentlySelectedBone;
+					newBonePair.DeltaPose *= DeltaRotate.Quaternion();
+					CurrentlyEditingComponent->CustomPoseDeltas.Add(newBonePair);
+					bFoundBone = true;
+				}
+
+				if (bFoundBone)
+				{
+					NotifyPropertyModified(CurrentlyEditingComponent.Get(), FindFProperty<FProperty>(UHandSocketComponent::StaticClass(), GET_MEMBER_NAME_CHECKED(UHandSocketComponent, CustomPoseDeltas)));
+				}
 			}
 
 			/*if (CurrentlyEditingComponent->HandVisualizerComponent)
@@ -210,8 +304,7 @@ public:
 			//}
 
 			//GEditor->RedrawLevelEditingViewports(true);
-			NotifyPropertyModified(CurrentlyEditingComponent.Get(), FindFProperty<FProperty>(UHandSocketComponent::StaticClass(), GET_MEMBER_NAME_CHECKED(UHandSocketComponent, HandRelativePlacement)));
-			
+
 			bHandled = true;
 		}
 
@@ -220,7 +313,6 @@ public:
 
 	virtual void EndEditing() override
 	{
-		bIsSelected = false;
 		CurrentlyEditingComponent = nullptr;
 	}
    // virtual bool GetWidgetLocation(const FEditorViewportClient* ViewportClient, FVector&amp; OutLocation) const override;
