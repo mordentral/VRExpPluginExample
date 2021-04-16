@@ -189,6 +189,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Hand Visualization")
 		UMaterial* HandPreviewMaterial;
 
+	// Hand preview animation class (if you want to access hand data you need to use the HandSocketAnimInstance base class
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Hand Visualization")
 		class TSubclassOf<UAnimInstance> HandPreviewAnimClass;
 #endif

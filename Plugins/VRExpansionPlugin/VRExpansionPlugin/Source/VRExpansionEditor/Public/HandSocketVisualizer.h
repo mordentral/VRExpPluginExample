@@ -67,7 +67,7 @@ public:
 					{
 						if (HandPair.BoneName == CurrentlySelectedBone)
 						{
-							DeltaQuat = HandPair.DeltaPose;
+							//DeltaQuat = HandPair.DeltaPose;
 						}
 					}
 
