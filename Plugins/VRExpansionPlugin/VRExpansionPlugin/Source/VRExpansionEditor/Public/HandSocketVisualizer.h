@@ -70,7 +70,6 @@ public:
    // virtual void OnRegister() override;
     virtual void DrawVisualization(const UActorComponent* Component, const FSceneView* View, FPrimitiveDrawInterface* PDI) override
 	{
-
 		//UWorld* World = Component->GetWorld();
 		//return World && (World->WorldType == EWorldType::EditorPreview || World->WorldType == EWorldType::Inactive);
 
@@ -101,6 +100,21 @@ public:
 			PDI->SetHitProxy(newHitProxy);
 			PDI->DrawPoint(HandComponent->GetComponentLocation(), FLinearColor::Red, 20.f, SDPG_Foreground);
 			PDI->SetHitProxy(NULL);
+
+			TArray<FTransform> BoneTransforms = HandComponent->HandVisualizerComponent->GetBoneSpaceTransforms();
+			FTransform ParentTrans = HandComponent->HandVisualizerComponent->GetComponentTransform();
+			for (int i=0; i<HandComponent->HandVisualizerComponent->GetNumBones(); i++)
+			{
+				FName BoneName = HandComponent->HandVisualizerComponent->GetBoneName(i);
+				FTransform BoneTransform = HandComponent->HandVisualizerComponent->GetBoneTransform(i);
+				FVector BoneLoc = BoneTransform.GetLocation();
+				float BoneScale = 1.0f - ((View->ViewLocation - BoneLoc).SizeSquared() / FMath::Square(100.0f));
+				BoneScale = FMath::Clamp(BoneScale, 0.1f, 1.0f);
+				PDI->SetHitProxy(new HHandSocketVisProxy(Component));
+				PDI->DrawPoint(BoneLoc, Color, 20.f * BoneScale, SDPG_Foreground);
+				PDI->SetHitProxy(NULL);
+			}
+			//HandComponent->HandVisualizerComponent->TransformFromBoneSpace()
 
 			//Iterate over each target drawing a line and dot
 			/*for (int i = 0; i < TargetingComponent->Targets.Num(); i++)
@@ -167,8 +181,10 @@ public:
 				Owner->Modify();
 			}
 			bool bLevelEdit = ViewportClient->IsLevelEditorClient();
-			FTransform DeltaTrans(DeltaRotate.Quaternion(), DeltaTranslate, DeltaScale);
-			CurrentlyEditingComponent->HandRelativePlacement = DeltaTrans * CurrentlyEditingComponent->HandRelativePlacement;
+			//FTransform DeltaTrans(DeltaRotate.Quaternion(), DeltaTranslate, DeltaScale);
+			//CurrentlyEditingComponent->HandRelativePlacement = DeltaTrans * CurrentlyEditingComponent->HandRelativePlacement;
+
+			CurrentlyEditingComponent->HandRelativePlacement.AddToTranslation(DeltaTranslate);
 
 			/*if (CurrentlyEditingComponent->HandVisualizerComponent)
 			{
