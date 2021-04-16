@@ -209,7 +209,7 @@ public:
 			//	Owner->PostEditMove(false);
 			//}
 
-			GEditor->RedrawLevelEditingViewports(true);
+			//GEditor->RedrawLevelEditingViewports(true);
 			NotifyPropertyModified(CurrentlyEditingComponent.Get(), FindFProperty<FProperty>(UHandSocketComponent::StaticClass(), GET_MEMBER_NAME_CHECKED(UHandSocketComponent, HandRelativePlacement)));
 			
 			bHandled = true;
