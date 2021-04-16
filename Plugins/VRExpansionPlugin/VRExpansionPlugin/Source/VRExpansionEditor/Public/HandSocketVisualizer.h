@@ -173,7 +173,7 @@ public:
 
 		if (CurrentlyEditingComponent.IsValid() && bIsSelected)
 		{
-		//	const FScopedTransaction Transaction(LOCTEXT("ChangingComp", "ChangingComp"));
+			const FScopedTransaction Transaction(LOCTEXT("ChangingComp", "ChangingComp"));
 
 			CurrentlyEditingComponent->Modify();
 			if (AActor* Owner = CurrentlyEditingComponent->GetOwner())
@@ -184,7 +184,20 @@ public:
 			//FTransform DeltaTrans(DeltaRotate.Quaternion(), DeltaTranslate, DeltaScale);
 			//CurrentlyEditingComponent->HandRelativePlacement = DeltaTrans * CurrentlyEditingComponent->HandRelativePlacement;
 
-			CurrentlyEditingComponent->HandRelativePlacement.AddToTranslation(DeltaTranslate);
+			if (!DeltaTranslate.IsNearlyZero())
+			{
+				CurrentlyEditingComponent->HandRelativePlacement.AddToTranslation(DeltaTranslate);
+			}
+
+			if (!DeltaRotate.IsNearlyZero())
+			{
+				CurrentlyEditingComponent->HandRelativePlacement.ConcatenateRotation(DeltaRotate.Quaternion());
+			}
+
+			if (!DeltaScale.IsNearlyZero())
+			{
+				CurrentlyEditingComponent->HandRelativePlacement.MultiplyScale3D(DeltaScale);
+			}
 
 			/*if (CurrentlyEditingComponent->HandVisualizerComponent)
 			{
