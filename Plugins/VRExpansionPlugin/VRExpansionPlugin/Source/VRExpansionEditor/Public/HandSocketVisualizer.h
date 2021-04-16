@@ -62,17 +62,17 @@ public:
 				}
 				else
 				{
-					FQuat DeltaQuat = FQuat::Identity;
+					/*FQuat DeltaQuat = FQuat::Identity;
 					for (FBPVRHandPoseBonePair & HandPair : CurrentlyEditingComponent->CustomPoseDeltas)
 					{
 						if (HandPair.BoneName == CurrentlySelectedBone)
 						{
 							//DeltaQuat = HandPair.DeltaPose;
 						}
-					}
+					}*/
 
 					FTransform newTrans = CurrentlyEditingComponent->HandVisualizerComponent->GetBoneTransform(CurrentlySelectedBoneIdx);
-					newTrans.ConcatenateRotation(DeltaQuat);
+					//newTrans.ConcatenateRotation(DeltaQuat);
 					OutMatrix = FRotationMatrix::Make(newTrans.GetRotation());
 				}
 
