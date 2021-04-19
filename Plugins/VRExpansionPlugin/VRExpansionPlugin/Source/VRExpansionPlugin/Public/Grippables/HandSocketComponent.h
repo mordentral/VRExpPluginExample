@@ -11,6 +11,7 @@
 #include "GameplayTagAssetInterface.h"
 #include "Components/SceneComponent.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "Components/PoseableMeshComponent.h"
 #include "Animation/AnimSequence.h"
 #include "Animation/AnimInstance.h"
 #include "Animation/AnimInstanceProxy.h"
@@ -90,6 +91,8 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Hand Animation")
 		UAnimSequence* HandTargetAnimation;
 
+	FTransform GetBoneTransformAtTime(UAnimSequence* MyAnimSequence, /*float AnimTime,*/ int BoneIdx, bool bUseRawDataOnly);
+
 	// If we have a seperate left hand animation then set it here
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Hand Animation")
 		UAnimSequence* HandTargetAnimationLeft;
@@ -145,7 +148,6 @@ public:
 #if WITH_EDITORONLY_DATA
 	static void AddReferencedObjects(UObject* InThis, FReferenceCollector& Collector);
 	virtual void OnComponentDestroyed(bool bDestroyingHierarchy) override;
-
 	bool bTickedPose;
 #endif
 	virtual void OnRegister() override;
@@ -178,7 +180,8 @@ public:
 	/** mesh component to indicate hand placement */
 #if WITH_EDITORONLY_DATA
 	//UPROPERTY(EditAnywhere, BlueprintReadOnly, Transient, Category = "Hand Visualization")
-		class USkeletalMeshComponent* HandVisualizerComponent;
+		//class USkeletalMeshComponent* HandVisualizerComponent;
+	class UPoseableMeshComponent* HandVisualizerComponent;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hand Visualization")
 		class USkeletalMesh* VisualizationMesh;
