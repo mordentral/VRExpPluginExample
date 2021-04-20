@@ -188,6 +188,8 @@ void UHandSocketComponent::OnRegister()
 
 
 						BoneTrans = BoneTrans * ParentTrans * HandVisualizerComponent->GetComponentTransform();
+						BoneTrans.NormalizeRotation();
+						DeltaQuat.Normalize();
 						//DeltaQuat *= HandVisualizerComponent->GetComponentTransform().GetRotation().Inverse();
 
 						BoneTrans.ConcatenateRotation(DeltaQuat);
