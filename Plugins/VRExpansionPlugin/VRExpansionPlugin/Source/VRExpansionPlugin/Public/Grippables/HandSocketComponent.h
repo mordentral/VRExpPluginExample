@@ -37,6 +37,14 @@ public:
 	// Initial "Resting" location of the tracker parent, assumed to be the calibration zero
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Settings")
 		FQuat DeltaPose;
+
+	FBoneReference ReferenceToConstruct;
+
+	FBPVRHandPoseBonePair()
+	{
+		BoneName = NAME_None;
+		DeltaPose = FQuat::Identity;
+	}
 };
 
 

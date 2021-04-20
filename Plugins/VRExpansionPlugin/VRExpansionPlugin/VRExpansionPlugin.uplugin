@@ -22,7 +22,7 @@
     },
 	{
       "Name": "VRExpansionEditor",
-      "Type": "Editor",
+      "Type": "UnCookedOnly",
 	  "LoadingPhase": "PostEngineInit"
     }
   ],

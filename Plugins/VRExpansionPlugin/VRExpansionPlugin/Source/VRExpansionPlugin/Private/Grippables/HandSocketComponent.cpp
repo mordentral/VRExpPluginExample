@@ -187,13 +187,14 @@ void UHandSocketComponent::OnRegister()
 
 
 
-						BoneTrans = BoneTrans * ParentTrans * HandVisualizerComponent->GetComponentTransform();
+						BoneTrans = BoneTrans * ParentTrans;// *HandVisualizerComponent->GetComponentTransform();
 						BoneTrans.NormalizeRotation();
 						DeltaQuat.Normalize();
 						//DeltaQuat *= HandVisualizerComponent->GetComponentTransform().GetRotation().Inverse();
 
 						BoneTrans.ConcatenateRotation(DeltaQuat);
-						HandVisualizerComponent->SetBoneTransformByName(BonesNames[i], BoneTrans, EBoneSpaces::WorldSpace);
+						BoneTrans.NormalizeRotation();
+						HandVisualizerComponent->SetBoneTransformByName(BonesNames[i], BoneTrans, EBoneSpaces::ComponentSpace);
 						
 					}
 

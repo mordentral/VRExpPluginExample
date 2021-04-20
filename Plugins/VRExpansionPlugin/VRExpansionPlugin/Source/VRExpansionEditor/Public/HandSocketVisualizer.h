@@ -52,8 +52,8 @@ public:
 	{
 		if (CurrentlyEditingComponent.IsValid() && CurrentlySelectedBone != NAME_None && CurrentlySelectedBone != "HandSocket")
 		{
-			if (ViewportClient->GetWidgetCoordSystemSpace() == COORD_Local || ViewportClient->GetWidgetMode() == FWidget::WM_Rotate)
-			{
+			//if (ViewportClient->GetWidgetCoordSystemSpace() == COORD_Local || ViewportClient->GetWidgetMode() == FWidget::WM_Rotate)
+			//{
 
 				if (CurrentlySelectedBone == "Visualizer")
 				{
@@ -77,7 +77,7 @@ public:
 				}
 
 				return true;
-			}
+			//}
 		}
 
 		return false;
@@ -147,19 +147,6 @@ public:
 					newHitProxy = nullptr;
 				}
 			}
-			//HandComponent->HandVisualizerComponent->TransformFromBoneSpace()
-
-			//Iterate over each target drawing a line and dot
-			/*for (int i = 0; i < TargetingComponent->Targets.Num(); i++)
-			{
-				FLinearColor Color = (i == SelectedTargetIndex) ? SelectedColor : UnselectedColor;
-
-				//Set our hit proxy
-				PDI->SetHitProxy(new HTargetProxy(Component, i));
-				PDI->DrawLine(Locaction, TargetingComponent->Targets[i], Color, SDPG_Foreground);
-				PDI->DrawPoint(TargetingComponent->Targets[i], Color, 20.f, SDPG_Foreground);
-				PDI->SetHitProxy(NULL);
-			}*/
 		}
 	}
 
@@ -267,13 +254,16 @@ public:
 				//FTransform DeltaTrans(DeltaRotate.Quaternion(), DeltaTranslate, DeltaScale);
 				//CurrentlyEditingComponent->HandRelativePlacement = DeltaTrans * CurrentlyEditingComponent->HandRelativePlacement;
 
+				FTransform CompTransform = CurrentlyEditingComponent->GetComponentTransform();
+				FQuat DeltaRotateMod = CompTransform.GetRotation().Inverse() * DeltaRotate.Quaternion();
+
 				bool bFoundBone = false;
 				for (FBPVRHandPoseBonePair& BonePair : CurrentlyEditingComponent->CustomPoseDeltas)
 				{
 					if (BonePair.BoneName == CurrentlySelectedBone)
 					{
 						bFoundBone = true;
-						BonePair.DeltaPose *= DeltaRotate.Quaternion();
+						BonePair.DeltaPose *= DeltaRotateMod;
 						break;
 					}
 				}
@@ -282,7 +272,7 @@ public:
 				{
 					FBPVRHandPoseBonePair newBonePair;
 					newBonePair.BoneName = CurrentlySelectedBone;
-					newBonePair.DeltaPose *= DeltaRotate.Quaternion();
+					newBonePair.DeltaPose *= DeltaRotateMod;
 					CurrentlyEditingComponent->CustomPoseDeltas.Add(newBonePair);
 					bFoundBone = true;
 				}

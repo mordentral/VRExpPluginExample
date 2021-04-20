@@ -38,8 +38,10 @@ namespace UnrealBuildTool.Rules
 				new string[]
 				{
 					"UnrealEd",
-					"BlueprintGraph"
-				}
+                    "BlueprintGraph",
+                    "AnimGraph",
+                    "AnimGraphRuntime"
+                }
 				);
 
 			DynamicallyLoadedModuleNames.AddRange(
