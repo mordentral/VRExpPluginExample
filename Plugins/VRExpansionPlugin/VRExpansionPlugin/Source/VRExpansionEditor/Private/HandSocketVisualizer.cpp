@@ -207,7 +207,23 @@ bool FHandSocketVisualizer::SaveAnimationAsset(const FString& InAssetPath, const
 					}
 				}*/
 
-				LocalTransform = CurrentlyEditingComponent->HandVisualizerComponent->GetBoneTransform(BoneIndex);
+				//LocalTransform = CurrentlyEditingComponent->HandVisualizerComponent->GetBoneTransform(BoneIndex);
+				
+				FName BoneName = CurrentlyEditingComponent->HandVisualizerComponent->GetBoneName(BoneIndex);
+
+				FName ParentBone = CurrentlyEditingComponent->HandVisualizerComponent->GetParentBone(BoneName);
+				FTransform ParentTrans = FTransform::Identity;
+				if (ParentBone != NAME_None)
+				{
+					ParentTrans = CurrentlyEditingComponent->HandVisualizerComponent->GetBoneTransformByName(ParentBone, EBoneSpaces::ComponentSpace);
+				}
+
+				LocalTransform = CurrentlyEditingComponent->HandVisualizerComponent->GetBoneTransformByName(BoneName, EBoneSpaces::ComponentSpace);
+
+				if (ParentBone != NAME_None)
+				{
+					LocalTransform.SetToRelativeTransform(ParentTrans);
+				}
 
 				FRawAnimSequenceTrack& RawTrack = AnimationObject->GetRawAnimationTrack(TrackIndex);
 				//if (bRecordTransforms)
