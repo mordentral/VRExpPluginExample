@@ -3,9 +3,6 @@
 #include "ComponentVisualizer.h"
 #include "Grippables/HandSocketComponent.h"
 #include "ActorEditorUtils.h"
-#include "Input/Reply.h"
-#include "Widgets/DeclarativeSyntaxSupport.h"
-#include "Widgets/SWindow.h"
 
 /**Base class for clickable targeting editing proxies*/
 struct VREXPANSIONEDITOR_API HHandSocketVisProxy : public HComponentVisProxy
@@ -77,49 +74,3 @@ private:
     /**Output log commands*/
    // TSharedPtr TargetingComponentVisualizerActions;
 };
-
-
-class SCreateHandAnimationDlg : public SWindow
-{
-public:
-	SLATE_BEGIN_ARGS(SCreateHandAnimationDlg)
-	{
-	}
-
-	SLATE_ARGUMENT(FText, DefaultAssetPath)
-		SLATE_END_ARGS()
-
-		SCreateHandAnimationDlg()
-		: UserResponse(EAppReturnType::Cancel)
-	{
-	}
-
-	void Construct(const FArguments& InArgs);
-
-public:
-	/** Displays the dialog in a blocking fashion */
-	EAppReturnType::Type ShowModal();
-
-	/** Gets the resulting asset path */
-	FString GetAssetPath();
-
-	/** Gets the resulting asset name */
-	FString GetAssetName();
-
-	/** Gets the resulting full asset path (path+'/'+name) */
-	FString GetFullAssetPath();
-
-protected:
-	void OnPathChange(const FString& NewPath);
-	void OnNameChange(const FText& NewName, ETextCommit::Type CommitInfo);
-	FReply OnButtonClick(EAppReturnType::Type ButtonID);
-
-	bool ValidatePackage();
-
-	EAppReturnType::Type UserResponse;
-	FText AssetPath;
-	FText AssetName;
-
-	static FText LastUsedAssetPath;
-};
-

@@ -27,7 +27,6 @@ UHandSocketComponent::UHandSocketComponent(const FObjectInitializer& ObjectIniti
 	SlotPrefix = FName("VRGripP");
 	bUseCustomPoseDeltas = false;
 	HandTargetAnimation = nullptr;
-	HandTargetAnimationLeft = nullptr;
 	bOnlySnapMesh = false;
 	bFlipForLeftHand = false;
 
@@ -35,9 +34,82 @@ UHandSocketComponent::UHandSocketComponent(const FObjectInitializer& ObjectIniti
 	FlipAxis = EAxis::Y;
 }
 
-UAnimSequence* UHandSocketComponent::GetTargetAnimation(bool bIsRightHand)
+UAnimSequence* UHandSocketComponent::GetTargetAnimation()
 {
-	return (bIsRightHand || !HandTargetAnimationLeft) ? HandTargetAnimation : HandTargetAnimationLeft;
+	return HandTargetAnimation;
+}
+
+bool UHandSocketComponent::GetBlendedPoseSnapShot(FPoseSnapshot& PoseSnapShot)
+{
+	if (HandTargetAnimation)// && bUseCustomPoseDeltas && CustomPoseDeltas.Num() > 0)
+	{
+		PoseSnapShot.SkeletalMeshName = HandTargetAnimation->GetSkeleton()->GetFName();
+		PoseSnapShot.SnapshotName = HandTargetAnimation->GetFName();
+		PoseSnapShot.BoneNames.Empty();
+		PoseSnapShot.LocalTransforms.Empty();
+
+		for (int32 TrackIndex = 0; TrackIndex < HandTargetAnimation->GetRawAnimationData().Num(); ++TrackIndex)
+		{
+			FRawAnimSequenceTrack& RawTrack = HandTargetAnimation->GetRawAnimationTrack(TrackIndex);
+
+			bool bHadLoc = false;
+			bool bHadRot = false;
+			bool bHadScale = false;
+			FVector Loc = FVector::ZeroVector;
+			FQuat Rot = FQuat::Identity;
+			FVector Scale = FVector(1.0f, 1.0f, 1.0f);
+
+			if (RawTrack.PosKeys.Num())
+			{
+				Loc = RawTrack.PosKeys[0];
+				bHadLoc = true;
+			}
+
+			if (RawTrack.RotKeys.Num())
+			{
+				Rot = RawTrack.RotKeys[0];
+				bHadRot = true;
+			}
+
+			if (RawTrack.ScaleKeys.Num())
+			{
+				Scale = RawTrack.ScaleKeys[0];
+				bHadScale = true;
+			}
+
+			FTransform FinalTrans(Rot, Loc, Scale);
+
+			FName TrackName = (HandTargetAnimation->GetAnimationTrackNames())[TrackIndex];
+			PoseSnapShot.BoneNames.Add(TrackName);
+
+			FQuat DeltaQuat = FQuat::Identity;
+			for (FBPVRHandPoseBonePair& HandPair : CustomPoseDeltas)
+			{
+				if (HandPair.BoneName == TrackName)
+				{
+					DeltaQuat = HandPair.DeltaPose;
+					bHadRot = true;
+					break;
+				}
+			}
+
+			FinalTrans.ConcatenateRotation(DeltaQuat);
+			FinalTrans.NormalizeRotation();
+
+			PoseSnapShot.LocalTransforms.Add(FinalTrans);
+
+			/*if (bHadLoc)
+				RawTrack.PosKeys[0] = FinalTrans.GetTranslation();
+			if (bHadRot)
+				RawTrack.RotKeys[0] = FinalTrans.GetRotation();
+			if (bHadScale)
+				RawTrack.ScaleKeys[0] = FinalTrans.GetScale3D();*/
+		}
+
+		return true;
+	}
+
+	return false;
 }
 
 FTransform UHandSocketComponent::GetHandRelativePlacement(bool bIsRightHand)
@@ -117,7 +189,7 @@ void UHandSocketComponent::OnRegister()
 {
 #if WITH_EDITORONLY_DATA
 	AActor* MyOwner = GetOwner();
-	if (bShowVisualizationMesh && (MyOwner != nullptr) && !IsRunningCommandlet())
+	if (bShowVisualizationMesh && (MyOwner != nullptr) )//&& !IsRunningCommandlet())
 	{
 		if (HandVisualizerComponent == nullptr)
 		{

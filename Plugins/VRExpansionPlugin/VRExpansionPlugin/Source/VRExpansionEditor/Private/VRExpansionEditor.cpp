@@ -4,7 +4,9 @@
 #include "Editor/UnrealEdEngine.h"
 #include "UnrealEdGlobals.h"
 #include "Grippables/HandSocketComponent.h"
+#include "PropertyEditorModule.h"
 #include "HandSocketVisualizer.h"
+#include "HandSocketComponentDetails.h"
 
 
 IMPLEMENT_MODULE(FVRExpansionEditorModule, VRExpansionEditor);
@@ -12,6 +14,19 @@ IMPLEMENT_MODULE(FVRExpansionEditorModule, VRExpansionEditor);
 void FVRExpansionEditorModule::StartupModule()
 {
 	RegisterComponentVisualizer(UHandSocketComponent::StaticClass()->GetFName(), MakeShareable(new FHandSocketVisualizer));
+
+	// Register detail customizations
+	{
+		auto& PropertyModule = FModuleManager::LoadModuleChecked< FPropertyEditorModule >("PropertyEditor");
+
+		// Register our customization to be used by a class 'UMyClass' or 'AMyClass'. Note the prefix must be dropped.
+		PropertyModule.RegisterCustomClassLayout(
+			UHandSocketComponent::StaticClass()->GetFName(),
+			FOnGetDetailCustomizationInstance::CreateStatic(&FHandSocketComponentDetails::MakeInstance)
+		);
+
+		PropertyModule.NotifyCustomizationModuleChanged();
+	}
 }
 
 void FVRExpansionEditorModule::ShutdownModule()
@@ -23,6 +38,13 @@ void FVRExpansionEditorModule::ShutdownModule()
 		{
 			GUnrealEd->UnregisterComponentVisualizer(ClassName);
 		}
+	}
+
+	if (FModuleManager::Get().IsModuleLoaded("PropertyEditor"))
+	{
+		auto& PropertyModule = FModuleManager::LoadModuleChecked<FPropertyEditorModule>("PropertyEditor");
+
+		PropertyModule.UnregisterCustomClassLayout(UHandSocketComponent::StaticClass()->GetFName());
 	}
 }
 

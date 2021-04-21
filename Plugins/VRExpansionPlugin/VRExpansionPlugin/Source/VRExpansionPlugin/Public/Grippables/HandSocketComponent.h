@@ -15,6 +15,7 @@
 #include "Animation/AnimSequence.h"
 #include "Animation/AnimInstance.h"
 #include "Animation/AnimInstanceProxy.h"
+#include "Animation/PoseSnapshot.h"
 #include "HandSocketComponent.generated.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(LogVRHandSocketComponent, Log, All);
@@ -48,7 +49,7 @@ public:
 };
 
 
-UCLASS(Blueprintable, /*meta = (BlueprintSpawnableComponent, ChildCanTick),*/ ClassGroup = (VRExpansionPlugin))
+UCLASS(Blueprintable, ClassGroup = (VRExpansionPlugin), hideCategories = ("Component Tick", Events, Physics, Lod, "Asset User Data", Collision))
 class VREXPANSIONPLUGIN_API UHandSocketComponent : public USceneComponent, public IGameplayTagAssetInterface
 {
 	GENERATED_BODY()
@@ -101,13 +102,13 @@ public:
 
 	FTransform GetBoneTransformAtTime(UAnimSequence* MyAnimSequence, /*float AnimTime,*/ int BoneIdx, bool bUseRawDataOnly);
 
-	// If we have a seperate left hand animation then set it here
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Hand Animation")
-		UAnimSequence* HandTargetAnimationLeft;
+	// Returns the target animation of the hand
+	UFUNCTION(BlueprintCallable, Category = "Hand Socket Data")
+		UAnimSequence* GetTargetAnimation();
 
 	// Returns the target animation of the hand
 	UFUNCTION(BlueprintCallable, Category = "Hand Socket Data")
-		UAnimSequence* GetTargetAnimation(bool bIsRightHand);
+		bool GetBlendedPoseSnapShot(FPoseSnapshot& PoseSnapShot);
 
 	// Returns the target relative transform of the hand
 	UFUNCTION(BlueprintCallable, Category = "Hand Socket Data")
