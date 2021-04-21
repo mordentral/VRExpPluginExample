@@ -97,13 +97,6 @@ bool UHandSocketComponent::GetBlendedPoseSnapShot(FPoseSnapshot& PoseSnapShot)
 			FinalTrans.NormalizeRotation();
 
 			PoseSnapShot.LocalTransforms.Add(FinalTrans);
-
-			/*if (bHadLoc)
-				RawTrack.PosKeys[0] = FinalTrans.GetTranslation();
-			if (bHadRot)
-				RawTrack.RotKeys[0] = FinalTrans.GetRotation();
-			if (bHadScale)
-				RawTrack.ScaleKeys[0] = FinalTrans.GetScale3D();*/
 		}
 
 		return true;
@@ -217,115 +210,7 @@ void UHandSocketComponent::OnRegister()
 				}
 
 				HandVisualizerComponent->SetRelativeTransform(HandRelativePlacement);
-
-				if (HandTargetAnimation)
-				{
-					TArray<FName> BonesNames;
-					HandVisualizerComponent->GetBoneNames(BonesNames);
-					int32 Bones = HandVisualizerComponent->GetNumBones();
-
-					for (int32 i=0; i< Bones; i++)
-					{
-						FName ParentBone = HandVisualizerComponent->GetParentBone(BonesNames[i]);
-						FTransform ParentTrans = FTransform::Identity;
-						if (ParentBone != NAME_None)
-						{
-							ParentTrans = HandVisualizerComponent->GetBoneTransformByName(ParentBone, EBoneSpaces::ComponentSpace);
-						}
-						
-
-						FQuat DeltaQuat = FQuat::Identity;
-						if (bUseCustomPoseDeltas)
-						{
-							for (FBPVRHandPoseBonePair BonePairC : CustomPoseDeltas)
-							{
-								if (BonePairC.BoneName == BonesNames[i])
-								{
-									DeltaQuat = BonePairC.DeltaPose;
-									break;
-								}
-							}
-						}
-
-						FTransform BoneTrans = GetBoneTransformAtTime(HandTargetAnimation, /*FLT_MAX,*/ i, false); // true;
-
-						/*int32 BoneIndex = HandVisualizerComponent->GetBoneIndex(BonesNames[i]);
-						if (BoneIndex != INDEX_NONE)
-						{
-							FMatrix BoneToWorldTM = HandVisualizerComponent->GetBoneMatrix(BoneIndex);
-							FMatrix LocalTM = BoneTrans.ToMatrixNoScale();//FRotationTranslationMatrix(InRotation, InPosition);
-							BoneTrans = FTransform(LocalTM * BoneToWorldTM);
-						}*/
-
-
-
-						BoneTrans = BoneTrans * ParentTrans;// *HandVisualizerComponent->GetComponentTransform();
-						BoneTrans.NormalizeRotation();
-						DeltaQuat.Normalize();
-						//DeltaQuat *= HandVisualizerComponent->GetComponentTransform().GetRotation().Inverse();
-
-						BoneTrans.ConcatenateRotation(DeltaQuat);
-						BoneTrans.NormalizeRotation();
-						HandVisualizerComponent->SetBoneTransformByName(BonesNames[i], BoneTrans, EBoneSpaces::ComponentSpace);
-						
-					}
-
-					if (HandVisualizerComponent && !bTickedPose)
-					{
-						// Tick Pose first
-						if (HandVisualizerComponent->IsRegistered())
-						{
-							bTickedPose = true;
-							HandVisualizerComponent->TickPose(1.0f, false);
-							if (HandVisualizerComponent->MasterPoseComponent.IsValid())
-							{
-								HandVisualizerComponent->UpdateSlaveComponent();
-							}
-							else
-							{
-								HandVisualizerComponent->RefreshBoneTransforms(&HandVisualizerComponent->PrimaryComponentTick);
-							}
-						}
-					}
-
-					if (HandTargetAnimation)
-					{
-						//UAnimSequence* NewSequence = NewObject<UAnimSequence>(MyOwner, NAME_None, RF_Transactional | RF_TextExportTransient | RF_Standalone);
-
-						//if (NewSequence)
-						//{
-							/**NewSequence = *HandTargetAnimation;
-							UPackage* OwningPackage = NewSequence->GetPackage();
-							if (OwningPackage)
-							{
-								int gg = 0;
-								//OwningPackage->sav
-							}*/
-						//}
-					}
-
-					/*HandVisualizerComponent->SetAnimationMode(EAnimationMode::AnimationSingleNode);
-					HandVisualizerComponent->PlayAnimation(HandTargetAnimation, false);
-					HandVisualizerComponent->AnimationData.AnimToPlay = HandTargetAnimation;
-
-					if (HandVisualizerComponent && !bTickedPose)
-					{
-						// Tick Pose first
-						if (HandVisualizerComponent->ShouldTickPose() && HandVisualizerComponent->IsRegistered())
-						{
-							bTickedPose = true;
-							HandVisualizerComponent->TickPose(1.0f, false);
-							if (HandVisualizerComponent->MasterPoseComponent.IsValid())
-							{
-								HandVisualizerComponent->UpdateSlaveComponent();
-							}
-							else
-							{
-								HandVisualizerComponent->RefreshBoneTransforms(&HandVisualizerComponent->PrimaryComponentTick);
-							}
-						}
-					}*/
-				}
+				PoseVisualizationToAnimation();
 			}
 		}
 	}
@@ -336,6 +221,69 @@ void UHandSocketComponent::OnRegister()
 }
 
 #if WITH_EDITORONLY_DATA
+void UHandSocketComponent::PoseVisualizationToAnimation(bool bForceRefresh)
+{
+	if (HandTargetAnimation && HandVisualizerComponent)
+	{
+		TArray<FName> BonesNames;
+		HandVisualizerComponent->GetBoneNames(BonesNames);
+		int32 Bones = HandVisualizerComponent->GetNumBones();
+
+		for (int32 i = 0; i < Bones; i++)
+		{
+			FName ParentBone = HandVisualizerComponent->GetParentBone(BonesNames[i]);
+			FTransform ParentTrans = FTransform::Identity;
+			if (ParentBone != NAME_None)
+			{
+				ParentTrans = HandVisualizerComponent->GetBoneTransformByName(ParentBone, EBoneSpaces::ComponentSpace);
+			}
+
+
+			FQuat DeltaQuat = FQuat::Identity;
+			if (bUseCustomPoseDeltas)
+			{
+				for (FBPVRHandPoseBonePair BonePairC : CustomPoseDeltas)
+				{
+					if (BonePairC.BoneName == BonesNames[i])
+					{
+						DeltaQuat = BonePairC.DeltaPose;
+						break;
+					}
+				}
+			}
+
+			FTransform BoneTrans = GetBoneTransformAtTime(HandTargetAnimation, /*FLT_MAX,*/ i, false); // true;
+			BoneTrans = BoneTrans * ParentTrans;// *HandVisualizerComponent->GetComponentTransform();
+			BoneTrans.NormalizeRotation();
+			DeltaQuat.Normalize();
+			//DeltaQuat *= HandVisualizerComponent->GetComponentTransform().GetRotation().Inverse();
+
+			BoneTrans.ConcatenateRotation(DeltaQuat);
+			BoneTrans.NormalizeRotation();
+			HandVisualizerComponent->SetBoneTransformByName(BonesNames[i], BoneTrans, EBoneSpaces::ComponentSpace);
+
+		}
+
+		if (HandVisualizerComponent && !bTickedPose)
+		{
+			// Tick Pose first
+			if (HandVisualizerComponent->IsRegistered())
+			{
+				bTickedPose = true;
+				HandVisualizerComponent->TickPose(1.0f, false);
+				if (HandVisualizerComponent->MasterPoseComponent.IsValid())
+				{
+					HandVisualizerComponent->UpdateSlaveComponent();
+				}
+				else
+				{
+					HandVisualizerComponent->RefreshBoneTransforms(&HandVisualizerComponent->PrimaryComponentTick);
+				}
+			}
+		}
+	}
+}
+
 void UHandSocketComponent::AddReferencedObjects(UObject* InThis, FReferenceCollector& Collector)
 {
 	UHandSocketComponent* This = CastChecked<UHandSocketComponent>(InThis);
@@ -406,7 +354,9 @@ void UHandSocketComponent::PostEditChangeProperty(FPropertyChangedEvent& Propert
 				}
 
 				// make sure the animation skeleton matches the current skeletalmesh
-				if (HandTargetAnimation != nullptr && HandVisualizerComponent->SkeletalMesh && HandTargetAnimation->GetSkeleton() == HandVisualizerComponent->SkeletalMesh->Skeleton)
+				
+				PoseVisualizationToAnimation(true);
+				/*if (HandTargetAnimation != nullptr && HandVisualizerComponent->SkeletalMesh && HandTargetAnimation->GetSkeleton() == HandVisualizerComponent->SkeletalMesh->Skeleton)
 				{
 					TArray<FName> BonesNames;
 					HandVisualizerComponent->GetBoneNames(BonesNames);
@@ -420,23 +370,20 @@ void UHandSocketComponent::PostEditChangeProperty(FPropertyChangedEvent& Propert
 							ParentTrans = HandVisualizerComponent->GetBoneTransformByName(ParentBone, EBoneSpaces::ComponentSpace);
 						}
 
-						FTransform BoneTrans = GetBoneTransformAtTime(HandTargetAnimation, /*FLT_MAX,*/ i, false); // true;
+						FTransform BoneTrans = GetBoneTransformAtTime(HandTargetAnimation,  i, false); // true;
 						BoneTrans = BoneTrans * ParentTrans;
 						HandVisualizerComponent->SetBoneTransformByName(BonesNames[i], BoneTrans, EBoneSpaces::ComponentSpace);
 					}
 
 					//HandVisualizerComponent->AnimationData.AnimToPlay = HandTargetAnimation;
 					//HandVisualizerComponent->PlayAnimation(HandTargetAnimation, false);
-				}
+				}*/
 			}
 		}
-		/*else if (PropertyThatChanged->GetFName() == GET_MEMBER_NAME_CHECKED(UHandSocketComponent, HandRelativePlacement))
+		else if (PropertyThatChanged->GetFName() == GET_MEMBER_NAME_CHECKED(UHandSocketComponent, CustomPoseDeltas))
 		{
-			if (HandVisualizerComponent)
-			{
-				HandVisualizerComponent->SetRelativeTransform(HandRelativePlacement);
-			}
-		}*/
+			//PoseVisualizationToAnimation(true);
+		}
 #endif
 	}
 }

@@ -157,6 +157,7 @@ public:
 #if WITH_EDITORONLY_DATA
 	static void AddReferencedObjects(UObject* InThis, FReferenceCollector& Collector);
 	virtual void OnComponentDestroyed(bool bDestroyingHierarchy) override;
+	void PoseVisualizationToAnimation(bool bForceRefresh = false);
 	bool bTickedPose;
 #endif
 	virtual void OnRegister() override;
