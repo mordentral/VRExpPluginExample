@@ -216,7 +216,21 @@ void UHandSocketComponent::OnRegister()
 						}
 					}
 
+					if (HandTargetAnimation)
+					{
+						//UAnimSequence* NewSequence = NewObject<UAnimSequence>(MyOwner, NAME_None, RF_Transactional | RF_TextExportTransient | RF_Standalone);
 
+						//if (NewSequence)
+						//{
+							/**NewSequence = *HandTargetAnimation;
+							UPackage* OwningPackage = NewSequence->GetPackage();
+							if (OwningPackage)
+							{
+								int gg = 0;
+								//OwningPackage->sav
+							}*/
+						//}
+					}
 
 					/*HandVisualizerComponent->SetAnimationMode(EAnimationMode::AnimationSingleNode);
 					HandVisualizerComponent->PlayAnimation(HandTargetAnimation, false);

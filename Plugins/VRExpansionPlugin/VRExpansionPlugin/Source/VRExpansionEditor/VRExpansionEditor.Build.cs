@@ -40,8 +40,15 @@ namespace UnrealBuildTool.Rules
 					"UnrealEd",
                     "BlueprintGraph",
                     "AnimGraph",
-                    "AnimGraphRuntime"
-                }
+                    "AnimGraphRuntime",
+                    "SlateCore",
+                    "Slate",
+                    "InputCore",
+                    "Engine",
+                    "UnrealEd",
+                    "EditorStyle",
+					"AssetRegistry"
+				}
 				);
 
 			DynamicallyLoadedModuleNames.AddRange(
