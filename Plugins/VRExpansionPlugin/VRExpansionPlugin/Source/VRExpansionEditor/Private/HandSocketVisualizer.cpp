@@ -76,129 +76,7 @@ bool FHandSocketVisualizer::VisProxyHandleClick(FEditorViewportClient* InViewpor
 
 	return bEditing;
 }
-/*
-bool FAnimationRecorder::Record(USkeletalMeshComponent* Component, FTransform const& ComponentToWorld, const TArray<FTransform>& SpacesBases, const FBlendedHeapCurve& AnimationCurves, int32 FrameToAdd)
-{
-	if (ensure(AnimationObject))
-	{
-		USkeletalMesh* SkeletalMesh = Component->MasterPoseComponent != nullptr ? Component->MasterPoseComponent->SkeletalMesh : Component->SkeletalMesh;
 
-		if (FrameToAdd == 0)
-		{
-			// Find the root bone & store its transform
-			SkeletonRootIndex = INDEX_NONE;
-			USkeleton* AnimSkeleton = AnimationObject->GetSkeleton();
-			for (int32 TrackIndex = 0; TrackIndex < AnimationObject->GetRawAnimationData().Num(); ++TrackIndex)
-			{
-				// verify if this bone exists in skeleton
-				int32 BoneTreeIndex = AnimationObject->GetSkeletonIndexFromRawDataTrackIndex(TrackIndex);
-				if (BoneTreeIndex != INDEX_NONE)
-				{
-					int32 BoneIndex = AnimSkeleton->GetMeshBoneIndexFromSkeletonBoneIndex(SkeletalMesh, BoneTreeIndex);
-					int32 ParentIndex = SkeletalMesh->RefSkeleton.GetParentIndex(BoneIndex);
-					FTransform LocalTransform = SpacesBases[BoneIndex];
-					if (ParentIndex == INDEX_NONE)
-					{
-						if (bRemoveRootTransform && AnimationObject->GetRawAnimationData().Num() > 1)
-						{
-							// Store initial root transform.
-							// We remove the initial transform of the root bone and transform root's children
-							// to remove any offset. We need to do this for sequence recording in particular
-							// as we use root motion to build transform tracks that properly sync with
-							// animation keyframes. If we have a transformed root bone then the assumptions
-							// we make about root motion use are incorrect.
-							// NEW. But we don't do this if there is just one root bone. This has come up with recording
-							// single bone props and cameras.
-							InitialRootTransform = LocalTransform;
-							InvInitialRootTransform = LocalTransform.Inverse();
-						}
-						else
-						{
-							InitialRootTransform = InvInitialRootTransform = FTransform::Identity;
-						}
-						SkeletonRootIndex = BoneIndex;
-						break;
-					}
-				}
-			}
-		}
-
-		FSerializedAnimation  SerializedAnimation;
-		USkeleton* AnimSkeleton = AnimationObject->GetSkeleton();
-		for (int32 TrackIndex = 0; TrackIndex < AnimationObject->GetRawAnimationData().Num(); ++TrackIndex)
-		{
-			// verify if this bone exists in skeleton
-			int32 BoneTreeIndex = AnimationObject->GetSkeletonIndexFromRawDataTrackIndex(TrackIndex);
-			if (BoneTreeIndex != INDEX_NONE)
-			{
-				int32 BoneIndex = AnimSkeleton->GetMeshBoneIndexFromSkeletonBoneIndex(SkeletalMesh, BoneTreeIndex);
-				int32 ParentIndex = SkeletalMesh->RefSkeleton.GetParentIndex(BoneIndex);
-				FTransform LocalTransform = SpacesBases[BoneIndex];
-				if ( ParentIndex != INDEX_NONE )
-				{
-					LocalTransform.SetToRelativeTransform(SpacesBases[ParentIndex]);
-				}
-				// if record local to world, we'd like to consider component to world to be in root
-				else
-				{
-					if (bRecordLocalToWorld)
-					{
-						LocalTransform *= ComponentToWorld;
-					}
-				}
-
-				FRawAnimSequenceTrack& RawTrack = AnimationObject->GetRawAnimationTrack(TrackIndex);
-				if (bRecordTransforms)
-				{
-					RawTrack.PosKeys.Add(LocalTransform.GetTranslation());
-					RawTrack.RotKeys.Add(LocalTransform.GetRotation());
-					RawTrack.ScaleKeys.Add(LocalTransform.GetScale3D());
-					if (AnimationSerializer)
-					{
-						SerializedAnimation.AddTransform(TrackIndex, LocalTransform);
-					}
-				}
-				// verification
-				if (FrameToAdd != RawTrack.PosKeys.Num()-1)
-				{
-					UE_LOG(LogAnimation, Warning, TEXT("Mismatch in animation frames. Trying to record frame: %d, but only: %d frame(s) exist. Changing skeleton while recording is not supported."), FrameToAdd, RawTrack.PosKeys.Num());
-					return false;
-				}
-			}
-		}
-
-		TOptional<FQualifiedFrameTime> CurrentTime = FApp::GetCurrentFrameTime();
-		RecordedTimes.Add(CurrentTime.IsSet() ? CurrentTime.GetValue() : FQualifiedFrameTime());
-
-		if (AnimationSerializer)
-		{
-			AnimationSerializer->WriteFrameData(AnimationSerializer->FramesWritten, SerializedAnimation);
-		}
-		// each RecordedCurves contains all elements
-		if (bRecordCurves && AnimationCurves.CurveWeights.Num() > 0)
-		{
-			RecordedCurves.Emplace(AnimationCurves.CurveWeights, AnimationCurves.ValidCurveWeights);
-			if (UIDToArrayIndexLUT == nullptr)
-			{
-				UIDToArrayIndexLUT = AnimationCurves.UIDToArrayIndexLUT;
-			}
-			else
-			{
-				ensureAlways(UIDToArrayIndexLUT->Num() == AnimationCurves.UIDToArrayIndexLUT->Num());
-				if (UIDToArrayIndexLUT != AnimationCurves.UIDToArrayIndexLUT)
-				{
-					UIDToArrayIndexLUT = AnimationCurves.UIDToArrayIndexLUT;
-				}
-			}
-		}
-
-		LastFrame = FrameToAdd;
-	}
-
-	return true;
-}
-
-*/
 bool FHandSocketVisualizer::SaveAnimationAsset(const FString& InAssetPath, const FString& InAssetName)
 {
 	// Replace when this moves to custom display
@@ -265,8 +143,8 @@ bool FHandSocketVisualizer::SaveAnimationAsset(const FString& InAssetPath, const
 		//PreviousComponentToWorld = Component->GetComponentTransform();
 
 		//LastFrame = 0;
-		AnimationObject->SequenceLength = 0.f;
-		AnimationObject->SetRawNumberOfFrame(0);
+		AnimationObject->SequenceLength = 4.f;
+		AnimationObject->SetRawNumberOfFrame(1);
 
 		//RecordedCurves.Reset();
 		//RecordedTimes.Empty();
@@ -286,10 +164,14 @@ bool FHandSocketVisualizer::SaveAnimationAsset(const FString& InAssetPath, const
 			}
 		}*/
 		USkeleton* AnimSkeleton = AnimationObject->GetSkeleton();
-		for (FBPVRHandPoseBonePair& BonePair : CurrentlyEditingComponent->CustomPoseDeltas)
+		for (int i = 0; i < CurrentlyEditingComponent->HandVisualizerComponent->GetNumBones(); i++)
 		{
-			AnimationObject->AddNewRawTrack(BonePair.BoneName);
+			AnimationObject->AddNewRawTrack(CurrentlyEditingComponent->HandVisualizerComponent->GetBoneName(i));
 		}
+		//for (FBPVRHandPoseBonePair& BonePair : CurrentlyEditingComponent->CustomPoseDeltas)
+		//{
+		///	AnimationObject->AddNewRawTrack(BonePair.BoneName);
+		//}
 		
 		
 		AnimationObject->RetargetSource = CurrentlyEditingComponent->HandVisualizerComponent->SkeletalMesh ? AnimSkeleton->GetRetargetSourceForMesh(CurrentlyEditingComponent->HandVisualizerComponent->SkeletalMesh) : NAME_None;
@@ -297,9 +179,10 @@ bool FHandSocketVisualizer::SaveAnimationAsset(const FString& InAssetPath, const
 
 		/// SAVE POSE
 		/// 
-					// Find the root bone & store its transform
-		/*SkeletonRootIndex = INDEX_NONE;
-		USkeleton* AnimSkeleton = AnimationObject->GetSkeleton();
+		//USkeleton* AnimSkeleton = AnimationObject->GetSkeleton();
+
+		//USkeleton* AnimSkeleton = AnimationObject->GetSkeleton();
+		USkeletalMesh* SkeletalMesh = CurrentlyEditingComponent->HandVisualizerComponent->SkeletalMesh;
 		for (int32 TrackIndex = 0; TrackIndex < AnimationObject->GetRawAnimationData().Num(); ++TrackIndex)
 		{
 			// verify if this bone exists in skeleton
@@ -308,32 +191,43 @@ bool FHandSocketVisualizer::SaveAnimationAsset(const FString& InAssetPath, const
 			{
 				int32 BoneIndex = AnimSkeleton->GetMeshBoneIndexFromSkeletonBoneIndex(SkeletalMesh, BoneTreeIndex);
 				int32 ParentIndex = SkeletalMesh->RefSkeleton.GetParentIndex(BoneIndex);
-				FTransform LocalTransform = SpacesBases[BoneIndex];
-				if (ParentIndex == INDEX_NONE)
+				FTransform LocalTransform = FTransform::Identity;
+				LocalTransform.AddToTranslation(FVector(10.f, 10.f, 0.f));
+				/*FTransform LocalTransform = SpacesBases[BoneIndex];
+				if (ParentIndex != INDEX_NONE)
 				{
-					if (bRemoveRootTransform && AnimationObject->GetRawAnimationData().Num() > 1)
-					{
-						// Store initial root transform.
-						// We remove the initial transform of the root bone and transform root's children
-						// to remove any offset. We need to do this for sequence recording in particular
-						// as we use root motion to build transform tracks that properly sync with
-						// animation keyframes. If we have a transformed root bone then the assumptions
-						// we make about root motion use are incorrect.
-						// NEW. But we don't do this if there is just one root bone. This has come up with recording
-						// single bone props and cameras.
-						InitialRootTransform = LocalTransform;
-						InvInitialRootTransform = LocalTransform.Inverse();
-					}
-					else
-					{
-						InitialRootTransform = InvInitialRootTransform = FTransform::Identity;
-					}
-					SkeletonRootIndex = BoneIndex;
-					break;
+					LocalTransform.SetToRelativeTransform(SpacesBases[ParentIndex]);
 				}
+				// if record local to world, we'd like to consider component to world to be in root
+				else
+				{
+					if (bRecordLocalToWorld)
+					{
+						LocalTransform *= ComponentToWorld;
+					}
+				}*/
+
+				LocalTransform = CurrentlyEditingComponent->HandVisualizerComponent->GetBoneTransform(BoneIndex);
+
+				FRawAnimSequenceTrack& RawTrack = AnimationObject->GetRawAnimationTrack(TrackIndex);
+				//if (bRecordTransforms)
+				{
+					RawTrack.PosKeys.Add(LocalTransform.GetTranslation());
+					RawTrack.RotKeys.Add(LocalTransform.GetRotation());
+					RawTrack.ScaleKeys.Add(LocalTransform.GetScale3D());
+				}
+				// verification
+				/*if (FrameToAdd != RawTrack.PosKeys.Num() - 1)
+				{
+					UE_LOG(LogAnimation, Warning, TEXT("Mismatch in animation frames. Trying to record frame: %d, but only: %d frame(s) exist. Changing skeleton while recording is not supported."), FrameToAdd, RawTrack.PosKeys.Num());
+					return false;
+				}*/
 			}
-		}*/
-		
+		}
+
+		//TOptional<FQualifiedFrameTime> CurrentTime = FApp::GetCurrentFrameTime();
+		//RecordedTimes.Add(CurrentTime.IsSet() ? CurrentTime.GetValue() : FQualifiedFrameTime());
+
 		
 		/// END SAVE POSE 
 		/// 
