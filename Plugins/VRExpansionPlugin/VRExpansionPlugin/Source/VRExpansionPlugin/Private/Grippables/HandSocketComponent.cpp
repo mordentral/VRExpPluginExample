@@ -139,6 +139,19 @@ FTransform UHandSocketComponent::GetHandSocketTransform(UGripMotionControllerCom
 {
 	// Optionally mirror for left hand
 
+	if (bOnlySnapMesh)
+	{
+		if (!QueryController)
+		{
+			// No controller input
+			UE_LOG(LogVRMotionController, Warning, TEXT("HandSocketComponent::GetHandSocketTransform was missing required motion controller for bOnlySnapMesh! Check that you are passing a controller into GetClosestSocketInRange!"));
+		}
+		else
+		{
+			return QueryController->GetPivotTransform();
+		}
+	}
+
 	if (bFlipForLeftHand)
 	{
 		if (!QueryController)
@@ -206,7 +219,7 @@ void UHandSocketComponent::OnRegister()
 {
 #if WITH_EDITORONLY_DATA
 	AActor* MyOwner = GetOwner();
-	if (bShowVisualizationMesh && (MyOwner != nullptr) )//&& !IsRunningCommandlet())
+	if (bShowVisualizationMesh && (MyOwner != nullptr) && !IsRunningCommandlet())
 	{
 		if (HandVisualizerComponent == nullptr)
 		{
