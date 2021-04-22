@@ -47,8 +47,11 @@ bool FHandSocketVisualizer::GetCustomInputCoordinateSystem(const FEditorViewport
 	{
 		//if (ViewportClient->GetWidgetCoordSystemSpace() == COORD_Local || ViewportClient->GetWidgetMode() == FWidget::WM_Rotate)
 		//{
-
-		if (CurrentlySelectedBone == "Visualizer")
+		if (CurrentlySelectedBone == "HandSocket")
+		{
+			return false;
+		}
+		else if (CurrentlySelectedBone == "Visualizer")
 		{
 			FTransform newTrans = CurrentlyEditingComponent->HandRelativePlacement * CurrentlyEditingComponent->GetComponentTransform();
 			OutMatrix = FRotationMatrix::Make(newTrans.GetRotation());
@@ -147,7 +150,11 @@ bool FHandSocketVisualizer::GetWidgetLocation(const FEditorViewportClient* Viewp
 {
 	if (CurrentlyEditingComponent.IsValid() && CurrentlySelectedBone != NAME_None && CurrentlySelectedBone != "HandSocket")
 	{
-		if (CurrentlySelectedBone == "Visualizer")
+		if (CurrentlySelectedBone == "HandSocket")
+		{
+			return false;
+		}
+		else if (CurrentlySelectedBone == "Visualizer")
 		{
 			OutLocation = (CurrentlyEditingComponent->HandRelativePlacement * CurrentlyEditingComponent->GetComponentTransform()).GetLocation();// HandVisualizerComponent->GetComponentLocation();
 		}
@@ -170,7 +177,7 @@ bool FHandSocketVisualizer::HandleInputDelta(FEditorViewportClient* ViewportClie
 	{
 		if (CurrentlySelectedBone == "HandSocket")
 		{
-
+			bHandled = false;
 		}
 		else if (CurrentlySelectedBone == "Visualizer")
 		{
@@ -202,6 +209,8 @@ bool FHandSocketVisualizer::HandleInputDelta(FEditorViewportClient* ViewportClie
 
 			NotifyPropertyModified(CurrentlyEditingComponent.Get(), FindFProperty<FProperty>(UHandSocketComponent::StaticClass(), GET_MEMBER_NAME_CHECKED(UHandSocketComponent, HandRelativePlacement)));
 
+			bHandled = true;
+
 		}
 		else
 		{
@@ -217,8 +226,8 @@ bool FHandSocketVisualizer::HandleInputDelta(FEditorViewportClient* ViewportClie
 			//CurrentlyEditingComponent->HandRelativePlacement = DeltaTrans * CurrentlyEditingComponent->HandRelativePlacement;
 
 			FTransform CompTransform = CurrentlyEditingComponent->GetComponentTransform();
-			FQuat DeltaRotateMod = CompTransform.GetRotation().Inverse() * DeltaRotate.Quaternion();
-
+			
+			FQuat DeltaRotateMod = DeltaRotate.Quaternion();// CompTransform.InverseTransformRotation(DeltaRotate.Quaternion());
 			bool bFoundBone = false;
 			for (FBPVRHandPoseBonePair& BonePair : CurrentlyEditingComponent->CustomPoseDeltas)
 			{
@@ -243,21 +252,9 @@ bool FHandSocketVisualizer::HandleInputDelta(FEditorViewportClient* ViewportClie
 			{
 				NotifyPropertyModified(CurrentlyEditingComponent.Get(), FindFProperty<FProperty>(UHandSocketComponent::StaticClass(), GET_MEMBER_NAME_CHECKED(UHandSocketComponent, CustomPoseDeltas)));
 			}
+
+			bHandled = true;
 		}
-
-		/*if (CurrentlyEditingComponent->HandVisualizerComponent)
-		{
-			CurrentlyEditingComponent->HandVisualizerComponent->SetRelativeTransform(CurrentlyEditingComponent->HandRelativePlacement);
-		}*/
-
-		//if (AActor* Owner = CurrentlyEditingComponent->GetOwner())
-		//{
-		//	Owner->PostEditMove(false);
-		//}
-
-		//GEditor->RedrawLevelEditingViewports(true);
-
-		bHandled = true;
 	}
 
 	return bHandled;

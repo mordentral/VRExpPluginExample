@@ -247,6 +247,7 @@ void UHandSocketComponent::PoseVisualizationToAnimation(bool bForceRefresh)
 					if (BonePairC.BoneName == BonesNames[i])
 					{
 						DeltaQuat = BonePairC.DeltaPose;
+						DeltaQuat.Normalize();
 						break;
 					}
 				}
@@ -255,7 +256,7 @@ void UHandSocketComponent::PoseVisualizationToAnimation(bool bForceRefresh)
 			FTransform BoneTrans = GetBoneTransformAtTime(HandTargetAnimation, /*FLT_MAX,*/ i, false); // true;
 			BoneTrans = BoneTrans * ParentTrans;// *HandVisualizerComponent->GetComponentTransform();
 			BoneTrans.NormalizeRotation();
-			DeltaQuat.Normalize();
+
 			//DeltaQuat *= HandVisualizerComponent->GetComponentTransform().GetRotation().Inverse();
 
 			BoneTrans.ConcatenateRotation(DeltaQuat);
