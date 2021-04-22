@@ -102,13 +102,15 @@ public:
 
 	FTransform GetBoneTransformAtTime(UAnimSequence* MyAnimSequence, /*float AnimTime,*/ int BoneIdx, bool bUseRawDataOnly);
 
-	// Returns the target animation of the hand
+	// Returns the base target animation of the hand (if there is one)
 	UFUNCTION(BlueprintCallable, Category = "Hand Socket Data")
 		UAnimSequence* GetTargetAnimation();
 
-	// Returns the target animation of the hand
+	// Returns the target animation of the hand blended with the delta rotations if there are any
+	// If the hand has no target animation is uses the reference pose
+	// To use the reference pose the node requires a target mesh to be passed in
 	UFUNCTION(BlueprintCallable, Category = "Hand Socket Data")
-		bool GetBlendedPoseSnapShot(FPoseSnapshot& PoseSnapShot);
+		bool GetBlendedPoseSnapShot(FPoseSnapshot& PoseSnapShot, USkeletalMeshComponent* TargetMesh = nullptr);
 
 	// Returns the target relative transform of the hand
 	UFUNCTION(BlueprintCallable, Category = "Hand Socket Data")
