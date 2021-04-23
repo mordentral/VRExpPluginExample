@@ -25,7 +25,9 @@ class VREXPANSIONEDITOR_API FHandSocketVisualizer : public FComponentVisualizer
 public:
 	FHandSocketVisualizer()
 	{
-		CurrentlyEditingComponent = nullptr;
+		CurrentlySelectedBone = NAME_None;
+		CurrentlySelectedBoneIdx = INDEX_NONE;
+		HandPropertyPath = FComponentPropertyPath();
 	}
 
 	virtual ~FHandSocketVisualizer()
@@ -33,17 +35,40 @@ public:
 
 	}
 
-	TWeakObjectPtr<UHandSocketComponent> CurrentlyEditingComponent;
-	//TWeakObjectPtr<HHandSocketVisProxy> LastVisProxy;
-	FQuat CachedRotation;
+	UPROPERTY()
+		FComponentPropertyPath HandPropertyPath;
+
 	FName CurrentlySelectedBone;
 	uint32 CurrentlySelectedBoneIdx;
 
-	UHandSocketComponent* GetEditedHandComponent() const
+	UHandSocketComponent* GetCurrentlyEditingComponent() const
 	{ 
-		return CurrentlyEditingComponent.Get();
+		return Cast<UHandSocketComponent>(HandPropertyPath.GetComponent());
 	}
 
+	const UHandSocketComponent* UpdateSelectedHandComponent(HComponentVisProxy* VisProxy)
+	{
+		const UHandSocketComponent* HandComp = CastChecked<const UHandSocketComponent>(VisProxy->Component.Get());
+
+		AActor* OldOwningActor = HandPropertyPath.GetParentOwningActor();
+		HandPropertyPath = FComponentPropertyPath(HandComp);
+		AActor* NewOwningActor = HandPropertyPath.GetParentOwningActor();
+
+		if (HandPropertyPath.IsValid())
+		{
+			if (OldOwningActor != NewOwningActor)
+			{
+				// Reset selection state if we are selecting a different actor to the one previously selected
+				CurrentlySelectedBoneIdx = INDEX_NONE;
+				CurrentlySelectedBone = NAME_None;
+			}
+
+			return HandComp;
+		}
+
+		HandPropertyPath = FComponentPropertyPath();
+		return nullptr;
+	}
 
 	bool SaveAnimationAsset(const FString& InAssetPath, const FString& InAssetName);
 
@@ -57,20 +82,7 @@ public:
 	bool GetWidgetLocation(const FEditorViewportClient* ViewportClient, FVector& OutLocation) const override;
 	bool HandleInputDelta(FEditorViewportClient* ViewportClient, FViewport* Viewport, FVector& DeltaTranslate, FRotator& DeltaRotate, FVector& DeltaScale) override;
 	virtual void EndEditing() override;
-   // virtual bool GetWidgetLocation(const FEditorViewportClient* ViewportClient, FVector&amp; OutLocation) const override;
-   // virtual bool GetCustomInputCoordinateSystem(const FEditorViewportClient* ViewportClient, FMatrix&amp; OutMatrix) const override;
-   // virtual bool HandleInputDelta(FEditorViewportClient* ViewportClient, FViewport* Viewport, FVector&amp; DeltaTranslate, FRotator&amp; DeltaRotate, FVector&amp; DeltaScale) override;
-   // virtual bool HandleInputKey(FEditorViewportClient* ViewportClient, FViewport* Viewport, FKey Key, EInputEvent Event) override;
-   // virtual TSharedPtr GenerateContextMenu() const override;
-    // End FComponentVisualizer interface
-
-    /** Get the target component we are currently editing */
-    //UTargetingComponent* GetEditedTargetingComponent() const;
 
 private:
-        /**Index of target in selected component*/
-        //int32 CurrentlySelectedTarget;
 
-    /**Output log commands*/
-   // TSharedPtr TargetingComponentVisualizerActions;
 };
