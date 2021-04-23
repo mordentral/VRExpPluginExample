@@ -85,19 +85,22 @@ void FHandSocketVisualizer::DrawVisualization(const UActorComponent* Component, 
 		//This is an editor only uproperty of our targeting component, that way we can change the colors if we can't see them against the background
 		const FLinearColor SelectedColor = FLinearColor::Yellow;//TargetingComponent->EditorSelectedColor;
 		const FLinearColor UnselectedColor = FLinearColor::White;//TargetingComponent->EditorUnselectedColor;
-
 		const FVector Location = HandComponent->HandVisualizerComponent->GetComponentLocation();
+		float BoneScale = 1.0f - ((View->ViewLocation - Location).SizeSquared() / FMath::Square(100.0f));
+		BoneScale = FMath::Clamp(BoneScale, 0.2f, 1.0f);
 		HHandSocketVisProxy* newHitProxy = new HHandSocketVisProxy(Component);
 		newHitProxy->TargetBoneName = "Visualizer";
 		PDI->SetHitProxy(newHitProxy);
-		PDI->DrawPoint(Location, CurrentlySelectedBone == newHitProxy->TargetBoneName ? SelectedColor : UnselectedColor, 20.f, SDPG_Foreground);
+		PDI->DrawPoint(Location, CurrentlySelectedBone == newHitProxy->TargetBoneName ? SelectedColor : UnselectedColor, 20.f * BoneScale, SDPG_Foreground);
 		PDI->SetHitProxy(NULL);
 		newHitProxy = nullptr;
 
 		newHitProxy = new HHandSocketVisProxy(Component);
 		newHitProxy->TargetBoneName = "HandSocket";
+		BoneScale = 1.0f - ((View->ViewLocation - HandComponent->GetComponentLocation()).SizeSquared() / FMath::Square(100.0f));
+		BoneScale = FMath::Clamp(BoneScale, 0.2f, 1.0f);
 		PDI->SetHitProxy(newHitProxy);
-		PDI->DrawPoint(HandComponent->GetComponentLocation(), FLinearColor::Red, 20.f, SDPG_Foreground);
+		PDI->DrawPoint(HandComponent->GetComponentLocation(), FLinearColor::Red, 20.f * BoneScale, SDPG_Foreground);
 		PDI->SetHitProxy(NULL);
 		newHitProxy = nullptr;
 
@@ -111,8 +114,8 @@ void FHandSocketVisualizer::DrawVisualization(const UActorComponent* Component, 
 				FName BoneName = HandComponent->HandVisualizerComponent->GetBoneName(i);
 				FTransform BoneTransform = HandComponent->HandVisualizerComponent->GetBoneTransform(i);
 				FVector BoneLoc = BoneTransform.GetLocation();
-				float BoneScale = 1.0f - ((View->ViewLocation - BoneLoc).SizeSquared() / FMath::Square(100.0f));
-				BoneScale = FMath::Clamp(BoneScale, 0.1f, 1.0f);
+				BoneScale = 1.0f - ((View->ViewLocation - BoneLoc).SizeSquared() / FMath::Square(100.0f));
+				BoneScale = FMath::Clamp(BoneScale, 0.1f, 0.9f);
 				newHitProxy = new HHandSocketVisProxy(Component);
 				newHitProxy->TargetBoneName = BoneName;
 				newHitProxy->BoneIdx = i;

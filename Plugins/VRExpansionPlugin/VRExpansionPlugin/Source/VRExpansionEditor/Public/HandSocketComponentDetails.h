@@ -19,6 +19,7 @@ public:
 
 	/** IDetailCustomization interface */
 	virtual void CustomizeDetails(IDetailLayoutBuilder& DetailBuilder) override;
+	//void SortCategories(const TMap<FName, IDetailCategoryBuilder*>& AllCategoryMap);
 
 	// The selected hand component
 	TWeakObjectPtr<UHandSocketComponent> HandSocketComponent;

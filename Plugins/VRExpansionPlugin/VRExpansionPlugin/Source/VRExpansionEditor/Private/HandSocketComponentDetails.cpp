@@ -376,6 +376,17 @@ void FHandSocketComponentDetails::CustomizeDetails(IDetailLayoutBuilder& DetailB
 		}
 	}
 
+	DetailBuilder.HideCategory(FName("ComponentTick"));
+	DetailBuilder.HideCategory(FName("GameplayTags"));
+	DetailBuilder.HideCategory(FName("VRGripInterface"));
+	DetailBuilder.HideCategory(FName("VRGripInterface|Replication"));
+	DetailBuilder.HideCategory(FName("Tags"));
+	DetailBuilder.HideCategory(FName("AssetUserData"));
+	DetailBuilder.HideCategory(FName("Events"));
+	DetailBuilder.HideCategory(FName("Activation"));
+	DetailBuilder.HideCategory(FName("Cooking"));
+	DetailBuilder.HideCategory(FName("ComponentReplication"));
+
 	TSharedPtr<IPropertyHandle> LockedLocationProperty = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UHandSocketComponent, bLockHandRelativePlacement));
 
 	FSimpleDelegate OnLockedStateChangedDelegate = FSimpleDelegate::CreateSP(this, &FHandSocketComponentDetails::OnLockedStateUpdated, &DetailBuilder);
