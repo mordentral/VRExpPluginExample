@@ -26,6 +26,9 @@
 #include "EditorStyleSet.h"
 #include "Styling/CoreStyle.h"
 
+#include "Editor/UnrealEdEngine.h"
+#include "UnrealEdGlobals.h"
+
 #define LOCTEXT_NAMESPACE "HandSocketComponentDetails"
 
 FText SCreateHandAnimationDlg::LastUsedAssetPath;
@@ -295,6 +298,67 @@ TSharedRef< IDetailCustomization > FHandSocketComponentDetails::MakeInstance()
     return MakeShareable(new FHandSocketComponentDetails);
 }
 
+void FHandSocketComponentDetails::OnLockedStateUpdated(IDetailLayoutBuilder* LayoutBuilder)
+{
+
+	if (!HandSocketComponent.IsValid())
+	{
+		return;
+	}
+
+	if (HandSocketComponent->bLockHandRelativePlacement)
+	{
+		FTransform RelTrans = HandSocketComponent->GetRelativeTransform();
+		FTransform WorldTrans = HandSocketComponent->GetComponentTransform();
+		//if (USceneComponent* ParentComp = HandSocketComponent->GetAttachParent())
+		{
+
+			HandSocketComponent->Modify();
+			if (AActor* Owner = HandSocketComponent->GetOwner())
+			{
+				Owner->Modify();
+			}
+			HandSocketComponent->HandRelativePlacement = HandSocketComponent->HandRelativePlacement * HandSocketComponent->GetComponentTransform();
+			
+			TSharedPtr<FComponentVisualizer> Visualizer = GUnrealEd->FindComponentVisualizer(HandSocketComponent->GetClass());
+			FHandSocketVisualizer* HandVisualizer = (FHandSocketVisualizer*)Visualizer.Get();
+
+			if (HandVisualizer)
+			{
+				if (UHandSocketComponent* RefHand = HandVisualizer->GetCurrentlyEditingComponent())
+				{
+					RefHand->HandRelativePlacement = HandSocketComponent->HandRelativePlacement;
+				}
+			}
+		}
+	}
+	else
+	{
+		//if (USceneComponent* ParentComp = HandSocketComponent->GetAttachParent())
+		{
+			HandSocketComponent->Modify();
+			if (AActor* Owner = HandSocketComponent->GetOwner())
+			{
+				Owner->Modify();
+			}
+			HandSocketComponent->HandRelativePlacement = HandSocketComponent->HandRelativePlacement.GetRelativeTransform(HandSocketComponent->GetRelativeTransform());
+			
+			TSharedPtr<FComponentVisualizer> Visualizer = GUnrealEd->FindComponentVisualizer(HandSocketComponent->GetClass());
+			FHandSocketVisualizer* HandVisualizer = (FHandSocketVisualizer*)Visualizer.Get();
+
+			if (HandVisualizer)
+			{
+				if (UHandSocketComponent* RefHand = HandVisualizer->GetCurrentlyEditingComponent())
+				{
+					RefHand->HandRelativePlacement = HandSocketComponent->HandRelativePlacement;
+				}
+			}
+		}
+	}
+
+	FComponentVisualizer::NotifyPropertyModified(HandSocketComponent.Get(), FindFProperty<FProperty>(UHandSocketComponent::StaticClass(), GET_MEMBER_NAME_CHECKED(UHandSocketComponent, CustomPoseDeltas)));
+}
+
 void FHandSocketComponentDetails::CustomizeDetails(IDetailLayoutBuilder& DetailBuilder)
 {
 	const TArray< TWeakObjectPtr<UObject> >& SelectedObjects = DetailBuilder.GetSelectedObjects();
@@ -311,6 +375,11 @@ void FHandSocketComponentDetails::CustomizeDetails(IDetailLayoutBuilder& DetailB
 			}
 		}
 	}
+
+	TSharedPtr<IPropertyHandle> LockedLocationProperty = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UHandSocketComponent, bLockHandRelativePlacement));
+
+	FSimpleDelegate OnLockedStateChangedDelegate = FSimpleDelegate::CreateSP(this, &FHandSocketComponentDetails::OnLockedStateUpdated, &DetailBuilder);
+	LockedLocationProperty->SetOnPropertyValueChanged(OnLockedStateChangedDelegate);
 
 	DetailBuilder.EditCategory("Hand Animation")
 		.AddCustomRow(NSLOCTEXT("HandSocketDetails", "UpdateHandSocket", "Save Current Pose"))
@@ -352,12 +421,35 @@ FReply FHandSocketComponentDetails::OnUpdateSavePose()
 			// Finally remove the deltas
 			if (NewAnim.IsValid())
 			{
+				HandSocketComponent->Modify();
+				if (AActor* Owner = HandSocketComponent->GetOwner())
+				{
+					Owner->Modify();
+				}
+
 				HandSocketComponent->HandTargetAnimation = NewAnim.Get();
 				HandSocketComponent->CustomPoseDeltas.Empty();
 				HandSocketComponent->bUseCustomPoseDeltas = false;
-				FComponentVisualizer::NotifyPropertyModified(HandSocketComponent.Get(), FindFProperty<FProperty>(UHandSocketComponent::StaticClass(), GET_MEMBER_NAME_CHECKED(UHandSocketComponent, HandTargetAnimation)));
-				FComponentVisualizer::NotifyPropertyModified(HandSocketComponent.Get(), FindFProperty<FProperty>(UHandSocketComponent::StaticClass(), GET_MEMBER_NAME_CHECKED(UHandSocketComponent, bUseCustomPoseDeltas)));
-				FComponentVisualizer::NotifyPropertyModified(HandSocketComponent.Get(), FindFProperty<FProperty>(UHandSocketComponent::StaticClass(), GET_MEMBER_NAME_CHECKED(UHandSocketComponent, CustomPoseDeltas)));
+
+				TSharedPtr<FComponentVisualizer> Visualizer = GUnrealEd->FindComponentVisualizer(HandSocketComponent->GetClass());
+				FHandSocketVisualizer* HandVisualizer = (FHandSocketVisualizer*)Visualizer.Get();
+
+				if (HandVisualizer)
+				{
+					if (UHandSocketComponent* RefHand = HandVisualizer->GetCurrentlyEditingComponent())
+					{
+						RefHand->HandTargetAnimation = NewAnim.Get();
+						RefHand->CustomPoseDeltas.Empty();
+						RefHand->bUseCustomPoseDeltas = false;
+					}
+				}
+				
+				// Modify all of the properties at once
+				TArray<FProperty*> PropertiesToModify;
+				PropertiesToModify.Add(FindFProperty<FProperty>(UHandSocketComponent::StaticClass(), GET_MEMBER_NAME_CHECKED(UHandSocketComponent, HandTargetAnimation)));
+				PropertiesToModify.Add(FindFProperty<FProperty>(UHandSocketComponent::StaticClass(), GET_MEMBER_NAME_CHECKED(UHandSocketComponent, bUseCustomPoseDeltas)));
+				PropertiesToModify.Add(FindFProperty<FProperty>(UHandSocketComponent::StaticClass(), GET_MEMBER_NAME_CHECKED(UHandSocketComponent, CustomPoseDeltas)));
+				FComponentVisualizer::NotifyPropertiesModified(HandSocketComponent.Get(), PropertiesToModify);
 			}
 		}
 	}

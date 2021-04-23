@@ -101,7 +101,7 @@ bool UHandSocketComponent::GetBlendedPoseSnapShot(FPoseSnapshot& PoseSnapShot, U
 
 		return true;
 	}
-	else if (TargetMesh)
+	else if (CustomPoseDeltas.Num() && TargetMesh)
 	{
 		PoseSnapShot.SkeletalMeshName = TargetMesh->SkeletalMesh->Skeleton->GetFName();
 		PoseSnapShot.SnapshotName = FName(TEXT("RawDeltaPose"));
@@ -129,9 +129,19 @@ bool UHandSocketComponent::GetBlendedPoseSnapShot(FPoseSnapshot& PoseSnapShot, U
 	return false;
 }
 
-FTransform UHandSocketComponent::GetHandRelativePlacement(bool bIsRightHand)
+FTransform UHandSocketComponent::GetHandRelativePlacement()
 {
 	// Optionally mirror for left hand
+
+	if (bLockHandRelativePlacement)
+	{
+		if (USceneComponent* ParentComp = GetAttachParent())
+		{
+			FTransform curTrans = HandRelativePlacement * ParentComp->GetComponentTransform();
+			return curTrans.GetRelativeTransform(this->GetComponentTransform());
+		}
+	}
+
 	return HandRelativePlacement;
 }
 
@@ -188,7 +198,7 @@ FTransform UHandSocketComponent::GetMeshRelativeTransform(UGripMotionControllerC
 		QueryController->GetHandType(HandType);
 		if (HandType == EControllerHand::Left)
 		{
-			FTransform ReturnTrans = (HandRelativePlacement * this->GetRelativeTransform());
+			FTransform ReturnTrans = (GetHandRelativePlacement() * this->GetRelativeTransform());
 			ReturnTrans.Mirror(MirrorAxis, FlipAxis);
 			if (USceneComponent* AttParent = this->GetAttachParent())
 			{
@@ -198,7 +208,7 @@ FTransform UHandSocketComponent::GetMeshRelativeTransform(UGripMotionControllerC
 		}
 	}
 
-	return (HandRelativePlacement * this->GetComponentTransform());
+	return (GetHandRelativePlacement() * this->GetComponentTransform());
 }
 
 FTransform UHandSocketComponent::GetBoneTransformAtTime(UAnimSequence* MyAnimSequence, /*float AnimTime,*/ int BoneIdx, bool bUseRawDataOnly)
@@ -246,7 +256,7 @@ void UHandSocketComponent::OnRegister()
 					}
 				}
 
-				HandVisualizerComponent->SetRelativeTransform(HandRelativePlacement);
+				HandVisualizerComponent->SetRelativeTransform(GetHandRelativePlacement());
 				PoseVisualizationToAnimation();
 			}
 		}
@@ -402,40 +412,6 @@ void UHandSocketComponent::PostEditChangeProperty(FPropertyChangedEvent& Propert
 			PropertyThatChanged->GetFName() == GET_MEMBER_NAME_CHECKED(UHandSocketComponent, VisualizationMesh)
 			)
 		{
-			if (HandVisualizerComponent)
-			{
-				HandVisualizerComponent->SetSkeletalMesh(VisualizationMesh);
-				if (HandPreviewMaterial)
-				{
-					HandVisualizerComponent->SetMaterial(0, HandPreviewMaterial);
-				}
-
-				// make sure the animation skeleton matches the current skeletalmesh
-				
-				PoseVisualizationToAnimation(true);
-				/*if (HandTargetAnimation != nullptr && HandVisualizerComponent->SkeletalMesh && HandTargetAnimation->GetSkeleton() == HandVisualizerComponent->SkeletalMesh->Skeleton)
-				{
-					TArray<FName> BonesNames;
-					HandVisualizerComponent->GetBoneNames(BonesNames);
-					int32 Bones = HandVisualizerComponent->GetNumBones();
-					for (int32 i = 0; i < Bones; i++)
-					{
-						FName ParentBone = HandVisualizerComponent->GetParentBone(BonesNames[i]);
-						FTransform ParentTrans = FTransform::Identity;
-						if (ParentBone != NAME_None)
-						{
-							ParentTrans = HandVisualizerComponent->GetBoneTransformByName(ParentBone, EBoneSpaces::ComponentSpace);
-						}
-
-						FTransform BoneTrans = GetBoneTransformAtTime(HandTargetAnimation,  i, false); // true;
-						BoneTrans = BoneTrans * ParentTrans;
-						HandVisualizerComponent->SetBoneTransformByName(BonesNames[i], BoneTrans, EBoneSpaces::ComponentSpace);
-					}
-
-					//HandVisualizerComponent->AnimationData.AnimToPlay = HandTargetAnimation;
-					//HandVisualizerComponent->PlayAnimation(HandTargetAnimation, false);
-				}*/
-			}
 		}
 		else if (PropertyThatChanged->GetFName() == GET_MEMBER_NAME_CHECKED(UHandSocketComponent, CustomPoseDeltas))
 		{

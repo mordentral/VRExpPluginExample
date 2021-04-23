@@ -74,6 +74,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Hand Socket Data")
 		FName SlotPrefix;
 
+	// If true when we move the component the hand relative placement will recalculate remain in the same location
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Hand Socket Data")
+		bool bLockHandRelativePlacement;
+
 	// If true we should only be used to snap mesh to us, not for the actual socket transform
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Hand Socket Data")
 		bool bOnlySnapMesh;
@@ -114,7 +118,7 @@ public:
 
 	// Returns the target relative transform of the hand
 	UFUNCTION(BlueprintCallable, Category = "Hand Socket Data")
-		FTransform GetHandRelativePlacement(bool bIsRightHand);
+		FTransform GetHandRelativePlacement();
 
 	// Returns the defined hand socket component (if it exists, you need to valid check the return!
 	// If it is a valid return you can then cast to your projects base socket class and handle whatever logic you want
@@ -204,9 +208,6 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Hand Visualization")
 		UMaterial* HandPreviewMaterial;
 
-	// Hand preview animation class (if you want to access hand data you need to use the HandSocketAnimInstance base class
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Hand Visualization")
-		class TSubclassOf<UAnimInstance> HandPreviewAnimClass;
 #endif
 };
 

@@ -24,6 +24,15 @@ public:
 	TWeakObjectPtr<UHandSocketComponent> HandSocketComponent;
 	FReply OnUpdateSavePose();
 	TWeakObjectPtr<UAnimSequence> SaveAnimationAsset(const FString& InAssetPath, const FString& InAssetName);
+
+	void OnLockedStateUpdated(IDetailLayoutBuilder* LayoutBuilder);
+	mutable FDelegateHandle TransformUpdateHandle;
+	FTransform ComponentTransform;
+
+	FHandSocketComponentDetails()
+	{
+		ComponentTransform = FTransform::Identity;
+	}
 };
 
 class SCreateHandAnimationDlg : public SWindow
@@ -68,5 +77,6 @@ protected:
 	FText AssetName;
 
 	static FText LastUsedAssetPath;
+
 };
 

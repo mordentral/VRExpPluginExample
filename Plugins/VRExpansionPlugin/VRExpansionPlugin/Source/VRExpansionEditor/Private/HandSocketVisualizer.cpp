@@ -46,7 +46,8 @@ bool FHandSocketVisualizer::GetCustomInputCoordinateSystem(const FEditorViewport
 		{
 			if (UHandSocketComponent* CurrentlyEditingComponent = GetCurrentlyEditingComponent())
 			{
-				FTransform newTrans = CurrentlyEditingComponent->HandRelativePlacement * CurrentlyEditingComponent->GetComponentTransform();
+				FTransform newTrans = CurrentlyEditingComponent->HandVisualizerComponent->GetBoneTransform(0);
+				//FTransform newTrans = CurrentlyEditingComponent->GetHandRelativePlacement() * CurrentlyEditingComponent->GetComponentTransform();
 				OutMatrix = FRotationMatrix::Make(newTrans.GetRotation());
 			}
 		}
@@ -81,10 +82,6 @@ void FHandSocketVisualizer::DrawVisualization(const UActorComponent* Component, 
 		if (!HandComponent->HandVisualizerComponent)
 			return;
 
-		//UHandSocketComponent* currentHand = const_cast<UHandSocketComponent*>(HandComponent);
-		//CurrentlyEditingComponent = currentHand;
-
-		//get colors for selected and unselected targets
 		//This is an editor only uproperty of our targeting component, that way we can change the colors if we can't see them against the background
 		const FLinearColor SelectedColor = FLinearColor::Yellow;//TargetingComponent->EditorSelectedColor;
 		const FLinearColor UnselectedColor = FLinearColor::White;//TargetingComponent->EditorUnselectedColor;
@@ -140,8 +137,7 @@ bool FHandSocketVisualizer::GetWidgetLocation(const FEditorViewportClient* Viewp
 		{
 			if (UHandSocketComponent* CurrentlyEditingComponent = GetCurrentlyEditingComponent())
 			{
-				FTransform newTrans = CurrentlyEditingComponent->HandRelativePlacement * CurrentlyEditingComponent->GetComponentTransform();
-				OutLocation = newTrans.GetLocation();
+				OutLocation = CurrentlyEditingComponent->HandVisualizerComponent->GetBoneTransform(0).GetLocation();
 			}
 		}
 		else
@@ -164,7 +160,7 @@ bool FHandSocketVisualizer::HandleInputDelta(FEditorViewportClient* ViewportClie
 
 	if (HandPropertyPath.IsValid())
 	{
-		if (CurrentlySelectedBone == "HandSocket")
+		if (CurrentlySelectedBone == "HandSocket" || CurrentlySelectedBone == NAME_None)
 		{
 			bHandled = false;
 		}
@@ -185,7 +181,19 @@ bool FHandSocketVisualizer::HandleInputDelta(FEditorViewportClient* ViewportClie
 			}
 			bool bLevelEdit = ViewportClient->IsLevelEditorClient();
 
-			FTransform CurrentTrans = CurrentlyEditingComponent->HandRelativePlacement * CurrentlyEditingComponent->GetComponentTransform();
+			FTransform CurrentTrans = FTransform::Identity;
+
+			if (CurrentlyEditingComponent->bLockHandRelativePlacement)
+			{
+				if (USceneComponent* ParentComp = CurrentlyEditingComponent->GetAttachParent())
+				{
+					CurrentTrans = CurrentlyEditingComponent->HandRelativePlacement * ParentComp->GetComponentTransform();
+				}
+			}
+			else
+			{
+				CurrentTrans = CurrentlyEditingComponent->GetHandRelativePlacement() * CurrentlyEditingComponent->GetComponentTransform();
+			}
 
 			if (!DeltaTranslate.IsNearlyZero())
 			{
@@ -202,7 +210,17 @@ bool FHandSocketVisualizer::HandleInputDelta(FEditorViewportClient* ViewportClie
 				CurrentTrans.MultiplyScale3D(DeltaScale);
 			}
 
-			CurrentlyEditingComponent->HandRelativePlacement = CurrentTrans.GetRelativeTransform(CurrentlyEditingComponent->GetComponentTransform());
+			if (CurrentlyEditingComponent->bLockHandRelativePlacement)
+			{
+				if (USceneComponent* ParentComp = CurrentlyEditingComponent->GetAttachParent())
+				{
+					CurrentlyEditingComponent->HandRelativePlacement = CurrentTrans.GetRelativeTransform(ParentComp->GetComponentTransform());
+				}
+			}
+			else
+			{
+				CurrentlyEditingComponent->HandRelativePlacement = CurrentTrans.GetRelativeTransform(CurrentlyEditingComponent->GetComponentTransform());
+			}
 
 			NotifyPropertyModified(CurrentlyEditingComponent, FindFProperty<FProperty>(UHandSocketComponent::StaticClass(), GET_MEMBER_NAME_CHECKED(UHandSocketComponent, HandRelativePlacement)));
 			//GEditor->RedrawLevelEditingViewports(true);
