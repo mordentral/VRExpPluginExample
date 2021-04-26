@@ -48,8 +48,31 @@ bool UHandSocketComponent::GetBlendedPoseSnapShot(FPoseSnapshot& PoseSnapShot, U
 		PoseSnapShot.BoneNames.Empty();
 		PoseSnapShot.LocalTransforms.Empty();
 
+		if (TargetMesh)
+		{
+			TargetMesh->GetBoneNames(PoseSnapShot.BoneNames);
+		}
+		else if(USkeleton * AnimationSkele = HandTargetAnimation->GetSkeleton())
+		{
+			// pre-size the array to avoid unnecessary reallocation
+			PoseSnapShot.BoneNames.AddUninitialized(AnimationSkele->GetReferenceSkeleton().GetNum());
+			for (int32 i = 0; i < AnimationSkele->GetReferenceSkeleton().GetNum(); i++)
+			{
+				PoseSnapShot.BoneNames[i] = AnimationSkele->GetReferenceSkeleton().GetBoneName(i);
+			}
+		}
+		else
+		{
+			return false;
+		}
+
 		for (int32 TrackIndex = 0; TrackIndex < HandTargetAnimation->GetRawAnimationData().Num(); ++TrackIndex)
 		{
+			if (TrackIndex >= PoseSnapShot.BoneNames.Num())
+			{
+				break;
+			}
+
 			FRawAnimSequenceTrack& RawTrack = HandTargetAnimation->GetRawAnimationTrack(TrackIndex);
 
 			bool bHadLoc = false;
@@ -79,13 +102,10 @@ bool UHandSocketComponent::GetBlendedPoseSnapShot(FPoseSnapshot& PoseSnapShot, U
 
 			FTransform FinalTrans(Rot, Loc, Scale);
 
-			FName TrackName = (HandTargetAnimation->GetAnimationTrackNames())[TrackIndex];
-			PoseSnapShot.BoneNames.Add(TrackName);
-
 			FQuat DeltaQuat = FQuat::Identity;
 			for (FBPVRHandPoseBonePair& HandPair : CustomPoseDeltas)
 			{
-				if (HandPair.BoneName == TrackName)
+				if (HandPair.BoneName == PoseSnapShot.BoneNames[TrackIndex])
 				{
 					DeltaQuat = HandPair.DeltaPose;
 					bHadRot = true;
