@@ -13,6 +13,8 @@ UHandSocketComponent::UHandSocketComponent(const FObjectInitializer& ObjectIniti
 	bReplicateMovement = false;
 	PrimaryComponentTick.bCanEverTick = false;
 	PrimaryComponentTick.bStartWithTickEnabled = false;
+	// Setting absolute scale so we don't have to care about our parents scale
+	this->SetUsingAbsoluteScale(true); 
 	//this->bReplicates = true;
 
 	bRepGameplayTags = true;
