@@ -306,7 +306,7 @@ void FHandSocketComponentDetails::OnLockedStateUpdated(IDetailLayoutBuilder* Lay
 		return;
 	}
 
-	if (HandSocketComponent->bLockHandRelativePlacement)
+	if (HandSocketComponent->bDecoupleMeshPlacement)
 	{
 		FTransform RelTrans = HandSocketComponent->GetRelativeTransform();
 		FTransform WorldTrans = HandSocketComponent->GetComponentTransform();
@@ -387,10 +387,15 @@ void FHandSocketComponentDetails::CustomizeDetails(IDetailLayoutBuilder& DetailB
 	DetailBuilder.HideCategory(FName("Cooking"));
 	DetailBuilder.HideCategory(FName("ComponentReplication"));
 
-	TSharedPtr<IPropertyHandle> LockedLocationProperty = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UHandSocketComponent, bLockHandRelativePlacement));
+	TSharedPtr<IPropertyHandle> LockedLocationProperty = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UHandSocketComponent, bDecoupleMeshPlacement));
 
 	FSimpleDelegate OnLockedStateChangedDelegate = FSimpleDelegate::CreateSP(this, &FHandSocketComponentDetails::OnLockedStateUpdated, &DetailBuilder);
 	LockedLocationProperty->SetOnPropertyValueChanged(OnLockedStateChangedDelegate);
+
+	TSharedPtr<IPropertyHandle> ShowVisualizationProperty = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UHandSocketComponent, bShowVisualizationMesh));
+
+	FSimpleDelegate OnShowVisChangedDelegate = FSimpleDelegate::CreateSP(this, &FHandSocketComponentDetails::OnUpdateShowMesh, &DetailBuilder);
+	ShowVisualizationProperty->SetOnPropertyValueChanged(OnShowVisChangedDelegate);
 
 	DetailBuilder.EditCategory("Hand Animation")
 		.AddCustomRow(NSLOCTEXT("HandSocketDetails", "UpdateHandSocket", "Save Current Pose"))
@@ -415,6 +420,19 @@ void FHandSocketComponentDetails::CustomizeDetails(IDetailLayoutBuilder& DetailB
 		.Text(NSLOCTEXT("HandSocketDetails", "UpdateHandSocket", "Save"))
 		]
 		];
+}
+
+void FHandSocketComponentDetails::OnUpdateShowMesh(IDetailLayoutBuilder* LayoutBuilder)
+{
+	TSharedPtr<FComponentVisualizer> Visualizer = GUnrealEd->FindComponentVisualizer(HandSocketComponent->GetClass());
+	FHandSocketVisualizer* HandVisualizer = (FHandSocketVisualizer*)Visualizer.Get();
+
+	if (HandVisualizer)
+	{
+		HandVisualizer->CurrentlySelectedBoneIdx = INDEX_NONE;
+		HandVisualizer->CurrentlySelectedBone = NAME_None;
+		HandVisualizer->HandPropertyPath = FComponentPropertyPath();
+	}
 }
 
 FReply FHandSocketComponentDetails::OnUpdateSavePose()

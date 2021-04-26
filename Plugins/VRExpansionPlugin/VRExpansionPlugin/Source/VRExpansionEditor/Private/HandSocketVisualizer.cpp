@@ -71,6 +71,35 @@ bool FHandSocketVisualizer::IsVisualizingArchetype() const
 	return (HandPropertyPath.IsValid() && HandPropertyPath.GetParentOwningActor() && FActorEditorUtils::IsAPreviewOrInactiveActor(HandPropertyPath.GetParentOwningActor()));
 }
 
+void FHandSocketVisualizer::DrawVisualizationHUD(const UActorComponent* Component, const FViewport* Viewport, const FSceneView* View, FCanvas* Canvas)
+{
+	if (const UHandSocketComponent* HandComp = Cast<const UHandSocketComponent>(Component))
+	{
+		if (CurrentlySelectedBone != NAME_None)
+		{
+			if (UHandSocketComponent* CurrentlyEditingComponent = GetCurrentlyEditingComponent())
+			{
+				if (!CurrentlyEditingComponent->HandVisualizerComponent)
+				{
+					return;
+				}
+
+				int32 XL;
+				int32 YL;
+				const FIntRect CanvasRect = Canvas->GetViewRect();
+
+				FPlane location = View->Project(CurrentlyEditingComponent->HandVisualizerComponent->GetBoneTransform(CurrentlySelectedBoneIdx).GetLocation());
+				StringSize(GEngine->GetLargeFont(), XL, YL, *CurrentlySelectedBone.ToString());
+				//const float DrawPositionX = location.X - XL;
+				//const float DrawPositionY = location.Y - YL;
+				const float DrawPositionX = FMath::FloorToFloat(CanvasRect.Min.X + (CanvasRect.Width() - XL) * 0.5f);
+				const float DrawPositionY = CanvasRect.Min.Y + 50.0f;
+				Canvas->DrawShadowedString(DrawPositionX, DrawPositionY, *CurrentlySelectedBone.ToString(), GEngine->GetLargeFont(), FLinearColor::Yellow);
+			}
+		}
+	}
+}
+
 void FHandSocketVisualizer::DrawVisualization(const UActorComponent* Component, const FSceneView* View, FPrimitiveDrawInterface* PDI)
 {
 	//UWorld* World = Component->GetWorld();
@@ -91,7 +120,7 @@ void FHandSocketVisualizer::DrawVisualization(const UActorComponent* Component, 
 		HHandSocketVisProxy* newHitProxy = new HHandSocketVisProxy(Component);
 		newHitProxy->TargetBoneName = "Visualizer";
 		PDI->SetHitProxy(newHitProxy);
-		PDI->DrawPoint(Location, CurrentlySelectedBone == newHitProxy->TargetBoneName ? SelectedColor : UnselectedColor, 20.f * BoneScale, SDPG_Foreground);
+		PDI->DrawPoint(Location, CurrentlySelectedBone == newHitProxy->TargetBoneName ? SelectedColor : FLinearColor::Red, 20.f * BoneScale, SDPG_Foreground);
 		PDI->SetHitProxy(NULL);
 		newHitProxy = nullptr;
 
@@ -100,7 +129,7 @@ void FHandSocketVisualizer::DrawVisualization(const UActorComponent* Component, 
 		BoneScale = 1.0f - ((View->ViewLocation - HandComponent->GetComponentLocation()).SizeSquared() / FMath::Square(100.0f));
 		BoneScale = FMath::Clamp(BoneScale, 0.2f, 1.0f);
 		PDI->SetHitProxy(newHitProxy);
-		PDI->DrawPoint(HandComponent->GetComponentLocation(), FLinearColor::Red, 20.f * BoneScale, SDPG_Foreground);
+		PDI->DrawPoint(HandComponent->GetComponentLocation(), FLinearColor::Green, 20.f * BoneScale, SDPG_Foreground);
 		PDI->SetHitProxy(NULL);
 		newHitProxy = nullptr;
 
@@ -186,7 +215,7 @@ bool FHandSocketVisualizer::HandleInputDelta(FEditorViewportClient* ViewportClie
 
 			FTransform CurrentTrans = FTransform::Identity;
 
-			if (CurrentlyEditingComponent->bLockHandRelativePlacement)
+			if (CurrentlyEditingComponent->bDecoupleMeshPlacement)
 			{
 				if (USceneComponent* ParentComp = CurrentlyEditingComponent->GetAttachParent())
 				{
@@ -213,7 +242,7 @@ bool FHandSocketVisualizer::HandleInputDelta(FEditorViewportClient* ViewportClie
 				CurrentTrans.MultiplyScale3D(DeltaScale);
 			}
 
-			if (CurrentlyEditingComponent->bLockHandRelativePlacement)
+			if (CurrentlyEditingComponent->bDecoupleMeshPlacement)
 			{
 				if (USceneComponent* ParentComp = CurrentlyEditingComponent->GetAttachParent())
 				{

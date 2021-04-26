@@ -133,7 +133,7 @@ FTransform UHandSocketComponent::GetHandRelativePlacement()
 {
 	// Optionally mirror for left hand
 
-	if (bLockHandRelativePlacement)
+	if (bDecoupleMeshPlacement)
 	{
 		if (USceneComponent* ParentComp = GetAttachParent())
 		{
@@ -189,26 +189,17 @@ FTransform UHandSocketComponent::GetHandSocketTransform(UGripMotionControllerCom
 	return this->GetComponentTransform();
 }
 
-FTransform UHandSocketComponent::GetMeshRelativeTransform(UGripMotionControllerComponent* QueryController)
+FTransform UHandSocketComponent::GetMeshRelativeTransform(bool bIsRightHand)
 {
 	// Optionally mirror for left hand
-	if (bFlipForLeftHand)
+	FTransform ReturnTrans = (GetHandRelativePlacement() * this->GetRelativeTransform());
+	FQuat OriginalRot = ReturnTrans.GetRotation();
+	if (bFlipForLeftHand && !bIsRightHand)
 	{
-		EControllerHand HandType;
-		QueryController->GetHandType(HandType);
-		if (HandType == EControllerHand::Left)
-		{
-			FTransform ReturnTrans = (GetHandRelativePlacement() * this->GetRelativeTransform());
-			ReturnTrans.Mirror(MirrorAxis, FlipAxis);
-			if (USceneComponent* AttParent = this->GetAttachParent())
-			{
-				ReturnTrans = ReturnTrans * AttParent->GetComponentTransform();
-			}
-			return ReturnTrans;
-		}
+		ReturnTrans.Mirror(MirrorAxis, FlipAxis);
 	}
-
-	return (GetHandRelativePlacement() * this->GetComponentTransform());
+	ReturnTrans.SetRotation(OriginalRot);
+	return ReturnTrans;
 }
 
 FTransform UHandSocketComponent::GetBoneTransformAtTime(UAnimSequence* MyAnimSequence, /*float AnimTime,*/ int BoneIdx, bool bUseRawDataOnly)

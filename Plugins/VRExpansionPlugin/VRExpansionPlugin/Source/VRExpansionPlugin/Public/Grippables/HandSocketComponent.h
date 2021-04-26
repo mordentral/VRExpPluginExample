@@ -74,11 +74,12 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Hand Socket Data")
 		FName SlotPrefix;
 
-	// If true when we move the component the hand relative placement will recalculate remain in the same location
+	// If true the hand meshes relative transform will be de-coupled from the hand socket
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Hand Socket Data")
-		bool bLockHandRelativePlacement;
+		bool bDecoupleMeshPlacement;
 
 	// If true we should only be used to snap mesh to us, not for the actual socket transform
+	// Will act like free gripping but the mesh will snap into position
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Hand Socket Data")
 		bool bOnlySnapMesh;
 
@@ -95,7 +96,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Hand Animation")
 		bool bUseCustomPoseDeltas;
 
-	// The custom pose deltas
+	// Custom rotations that are added on top of an animations bone rotation to make a final transform
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Hand Animation")
 		TArray<FBPVRHandPoseBonePair> CustomPoseDeltas;
 
@@ -117,8 +118,13 @@ public:
 		bool GetBlendedPoseSnapShot(FPoseSnapshot& PoseSnapShot, USkeletalMeshComponent* TargetMesh = nullptr);
 
 	// Returns the target relative transform of the hand
-	UFUNCTION(BlueprintCallable, Category = "Hand Socket Data")
+	//UFUNCTION(BlueprintCallable, Category = "Hand Socket Data")
 		FTransform GetHandRelativePlacement();
+
+	// Returns the target relative transform of the hand to the gripped object
+	// If you want the transform mirrored you need to pass in which hand is requesting the information
+	UFUNCTION(BlueprintCallable, Category = "Hand Socket Data")
+	FTransform GetMeshRelativeTransform(bool bIsRightHand);
 
 	// Returns the defined hand socket component (if it exists, you need to valid check the return!
 	// If it is a valid return you can then cast to your projects base socket class and handle whatever logic you want
@@ -155,7 +161,6 @@ public:
 	}
 
 	virtual FTransform GetHandSocketTransform(UGripMotionControllerComponent* QueryController);
-	virtual FTransform GetMeshRelativeTransform(UGripMotionControllerComponent* QueryController);
 
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
@@ -220,14 +225,6 @@ public:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, transient, Category = "Socket Data")
 		UHandSocketComponent* OwningSocket;
-
-	//FOpenInputAnimInstanceProxy AnimInstanceProxy;
-
-	/*virtual FAnimInstanceProxy* CreateAnimInstanceProxy() override
-	{
-		return new FHandSocketAnimInstanceProxy(this);
-		//return &AnimInstanceProxy;
-	}*/
 
 	virtual void NativeInitializeAnimation() override
 	{

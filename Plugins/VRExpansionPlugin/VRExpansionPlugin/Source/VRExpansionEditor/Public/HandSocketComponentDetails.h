@@ -27,12 +27,10 @@ public:
 	TWeakObjectPtr<UAnimSequence> SaveAnimationAsset(const FString& InAssetPath, const FString& InAssetName);
 
 	void OnLockedStateUpdated(IDetailLayoutBuilder* LayoutBuilder);
-	mutable FDelegateHandle TransformUpdateHandle;
-	FTransform ComponentTransform;
+	void OnUpdateShowMesh(IDetailLayoutBuilder* LayoutBuilder);
 
 	FHandSocketComponentDetails()
 	{
-		ComponentTransform = FTransform::Identity;
 	}
 };
 
