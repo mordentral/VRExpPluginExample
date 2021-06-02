@@ -64,7 +64,7 @@ public:
 	virtual void GatherCurrentMovement() override;
 
 	UPROPERTY(EditAnywhere, Replicated, BlueprintReadOnly, Instanced, Category = "VRGripInterface")
-		TArray<class UVRGripScriptBase*> GripLogicScripts;
+		TArray<TObjectPtr<UVRGripScriptBase>> GripLogicScripts;
 
 	bool ReplicateSubobjects(UActorChannel* Channel, class FOutBunch* Bunch, FReplicationFlags* RepFlags) override;
 
