@@ -254,8 +254,9 @@ FTransform UHandSocketComponent::GetHandRelativePlacement()
 	{
 		if (USceneComponent* ParentComp = GetAttachParent())
 		{
-			FTransform curTrans = HandRelativePlacement * ParentComp->GetComponentTransform();
-			return curTrans.GetRelativeTransform(this->GetComponentTransform());
+			return HandRelativePlacement.GetRelativeTransform(this->GetRelativeTransform());
+			//FTransform curTrans = HandRelativePlacement * ParentComp->GetComponentTransform();
+			//return curTrans.GetRelativeTransform(this->GetComponentTransform());
 		}
 	}
 
@@ -325,7 +326,6 @@ FTransform UHandSocketComponent::GetMeshRelativeTransform(bool bIsRightHand)
 			HandPlacement.ScaleTranslation(/*FVector(1.0f) / */this->GetAttachParent()->GetRelativeScale3D());
 		}
 	}
-
 
 	FTransform ReturnTrans = (HandPlacement * relTrans);
 
