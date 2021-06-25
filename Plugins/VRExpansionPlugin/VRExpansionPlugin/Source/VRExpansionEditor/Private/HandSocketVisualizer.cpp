@@ -65,20 +65,19 @@ bool FHandSocketVisualizer::GetCustomInputCoordinateSystem(const FEditorViewport
 			if (UHandSocketComponent* CurrentlyEditingComponent = GetCurrentlyEditingComponent())
 			{
 
-				FTransform newTrans = CurrentlyEditingComponent->GetHandRelativePlacement() * CurrentlyEditingComponent->GetRelativeTransform();
-				//FTransform newTrans = CurrentlyEditingComponent->HandVisualizerComponent->GetBoneTransform(0);
-
-				if (CurrentlyEditingComponent->bMirrorVisualizationMesh)
+				FTransform newTrans = FTransform::Identity;
+				if (CurrentlyEditingComponent->bDecoupleMeshPlacement)
 				{
-					newTrans.Mirror(CurrentlyEditingComponent->MirrorAxis, CurrentlyEditingComponent->FlipAxis);
-
 					if (USceneComponent* ParentComp = CurrentlyEditingComponent->GetAttachParent())
 					{
-						newTrans = newTrans * ParentComp->GetComponentTransform();
+						newTrans = CurrentlyEditingComponent->HandRelativePlacement * ParentComp->GetComponentTransform();
 					}
 				}
+				else
+				{
+					newTrans = CurrentlyEditingComponent->GetHandRelativePlacement() * CurrentlyEditingComponent->GetComponentTransform();
+				}
 
-				//FTransform newTrans = CurrentlyEditingComponent->GetHandRelativePlacement() * CurrentlyEditingComponent->GetComponentTransform();
 				OutMatrix = FRotationMatrix::Make(newTrans.GetRotation());
 			}
 		}
@@ -198,27 +197,23 @@ bool FHandSocketVisualizer::GetWidgetLocation(const FEditorViewportClient* Viewp
 		}
 		else if (CurrentlySelectedBone == "Visualizer")
 		{
-			OutLocation = CurrentlyEditingComponent->HandVisualizerComponent->GetBoneTransform(0).GetLocation();
-
-			/*if (UHandSocketComponent* CurrentlyEditingComponent = GetCurrentlyEditingComponent())
+			if (UHandSocketComponent* CurrentlyEditingComponent = GetCurrentlyEditingComponent())
 			{
-				//OutLocation = CurrentlyEditingComponent->HandVisualizerComponent->GetBoneTransform(0).GetLocation();
-
-				FTransform newTrans = CurrentlyEditingComponent->GetHandRelativePlacement() * CurrentlyEditingComponent->GetRelativeTransform();
-				//FTransform newTrans = CurrentlyEditingComponent->HandVisualizerComponent->GetBoneTransform(0);
-
-				if (CurrentlyEditingComponent->bMirrorVisualizationMesh)
+				FTransform newTrans = FTransform::Identity;
+				if (CurrentlyEditingComponent->bDecoupleMeshPlacement)
 				{
-					newTrans.Mirror(CurrentlyEditingComponent->MirrorAxis, CurrentlyEditingComponent->FlipAxis);
-
 					if (USceneComponent* ParentComp = CurrentlyEditingComponent->GetAttachParent())
 					{
-						newTrans = newTrans * ParentComp->GetComponentTransform();
+						newTrans = CurrentlyEditingComponent->HandRelativePlacement * ParentComp->GetComponentTransform();
 					}
+				}
+				else
+				{
+					newTrans = CurrentlyEditingComponent->GetHandRelativePlacement() * CurrentlyEditingComponent->GetComponentTransform();
 				}
 
 				OutLocation = newTrans.GetLocation();
-			}*/
+			}
 		}
 		else
 		{
