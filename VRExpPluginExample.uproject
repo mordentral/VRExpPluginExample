@@ -26,6 +26,10 @@
 		{
 			"Name": "AdvancedSteamSessions",
 			"Enabled": false
+		},
+		{
+			"Name": "OpenXRExpansionPlugin",
+			"Enabled": true
 		}
 	],
 	"TargetPlatforms": [
