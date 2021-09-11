@@ -1183,11 +1183,11 @@ bool UVRRootComponent::MoveComponentImpl(const FVector& Delta, const FQuat& NewR
 				bool bHasEndOverlaps = false;
 				if (bRotationOnly)
 				{
-					bHasEndOverlaps = ConvertRotationOverlapsToCurrentOverlaps(OverlapsAtEndLocation, OverlappingComponents);
+				//	bHasEndOverlaps = ConvertRotationOverlapsToCurrentOverlaps(OverlapsAtEndLocation, OverlappingComponents);
 				}
 				else
-				{
-					bHasEndOverlaps = ConvertSweptOverlapsToCurrentOverlaps(OverlapsAtEndLocation, PendingOverlaps, 0, GetComponentLocation(), GetComponentQuat());
+				{		
+				//	bHasEndOverlaps = ConvertSweptOverlapsToCurrentOverlaps(OverlapsAtEndLocation, PendingOverlaps, 0, OffsetComponentToWorld.GetLocation(), GetComponentQuat());
 				}
 				TOverlapArrayView PendingOverlapsView(PendingOverlaps);
 				TOverlapArrayView OverlapsAtEndView(OverlapsAtEndLocation);
@@ -1280,9 +1280,9 @@ bool UVRRootComponent::UpdateOverlapsImpl(const TOverlapArrayView* NewPendingOve
 			
 			TArray<FOverlapInfo> OverlapsAtEnd;
 			TOverlapArrayView OverlapsAtEndLoc;
-			if ((!OverlapsAtEndLocation || OverlapsAtEndLocation->Num() < 1) && NewPendingOverlaps && NewPendingOverlaps->Num() > 0)
+			if (/*(!OverlapsAtEndLocation || OverlapsAtEndLocation->Num() < 1) &&*/ NewPendingOverlaps && NewPendingOverlaps->Num() > 0)
 			{
-				ConvertSweptOverlapsToCurrentOverlaps(OverlapsAtEnd, *NewPendingOverlaps, 0, OffsetComponentToWorld.GetLocation(), GetComponentQuat());
+				ConvertSweptOverlapsToCurrentOverlaps(OverlapsAtEnd, *NewPendingOverlaps, -1, OffsetComponentToWorld.GetLocation(), GetComponentQuat());
 				OverlapsAtEndLoc = TOverlapArrayView(OverlapsAtEnd);
 				OverlapsAtEndLocationPtr = &OverlapsAtEndLoc;
 			}
@@ -1465,7 +1465,21 @@ bool UVRRootComponent::ConvertSweptOverlapsToCurrentOverlaps(
 	TArray<FOverlapInfo, AllocatorType>& OverlapsAtEndLocation, const TOverlapArrayView& SweptOverlaps, int32 SweptOverlapsIndex,
 	const FVector& EndLocation, const FQuat& EndRotationQuat)
 {
+	if (SweptOverlapsIndex == -1)
+	{
+		SweptOverlapsIndex = 0;
+	}
+	else
+	{
+		return false;
+	}
+
 	checkSlow(SweptOverlapsIndex >= 0);
+
+	// Override location check with our own
+	GenerateOffsetToWorld();
+	FVector EndLocationVR = OffsetComponentToWorld.GetLocation();
+
 
 	bool bResult = false;
 	const bool bForceGatherOverlaps = !ShouldCheckOverlapFlagToQueueOverlaps(*this);
@@ -1501,7 +1515,7 @@ bool UVRRootComponent::ConvertSweptOverlapsToCurrentOverlaps(
 							// SkeletalMeshComponent does not support this operation, and would return false in the test when an actual query could return true.
 							return false;
 						}
-						else if (OtherPrimitive->ComponentOverlapComponent(this, EndLocation, EndRotationQuat, UnusedQueryParams))
+						else if (OtherPrimitive->ComponentOverlapComponent(this, EndLocationVR, EndRotationQuat, UnusedQueryParams))
 						{
 							OverlapsAtEndLocation.Add(OtherOverlap);
 						}
