@@ -11,6 +11,10 @@
 		}
 	],
 	"Plugins": [
+			{
+			"Name": "OpenXR",
+			"Enabled": true
+		},
 		{
 			"Name": "VRExpansionPlugin",
 			"Enabled": true
