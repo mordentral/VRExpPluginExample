@@ -2869,8 +2869,8 @@ void UGripMotionControllerComponent::InitializeLerpToHand(FBPActorGripInformatio
 	if (VRSettings.MinDistanceForLerp > 0.0f && Distance < VRSettings.MinDistanceForLerp)
 	{
 		// Don't init
-		OnLerpToHandFinished.Broadcast(GripInformation);
 		GripInformation.bIsLerping = false;
+		//OnLerpToHandFinished.Broadcast(GripInformation);
 		return;
 	}
 	else
