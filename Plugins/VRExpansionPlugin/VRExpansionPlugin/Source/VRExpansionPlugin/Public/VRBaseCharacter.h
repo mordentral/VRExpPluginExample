@@ -39,7 +39,7 @@ public:
 		bool bJustTeleportedGrips;
 
 	UPROPERTY(Transient)
-		TObjectPtr<AActor> Owner;
+		AActor* Owner;
 
 	bool NetSerialize(FArchive& Ar, class UPackageMap* Map, bool& bOutSuccess)
 	{
@@ -109,7 +109,7 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = "CharacterSeatInfo")
 		FTransform_NetQuantize InitialRelCameraTransform;
 	UPROPERTY(BlueprintReadOnly, Category = "CharacterSeatInfo")
-		TObjectPtr<USceneComponent> SeatParent;
+		USceneComponent* SeatParent;
 	UPROPERTY(BlueprintReadOnly, Category = "CharacterSeatInfo")
 		EVRConjoinedMovementModes PostSeatedMovementMode;
 
@@ -497,22 +497,22 @@ public:
 	// The simplest method of doing this was applying the exact same offset as the mesh gets to a base component that
 	// tracked objects are attached to.
 	UPROPERTY(Category = VRBaseCharacter, VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-		TObjectPtr<USceneComponent> NetSmoother;
+		USceneComponent * NetSmoother;
 
 	UPROPERTY(Category = VRBaseCharacter, VisibleAnywhere, Transient, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-		TObjectPtr<UVRBaseCharacterMovementComponent> VRMovementReference;
+		UVRBaseCharacterMovementComponent * VRMovementReference;
 
 	UPROPERTY(Category = VRBaseCharacter, VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-		TObjectPtr<UReplicatedVRCameraComponent> VRReplicatedCamera;
+		UReplicatedVRCameraComponent * VRReplicatedCamera;
 
 	UPROPERTY(Category = VRBaseCharacter, VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-		TObjectPtr<UParentRelativeAttachmentComponent> ParentRelativeAttachment;
+		UParentRelativeAttachmentComponent * ParentRelativeAttachment;
 
 	UPROPERTY(Category = VRBaseCharacter, VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-		TObjectPtr<UGripMotionControllerComponent> LeftMotionController;
+		UGripMotionControllerComponent * LeftMotionController;
 
 	UPROPERTY(Category = VRBaseCharacter, VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-		TObjectPtr<UGripMotionControllerComponent> RightMotionController;
+		UGripMotionControllerComponent * RightMotionController;
 
 	/** Name of the LeftMotionController component. Use this name if you want to use a different class (with ObjectInitializer.SetDefaultSubobjectClass). */
 	static FName LeftMotionControllerComponentName;

@@ -103,10 +103,10 @@ public:
 	bool IsLocallyControlled() const;
 
 	UPROPERTY(BlueprintReadWrite, Transient, Category = "VRExpansionLibrary")
-		TObjectPtr<USceneComponent> TargetPrimitiveComponent;
+	USceneComponent * TargetPrimitiveComponent;
 
 	//UPROPERTY(BlueprintReadWrite, Transient, Category = "VRExpansionLibrary")
-	TObjectPtr<AVRBaseCharacter> owningVRChar;
+	AVRBaseCharacter * owningVRChar;
 
 	//UPROPERTY(BlueprintReadWrite, Transient, Category = "VRExpansionLibrary")
 	//UCapsuleComponent * VRCameraCollider;

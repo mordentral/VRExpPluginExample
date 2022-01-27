@@ -39,7 +39,7 @@ public:
 
 	/** BaseVR Character movement component belongs to */
 	UPROPERTY(Transient, DuplicateTransient)
-		TObjectPtr<AVRBaseCharacter> BaseVRCharacterOwner;
+		AVRBaseCharacter* BaseVRCharacterOwner;
 
 	virtual void SetUpdatedComponent(USceneComponent* NewUpdatedComponent);
 

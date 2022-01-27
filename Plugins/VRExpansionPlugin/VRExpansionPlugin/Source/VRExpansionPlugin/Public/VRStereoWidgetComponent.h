@@ -35,7 +35,7 @@ public:
 
 	/** The User Widget object displayed and managed by this component */
 	UPROPERTY(Transient, DuplicateTransient)
-		TObjectPtr<UUserWidget> Widget;
+		UUserWidget* Widget;
 
 	/** If true then we sample the requested size of the widget and reset the texture to be that size */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "WidgetSettings", meta = (ExposeOnSpawn = true))
@@ -75,7 +75,7 @@ public:
 
 	/** The render target being display */
 	UPROPERTY(BlueprintReadOnly, Transient, DuplicateTransient, Category = "WidgetSettings")
-		TObjectPtr<UTextureRenderTarget2D> RenderTarget;
+		UTextureRenderTarget2D* RenderTarget;
 
 	/** The slate window that contains the user widget content */
 	TSharedPtr<class SVirtualWindow> SlateWindow;
@@ -115,7 +115,7 @@ public:
 
 	/** Specifies which shape of layer it is.  Note that some shapes will be supported only on certain platforms! **/
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, NoClear, Instanced, Category = "StereoLayer", DisplayName = "Stereo Layer Shape")
-		TObjectPtr<UStereoLayerShape> Shape;
+		UStereoLayerShape* Shape;
 
 	void BeginDestroy() override;
 	void OnUnregister() override;

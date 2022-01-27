@@ -1,5 +1,4 @@
 // Fill out your copyright notice in the Description page of Project Settings.
-// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -150,7 +149,7 @@ public:
 
 	// Set this to assign a spline component to the slider
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Replicated/*Using = OnRep_SplineComponentToFollow*/, Category = "VRSliderComponent")
-	TObjectPtr<USplineComponent> SplineComponentToFollow;
+	USplineComponent * SplineComponentToFollow;
 
 	/*UFUNCTION()
 	virtual void OnRep_SplineComponentToFollow()

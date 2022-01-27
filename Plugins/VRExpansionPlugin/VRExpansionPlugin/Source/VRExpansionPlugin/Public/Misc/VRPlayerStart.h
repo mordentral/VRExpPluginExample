@@ -20,7 +20,7 @@ class VREXPANSIONPLUGIN_API AVRPlayerStart : public APlayerStart
 
 private:
 	UPROPERTY()
-		TObjectPtr<USceneComponent> VRRootComp;
+		class USceneComponent* VRRootComp;
 public:
 
 	AVRPlayerStart(const FObjectInitializer& ObjectInitializer);
