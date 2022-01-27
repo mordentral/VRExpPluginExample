@@ -58,7 +58,7 @@ bool UGrippableSphereComponent::ReplicateSubobjects(UActorChannel* Channel, clas
 
 	for (UVRGripScriptBase* Script : GripLogicScripts)
 	{
-		if (Script && !Script->IsPendingKill())
+		if (Script && IsValid(Script))
 		{
 			WroteSomething |= Channel->ReplicateSubobject(Script, *Bunch, *RepFlags);
 		}
@@ -259,7 +259,7 @@ void UGrippableSphereComponent::PreDestroyFromReplication()
 		if (UObject *SubObject = GripLogicScripts[i])
 		{
 			SubObject->PreDestroyFromReplication();
-			SubObject->MarkPendingKill();
+			SubObject->MarkAsGarbage();
 		}
 	}
 
@@ -296,7 +296,7 @@ void UGrippableSphereComponent::OnComponentDestroyed(bool bDestroyingHierarchy)
 	{
 		if (UObject *SubObject = GripLogicScripts[i])
 		{
-			SubObject->MarkPendingKill();
+			SubObject->MarkAsGarbage();
 		}
 	}
 

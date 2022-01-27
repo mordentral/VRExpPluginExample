@@ -416,7 +416,7 @@ void UCollisionIgnoreSubsystem::SetComponentCollisionIgnoreState(bool bIterateCh
 									// If we don't have a map element for this pair, then add it now
 									if (!RemovedPairs.Contains(newPrimPair))
 									{
-										RemovedPairs.Add(newPrimPair, FCollisionIgnorePairArray >());
+										RemovedPairs.Add(newPrimPair, FCollisionIgnorePairArray());
 									}
 									RemovedPairs[newPrimPair].PairArray.AddUnique(newIgnorePair);
 								}

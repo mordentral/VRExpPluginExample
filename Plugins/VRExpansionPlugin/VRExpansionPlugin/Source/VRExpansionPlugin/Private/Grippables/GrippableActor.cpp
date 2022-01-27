@@ -95,11 +95,13 @@ void AGrippableActor::PreReplication(IRepChangedPropertyTracker & ChangedPropert
 	}
 #endif
 
-	UBlueprintGeneratedClass* BPClass = Cast<UBlueprintGeneratedClass>(GetClass());
-	if (BPClass != nullptr)	
+	PRAGMA_DISABLE_DEPRECATION_WARNINGS
+		UBlueprintGeneratedClass* BPClass = Cast<UBlueprintGeneratedClass>(GetClass());
+	if (BPClass != nullptr)
 	{
 		BPClass->InstancePreReplication(this, ChangedPropertyTracker);
 	}
+	PRAGMA_ENABLE_DEPRECATION_WARNINGS
 }
 
 void AGrippableActor::GatherCurrentMovement()
@@ -699,7 +701,7 @@ void AGrippableActor::MarkComponentsAsPendingKill()
 	{
 		if (UObject *SubObject = GripLogicScripts[i])
 		{
-			SubObject->MarkPendingKill();
+			SubObject->MarkAsGarbage();
 		}
 	}
 
@@ -719,7 +721,7 @@ void AGrippableActor::PreDestroyFromReplication()
 		{
 			OnSubobjectDestroyFromReplication(SubObject); //-V595
 			SubObject->PreDestroyFromReplication();
-			SubObject->MarkPendingKill();
+			SubObject->MarkAsGarbage();
 		}
 	}
 
@@ -742,7 +744,7 @@ void AGrippableActor::BeginDestroy()
 	{
 		if (UObject *SubObject = GripLogicScripts[i])
 		{
-			SubObject->MarkPendingKill();
+			SubObject->MarkAsGarbage();
 		}
 	}
 

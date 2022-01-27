@@ -59,7 +59,7 @@ bool UGrippableStaticMeshComponent::ReplicateSubobjects(UActorChannel* Channel, 
 
 	for (UVRGripScriptBase* Script : GripLogicScripts)
 	{
-		if (Script && !Script->IsPendingKill())
+		if (Script && IsValid(Script))
 		{
 			WroteSomething |= Channel->ReplicateSubobject(Script, *Bunch, *RepFlags);
 		}
@@ -254,7 +254,7 @@ void UGrippableStaticMeshComponent::PreDestroyFromReplication()
 		if (UObject *SubObject = GripLogicScripts[i])
 		{
 			SubObject->PreDestroyFromReplication();
-			SubObject->MarkPendingKill();
+			SubObject->MarkAsGarbage();
 		}
 	}
 
@@ -291,7 +291,7 @@ void UGrippableStaticMeshComponent::OnComponentDestroyed(bool bDestroyingHierarc
 	{
 		if (UObject *SubObject = GripLogicScripts[i])
 		{
-			SubObject->MarkPendingKill();
+			SubObject->MarkAsGarbage();
 		}
 	}
 

@@ -199,7 +199,7 @@ void UVRStereoWidgetRenderComponent::InitWidget()
 
 	if (Widget != nullptr)
 	{
-		Widget->MarkPendingKill();
+		Widget->MarkAsGarbage();
 		Widget = nullptr;
 	}
 
@@ -334,7 +334,7 @@ void UVRStereoWidgetRenderComponent::RenderWidget(float DeltaTime)
 		RenderTarget->InitCustomFormat(TextureSize.X, TextureSize.Y, requestedFormat /*PF_B8G8R8A8*/, false);
 		MarkStereoLayerDirty();
 	}
-	else if (RenderTarget->Resource->GetSizeX() != TextureSize.X || RenderTarget->Resource->GetSizeY() != TextureSize.Y)
+	else if (RenderTarget->GetResource()->GetSizeX() != TextureSize.X || RenderTarget->GetResource()->GetSizeY() != TextureSize.Y)
 	{
 		const EPixelFormat requestedFormat = FSlateApplication::Get().GetRenderer()->GetSlateRecommendedColorFormat();
 		RenderTarget->InitCustomFormat(TextureSize.X, TextureSize.Y, requestedFormat /*PF_B8G8R8A8*/, false);
@@ -609,7 +609,7 @@ void UVRStereoWidgetComponent::TickComponent(float DeltaTime, enum ELevelTick Ti
 	}
 
 	bool bCurrVisible = bIsVisible;
-	if (!RenderTarget || !RenderTarget->Resource)
+	if (!RenderTarget || !RenderTarget->GetResource())
 	{
 		bCurrVisible = false;
 	}
@@ -633,7 +633,7 @@ void UVRStereoWidgetComponent::TickComponent(float DeltaTime, enum ELevelTick Ti
 
 		if (RenderTarget)
 		{
-			LayerDsec.Texture = RenderTarget->Resource->TextureRHI;
+			LayerDsec.Texture = RenderTarget->GetResource()->TextureRHI;
 			LayerDsec.Flags |= (RenderTarget->GetMaterialType() == MCT_TextureExternal) ? IStereoLayers::LAYER_FLAG_TEX_EXTERNAL : 0;
 		}
 		// Forget the left texture implementation
@@ -678,7 +678,7 @@ void UVRStereoWidgetComponent::TickComponent(float DeltaTime, enum ELevelTick Ti
 			{
 				if (Shape)
 				{
-					Shape->MarkPendingKill();
+					Shape->MarkAsGarbage();
 				}
 
 				Cylinder = NewObject<UStereoLayerShapeCylinder>(this, NAME_None, RF_Public);
@@ -708,7 +708,7 @@ void UVRStereoWidgetComponent::TickComponent(float DeltaTime, enum ELevelTick Ti
 			{
 				if (Shape)
 				{
-					Shape->MarkPendingKill();
+					Shape->MarkAsGarbage();
 				}
 				Shape = NewObject<UStereoLayerShapeQuad>(this, NAME_None, RF_Public);
 			}
@@ -822,7 +822,7 @@ public:
 
 		if (RenderTarget)//false)//RenderTarget)
 		{
-			FTextureResource* TextureResource = RenderTarget->Resource;
+			FTextureResource* TextureResource = RenderTarget->GetResource();
 			if (TextureResource)
 			{
 				if (GeometryMode == EWidgetGeometryMode::Plane)
