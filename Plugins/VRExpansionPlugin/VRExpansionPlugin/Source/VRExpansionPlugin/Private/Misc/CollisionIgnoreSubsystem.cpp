@@ -4,6 +4,14 @@
 #include "Components/SkeletalMeshComponent.h"
 #include "Runtime/Engine/Classes/Kismet/GameplayStatics.h"
 
+#if WITH_CHAOS
+#include "Chaos/ParticleHandle.h"
+#include "Chaos/KinematicGeometryParticles.h"
+#include "Chaos/ParticleHandle.h"
+#include "PhysicsProxy/SingleParticlePhysicsProxy.h"
+#include "PBDRigidsSolver.h"
+#endif
+
 DEFINE_LOG_CATEGORY(VRE_CollisionIgnoreLog);
 
 

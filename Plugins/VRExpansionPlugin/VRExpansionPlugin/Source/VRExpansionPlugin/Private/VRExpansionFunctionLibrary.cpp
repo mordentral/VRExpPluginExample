@@ -7,14 +7,6 @@
 #include "Grippables/HandSocketComponent.h"
 #include "Misc/CollisionIgnoreSubsystem.h"
 
-#if WITH_CHAOS
-#include "Chaos/ParticleHandle.h"
-#include "Chaos/KinematicGeometryParticles.h"
-#include "Chaos/ParticleHandle.h"
-#include "PhysicsProxy/SingleParticlePhysicsProxy.h"
-#include "PBDRigidsSolver.h"
-#endif
-
 #if WITH_EDITOR
 #include "Editor/UnrealEd/Classes/Editor/EditorEngine.h"
 #endif

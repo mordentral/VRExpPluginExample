@@ -544,10 +544,10 @@ float UVRBaseCharacterMovementComponent::SlideAlongSurface(const FVector& Delta,
 
 }
 
-void UVRBaseCharacterMovementComponent::SetCrouchedHalfHeight(float NewCrouchedHalfHeight)
+/*void UVRBaseCharacterMovementComponent::SetCrouchedHalfHeight(float NewCrouchedHalfHeight)
 {
 	this->CrouchedHalfHeight = NewCrouchedHalfHeight;
-}
+}*/
 
 void UVRBaseCharacterMovementComponent::AddCustomReplicatedMovement(FVector Movement)
 {
