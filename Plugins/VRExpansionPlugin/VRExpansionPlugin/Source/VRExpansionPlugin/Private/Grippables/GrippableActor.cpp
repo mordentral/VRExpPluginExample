@@ -270,7 +270,7 @@ bool AGrippableActor::ReplicateSubobjects(UActorChannel* Channel, class FOutBunc
 	{
 		for (UVRGripScriptBase* Script : GripLogicScripts)
 		{
-			if (Script && !Script->IsPendingKill())
+			if (Script && IsValid(Script))
 			{
 				WroteSomething |= Channel->ReplicateSubobject(Script, *Bunch, *RepFlags);
 			}
@@ -734,7 +734,7 @@ void AGrippableActor::PreDestroyFromReplication()
 	for (UActorComponent * ActorComp : GetComponents())
 	{
 		// Pending kill components should have already had this called as they were network spawned and are being killed
-		if (ActorComp && !ActorComp->IsPendingKill() && ActorComp->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
+		if (ActorComp && IsValid(ActorComp) && ActorComp->GetClass()->ImplementsInterface(UVRGripInterface::StaticClass()))
 			ActorComp->PreDestroyFromReplication();
 	}
 
