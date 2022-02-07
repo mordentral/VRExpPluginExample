@@ -182,7 +182,8 @@ void UVRExpansionFunctionLibrary::GetGripSlotInRangeByTypeName(FName SlotType, A
 				{
 					if (!SocketComp->bDisabled && SocketComp->SlotPrefix.ToString().Contains(GripIdentifier, ESearchCase::IgnoreCase, ESearchDir::FromStart))
 					{
-						float vecLen = FVector::DistSquared(RelativeWorldLocation, SocketComp->GetRelativeLocation());
+						FVector SocketRelativeLocation = rootComp->GetComponentTransform().InverseTransformPosition(SocketComp->GetHandSocketTransform(QueryController).GetLocation());
+						float vecLen = FVector::DistSquared(RelativeWorldLocation, SocketRelativeLocation);
 
 						if (SocketComp->bAlwaysInRange)
 						{
