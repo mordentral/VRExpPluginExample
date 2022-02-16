@@ -55,6 +55,7 @@ public class VRExpansionPlugin : ModuleRules
         new string[]
         {
                     "Core",
+                    "NetCore",
                     "CoreUObject",
                     "Engine",
                    // "InputCore",
