@@ -43,9 +43,8 @@
 		},
 		{
 			"Name": "OculusVR",
-			"Enabled": false,
+			"Enabled": true,
 			"SupportedTargetPlatforms": [
-				"Win32",
 				"Win64",
 				"Android"
 			]
