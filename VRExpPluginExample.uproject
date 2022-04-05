@@ -1,6 +1,6 @@
 {
 	"FileVersion": 3,
-	"EngineAssociation": "4.27",
+	"EngineAssociation": "5.0",
 	"Category": "",
 	"Description": "",
 	"Modules": [
@@ -13,7 +13,13 @@
 	"Plugins": [
 		{
 			"Name": "OpenXR",
-			"Enabled": true
+			"Enabled": true,
+			"SupportedTargetPlatforms": [
+				"Win64",
+				"Linux",
+				"Android",
+				"HoloLens"
+			]
 		},
 		{
 			"Name": "VRExpansionPlugin",
@@ -37,18 +43,8 @@
 		},
 		{
 			"Name": "OculusVR",
-			"Enabled": false,
-			"SupportedTargetPlatforms": [
-				"Win32",
-				"Win64",
-				"Android"
-			]
-		},
-		{
-			"Name": "OculusOpenXR",
 			"Enabled": true,
 			"SupportedTargetPlatforms": [
-				"Win32",
 				"Win64",
 				"Android"
 			]
@@ -65,6 +61,9 @@
 	],
 	"TargetPlatforms": [
 		"PS4",
-		"WindowsNoEditor"
+		"WindowsNoEditor",
+		"Android",
+		"Windows",
+		"Linux"
 	]
 }
