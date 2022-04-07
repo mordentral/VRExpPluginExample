@@ -23,7 +23,13 @@
 		},
 		{
 			"Name": "VRExpansionPlugin",
-			"Enabled": true
+			"Enabled": true,
+			"SupportedTargetPlatforms": [
+				"Win64",
+				"Linux",
+				"Android",
+				"HoloLens"
+			]
 		},
 		{
 			"Name": "OnlineSubsystemSteam",
@@ -31,15 +37,17 @@
 		},
 		{
 			"Name": "OpenVRExpansionPlugin",
-			"Enabled": false
-		},
-		{
-			"Name": "AdvancedSteamSessions",
-			"Enabled": false
+			"Enabled": true
 		},
 		{
 			"Name": "OpenXRExpansionPlugin",
-			"Enabled": true
+			"Enabled": true,
+			"SupportedTargetPlatforms": [
+				"Win64",
+				"Linux",
+				"Android",
+				"HoloLens"
+			]
 		},
 		{
 			"Name": "OculusVR",
