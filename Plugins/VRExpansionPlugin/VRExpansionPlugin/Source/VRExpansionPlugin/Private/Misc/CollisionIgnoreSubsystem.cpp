@@ -35,8 +35,12 @@ void UCollisionIgnoreSubsystem::CheckActiveFilters()
 		// Implement later
 
 
-		for (int i = KeyPair.Value.PairArray.Num() - 1; i >= 0; i--)
+		/*for (int i = KeyPair.Value.PairArray.Num() - 1; i >= 0; i--)
 		{
+
+			FPhysicsActorHandle hand1 = KeyPair.Value.PairArray[i].Actor1;
+			FPhysicsActorHandle hand2 = KeyPair.Value.PairArray[i].Actor2;
+			
 			if (
 				(!KeyPair.Value.PairArray[i].Actor1 || !FPhysicsInterface::IsValid(KeyPair.Value.PairArray[i].Actor1)) ||
 				(!KeyPair.Value.PairArray[i].Actor2 || !FPhysicsInterface::IsValid(KeyPair.Value.PairArray[i].Actor2))
@@ -71,22 +75,24 @@ void UCollisionIgnoreSubsystem::CheckActiveFilters()
 			{
 				RemovedPairs.Add(KeyPair.Key, KeyPair.Value);
 			}
-		}
+		}*/
 	}
 
-#if WITH_CHAOS
-	/*if (FPhysScene* PhysScene2 = GetWorld()->GetPhysicsScene())
+/*#if WITH_CHAOS
+	if (FPhysScene* PhysScene2 = GetWorld()->GetPhysicsScene())
 	{
 		Chaos::FIgnoreCollisionManager& IgnoreCollisionManager = PhysScene2->GetSolver()->GetEvolution()->GetBroadPhase().GetIgnoreCollisionManager();
 		int32 ExternalTimestamp = PhysScene2->GetSolver()->GetMarshallingManager().GetExternalTimestamp_External();
 
-		Chaos::FIgnoreCollisionManager::FDeactivationSet IgnoreSet = IgnoreCollisionManager.GetPendingActivationsForGameThread(ExternalTimestamp);
-
+		Chaos::FIgnoreCollisionManager::FPendingMap IgnoreSet = IgnoreCollisionManager.GetPendingActivationsForGameThread(ExternalTimestamp);
+		Chaos::FIgnoreCollisionManager::FDeactivationSet DeactiveSet = IgnoreCollisionManager.GetPendingDeactivationsForGameThread(ExternalTimestamp);
+		//Chaos::FIgnoreCollisionManager::FDeactivationSet IgnoreSet = 
+		
 		// Prints out the list of items currently being re-activated after one of their pairs died.
 		// Chaos automatically cleans up here, I don't need to do anything.
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Pending activation Chaos: %i"), IgnoreCollisionManager.FActiveMap.Num()));
-	}*/
-#endif
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Pending activate: %i - Pending deativate: %i"), IgnoreSet.Num(), DeactiveSet.Num()));
+	}
+#endif*/
 
 	for (const TPair<FCollisionPrimPair, FCollisionIgnorePairArray>& KeyPair : RemovedPairs)
 	{
@@ -105,6 +111,9 @@ void UCollisionIgnoreSubsystem::RemoveComponentCollisionIgnoreState(UPrimitiveCo
 
 	if (!Prim1)
 		return;
+	
+
+	TMap<FCollisionPrimPair, FCollisionIgnorePairArray> PairsToRemove;
 
 	for (const TPair<FCollisionPrimPair, FCollisionIgnorePairArray>& KeyPair : CollisionTrackedPairs)
 	{
@@ -112,14 +121,15 @@ void UCollisionIgnoreSubsystem::RemoveComponentCollisionIgnoreState(UPrimitiveCo
 		if (KeyPair.Key.Prim1 == Prim1 || KeyPair.Key.Prim2 == Prim1)
 		{
 			// If we don't have a map element for this pair, then add it now
-			if (!RemovedPairs.Contains(KeyPair.Key))
+			if (!PairsToRemove.Contains(KeyPair.Key))
 			{
-				RemovedPairs.Add(KeyPair.Key, KeyPair.Value);
+				PairsToRemove.Add(KeyPair.Key, KeyPair.Value);
 			}
 		}
 	}
+	
 
-	for (const TPair<FCollisionPrimPair, FCollisionIgnorePairArray>& KeyPair : RemovedPairs)
+	for (const TPair<FCollisionPrimPair, FCollisionIgnorePairArray>& KeyPair : PairsToRemove)
 	{
 		if (CollisionTrackedPairs.Contains(KeyPair.Key))
 		{
@@ -129,9 +139,12 @@ void UCollisionIgnoreSubsystem::RemoveComponentCollisionIgnoreState(UPrimitiveCo
 				SetComponentCollisionIgnoreState(false, false, KeyPair.Key.Prim1, newIgnorePair.BoneName1, KeyPair.Key.Prim2, newIgnorePair.BoneName2, false, false);
 			}
 
-			// Ensure we are empty
-			CollisionTrackedPairs[KeyPair.Key].PairArray.Empty();
-			CollisionTrackedPairs.Remove(KeyPair.Key);
+			/*if (CollisionTrackedPairs.Contains(KeyPair.Key))
+			{
+				// Ensure we are empty
+				CollisionTrackedPairs[KeyPair.Key].PairArray.Empty();
+				CollisionTrackedPairs.Remove(KeyPair.Key);
+			}*/
 		}
 	}
 
