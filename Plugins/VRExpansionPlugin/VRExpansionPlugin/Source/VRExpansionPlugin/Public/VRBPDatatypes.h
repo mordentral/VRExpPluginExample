@@ -1393,6 +1393,10 @@ public:
 	UPROPERTY(BlueprintReadWrite, NotReplicated, Category = "Settings")
 		bool bIsPaused;
 
+	// Whether the grip is currently paused
+	UPROPERTY(BlueprintReadOnly, NotReplicated, Category = "Settings")
+		bool bIsPendingKill;
+
 	// When true, will lock a hybrid grip into its collision state
 	UPROPERTY(BlueprintReadWrite, NotReplicated, Category = "Settings")
 		bool bLockHybridGrip;
@@ -1474,6 +1478,7 @@ public:
 		bSkipNextTeleportCheck = false;
 		bSkipNextConstraintLengthCheck = false;
 		bIsPaused = false;
+		bIsPendingKill = false;
 		bLockHybridGrip = false;
 		AdditionTransform = FTransform::Identity;
 		GripDistance = 0.0f;
@@ -1578,6 +1583,7 @@ public:
 		SlotName(NAME_None),
 		GripMovementReplicationSetting(EGripMovementReplicationSettings::ForceClientSideMovement),
 		bIsPaused(false),
+		bIsPendingKill(false),
 		bLockHybridGrip(false),
 		bOriginalReplicatesMovement(false),
 		bOriginalGravity(false),
