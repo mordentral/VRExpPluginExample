@@ -1393,7 +1393,10 @@ public:
 	UPROPERTY(BlueprintReadWrite, NotReplicated, Category = "Settings")
 		bool bIsPaused;
 
-	// Whether the grip is currently paused
+	// Only true in one specific circumstance, when you are a simulated client
+	// and the grip has been dropped but replication on the array hasn't deleted
+	// the entry yet. We cannot remove the entry as it can corrupt the array.
+	// this lets end users check against the grip to ignore it.
 	UPROPERTY(BlueprintReadOnly, NotReplicated, Category = "Settings")
 		bool bIsPendingKill;
 

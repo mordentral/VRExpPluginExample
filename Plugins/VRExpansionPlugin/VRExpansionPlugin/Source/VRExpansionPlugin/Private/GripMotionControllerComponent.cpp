@@ -4535,7 +4535,7 @@ void UGripMotionControllerComponent::HandleGripArray(TArray<FBPActorGripInformat
 				continue; // If we didn't successfully handle the replication (out of order) then continue on.
 
 			// Continue if the grip is paused
-			if (Grip->bIsPaused)
+			if (Grip->bIsPaused || Grip->bIsPendingKill)
 				continue;
 
 			if (Grip->GripID != INVALID_VRGRIP_ID && Grip->GrippedObject && IsValid(Grip->GrippedObject))
