@@ -194,6 +194,14 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GripMotionController")
 	bool bOffsetByHMD;
 
+	// If true this controller will attempt to stay within its LeashRange distance from the HMD
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GripMotionController|Leashing")
+		bool bLeashToHMD;
+
+	// How far away from the HMD the controller should stay max (vector distance)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GripMotionController|Leashing", meta = (ClampMin = "0.1", UIMin = "0.1", EditCondition = "bLeashToHMD"))
+		float LeashRange;
+
 	// When true any physics constraints will be attached to the grip pivot instead of a new kinematic actor in the scene
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GripMotionController")
 		bool bConstrainToPivot;
@@ -292,6 +300,7 @@ protected:
 	FTransform GripRenderThreadRelativeTransform;
 	FVector GripRenderThreadComponentScale;
 	FTransform GripRenderThreadProfileTransform;
+	FVector GripRenderThreadLastLocationForLateUpdate;
 
 	FDelegateHandle NewControllerProfileEvent_Handle;
 	UFUNCTION()

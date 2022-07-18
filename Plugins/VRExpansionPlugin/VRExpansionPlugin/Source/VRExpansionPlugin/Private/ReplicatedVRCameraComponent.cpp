@@ -30,6 +30,8 @@ UReplicatedVRCameraComponent::UReplicatedVRCameraComponent(const FObjectInitiali
 	bUsePawnControlRotation = false;
 	bAutoSetLockToHmd = true;
 	bOffsetByHMD = false;
+	bLimitMaxHeight = false;
+	MaxHeightAllowed = 300.f;
 
 	bSetPositionDuringTick = false;
 	bSmoothReplicatedMotion = false;
@@ -148,6 +150,11 @@ void UReplicatedVRCameraComponent::UpdateTracking(float DeltaTime)
 				{
 					Position.X = 0;
 					Position.Y = 0;
+				}
+
+				if (bLimitMaxHeight)
+				{
+					Position.Z = FMath::Clamp(Position.Z, 0.0f, MaxHeightAllowed);
 				}
 
 				SetRelativeTransform(FTransform(Orientation, Position));
@@ -288,6 +295,11 @@ void UReplicatedVRCameraComponent::GetCameraView(float DeltaTime, FMinimalViewIn
 						{
 							Position.X = 0;
 							Position.Y = 0;
+						}
+
+						if (bLimitMaxHeight)
+						{
+							Position.Z = FMath::Clamp(Position.Z, 0.0f, MaxHeightAllowed);
 						}
 
 						SetRelativeTransform(FTransform(Orientation, Position));

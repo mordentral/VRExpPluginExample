@@ -55,6 +55,14 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ReplicatedCamera")
 	bool bOffsetByHMD;
 
+	// If true will limit the max Z height that the camera is capable of reaching
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ReplicatedCamera|MaxHeight")
+		bool bLimitMaxHeight;
+
+	// If we are limiting the max height, this is the maximum allowed value
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ReplicatedCamera|MaxHeight", meta = (ClampMin = "0.1", UIMin = "0.1", EditCondition = "bLimitMaxHeight"))
+		float MaxHeightAllowed;
+
 	/** Sets lock to hmd automatically based on if the camera is currently locally controlled or not */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ReplicatedCamera")
 		uint32 bAutoSetLockToHmd : 1;
