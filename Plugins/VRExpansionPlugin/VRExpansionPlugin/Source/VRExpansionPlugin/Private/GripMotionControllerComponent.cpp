@@ -105,6 +105,10 @@ UGripMotionControllerComponent::UGripMotionControllerComponent(const FObjectInit
 	bLerpingPosition = false;
 	bSmoothReplicatedMotion = false;
 	bReppedOnce = false;
+	bScaleTracking = false;
+	TrackingScaler = FVector(1.0f);
+	bLimitMinHeight = false;
+	MinimumHeight = 0.0f;
 	bOffsetByHMD = false;
 	bLeashToHMD = false;
 	LeashRange = 300.0f;
@@ -6386,7 +6390,16 @@ bool UGripMotionControllerComponent::GripPollControllerState(FVector& Position, 
 						continue;
 				}
 #endif
+				if (bScaleTracking)
+				{
+					Position *= TrackingScaler;
+				}
 
+				if (bLimitMinHeight)
+				{
+					Position.Z = FMath::Max(Position.Z, MinimumHeight);
+				}
+			
 				if (bOffsetByHMD || bLeashToHMD)
 				{
 					if (bIsInGameThread)
@@ -6397,7 +6410,7 @@ bool UGripMotionControllerComponent::GripPollControllerState(FVector& Position, 
 							FVector curLoc;
 							if (GEngine->XRSystem->GetCurrentPose(IXRTrackingSystem::HMDDeviceId, curRot, curLoc))
 							{
-								curLoc.Z = 0;
+								//curLoc.Z = 0;
 								LastLocationForLateUpdate = curLoc;
 							}
 							else
@@ -6414,7 +6427,7 @@ bool UGripMotionControllerComponent::GripPollControllerState(FVector& Position, 
 
 					if (bOffsetByHMD)
 					{
-						Position -= CorrectLastLocation;
+						Position -= FVector(CorrectLastLocation.X, CorrectLastLocation.Y, 0.0f);
 					}
 
 					if (bLeashToHMD)
@@ -6423,7 +6436,7 @@ bool UGripMotionControllerComponent::GripPollControllerState(FVector& Position, 
 
 						if (DifferenceVec.SizeSquared() > FMath::Square(LeashRange))
 						{
-							Position = DifferenceVec.GetSafeNormal() * LeashRange;
+							Position = CorrectLastLocation + (DifferenceVec.GetSafeNormal() * LeashRange);
 						}
 					}
 				}
