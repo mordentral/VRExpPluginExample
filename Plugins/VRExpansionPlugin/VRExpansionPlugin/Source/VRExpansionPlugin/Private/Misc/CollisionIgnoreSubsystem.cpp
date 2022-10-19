@@ -10,8 +10,101 @@
 #include "PhysicsProxy/SingleParticlePhysicsProxy.h"
 #include "PBDRigidsSolver.h"
 
+#include "Chaos/ContactModification.h"
+
 DEFINE_LOG_CATEGORY(VRE_CollisionIgnoreLog);
 
+
+void FCollisionIgnoreSubsystemAsyncCallback::OnContactModification_Internal(Chaos::FCollisionContactModifier& Modifier)
+{
+	//registered for contact modification, but implementation is missing
+	//Modifier.Disable();
+	// FSimCallbackInputVR* Input = GetConsumerInput_Internal();
+
+
+	//ParticleHandle0->AddCollisionConstraintFlag(Chaos::ECollisionConstraintFlags::CCF_BroadPhaseIgnoreCollisions);
+	//if (Input->bIsInitialized)
+	{
+		for (Chaos::FContactPairModifierIterator ContactIterator = Modifier.Begin(); ContactIterator; ++ContactIterator)
+		{
+			if (ContactIterator.IsValid())
+			{
+				Chaos::TVec2<Chaos::FGeometryParticleHandle*> Pair = ContactIterator->GetParticlePair();
+
+				Chaos::TPBDRigidParticleHandle<Chaos::FReal, 3>* ParticleHandle0 = Pair[0]->CastToRigidParticle();
+				Chaos::TPBDRigidParticleHandle<Chaos::FReal, 3>* ParticleHandle1 = Pair[1]->CastToRigidParticle();
+
+				if (ParticleHandle0 && ParticleHandle1)
+				{
+					if (
+						ParticleHandle0->HasCollisionConstraintFlag(Chaos::ECollisionConstraintFlags::CCF_BroadPhaseIgnoreCollisions) &&
+						ParticleHandle1->HasCollisionConstraintFlag(Chaos::ECollisionConstraintFlags::CCF_BroadPhaseIgnoreCollisions)
+						)
+					{
+
+						ContactIterator->Disable();
+					}
+				}
+			}
+		}
+	}
+}
+
+void UCollisionIgnoreSubsystem::UpdateTimer()
+{
+	RemovedPairs.Reset();
+
+	if (CollisionTrackedPairs.Num() > 0)
+	{
+		if (!UpdateHandle.IsValid())
+		{
+			// Setup the heartbeat on 1htz checks
+			GetWorld()->GetTimerManager().SetTimer(UpdateHandle, this, &UCollisionIgnoreSubsystem::CheckActiveFilters, 1.0f, true, 1.0f);
+
+			if (!ContactModifierCallback)
+			{
+				if (UWorld* World = GetWorld())
+				{
+					if (FPhysScene* PhysScene = World->GetPhysicsScene())
+					{
+						// Register a callback
+						//ContactModifierCallback = PhysScene->GetSolver()->CreateAndRegisterSimCallbackObject_External<FCollisionIgnoreSubsystemAsyncCallback>(true);
+					}
+				}
+			}
+
+			// Need to only add input when changes are made
+			if (ContactModifierCallback)
+			{
+				FSimCallbackInputVR* Input = ContactModifierCallback->GetProducerInputData_External();
+				if (Input->bIsInitialized == false)
+				{
+					Input->bIsInitialized = true;
+				}
+			}
+		}
+	}
+	else if (UpdateHandle.IsValid())
+	{
+		GetWorld()->GetTimerManager().ClearTimer(UpdateHandle);
+
+		if (ContactModifierCallback)
+		{
+			//FSimCallbackInputVR* Input = ContactModifierCallback->GetProducerInputData_External();
+			//Input->bIsInitialized = false;
+
+			if (UWorld* World = GetWorld())
+			{
+				if (FPhysScene* PhysScene = World->GetPhysicsScene())
+				{
+					// Register a callback
+					//PhysScene->GetSolver()->UnregisterAndFreeSimCallbackObject_External(ContactModifierCallback);
+					ContactModifierCallback = nullptr;
+				}
+			}
+		}
+	}
+}
 
 void UCollisionIgnoreSubsystem::CheckActiveFilters()
 {
