@@ -12,6 +12,7 @@
 // Some of these can be moved out to the cpp
 #include "Chaos/SimCallbackObject.h"
 #include "Chaos/SimCallbackInput.h"
+#include "Chaos/ParticleHandle.h"
 //#include "Chaos/ContactModification.h"
 //#include "PBDRigidsSolver.h"
 
@@ -24,13 +25,48 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(VRE_CollisionIgnoreLog, Log, All);
 
+
+USTRUCT()
+struct FChaosParticlePair
+{
+	GENERATED_BODY()
+
+	Chaos::TPBDRigidParticleHandle<Chaos::FReal, 3>* ParticleHandle0;
+	Chaos::TPBDRigidParticleHandle<Chaos::FReal, 3>* ParticleHandle1;
+
+	FChaosParticlePair()
+	{
+		ParticleHandle0 = nullptr;
+		ParticleHandle1 = nullptr;
+	}
+
+	FChaosParticlePair(Chaos::TPBDRigidParticleHandle<Chaos::FReal, 3>* pH1, Chaos::TPBDRigidParticleHandle<Chaos::FReal, 3>* pH2)
+	{
+		ParticleHandle0 = pH1;
+		ParticleHandle1 = pH2;
+	}
+
+	FORCEINLINE bool operator==(const FChaosParticlePair& Other) const
+	{
+		return(
+			(ParticleHandle0 == Other.ParticleHandle0 || ParticleHandle0 == Other.ParticleHandle1) &&
+			(ParticleHandle1 == Other.ParticleHandle1 || ParticleHandle1 == Other.ParticleHandle0)
+			);
+	}
+};
+
 /*
 * All input is const, non-const data goes in output. 'AsyncSimState' points to non-const sim state.
 */
 struct FSimCallbackInputVR : public Chaos::FSimCallbackInput
 {
 	virtual ~FSimCallbackInputVR() {}
-	void Reset() {}
+	void Reset() 
+	{
+		ParticlePairs.Empty();
+	}
+
+	TArray<FChaosParticlePair> ParticlePairs;
 
 	bool bIsInitialized;
 };
@@ -60,6 +96,7 @@ private:
 	virtual void OnContactModification_Internal(Chaos::FCollisionContactModifier& Modifier) override;
 
 };
+
 
 USTRUCT()
 struct FCollisionPrimPair
@@ -165,6 +202,8 @@ public:
 
 	FCollisionIgnoreSubsystemAsyncCallback* ContactModifierCallback;
 
+	void ConstructInput();
+
 	virtual bool DoesSupportWorldType(EWorldType::Type WorldType) const override
 	{
 		return WorldType == EWorldType::Game || WorldType == EWorldType::PIE;
@@ -196,7 +235,7 @@ public:
 	//TArray<FCollisionIgnorePair> RemovedPairs;
 
 	//
-	void UpdateTimer();
+	void UpdateTimer(bool bChangesWereMade);
 
 	UFUNCTION(Category = "Collision")
 		void CheckActiveFilters();
