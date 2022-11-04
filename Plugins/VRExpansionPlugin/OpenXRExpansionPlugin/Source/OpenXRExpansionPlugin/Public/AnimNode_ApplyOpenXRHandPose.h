@@ -17,6 +17,9 @@ struct OPENXREXPANSIONPLUGIN_API FAnimNode_ApplyOpenXRHandPose : public FAnimNod
 
 public:
 
+	FVector WristForwardLS_UE;
+	FVector WristSideDirectionLS;
+
 	// Generally used when not passing in custom bone mappings, defines the auto mapping style
 	UPROPERTY(EditAnywhere, Category = Skeletal, meta = (PinShownByDefault))
 		EVROpenXRSkeletonType SkeletonType;
@@ -42,6 +45,17 @@ public:
 	bool bIsOpenInputAnimationInstance;
 
 	void ConvertHandTransformsSpace(TArray<FTransform>& OutTransforms, TArray<FTransform>& WorldTransforms, FTransform AddTrans, bool bMirrorLeftRight, bool bMergeMissingUE4Bones);
+
+	void CalculateSkeletalAdjustment(USkeleton* AssetSkeleton);
+	void CalculateOpenXRAdjustment(TArray<FTransform>& WorldTransforms);
+
+	FQuat CalcRotationAboutAxis(const FVector& FromDirection, const FVector& ToDirection, const FVector& Axis)
+	{
+		FVector FromDirectionCp = FVector::CrossProduct(Axis, FromDirection);
+		FVector ToDirectionCp = FVector::CrossProduct(Axis, ToDirection);
+
+		return FQuat::FindBetweenVectors(FromDirectionCp, ToDirectionCp);
+	}
 
 	FTransform GetRefBoneInCS(TArray<FTransform>& RefBones, TArray<FMeshBoneInfo>& RefBonesInfo, int32 BoneIndex)
 	{
