@@ -118,6 +118,8 @@ public:
 		TArray<FTransform> OldSkeletalTransforms;
 
 	// The rotation required to rotate the finger bones back to X+
+	// The animation node attempts to auto calculate it, if you have a non standard hand you may need to fill
+	// This in by yourself
 	UPROPERTY(EditAnywhere, NotReplicated, BlueprintReadWrite, Category = Default)
 		FTransform AdditionTransform;
 
@@ -130,7 +132,7 @@ public:
 	FBPOpenXRActionSkeletalData()
 	{
 		//bGetTransformsInParentSpace = false;
-		AdditionTransform = FTransform(FRotator(180.f, 0.f, -90.f), FVector::ZeroVector, FVector(1.f));//FTransform(FRotator(0.f, 90.f, 90.f), FVector::ZeroVector, FVector(1.f));
+		AdditionTransform = FTransform::Identity;// FTransform(FRotator(180.f, 0.f, -90.f), FVector::ZeroVector, FVector(1.f));//FTransform(FRotator(0.f, 90.f, 90.f), FVector::ZeroVector, FVector(1.f));
 		WorldScaleOverride = 0.0f;
 		bAllowDeformingMesh = true;
 		bMirrorLeftRight = false;

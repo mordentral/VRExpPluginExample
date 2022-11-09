@@ -47,7 +47,7 @@ public:
 	void ConvertHandTransformsSpace(TArray<FTransform>& OutTransforms, TArray<FTransform>& WorldTransforms, FTransform AddTrans, bool bMirrorLeftRight, bool bMergeMissingUE4Bones);
 
 	void CalculateSkeletalAdjustment(USkeleton* AssetSkeleton);
-	void CalculateOpenXRAdjustment(TArray<FTransform>& WorldTransforms);
+	void CalculateOpenXRAdjustment();
 
 	FQuat CalcRotationAboutAxis(const FVector& FromDirection, const FVector& ToDirection, const FVector& Axis)
 	{
@@ -75,24 +75,25 @@ public:
 
 	void SetVectorToMaxElement(FVector& vec)
 	{
-		float aX = FMath::Abs(vec.X);
-		float aY = FMath::Abs(vec.Y);
-
-		if (aY < aX)
+		FVector absVal = vec.GetAbs();
+		if (absVal.X > absVal.Y && absVal.X > absVal.Z)
 		{
-			vec.Y = 0.f;
-			if (FMath::Abs(vec.Z) < aX)
-				vec.Z = 0.f;
-			else
-				vec.X = 0.f;
+			vec = vec.GetSignVector() * FVector(1.0f, 0.f, 0.f);
+			vec.Normalize();
+		}
+		else if (absVal.Y > absVal.X && absVal.Y > absVal.Z)
+		{
+			vec = vec.GetSignVector() * FVector(0.0f, 1.f, 0.f);
+			vec.Normalize();
+		}
+		else if (absVal.Z > absVal.X && absVal.Z > absVal.Y)
+		{
+			vec = vec.GetSignVector() * FVector(0.0f, 0.f, 1.f);
+			vec.Normalize();
 		}
 		else
 		{
-			vec.X = 0.f;
-			if (FMath::Abs(vec.Z) < aY)
-				vec.Z = 0;
-			else
-				vec.Y = 0;
+			vec.Normalize();
 		}
 	}
 

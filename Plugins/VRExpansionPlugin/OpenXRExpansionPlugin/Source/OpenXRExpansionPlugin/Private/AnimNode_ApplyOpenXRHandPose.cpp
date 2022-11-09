@@ -83,30 +83,21 @@ void FAnimNode_ApplyOpenXRHandPose::InitializeBoneReferences(const FBoneContaine
 				{
 					// Get our parent bones index
 					BonePair.ParentReference = RequiredBones.GetParentBoneIndex(BonePair.ReferenceToConstruct.CachedCompactPoseIndex);
-
-					/*FTransform BoneRefPose = GetRefBoneInCS(RefBones, RefBonesInfo, BonePair.ReferenceToConstruct.BoneIndex);
-					FTransform FinalPose = BoneRefPose;
-
-					FRotator BoneRot = BoneRefPose.GetRotation().Rotator();
-					FVector ForVec = BoneRefPose.GetRotation().GetForwardVector();
-
-					FVector BoneUpVector = FinalPose.GetRotation().GetUpVector();
-					FVector BoneForwardVector = FinalPose.GetRotation().GetForwardVector();
-
-					FQuat AdjustmentForward = FQuat::FindBetweenNormals(FVector::ForwardVector, BoneForwardVector);
-					FRotator AFor = AdjustmentForward.Rotator();
-
-					FQuat AdjustmentUp = FQuat::FindBetweenNormals(AdjustmentForward.GetUpVector(), BoneUpVector);
-					FRotator AUp = AdjustmentUp.Rotator();
-
-					FQuat FinalAdjustment = AdjustmentUp * AdjustmentForward;
-					FRotator Difference = FinalAdjustment.Rotator();
-					BonePair.RetargetRot = FinalAdjustment;*/
 				}
 			}
 
 			MappedBonePairs.bInitialized = true;
-			CalculateSkeletalAdjustment(AssetSkeleton);
+
+			if (SkeletonType == EVROpenXRSkeletonType::OXR_SkeletonType_OpenVRDefault_Left || SkeletonType == EVROpenXRSkeletonType::OXR_SkeletonType_OpenVRDefault_Right)
+			{
+				// We hard code this for now because I don't like their wrist being a different transform
+				MappedBonePairs.AdjustmentQuat = FRotator(0.f, 90.f, 180.f).Quaternion(); // Current one is incorrect without wrist
+				// Maybe do it in relative space?
+			}
+			else
+			{
+				CalculateSkeletalAdjustment(AssetSkeleton);
+			}
 			
 		}
 	}
@@ -138,52 +129,38 @@ void FAnimNode_ApplyOpenXRHandPose::CalculateSkeletalAdjustment(USkeleton* Asset
 	FVector ToKnuckleAverage_UE = KnuckleAverage - WristTransform_UE.GetTranslation();
 	ToKnuckleAverage_UE.Normalize();
 
+
 	WristForwardLS_UE = WristTransform_UE.GetRotation().UnrotateVector(ToKnuckleAverage_UE);
+	SetVectorToMaxElement(WristForwardLS_UE);
 	WristSideDirectionLS = FVector::CrossProduct(WristForwardLS_UE, FVector::RightVector);
+	SetVectorToMaxElement(WristSideDirectionLS);
 
-	/*FQuat AdjustmentForward = FQuat::FindBetweenNormals(FVector::ForwardVector, WristForwardLS_UE);
-	FRotator AFor = AdjustmentForward.Rotator();
-
-	FQuat AdjustmentRight = FQuat::FindBetweenNormals(AdjustmentForward.GetRightVector(), WristSideDirectionLS);
-	FRotator ARight = AdjustmentRight.Rotator();
-
-	FQuat FinalAdjustment = AdjustmentRight * AdjustmentForward;
-	FRotator Difference = FinalAdjustment.Rotator();
-
-	MappedBonePairs.AdjustmentQuat = FinalAdjustment;*/
+	CalculateOpenXRAdjustment();
 }
 
-void FAnimNode_ApplyOpenXRHandPose::CalculateOpenXRAdjustment(TArray<FTransform>& WorldTransforms)
+void FAnimNode_ApplyOpenXRHandPose::CalculateOpenXRAdjustment()
 {
-	FVector OpenXRKnuckleAverage = WorldTransforms[(int8)EXRHandJointType::OXR_HAND_JOINT_INDEX_PROXIMAL_EXT].GetTranslation();
-	OpenXRKnuckleAverage += WorldTransforms[(int8)EXRHandJointType::OXR_HAND_JOINT_MIDDLE_PROXIMAL_EXT].GetTranslation();
-	OpenXRKnuckleAverage += WorldTransforms[(int8)EXRHandJointType::OXR_HAND_JOINT_RING_PROXIMAL_EXT].GetTranslation();
-	OpenXRKnuckleAverage += WorldTransforms[(int8)EXRHandJointType::OXR_HAND_JOINT_LITTLE_PROXIMAL_EXT].GetTranslation();
+	// Base implementation is like valves
 
-	OpenXRKnuckleAverage /= 4.f;
+	// Forward direction
+	static FVector OpenXRForwardDirection = FVector(1.0f, 0.f, 0.f);
 
-	FVector ToKnuckleAverageMS_OpenXR = OpenXRKnuckleAverage - WorldTransforms[(int8)EXRHandJointType::OXR_HAND_JOINT_WRIST_EXT].GetTranslation();
-	ToKnuckleAverageMS_OpenXR.Normalize();
+	// Side direction
+	// Do I need to flip this for left hand?
+	static FVector OpenXRSideDirection = FVector(0.f, 1.f, 0.f); 
 
-	FVector WristForwardLS_OpenXR = WorldTransforms[(int8)EXRHandJointType::OXR_HAND_JOINT_WRIST_EXT].GetRotation().UnrotateVector(ToKnuckleAverageMS_OpenXR);
-	
-	// Palm direction
-	FVector WristSideDirectionLS_OpenXR = FVector(0.f, 0.f, -1.f);
-	WristSideDirectionLS_OpenXR = FVector::CrossProduct(WristForwardLS_OpenXR, WristSideDirectionLS_OpenXR);
-
-	// Calculate the rotation that will align the UE4 hand's forward vector with the SteamVR hand's forward
-	FQuat AlignmentRot = FQuat::FindBetweenNormals(WristForwardLS_UE, WristForwardLS_OpenXR);
+	// Align forward vectors, openXR once in engine is X+ forward
+	FQuat AlignmentRot = FQuat::FindBetweenNormals(WristForwardLS_UE, OpenXRForwardDirection);
 
 	// Rotate about the aligned forward direction to make the side directions align
 	FVector WristSideDirectionMS_UE = AlignmentRot * WristSideDirectionLS;
-	FQuat TwistRotation = CalcRotationAboutAxis(WristSideDirectionMS_UE, WristSideDirectionLS_OpenXR, WristForwardLS_OpenXR);
+
+	// Rotate around, should the Side direction flip for openXR if its the left hand?
+	FQuat TwistRotation = CalcRotationAboutAxis(WristSideDirectionMS_UE, OpenXRSideDirection, OpenXRForwardDirection);
 
 	FRotator Difference = (TwistRotation * AlignmentRot).Rotator();
 
-	MappedBonePairs.AdjustmentQuat = (TwistRotation * AlignmentRot).Inverse();
-
-	// Apply the rotation to the hand
-	//TargetBoneRotationsMS[EUE4HandBone_Wrist] = TwistRotation * AlignmentRot;
+	MappedBonePairs.AdjustmentQuat = (TwistRotation * AlignmentRot).GetNormalized();
 
 }
 
@@ -240,8 +217,6 @@ void FAnimNode_ApplyOpenXRHandPose::ConvertHandTransformsSpace(TArray<FTransform
 	// Convert transforms to parent space
 	// The hand tracking transforms are in world space.
 
-	CalculateOpenXRAdjustment(WorldTransforms);
-
 	for (int32 Index = 0; Index < EHandKeypointCount; ++Index)
 	{
 		WorldTransforms[Index].NormalizeRotation();
@@ -251,17 +226,15 @@ void FAnimNode_ApplyOpenXRHandPose::ConvertHandTransformsSpace(TArray<FTransform
 			WorldTransforms[Index].Mirror(EAxis::Y, EAxis::Y);
 		}
 
-
-		WorldTransforms[Index].ConcatenateRotation(MappedBonePairs.AdjustmentQuat);
-
-		/*if (bUseAutoCalculatedRetarget)
+		if (bUseAutoCalculatedRetarget)
 		{
-			WorldTransforms[Index].ConcatenateRotation(MappedBonePairs.BonePairs[0].RetargetRot);
+			WorldTransforms[Index].ConcatenateRotation(MappedBonePairs.AdjustmentQuat);
+			//WorldTransforms[Index].ConcatenateRotation(MappedBonePairs.BonePairs[0].RetargetRot);
 		}
 		else
 		{
 			WorldTransforms[Index].ConcatenateRotation(AddTrans.GetRotation());
-		}*/
+		}
 	}
 
 	for (int32 Index = 0; Index < EHandKeypointCount; ++Index)
