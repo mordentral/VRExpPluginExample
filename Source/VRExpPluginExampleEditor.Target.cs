@@ -8,6 +8,7 @@ public class VRExpPluginExampleEditorTarget : TargetRules
 	public VRExpPluginExampleEditorTarget(TargetInfo Target) : base(Target)
 	{
         DefaultBuildSettings = BuildSettingsVersion.V2;
+		IncludeOrderVersion = EngineIncludeOrderVersion.Latest;
 
         Type = TargetType.Editor;
         ExtraModuleNames.AddRange(new string[] { "VRExpPluginExample" });
