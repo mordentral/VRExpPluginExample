@@ -104,6 +104,7 @@ UGripMotionControllerComponent::UGripMotionControllerComponent(const FObjectInit
 	bReplicateWithoutTracking = false;
 	bLerpingPosition = false;
 	bSmoothReplicatedMotion = false;
+	bDoubleBufferReplicatedMotion = false;
 	bReppedOnce = false;
 	bScaleTracking = false;
 	TrackingScaler = FVector(1.0f);
@@ -4552,7 +4553,7 @@ void UGripMotionControllerComponent::UpdateTracking(float DeltaTime)
 
 			if (LerpVal >= 1.0f)
 			{
-				SetRelativeLocationAndRotation(ReplicatedControllerTransform.Position, ReplicatedControllerTransform.Rotation);
+				SetRelativeLocationAndRotation(MotionSampleUpdateBuffer[0].Position, MotionSampleUpdateBuffer[0].Rotation);
 
 				// Stop lerping, wait for next update if it is delayed or lost then it will hitch here
 				// Actual prediction might be something to consider in the future, but rough to do in VR
@@ -4566,8 +4567,8 @@ void UGripMotionControllerComponent::UpdateTracking(float DeltaTime)
 			{
 				// Removed variables to speed this up a bit
 				SetRelativeLocationAndRotation(
-					FMath::Lerp(LastUpdatesRelativePosition, (FVector)ReplicatedControllerTransform.Position, LerpVal),
-					FMath::Lerp(LastUpdatesRelativeRotation, ReplicatedControllerTransform.Rotation, LerpVal)
+					FMath::Lerp(LastUpdatesRelativePosition, (FVector)MotionSampleUpdateBuffer[0].Position, LerpVal),
+					FMath::Lerp(LastUpdatesRelativeRotation, MotionSampleUpdateBuffer[0].Rotation, LerpVal)
 				);
 			}
 		}
@@ -5887,9 +5888,16 @@ bool UGripMotionControllerComponent::SetUpPhysicsHandle(const FBPActorGripInform
 	// Needs to be simulating in order to run physics
 	if (!NewGrip.AdvancedGripSettings.PhysicsSettings.bUsePhysicsSettings || !NewGrip.AdvancedGripSettings.PhysicsSettings.bSkipSettingSimulating)
 	{
-		if (!root->IsSimulatingPhysics())
+		// This is a temp fix anyway for a physx bug that appears to only exist in 4.27 from the chaos code merges.
+		// It breaks physics constraints so I don't want to use it on the other grip types.
+		// The potential slow downs it can cause really only rear their heads on this grip type anyway
+		if (NewGrip.GripCollisionType == EGripCollisionType::InteractiveHybridCollisionWithSweep)
 		{
 			root->RecreatePhysicsState();
+		}
+
+		if(!root->IsSimulatingPhysics())
+		{
 			root->SetSimulatePhysics(true);
 		}
 	}
