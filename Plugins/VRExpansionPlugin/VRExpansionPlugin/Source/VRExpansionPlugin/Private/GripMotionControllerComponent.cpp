@@ -135,6 +135,7 @@ UGripMotionControllerComponent::UGripMotionControllerComponent(const FObjectInit
 	bSkipPivotTransformAdjustment = false;
 
 	bOffsetByControllerProfile = true;
+	GripRenderThreadProfileTransform = FTransform::Identity;
 	CurrentControllerProfileTransform = FTransform::Identity;
 
 	DefaultGripScript = nullptr;
@@ -475,31 +476,10 @@ void UGripMotionControllerComponent::CreateRenderState_Concurrent(FRegisterCompo
 	// Don't bother updating this stuff if we aren't local or using them
 	if (bHasAuthority && !bDisableLowLatencyUpdate && IsActive())
 	{
-		LateUpdateParams.GripRenderThreadRelativeTransform = GetRelativeTransform();
-		LateUpdateParams.GripRenderThreadComponentScale = GetComponentScale();
-		LateUpdateParams.GripRenderThreadProfileTransform = CurrentControllerProfileTransform;
-		LateUpdateParams.GripRenderThreadLastLocationForLateUpdate = LastLocationForLateUpdate;
-
-		LateUpdateParams.bRenderSmoothHandTracking = bSmoothHandTracking;
-		if (LateUpdateParams.bRenderSmoothHandTracking)
-		{
-			if (UWorld* world = GetWorld())
-			{
-				LateUpdateParams.RenderLastDeltaTime = world->GetDeltaSeconds();
-			}
-
-			LateUpdateParams.bRenderSmoothWithEuroLowPassFunction = bSmoothWithEuroLowPassFunction;
-
-			if (LateUpdateParams.bRenderSmoothWithEuroLowPassFunction)
-			{
-				LateUpdateParams.RenderEuroSmoothingParams = EuroSmoothingParams;
-			}
-			else
-			{
-				LateUpdateParams.RenderSmoothingSpeed = SmoothingSpeed;
-				LateUpdateParams.RenderLastSmoothRelativeTransform = LastSmoothRelativeTransform;
-			}
-		}
+		GripRenderThreadRelativeTransform = GetRelativeTransform();
+		GripRenderThreadComponentScale = GetComponentScale();
+		GripRenderThreadProfileTransform = CurrentControllerProfileTransform;
+		GripRenderThreadLastLocationForLateUpdate = LastLocationForLateUpdate;
 	}
 
 	Super::Super::CreateRenderState_Concurrent(Context);
@@ -512,40 +492,25 @@ void UGripMotionControllerComponent::SendRenderTransform_Concurrent()
 	{
 		struct FPrimitiveUpdateRenderThreadRelativeTransformParams
 		{
-			FRenderTrackingParams LateUpdateParams;
+			FTransform RenderThreadRelativeTransform;
+			FVector RenderThreadComponentScale;
+			FTransform RenderThreadProfileTransform;
+			FVector GripRenderThreadLastLocationForLateUpdate;
 		};
 
 		FPrimitiveUpdateRenderThreadRelativeTransformParams UpdateParams;
-		UpdateParams.LateUpdateParams.GripRenderThreadRelativeTransform = GetRelativeTransform();
-		UpdateParams.LateUpdateParams.GripRenderThreadComponentScale = GetComponentScale();
-		UpdateParams.LateUpdateParams.GripRenderThreadProfileTransform = CurrentControllerProfileTransform;
-		UpdateParams.LateUpdateParams.GripRenderThreadLastLocationForLateUpdate = LastLocationForLateUpdate;
-
-		UpdateParams.LateUpdateParams.bRenderSmoothHandTracking = bSmoothHandTracking;
-		if (UpdateParams.LateUpdateParams.bRenderSmoothHandTracking)
-		{
-			if (UWorld* world = GetWorld())
-			{
-				UpdateParams.LateUpdateParams.RenderLastDeltaTime = world->GetDeltaSeconds();
-			}
-
-			UpdateParams.LateUpdateParams.bRenderSmoothWithEuroLowPassFunction = bSmoothWithEuroLowPassFunction;
-
-			if (UpdateParams.LateUpdateParams.bRenderSmoothWithEuroLowPassFunction)
-			{
-				UpdateParams.LateUpdateParams.RenderEuroSmoothingParams = EuroSmoothingParams;
-			}
-			else
-			{
-				UpdateParams.LateUpdateParams.RenderSmoothingSpeed = SmoothingSpeed;
-				UpdateParams.LateUpdateParams.RenderLastSmoothRelativeTransform = LastSmoothRelativeTransform;
-			}
-		}
+		UpdateParams.RenderThreadRelativeTransform = GetRelativeTransform();
+		UpdateParams.RenderThreadComponentScale = GetComponentScale();
+		UpdateParams.RenderThreadProfileTransform = CurrentControllerProfileTransform;
+		UpdateParams.GripRenderThreadLastLocationForLateUpdate = LastLocationForLateUpdate;
 
 		ENQUEUE_RENDER_COMMAND(UpdateRTRelativeTransformCommand)(
 			[UpdateParams, this](FRHICommandListImmediate& RHICmdList)
 			{
-				LateUpdateParams = UpdateParams.LateUpdateParams;
+				GripRenderThreadRelativeTransform = UpdateParams.RenderThreadRelativeTransform;
+				GripRenderThreadComponentScale = UpdateParams.RenderThreadComponentScale;
+				GripRenderThreadProfileTransform = UpdateParams.RenderThreadProfileTransform;
+				GripRenderThreadLastLocationForLateUpdate = UpdateParams.GripRenderThreadLastLocationForLateUpdate;
 			});
 	}
 
@@ -7051,7 +7016,7 @@ void UGripMotionControllerComponent::ApplyTrackingParameters(FVector& OriginalPo
 		// #TODO: This is technically unsafe, need to use a seperate value like the transforms for the render thread
 		// If I ever delete the simple char then this setup can just go away anyway though
 		// It has a data race condition right now though
-		FVector CorrectLastLocation = bIsInGameThread ? LastLocationForLateUpdate : LateUpdateParams.GripRenderThreadLastLocationForLateUpdate;
+		FVector CorrectLastLocation = bIsInGameThread ? LastLocationForLateUpdate : GripRenderThreadLastLocationForLateUpdate;
 
 		if (bOffsetByHMD)
 		{
@@ -7123,7 +7088,7 @@ bool UGripMotionControllerComponent::GripPollControllerState(FVector& Position, 
 					}
 					else
 					{
-						FinalControllerTransform = LateUpdateParams.GripRenderThreadProfileTransform * FinalControllerTransform;
+						FinalControllerTransform = GripRenderThreadProfileTransform * FinalControllerTransform;
 					}
 					
 					Orientation = FinalControllerTransform.Rotator();
@@ -7215,49 +7180,17 @@ void UGripMotionControllerComponent::FGripViewExtension::PreRenderViewFamily_Ren
 		}
 
 		// Poll state for the most recent controller transform
-		FVector Position = MotionControllerComponent->LateUpdateParams.GripRenderThreadRelativeTransform.GetTranslation();
-		FRotator Orientation = MotionControllerComponent->LateUpdateParams.GripRenderThreadRelativeTransform.GetRotation().Rotator();
+		FVector Position = MotionControllerComponent->GripRenderThreadRelativeTransform.GetTranslation();
+		FRotator Orientation = MotionControllerComponent->GripRenderThreadRelativeTransform.GetRotation().Rotator();
 
 		if (!MotionControllerComponent->GripPollControllerState(Position, Orientation, WorldToMetersScale))
 		{
 			return;
 		}
 
-		if (MotionControllerComponent->LateUpdateParams.bRenderSmoothHandTracking)
-		{
-			FTransform CalcedTransform = FTransform(Orientation, Position, MotionControllerComponent->LateUpdateParams.GripRenderThreadComponentScale);
-
-			if (MotionControllerComponent->LateUpdateParams.bRenderSmoothWithEuroLowPassFunction)
-			{
-				CalcedTransform = MotionControllerComponent->LateUpdateParams.RenderEuroSmoothingParams.RunFilterSmoothing(CalcedTransform, MotionControllerComponent->LateUpdateParams.RenderLastDeltaTime);
-				//SetRelativeTransform(RenderEuroSmoothingParams.RunFilterSmoothing(CalcedTransform, RenderLastDeltaTime));
-			}
-			else
-			{
-				if (MotionControllerComponent->LateUpdateParams.RenderSmoothingSpeed <= 0.f || MotionControllerComponent->LateUpdateParams.RenderLastSmoothRelativeTransform.Equals(FTransform::Identity))
-				{
-					//SetRelativeTransform(CalcedTransform);
-				}
-				else
-				{
-					const float Alpha = FMath::Clamp(MotionControllerComponent->LateUpdateParams.RenderLastDeltaTime * MotionControllerComponent->LateUpdateParams.RenderSmoothingSpeed, 0.f, 1.f);
-					MotionControllerComponent->LateUpdateParams.RenderLastSmoothRelativeTransform.Blend(MotionControllerComponent->LateUpdateParams.RenderLastSmoothRelativeTransform, CalcedTransform, Alpha);
-					CalcedTransform = MotionControllerComponent->LateUpdateParams.RenderLastSmoothRelativeTransform;
-					//SetRelativeTransform(LastSmoothRelativeTransform);
-				}
-			}
-
-			// Set smoothed properties
-			NewTransform = CalcedTransform;
-		}
-		else
-		{
-			NewTransform = FTransform(Orientation, Position, MotionControllerComponent->LateUpdateParams.GripRenderThreadComponentScale);
-		}
-
-		OldTransform = MotionControllerComponent->LateUpdateParams.GripRenderThreadRelativeTransform;
-		//NewTransform = FTransform(Orientation, Position, MotionControllerComponent->GripRenderThreadComponentScale);
-		MotionControllerComponent->LateUpdateParams.GripRenderThreadRelativeTransform = NewTransform;
+		OldTransform = MotionControllerComponent->GripRenderThreadRelativeTransform;
+		NewTransform = FTransform(Orientation, Position, MotionControllerComponent->GripRenderThreadComponentScale);
+		MotionControllerComponent->GripRenderThreadRelativeTransform = NewTransform;
 	} // Release lock on motion controller component
 
 	  // Tell the late update manager to apply the offset to the scene components
@@ -7307,41 +7240,9 @@ void UGripMotionControllerComponent::FGripViewExtension::LateLatchingViewFamily_
 			return;
 		}
 
-		if (MotionControllerComponent->LateUpdateParams.bRenderSmoothHandTracking)
-		{
-			FTransform CalcedTransform = FTransform(Orientation, Position, MotionControllerComponent->LateUpdateParams.GripRenderThreadComponentScale);
-
-			if (MotionControllerComponent->LateUpdateParams.bRenderSmoothWithEuroLowPassFunction)
-			{
-				CalcedTransform = MotionControllerComponent->LateUpdateParams.RenderEuroSmoothingParams.RunFilterSmoothing(CalcedTransform, MotionControllerComponent->LateUpdateParams.RenderLastDeltaTime);
-				//SetRelativeTransform(RenderEuroSmoothingParams.RunFilterSmoothing(CalcedTransform, RenderLastDeltaTime));
-			}
-			else
-			{
-				if (MotionControllerComponent->LateUpdateParams.RenderSmoothingSpeed <= 0.f || MotionControllerComponent->LateUpdateParams.RenderLastSmoothRelativeTransform.Equals(FTransform::Identity))
-				{
-					//SetRelativeTransform(CalcedTransform);
-				}
-				else
-				{
-					const float Alpha = FMath::Clamp(MotionControllerComponent->LateUpdateParams.RenderLastDeltaTime * MotionControllerComponent->LateUpdateParams.RenderSmoothingSpeed, 0.f, 1.f);
-					MotionControllerComponent->LateUpdateParams.RenderLastSmoothRelativeTransform.Blend(MotionControllerComponent->LateUpdateParams.RenderLastSmoothRelativeTransform, CalcedTransform, Alpha);
-					CalcedTransform = MotionControllerComponent->LateUpdateParams.RenderLastSmoothRelativeTransform;
-					//SetRelativeTransform(LastSmoothRelativeTransform);
-				}
-			}
-
-			// Set smoothed properties
-			NewTransform = CalcedTransform;
-		}
-		else
-		{
-			NewTransform = FTransform(Orientation, Position, MotionControllerComponent->LateUpdateParams.GripRenderThreadComponentScale);
-		}
-
-		OldTransform = MotionControllerComponent->LateUpdateParams.GripRenderThreadRelativeTransform;
-		//NewTransform = FTransform(Orientation, Position, MotionControllerComponent->GripRenderThreadComponentScale);
-		MotionControllerComponent->LateUpdateParams.GripRenderThreadRelativeTransform = NewTransform;
+		OldTransform = MotionControllerComponent->GripRenderThreadRelativeTransform;
+		NewTransform = FTransform(Orientation, Position, MotionControllerComponent->GripRenderThreadComponentScale);
+		MotionControllerComponent->GripRenderThreadRelativeTransform = NewTransform;
 
 	} // Release the lock on the MotionControllerComponent
 
