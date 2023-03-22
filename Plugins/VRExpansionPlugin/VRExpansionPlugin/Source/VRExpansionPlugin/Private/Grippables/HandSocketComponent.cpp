@@ -7,6 +7,7 @@
 #include "Animation/AnimSequence.h"
 #include "Animation/AnimInstanceProxy.h"
 #include "Animation/PoseSnapshot.h"
+#include "Animation/AnimData/AnimDataModel.h"
 //#include "VRExpansionFunctionLibrary.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/PoseableMeshComponent.h"

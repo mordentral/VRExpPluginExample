@@ -33,6 +33,24 @@ FORCEINLINE_DEBUGGABLE static bool CanComponentsGenerateOverlap(const UPrimitive
 		&& MyComponent->GetCollisionResponseToComponent(OtherComp) == ECR_Overlap;
 }
 
+// Predicate to determine if an overlap is *NOT* with a certain AActor.
+struct FPredicateOverlapHasDifferentActorVR
+{
+	FPredicateOverlapHasDifferentActor(const AActor& Owner)
+		: MyOwnerPtr(&Owner)
+	{
+	}
+
+	bool operator() (const FOverlapInfo& Info)
+	{
+		// MyOwnerPtr is always valid, so we don't need the IsValid() checks in the WeakObjectPtr comparison operator.
+		return !MyOwnerPtr.HasSameIndexAndSerialNumber(Info.OverlapInfo.HitObjectHandle.FetchActor());
+	}
+
+private:
+	const TWeakObjectPtr<const AActor> MyOwnerPtr;
+};
+
 // Predicate to identify components from overlaps array that can overlap
 struct FPredicateFilterCanOverlap
 {
@@ -142,7 +160,7 @@ namespace PrimitiveComponentStatics
 }
 
 // Predicate to determine if an overlap is with a certain AActor.
-struct FPredicateOverlapHasSameActor
+/*struct FPredicateOverlapHasSameActor
 {
 	FPredicateOverlapHasSameActor(const AActor& Owner)
 		: MyOwnerPtr(&Owner)
@@ -175,7 +193,7 @@ struct FPredicateOverlapHasDifferentActor
 
 private:
 	const TWeakObjectPtr<const AActor> MyOwnerPtr;
-};
+};*/
 
 // Helper for finding the index of an FOverlapInfo in an Array using the FFastOverlapInfoCompare predicate, knowing that at least one overlap is valid (non-null).
 template<class AllocatorType>
@@ -1312,7 +1330,7 @@ bool UVRRootComponent::UpdateOverlapsImpl(const TOverlapArrayView* NewPendingOve
 				TInlineOverlapPointerArray OldOverlappingComponentPtrs;
 				if (bIgnoreChildren)
 				{
-					GetPointersToArrayDataByPredicate(OldOverlappingComponentPtrs, OverlappingComponents, FPredicateOverlapHasDifferentActor(*MyActor));
+					GetPointersToArrayDataByPredicate(OldOverlappingComponentPtrs, OverlappingComponents, FPredicateOverlapHasDifferentActorVR(*MyActor));
 				}
 				else
 				{

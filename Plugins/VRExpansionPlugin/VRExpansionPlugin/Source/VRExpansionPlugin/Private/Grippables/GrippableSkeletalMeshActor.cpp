@@ -11,6 +11,7 @@
 #include "Misc/BucketUpdateSubsystem.h"
 #include "Net/UnrealNetwork.h"
 #include "PhysicsReplication.h"
+#include "Physics/Experimental/PhysScene_Chaos.h"
 #if WITH_PUSH_MODEL
 #include "Net/Core/PushModel/PushModel.h"
 #endif

@@ -6,6 +6,7 @@
 #include "TimerManager.h"
 #include "Net/UnrealNetwork.h"
 #include "PhysicsReplication.h"
+#include "PhysicsEngine/PhysicsAsset.h"
 #if WITH_PUSH_MODEL
 #include "Net/Core/PushModel/PushModel.h"
 #endif

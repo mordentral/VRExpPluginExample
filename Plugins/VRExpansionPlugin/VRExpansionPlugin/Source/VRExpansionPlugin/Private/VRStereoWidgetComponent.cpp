@@ -16,6 +16,7 @@
 #include "EngineGlobals.h"
 #include "MaterialShared.h"
 #include "Materials/MaterialInstanceDynamic.h"
+#include "Materials/MaterialRenderProxy.h"
 #include "Engine/Engine.h"
 //#include "Widgets/SWindow.h"
 #include "Engine/TextureRenderTarget2D.h"
@@ -821,7 +822,7 @@ public:
 		if(!bCreateSceneProxy)
 			return;
 
-#if WITH_EDITOR
+#if FALSE// WITH_EDITOR
 		const bool bWireframe = AllowDebugViewmodes() && ViewFamily.EngineShowFlags.Wireframe;
 
 		auto WireframeMaterialInstance = new FColoredMaterialRenderProxy(

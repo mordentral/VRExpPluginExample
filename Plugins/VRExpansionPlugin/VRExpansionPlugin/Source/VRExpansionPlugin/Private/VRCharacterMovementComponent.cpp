@@ -12,6 +12,7 @@
 #include "GameFramework/GameNetworkManager.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/GameState.h"
+#include "GameFramework/WorldSettings.h"
 #include "Components/PrimitiveComponent.h"
 #include "Animation/AnimMontage.h"
 #include "DrawDebugHelpers.h"
@@ -1305,7 +1306,7 @@ void UVRCharacterMovementComponent::ReplicateMoveToServer(float DeltaTime, const
 			// Decide whether to hold off on move	
 			// Decide whether to hold off on move
 			const float NetMoveDelta = FMath::Clamp(GetClientNetSendDeltaTime(PC, ClientData, NewMovePtr), 1.f / 120.f, 1.f / 5.f);
-			
+
 			if ((MyWorld->TimeSeconds - ClientData->ClientUpdateTime) * MyWorld->GetWorldSettings()->GetEffectiveTimeDilation() < NetMoveDelta)
 			{
 				// Delay sending this move.

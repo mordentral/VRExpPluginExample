@@ -13,6 +13,7 @@
 #include "PhysicsReplication.h"
 #include "GripScripts/VRGripScriptBase.h"
 #include "DrawDebugHelpers.h"
+#include "Physics/Experimental/PhysScene_Chaos.h"
 
 #if WITH_PUSH_MODEL
 #include "Net/Core/PushModel/PushModel.h"

@@ -27,6 +27,8 @@
 #include "EditorStyleSet.h"
 #include "Styling/CoreStyle.h"
 
+#include "Animation/AnimData/AnimDataModel.h"
+
 #include "Editor/UnrealEdEngine.h"
 #include "UnrealEdGlobals.h"
 
