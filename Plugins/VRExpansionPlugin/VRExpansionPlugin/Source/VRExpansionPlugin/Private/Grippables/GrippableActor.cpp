@@ -97,13 +97,13 @@ void AGrippableActor::PreReplication(IRepChangedPropertyTracker & ChangedPropert
 
 	GatherCurrentMovement();
 
-	DOREPLIFETIME_ACTIVE_OVERRIDE_PRIVATE_PROPERTY(AActor, ReplicatedMovement, IsReplicatingMovement());
+	DOREPLIFETIME_ACTIVE_OVERRIDE_FAST(AActor, ReplicatedMovement, IsReplicatingMovement());
 
 	// Don't need to replicate AttachmentReplication if the root component replicates, because it already handles it.
 	DOREPLIFETIME_ACTIVE_OVERRIDE_FAST(AGrippableActor, AttachmentWeldReplication, RootComponent && !RootComponent->GetIsReplicated());
 
 	// Don't need to replicate AttachmentReplication if the root component replicates, because it already handles it.
-	DOREPLIFETIME_ACTIVE_OVERRIDE_PRIVATE_PROPERTY(AActor, AttachmentReplication, false);// RootComponent && !RootComponent->GetIsReplicated());
+	DOREPLIFETIME_ACTIVE_OVERRIDE_FAST(AActor, AttachmentReplication, false);// RootComponent && !RootComponent->GetIsReplicated());
 
 
 #if WITH_PUSH_MODEL
@@ -141,7 +141,7 @@ void AGrippableActor::GatherCurrentMovement()
 		if (RootPrimComp && RootPrimComp->IsSimulatingPhysics())
 		{
 #if UE_WITH_IRIS
-			const bool bPrevRepPhysics = ReplicatedMovement.bRepPhysics;
+			const bool bPrevRepPhysics = GetReplicatedMovement_Mutable().bRepPhysics;
 #endif // UE_WITH_IRIS
 
 			bool bFoundInCache = false;
@@ -195,7 +195,7 @@ void AGrippableActor::GatherCurrentMovement()
 
 #if UE_WITH_IRIS
 			// If RepPhysics has changed value then notify the ReplicationSystem
-			if (bPrevRepPhysics != ReplicatedMovement.bRepPhysics)
+			if (bPrevRepPhysics != GetReplicatedMovement_Mutable().bRepPhysics)
 			{
 				UpdateReplicatePhysicsCondition();
 			}

@@ -822,7 +822,7 @@ public:
 		if(!bCreateSceneProxy)
 			return;
 
-#if FALSE// WITH_EDITOR
+#if WITH_EDITOR
 		const bool bWireframe = AllowDebugViewmodes() && ViewFamily.EngineShowFlags.Wireframe;
 
 		auto WireframeMaterialInstance = new FColoredMaterialRenderProxy(
