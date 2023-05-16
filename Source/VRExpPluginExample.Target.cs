@@ -21,7 +21,7 @@ public class VRExpPluginExampleTarget : TargetRules
          * This is our Steam App ID.
          * # Define in both server and client targets
          */
-        ProjectDefinitions.Add("UE4_PROJECT_STEAMSHIPPINGID=480");
+        ProjectDefinitions.Add("UE_PROJECT_STEAMSHIPPINGID=480");
 
 
 
@@ -30,20 +30,20 @@ public class VRExpPluginExampleTarget : TargetRules
          * under Dedicated Game Server Information in Steamworks
          * # Define in the Server target
          */
-        //ProjectDefinitions.Add("UE4_PROJECT_STEAMPRODUCTNAME=\"MyGame\"");
+        //ProjectDefinitions.Add("UE_PROJECT_STEAMPRODUCTNAME=\"MyGame\"");
 
         /*
          * This is used on SetModDir(), and should be the same as your Product Name
          * under Dedicated Game Server Information in Steamworks
          * # Define in the client target
          */
-        //ProjectDefinitions.Add("UE4_PROJECT_STEAMGAMEDIR=\"MyGame\"");
+        //ProjectDefinitions.Add("UE_PROJECT_STEAMGAMEDIR=\"MyGame\"");
 
         /*
          * This is what shows up under the game filter in Steam server browsers.
          * # Define in both server and client targets
          */
-        //ProjectDefinitions.Add("UE4_PROJECT_STEAMGAMEDESC=\"My Game\"");
+        //ProjectDefinitions.Add("UE_PROJECT_STEAMGAMEDESC=\"My Game\"");
     }
 
     //
