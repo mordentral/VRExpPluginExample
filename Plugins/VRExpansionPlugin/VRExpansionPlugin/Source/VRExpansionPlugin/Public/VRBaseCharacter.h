@@ -461,17 +461,13 @@ public:
 	{
 		return FVector::ZeroVector;
 	}
-	
+
 	void ZeroToSeatInformation()
 	{
-		if (bRetainRoomscale)
-		{
+		//if (bRetainRoomscale)
+		//{
 			SetSeatRelativeLocationAndRotationVR(FVector::ZeroVector);
-		}
-		else
-		{
-			NetSmoother->SetRelativeLocation(GetTargetHeightOffset());
-		}
+		//}
 
 		NotifyOfTeleport();
 		//LeftMotionController->PostTeleportMoveGrippedObjects();
