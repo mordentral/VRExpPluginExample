@@ -2973,7 +2973,7 @@ bool UGripMotionControllerComponent::NotifyGrip(FBPActorGripInformation &NewGrip
 				{
 					if (FPhysScene* PhysScene = World->GetPhysicsScene())
 					{
-						if (FPhysicsReplication* PhysicsReplication = PhysScene->GetPhysicsReplication())
+						if (IPhysicsReplication* PhysicsReplication = PhysScene->GetPhysicsReplication())
 						{
 							FBodyInstance* BI = root->GetBodyInstance(NewGrip.GrippedBoneName);
 							if (BI && BI->IsInstanceSimulatingPhysics())
@@ -3679,7 +3679,7 @@ void UGripMotionControllerComponent::Drop_Implementation(const FBPActorGripInfor
 				{
 					if (FPhysScene * PhysScene = World->GetPhysicsScene())
 					{
-						if (FPhysicsReplication * PhysicsReplication = PhysScene->GetPhysicsReplication())
+						if (IPhysicsReplication* PhysicsReplication = PhysScene->GetPhysicsReplication())
 						{
 							FBodyInstance* BI = root->GetBodyInstance(NewDrop.GrippedBoneName);
 							if (BI && BI->IsInstanceSimulatingPhysics())
