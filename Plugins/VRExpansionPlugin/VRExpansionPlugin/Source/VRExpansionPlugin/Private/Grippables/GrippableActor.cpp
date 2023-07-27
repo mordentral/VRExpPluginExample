@@ -113,13 +113,13 @@ void AGrippableActor::PreReplication(IRepChangedPropertyTracker & ChangedPropert
 	}
 #endif
 
-	PRAGMA_DISABLE_DEPRECATION_WARNINGS
+	/*PRAGMA_DISABLE_DEPRECATION_WARNINGS
 	UBlueprintGeneratedClass* BPClass = Cast<UBlueprintGeneratedClass>(GetClass());
 	if (BPClass != nullptr)
 	{
 		BPClass->InstancePreReplication(this, ChangedPropertyTracker);
 	}
-	PRAGMA_ENABLE_DEPRECATION_WARNINGS
+	PRAGMA_ENABLE_DEPRECATION_WARNINGS*/
 }
 
 void AGrippableActor::GatherCurrentMovement()
@@ -749,9 +749,9 @@ void AGrippableActor::PostNetReceivePhysicState()
 	Super::PostNetReceivePhysicState();
 }
 // This isn't called very many places but it does come up
-void AGrippableActor::MarkComponentsAsPendingKill()
+void AGrippableActor::MarkComponentsAsGarbage(bool bModify)
 {
-	Super::MarkComponentsAsPendingKill();
+	Super::MarkComponentsAsGarbage(bModify);
 
 	for (int32 i = 0; i < GripLogicScripts.Num(); ++i)
 	{
