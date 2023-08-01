@@ -247,7 +247,8 @@ void UVREPhysicalAnimationComponent::UpdateWeldedBoneDriver(float DeltaTime)
 						PhysicsInterfaceTypes::FInlineShapeArray Shapes;
 						FPhysicsInterface::GetAllShapes_AssumedLocked(Actor, Shapes);
 
-						FTransform GlobalPose = FPhysicsInterface::GetGlobalPose_AssumesLocked(ActorHandle).Inverse();
+						FTransform GlobalPose = FPhysicsInterface::GetGlobalPose_AssumesLocked(ActorHandle);
+						FTransform GlobalPoseInv = GlobalPose.Inverse();
 
 
 #if ENABLE_DRAW_DEBUG
@@ -292,7 +293,7 @@ void UVREPhysicalAnimationComponent::UpdateWeldedBoneDriver(float DeltaTime)
 								// This fixes a bug with simulating inverse scaled meshes
 								//Trans.SetScale3D(FVector(1.f) * Trans.GetScale3D().GetSignVector());
 								FTransform GlobalTransform = WeldedData->RelativeTransform * Trans;
-								FTransform RelativeTM = GlobalTransform * GlobalPose;
+								FTransform RelativeTM = GlobalTransform * GlobalPoseInv;
 
 								if (!WeldedData->LastLocal.Equals(RelativeTM))
 								{
