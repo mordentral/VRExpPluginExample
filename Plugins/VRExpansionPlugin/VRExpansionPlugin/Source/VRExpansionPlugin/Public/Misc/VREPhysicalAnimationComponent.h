@@ -5,9 +5,6 @@
 //#include "UObject/ObjectMacros.h"
 #include "Components/ActorComponent.h"
 #include "EngineDefines.h"
-#if ENABLE_DRAW_DEBUG
-#include "Chaos/DebugDrawQueue.h"
-#endif
 #include "VREPhysicalAnimationComponent.generated.h"
 
 struct FReferenceSkeleton;
@@ -86,15 +83,6 @@ public:
 
 	//void OnWeldedMassUpdated(FBodyInstance* BodyInstance);
 	void UpdateWeldedBoneDriver(float DeltaTime);
-
-
-	/** If true then we will debug draw the mesh collision post shape alterations */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = WeldedBoneDriver)
-		bool bDebugDrawCollision = false;
-
-#if ENABLE_DRAW_DEBUG
-	void DebugDrawMesh(const TArray<Chaos::FLatentDrawCommand>& DrawCommands);
-#endif
 
 	FTransform GetWorldSpaceRefBoneTransform(FReferenceSkeleton& RefSkel, int32 BoneIndex, int32 ParentBoneIndex);
 	FTransform GetRefPoseBoneRelativeTransform(USkeletalMeshComponent* SkeleMesh, FName BoneName, FName ParentBoneName);
