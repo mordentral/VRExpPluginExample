@@ -311,7 +311,7 @@ void UVREPhysicalAnimationComponent::UpdateWeldedBoneDriver(float DeltaTime)
 									FTransform GlobalTransform = WeldedData->RelativeTransform * Trans;
 									FTransform RelativeTM = GlobalTransform * GlobalPoseInv;
 
-									BaseTransform = GlobalTransform;
+									BaseTransform = WeldedData->RelativeTransform;// GlobalTransform;
 
 									if (!WeldedData->LastLocal.Equals(RelativeTM))
 									{
@@ -327,14 +327,17 @@ void UVREPhysicalAnimationComponent::UpdateWeldedBoneDriver(float DeltaTime)
 								const Chaos::FImplicitObject* ShapeImplicit = Shape.Shape->GetGeometry().Get();
 								Chaos::EImplicitObjectType Type = ShapeImplicit->GetType();
 
+							
 								FTransform shapeTransform = FPhysicsInterface::GetLocalTransform(Shape);
-								FTransform FinalTransform = shapeTransform * GlobalPose;
+								FTransform FinalTransform = /*BaseTransform.Inverse() **/ shapeTransform * GlobalPose;
 
 								if (bOperateOn)
 								{
-									FinalTransform = BaseTransform;
+									//FinalTransform = BaseTransform * shapeTransform * GlobalPose;
+									//FinalTransform = BaseTransform;
 								}
 
+								//DrawDebugSphere(GetWorld(), FinalTransform.GetLocation(), 2.0f, 10.0f, FColor::White, false, -1.f, 0.f, 0.f);
 								Chaos::FRigidTransform3 RigTransform(FinalTransform);
 								Chaos::DebugDraw::DrawShape(RigTransform, ShapeImplicit, Chaos::FShapeOrShapesArray(), FColor::White);
 							}
