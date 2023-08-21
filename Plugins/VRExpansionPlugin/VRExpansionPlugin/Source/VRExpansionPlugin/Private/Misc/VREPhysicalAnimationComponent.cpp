@@ -324,8 +324,8 @@ void UVREPhysicalAnimationComponent::UpdateWeldedBoneDriver(float DeltaTime)
 #if ENABLE_DRAW_DEBUG
 							if (bDebugDrawCollision)
 							{
-								const Chaos::FImplicitObject* ShapeImplicit = Shape.Shape->GetGeometry().Get();
-								Chaos::EImplicitObjectType Type = ShapeImplicit->GetType();
+								//const Chaos::FImplicitObject* ShapeImplicit = Shape.Shape->GetGeometry().Get();
+								//Chaos::EImplicitObjectType Type = ShapeImplicit->GetType();
 
 							
 								FTransform shapeTransform = FPhysicsInterface::GetLocalTransform(Shape);
