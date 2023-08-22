@@ -294,7 +294,7 @@ void UVREPhysicalAnimationComponent::UpdateWeldedBoneDriver(float DeltaTime)
 
 							if (TargetBoneName == BaseWeldedBoneDriverName)
 							{
-								//bOperateOn = false;
+								bOperateOn = false;
 								//continue;
 							}
 
@@ -324,12 +324,12 @@ void UVREPhysicalAnimationComponent::UpdateWeldedBoneDriver(float DeltaTime)
 #if ENABLE_DRAW_DEBUG
 							if (bDebugDrawCollision)
 							{
-								const Chaos::FImplicitObject* ShapeImplicit = Shape.Shape->GetGeometry().Get();
-								Chaos::EImplicitObjectType Type = ShapeImplicit->GetType();
+								//const Chaos::FImplicitObject* ShapeImplicit = Shape.Shape->GetGeometry().Get();
+								//Chaos::EImplicitObjectType Type = ShapeImplicit->GetType();
 
 							
 								FTransform shapeTransform = FPhysicsInterface::GetLocalTransform(Shape);
-								FTransform FinalTransform = /*BaseTransform.Inverse() **/ shapeTransform * GlobalPose;
+								FTransform FinalTransform = BaseTransform.Inverse() * shapeTransform * GlobalPose;
 
 								if (bOperateOn)
 								{
@@ -337,9 +337,9 @@ void UVREPhysicalAnimationComponent::UpdateWeldedBoneDriver(float DeltaTime)
 									//FinalTransform = BaseTransform;
 								}
 
-								//DrawDebugSphere(GetWorld(), FinalTransform.GetLocation(), 2.0f, 10.0f, FColor::White, false, -1.f, 0.f, 0.f);
-								Chaos::FRigidTransform3 RigTransform(FinalTransform);
-								Chaos::DebugDraw::DrawShape(RigTransform, ShapeImplicit, Chaos::FShapeOrShapesArray(), FColor::White);
+								DrawDebugSphere(GetWorld(), FinalTransform.GetLocation(), 2.0f, 10.0f, FColor::White, false, -1.f, 0.f, 0.f);
+								//Chaos::FRigidTransform3 RigTransform(FinalTransform);
+								//Chaos::DebugDraw::DrawShape(RigTransform, ShapeImplicit, Chaos::FShapeOrShapesArray(), FColor::White);
 							}
 #endif
 						}
