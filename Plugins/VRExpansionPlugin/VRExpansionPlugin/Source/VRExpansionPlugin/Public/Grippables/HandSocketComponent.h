@@ -43,7 +43,7 @@ private:
 };
 
 
-UENUM(BlueprintType)
+UENUM()
 namespace EVRAxis
 {
 	enum Type
@@ -100,11 +100,11 @@ public:
 	//static get socket compoonent
 
 	//Axis to mirror on for this socket
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Hand Socket Data|Mirroring|Advanced")
+	UPROPERTY(EditDefaultsOnly, Category = "Hand Socket Data|Mirroring|Advanced")
 		TEnumAsByte<EVRAxis::Type> MirrorAxis;
 
 	// Axis to flip on when mirroring this socket
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Hand Socket Data|Mirroring|Advanced")
+	UPROPERTY(VisibleDefaultsOnly, Category = "Hand Socket Data|Mirroring|Advanced")
 		TEnumAsByte<EVRAxis::Type> FlipAxis;
 
 	// Relative placement of the hand to this socket
