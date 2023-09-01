@@ -315,7 +315,8 @@ void UVREPhysicalAnimationComponent::UpdateWeldedBoneDriver(float DeltaTime)
 
 									if (!WeldedData->LastLocal.Equals(RelativeTM))
 									{
-										FPhysicsInterface::SetLocalTransform(Shape, RelativeTM);
+										//FPhysicsInterface::SetLocalTransform(Shape, FTransform::Identity);
+										//FPhysicsInterface::SetLocalTransform(Shape, RelativeTM);
 										WeldedData->LastLocal = RelativeTM;
 									}
 								}
@@ -329,6 +330,12 @@ void UVREPhysicalAnimationComponent::UpdateWeldedBoneDriver(float DeltaTime)
 
 							
 								FTransform shapeTransform = FPhysicsInterface::GetLocalTransform(Shape);
+
+								if (TargetBoneName == FName(TEXT("root")) || TargetBoneName == FName(TEXT("hand_r")) || TargetBoneName == FName(TEXT("index_metacarpal_r")) || TargetBoneName == FName(TEXT("index_01_r")))
+								{
+									GEngine->AddOnScreenDebugMessage(-1, 1.0f, FColor::Yellow, FString::Printf(TEXT("%s: %s"), *TargetBoneName.ToString(), *shapeTransform.GetLocation().ToString()));
+								}
+
 								FTransform FinalTransform = BaseTransform.Inverse() * shapeTransform * GlobalPose;
 
 								if (bOperateOn)
