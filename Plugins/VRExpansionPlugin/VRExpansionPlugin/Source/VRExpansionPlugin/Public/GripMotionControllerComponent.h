@@ -338,9 +338,9 @@ protected:
 	
 	void OnModularFeatureUnregistered(const FName& Type, class IModularFeature* ModularFeature);
 
-	IMotionController* GripPolledMotionController_GameThread;
-	IMotionController* GripPolledMotionController_RenderThread;
-	FCriticalSection GripPolledMotionControllerMutex;
+	//IMotionController* GripPolledMotionController_GameThread;
+	//IMotionController* GripPolledMotionController_RenderThread;
+	//FCriticalSection GripPolledMotionControllerMutex;
 
 	// Late update control variables (should likely struct these soon)
 	struct FRenderTrackingParams
@@ -1425,6 +1425,8 @@ public:
 
 	/** If true, the Position and Orientation args will contain the most recent controller state */
 	virtual bool GripPollControllerState(FVector& Position, FRotator& Orientation, float WorldToMetersScale);
+	bool GripPollControllerState_GameThread(FVector& Position, FRotator& Orientation, bool& OutbProvidedLinearVelocity, FVector& OutLinearVelocity, bool& OutbProvidedAngularVelocity, FVector& OutAngularVelocityAsAxisAndLength, bool& OutbProvidedLinearAcceleration, FVector& OutLinearAcceleration, float WorldToMetersScale);
+	bool GripPollControllerState_RenderThread(FVector& Position, FRotator& Orientation, float WorldToMetersScale);
 
 	/** Whether or not this component had a valid tracked controller associated with it this frame*/
 	bool bTracked;
