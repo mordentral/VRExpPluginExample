@@ -1429,7 +1429,7 @@ public:
 	bool GripPollControllerState_RenderThread(FVector& Position, FRotator& Orientation, float WorldToMetersScale);
 
 	/** Whether or not this component had a valid tracked controller associated with it this frame*/
-	bool bTracked;
+	//bool bTracked;
 
 	/** Whether or not this component had a valid tracked device this frame
 	*
@@ -1446,8 +1446,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "GripMotionController", meta = (ExpandEnumAsExecs = "Result"))
 		void GetControllerDeviceID(FXRDeviceId & DeviceID, EBPVRResultSwitch &Result, bool bCheckOpenVROnly = false);
 
+	// Return whether this controller has authority (is locally net owned)
+	UFUNCTION(BlueprintPure, Category = "GripMotionController")
+		bool HasAuthority() const;
+
 	/** Whether or not this component has authority within the frame*/
-	bool bHasAuthority;
+	//bool bHasAuthority;
 
 	/** Whether or not this component has informed the visualization component (if present) to start rendering */
 	//bool bHasStartedRendering = false;
