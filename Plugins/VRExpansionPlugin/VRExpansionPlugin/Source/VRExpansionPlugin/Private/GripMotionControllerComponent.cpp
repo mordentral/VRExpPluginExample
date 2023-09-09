@@ -8370,8 +8370,7 @@ bool UGripMotionControllerComponent::GetGripDistance_BP(FBPActorGripInformation 
 	FVector CheckDistance;
 	if (!GetPhysicsJointLength(Grip, RootComp, CheckDistance))
 	{
-		CheckDistance = (ExpectedLocation - 
-RootComp->GetComponentLocation());
+		CheckDistance = (ExpectedLocation - RootComp->GetComponentLocation());
 	}
 	// Set grip distance now for people to use
 	CurrentDistance = CheckDistance.Size();
