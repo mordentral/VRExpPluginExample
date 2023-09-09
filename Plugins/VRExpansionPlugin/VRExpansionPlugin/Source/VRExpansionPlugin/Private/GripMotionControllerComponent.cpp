@@ -148,7 +148,7 @@ UGripMotionControllerComponent::UGripMotionControllerComponent(const FObjectInit
 	PrimaryComponentTick.bTickEvenWhenPaused = true;
 
 	PlayerIndex = 0;
-	MotionSource = FXRMotionControllerBase::LeftHandSourceId;
+	MotionSource = IMotionController::LeftHandSourceId;
 	//Hand = EControllerHand::Left;
 	bDisableLowLatencyUpdate = false;
 	bHasAuthority = false;
@@ -4645,40 +4645,15 @@ void UGripMotionControllerComponent::UpdateTracking(float DeltaTime)
 			
 			float WorldToMeters = GetWorld() ? GetWorld()->GetWorldSettings()->WorldToMeters : 100.0f;
 			ETrackingStatus LastTrackingStatus = CurrentTrackingStatus;
-			const bool bNewTrackedState = GripPollControllerState(Position, Orientation, WorldToMeters);
+			const bool bNewTrackedState = PollControllerState_GameThread(Position, Orientation, bProvidedLinearVelocity, LinearVelocity, bProvidedAngularVelocity, AngularVelocityAsAxisAndLength, bProvidedLinearAcceleration, LinearAcceleration, WorldToMeters);
 
-			// Pull a reference to the private display component if it should exist
-			/*if (bDisplayDeviceModel && !IsValid(DisplayComponentReference.Get()))
+			// if controller tracking just kicked in or we haven't started rendering in the (possibly present) 
+			// visualization component.
+			if (!bTracked && bNewTrackedState)
 			{
-				if (FProperty* Property = this->GetClass()->FindPropertyByName("DisplayComponent"))
-				{
-					const TObjectPtr<UPrimitiveComponent>* DisplayCompPrim = Property->ContainerPtrToValuePtr<TObjectPtr<UPrimitiveComponent>>(this);
+				OnActivateVisualizationComponent.Broadcast(true);
+			}
 
-					if (DisplayCompPrim && IsValid(*DisplayCompPrim))
-					{
-						// Working Display component reference
-						DisplayComponentReference = DisplayCompPrim->Get();
-					}
-				}
-			}*/
-
-			// if controller tracking just kicked in or we haven't gotten a valid model yet
-			/*if (!bTracked && bNewTrackedState && !bHasStartedRendering)
-			{
-				if (VisualizationComponent)
-				{
-					VisualizationComponent->SetIsRenderingActive(true);
-					bHasStartedRendering = true;
-				}
-			}*/
-
-			// This part is deprecated and will be removed in later versions.
-			// If controller tracking just kicked in or we haven't gotten a valid model yet
-			/*if (((!bTracked && bNewTrackedState) || !DisplayComponentReference.IsValid()) && bDisplayDeviceModel && DisplayModelSource != UMotionControllerComponent::CustomModelSourceId)
-			{
-				RefreshDisplayComponent();
-			} // End of deprecation
-			*/
 
 			bTracked = bNewTrackedState && (bIgnoreTrackingStatus || CurrentTrackingStatus != ETrackingStatus::NotTracked);
 			if (bTracked)
@@ -7435,7 +7410,7 @@ void UGripMotionControllerComponent::FGripViewExtension::PreRenderViewFamily_Ren
 		FVector Position = MotionControllerComponent->LateUpdateParams.GripRenderThreadRelativeTransform.GetTranslation();
 		FRotator Orientation = MotionControllerComponent->LateUpdateParams.GripRenderThreadRelativeTransform.GetRotation().Rotator();
 
-		if (!MotionControllerComponent->GripPollControllerState(Position, Orientation, WorldToMetersScale))
+		if (!MotionControllerComponent->PollControllerState_RenderThread(Position, Orientation, WorldToMetersScale))
 		{
 			return;
 		}
@@ -7939,7 +7914,7 @@ void UGripMotionControllerComponent::Server_NotifySecondaryAttachmentChanged_Ret
 void UGripMotionControllerComponent::GetControllerDeviceID(FXRDeviceId & DeviceID, EBPVRResultSwitch &Result, bool bCheckOpenVROnly)
 {
 	EControllerHand ControllerHandIndex;
-	if (!FXRMotionControllerBase::GetHandEnumForSourceName(MotionSource, ControllerHandIndex))
+	if (!IMotionController::GetHandEnumForSourceName(MotionSource, ControllerHandIndex))
 	{
 		Result = EBPVRResultSwitch::OnFailed;
 		return;
@@ -8229,7 +8204,7 @@ void FExpandedLateUpdateManager::ProcessGripArrayLateUpdatePrimitives(UGripMotio
 
 void UGripMotionControllerComponent::GetHandType(EControllerHand& Hand)
 {
-	if (!FXRMotionControllerBase::GetHandEnumForSourceName(MotionSource, Hand))
+	if (!IMotionController::GetHandEnumForSourceName(MotionSource, Hand))
 	{
 		// Check if the palm motion source extension is being used
 		// I assume eventually epic will handle this case
