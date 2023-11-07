@@ -3,6 +3,8 @@
 #include "Misc/VRLogComponent.h"
 #include UE_INLINE_GENERATED_CPP_BY_NAME(VRLogComponent)
 
+#include "GlobalRenderResources.h"
+
 //#include "Engine/Engine.h"
 
 /* Top of File */
