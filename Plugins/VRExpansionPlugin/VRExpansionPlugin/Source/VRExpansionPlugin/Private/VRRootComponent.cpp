@@ -422,12 +422,15 @@ void UVRRootComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if(AVRBaseCharacter * vrOwner = Cast<AVRBaseCharacter>(this->GetOwner()); vrOwner && vrOwner->VRReplicatedCamera)
-	{ 
-		TargetPrimitiveComponent = vrOwner->VRReplicatedCamera;
-		owningVRChar = vrOwner;
-		//VRCameraCollider = vrOwner->VRCameraCollider;
-		return;
+	if(AVRBaseCharacter * vrOwner = Cast<AVRBaseCharacter>(this->GetOwner()))
+	{
+		if (vrOwner->VRReplicatedCamera)
+		{
+			TargetPrimitiveComponent = vrOwner->VRReplicatedCamera;
+			owningVRChar = vrOwner;
+			//VRCameraCollider = vrOwner->VRCameraCollider;
+			return;
+		}
 	}
 	else
 	{
@@ -754,17 +757,23 @@ void UVRRootComponent::SetSimulatePhysics(bool bSimulate)
 
 	if (bSimulate)
 	{
-		if (AVRCharacter* OwningCharacter = Cast<AVRCharacter>(GetOwner()); OwningCharacter && OwningCharacter->NetSmoother)
+		if (AVRCharacter* OwningCharacter = Cast<AVRCharacter>(GetOwner()))
 		{
-			OwningCharacter->NetSmoother->SetRelativeLocation(FVector(0.f,0.f, -this->GetUnscaledCapsuleHalfHeight()));
+			if (OwningCharacter->NetSmoother)
+			{
+				OwningCharacter->NetSmoother->SetRelativeLocation(FVector(0.f,0.f, -this->GetUnscaledCapsuleHalfHeight()));
+			}
 		}	
 		this->AddWorldOffset(this->GetComponentRotation().RotateVector(FVector(0.f, 0.f, this->GetScaledCapsuleHalfHeight())), false, nullptr, ETeleportType::TeleportPhysics);
 	}
 	else
 	{
-		if (AVRCharacter* OwningCharacter = Cast<AVRCharacter>(GetOwner()); OwningCharacter && OwningCharacter->NetSmoother)
+		if (AVRCharacter* OwningCharacter = Cast<AVRCharacter>(GetOwner()))
 		{
-			OwningCharacter->NetSmoother->SetRelativeLocation(FVector(0.f, 0.f, 0));
+			if (OwningCharacter->NetSmoother)
+			{
+				OwningCharacter->NetSmoother->SetRelativeLocation(FVector(0.f, 0.f, 0));
+			}
 		}
 		this->AddWorldOffset(this->GetComponentRotation().RotateVector(FVector(0.f, 0.f, -this->GetScaledCapsuleHalfHeight())), false, nullptr, ETeleportType::TeleportPhysics);
 	}

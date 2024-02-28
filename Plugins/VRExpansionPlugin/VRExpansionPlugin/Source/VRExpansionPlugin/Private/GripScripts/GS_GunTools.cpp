@@ -511,10 +511,13 @@ void UGS_GunTools::GetVirtualStockTarget(UGripMotionControllerComponent * Grippi
 {
 	if (GrippingController && (GrippingController->HasAuthority() || bUseHighQualityRemoteSimulation))
 	{
-		if (AVRBaseCharacter * vrOwner = Cast<AVRBaseCharacter>(GrippingController->GetOwner()); vrOwner && vrOwner->VRReplicatedCamera)
+		if (AVRBaseCharacter * vrOwner = Cast<AVRBaseCharacter>(GrippingController->GetOwner()))
 		{
-			CameraComponent = vrOwner->VRReplicatedCamera;
-			return;
+			if (vrOwner->VRReplicatedCamera)
+			{
+				CameraComponent = vrOwner->VRReplicatedCamera;
+				return;
+			}
 		}
 		else
 		{
