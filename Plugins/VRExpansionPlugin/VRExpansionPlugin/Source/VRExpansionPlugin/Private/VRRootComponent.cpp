@@ -422,7 +422,7 @@ void UVRRootComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if(AVRBaseCharacter * vrOwner = Cast<AVRBaseCharacter>(this->GetOwner()))
+	if(AVRBaseCharacter * vrOwner = Cast<AVRBaseCharacter>(this->GetOwner()); vrOwner && vrOwner->VRReplicatedCamera)
 	{ 
 		TargetPrimitiveComponent = vrOwner->VRReplicatedCamera;
 		owningVRChar = vrOwner;
@@ -456,7 +456,7 @@ void UVRRootComponent::SetTrackingPaused(bool bPaused)
 
 void UVRRootComponent::UpdateCharacterCapsuleOffset()
 {
-	if (owningVRChar && !owningVRChar->bRetainRoomscale)
+	if (owningVRChar && !owningVRChar->bRetainRoomscale && owningVRChar->NetSmoother)
 	{
 		if (!FMath::IsNearlyEqual(LastCapsuleHalfHeight, CapsuleHalfHeight))
 		{
@@ -754,7 +754,7 @@ void UVRRootComponent::SetSimulatePhysics(bool bSimulate)
 
 	if (bSimulate)
 	{
-		if (AVRCharacter* OwningCharacter = Cast<AVRCharacter>(GetOwner()))
+		if (AVRCharacter* OwningCharacter = Cast<AVRCharacter>(GetOwner()); OwningCharacter && OwningCharacter->NetSmoother)
 		{
 			OwningCharacter->NetSmoother->SetRelativeLocation(FVector(0.f,0.f, -this->GetUnscaledCapsuleHalfHeight()));
 		}	
@@ -762,7 +762,7 @@ void UVRRootComponent::SetSimulatePhysics(bool bSimulate)
 	}
 	else
 	{
-		if (AVRCharacter* OwningCharacter = Cast<AVRCharacter>(GetOwner()))
+		if (AVRCharacter* OwningCharacter = Cast<AVRCharacter>(GetOwner()); OwningCharacter && OwningCharacter->NetSmoother)
 		{
 			OwningCharacter->NetSmoother->SetRelativeLocation(FVector(0.f, 0.f, 0));
 		}

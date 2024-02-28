@@ -574,7 +574,7 @@ void UVRStereoWidgetComponent::TickComponent(float DeltaTime, enum ELevelTick Ti
 					// Set transform to this relative transform
 
 					bool bHandledTransform = false;
-					if (AVRBaseCharacter* BaseVRChar = Cast<AVRBaseCharacter>(mpawn))
+					if (AVRBaseCharacter* BaseVRChar = Cast<AVRBaseCharacter>(mpawn); BaseVRChar && BaseVRChar->VRReplicatedCamera)
 					{
 						if (USceneComponent* CameraParent = BaseVRChar->VRReplicatedCamera->GetAttachParent())
 						{
