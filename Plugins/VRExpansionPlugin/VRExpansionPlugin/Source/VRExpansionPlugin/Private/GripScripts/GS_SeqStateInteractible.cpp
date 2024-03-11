@@ -9,10 +9,10 @@
 #include "Net/UnrealNetwork.h"
 
   //=============================================================================
-UVRSeqStateComponent::UVRSeqStateComponent(const FObjectInitializer& ObjectInitializer)
+UGS_SeqStateInteractible::UGS_SeqStateInteractible(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {
-	this->SetGenerateOverlapEvents(true);
+	/*this->SetGenerateOverlapEvents(true);
 	this->PrimaryComponentTick.bStartWithTickEnabled = false;
 	PrimaryComponentTick.bCanEverTick = true;
 
@@ -47,44 +47,44 @@ UVRSeqStateComponent::UVRSeqStateComponent(const FObjectInitializer& ObjectIniti
 	LastSliderProgressState = -1.0f;
 
 	// Set to only overlap with things so that its not ruined by touching over actors
-	this->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Overlap);
+	this->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Overlap);*/
 }
 
 //=============================================================================
-UVRSeqStateComponent::~UVRSeqStateComponent()
+UGS_SeqStateInteractible::~UGS_SeqStateInteractible()
 {
 }
 
-
-void UVRSeqStateComponent::GetLifetimeReplicatedProps(TArray< class FLifetimeProperty > & OutLifetimeProps) const
+/*
+void UGS_SeqStateInteractible::GetLifetimeReplicatedProps(TArray< class FLifetimeProperty > & OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-	DOREPLIFETIME(UVRSeqStateComponent, InitialRelativeTransform);
-	//DOREPLIFETIME_CONDITION(UVRSeqStateComponent, bIsLerping, COND_InitialOnly);
+	DOREPLIFETIME(UGS_SeqStateInteractible, InitialRelativeTransform);
+	//DOREPLIFETIME_CONDITION(UGS_SeqStateInteractible, bIsLerping, COND_InitialOnly);
 
-	DOREPLIFETIME(UVRSeqStateComponent, bRepGameplayTags);
-	DOREPLIFETIME(UVRSeqStateComponent, bReplicateMovement);
-	DOREPLIFETIME_CONDITION(UVRSeqStateComponent, GameplayTags, COND_Custom);
+	DOREPLIFETIME(UGS_SeqStateInteractible, bRepGameplayTags);
+	DOREPLIFETIME(UGS_SeqStateInteractible, bReplicateMovement);
+	DOREPLIFETIME_CONDITION(UGS_SeqStateInteractible, GameplayTags, COND_Custom);
 }
 
-void UVRSeqStateComponent::PreReplication(IRepChangedPropertyTracker & ChangedPropertyTracker)
+void UGS_SeqStateInteractible::PreReplication(IRepChangedPropertyTracker & ChangedPropertyTracker)
 {
 	Super::PreReplication(ChangedPropertyTracker);
 
 	// Replicate the levers initial transform if we are replicating movement
-	//DOREPLIFETIME_ACTIVE_OVERRIDE(UVRSeqStateComponent, InitialRelativeTransform, bReplicateMovement);
-	//DOREPLIFETIME_ACTIVE_OVERRIDE(UVRSeqStateComponent, SplineComponentToFollow, bReplicateMovement);
+	//DOREPLIFETIME_ACTIVE_OVERRIDE(UGS_SeqStateInteractible, InitialRelativeTransform, bReplicateMovement);
+	//DOREPLIFETIME_ACTIVE_OVERRIDE(UGS_SeqStateInteractible, SplineComponentToFollow, bReplicateMovement);
 
 	// Don't replicate if set to not do it
-	DOREPLIFETIME_ACTIVE_OVERRIDE_FAST(UVRSeqStateComponent, GameplayTags, bRepGameplayTags);
+	DOREPLIFETIME_ACTIVE_OVERRIDE_FAST(UGS_SeqStateInteractible, GameplayTags, bRepGameplayTags);
 
 	DOREPLIFETIME_ACTIVE_OVERRIDE_FAST(USceneComponent, RelativeLocation, bReplicateMovement);
 	DOREPLIFETIME_ACTIVE_OVERRIDE_FAST(USceneComponent, RelativeRotation, bReplicateMovement);
 	DOREPLIFETIME_ACTIVE_OVERRIDE_FAST(USceneComponent, RelativeScale3D, bReplicateMovement);
 }
 
-void UVRSeqStateComponent::OnRegister()
+void UGS_SeqStateInteractible::OnRegister()
 {
 	Super::OnRegister();
 
@@ -92,7 +92,7 @@ void UVRSeqStateComponent::OnRegister()
 	ResetInitialSliderLocation();
 }
 
-void UVRSeqStateComponent::BeginPlay()
+void UGS_SeqStateInteractible::BeginPlay()
 {
 	// Call the base class 
 	Super::BeginPlay();
@@ -102,7 +102,7 @@ void UVRSeqStateComponent::BeginPlay()
 	bOriginalReplicatesMovement = bReplicateMovement;
 }
 
-void UVRSeqStateComponent::TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction)
+void UGS_SeqStateInteractible::TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction)
 {
 	// Call supers tick (though I don't think any of the base classes to this actually implement it)
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
@@ -133,7 +133,7 @@ void UVRSeqStateComponent::TickComponent(float DeltaTime, enum ELevelTick TickTy
 	}
 }
 
-void UVRSeqStateComponent::TickGrip_Implementation(UGripMotionControllerComponent * GrippingController, const FBPActorGripInformation & GripInformation, float DeltaTime) 
+void UGS_SeqStateInteractible::TickGrip_Implementation(UGripMotionControllerComponent * GrippingController, const FBPActorGripInformation & GripInformation, float DeltaTime) 
 {
 
 	// Skip this tick if its not triggered from the pass through
@@ -170,7 +170,7 @@ void UVRSeqStateComponent::TickGrip_Implementation(UGripMotionControllerComponen
 	CheckAutoDrop(GrippingController, GripInformation);
 }
 
-bool UVRSeqStateComponent::CheckAutoDrop(UGripMotionControllerComponent * GrippingController, const FBPActorGripInformation & GripInformation)
+bool UGS_SeqStateInteractible::CheckAutoDrop(UGripMotionControllerComponent * GrippingController, const FBPActorGripInformation & GripInformation)
 {
 	// Converted to a relative value now so it should be correct
 	if (BreakDistance > 0.f && GrippingController->HasGripAuthority(GripInformation) && FVector::DistSquared(InitialDropLocation, this->GetComponentTransform().InverseTransformPosition(GrippingController->GetPivotLocation())) >= FMath::Square(BreakDistance))
@@ -190,13 +190,13 @@ bool UVRSeqStateComponent::CheckAutoDrop(UGripMotionControllerComponent * Grippi
 	return false;
 }
 
-void UVRSeqStateComponent::CheckSliderProgress()
+void UGS_SeqStateInteractible::CheckSliderProgress()
 {
  // Implement progress here
 
 }
 
-void UVRSeqStateComponent::OnGrip_Implementation(UGripMotionControllerComponent * GrippingController, const FBPActorGripInformation & GripInformation) 
+void UGS_SeqStateInteractible::OnGrip_Implementation(UGripMotionControllerComponent * GrippingController, const FBPActorGripInformation & GripInformation) 
 {
 	FTransform CurrentRelativeTransform = InitialRelativeTransform * UVRInteractibleFunctionLibrary::Interactible_GetCurrentParentTransform(this);
 
@@ -220,7 +220,7 @@ void UVRSeqStateComponent::OnGrip_Implementation(UGripMotionControllerComponent 
 
 }
 
-void UVRSeqStateComponent::OnGripRelease_Implementation(UGripMotionControllerComponent * ReleasingController, const FBPActorGripInformation & GripInformation, bool bWasSocketed) 
+void UGS_SeqStateInteractible::OnGripRelease_Implementation(UGripMotionControllerComponent * ReleasingController, const FBPActorGripInformation & GripInformation, bool bWasSocketed) 
 {
 	//this->SetComponentTickEnabled(false);
 	// #TODO: Handle letting go and how lerping works, specifically with the snap points it may be an issue
@@ -231,109 +231,80 @@ void UVRSeqStateComponent::OnGripRelease_Implementation(UGripMotionControllerCom
 	//OnDropped.Broadcast(ReleasingController, GripInformation, bWasSocketed);
 }
 
-void UVRSeqStateComponent::SetIsLocked(bool bNewLockedState)
+void UGS_SeqStateInteractible::SetIsLocked(bool bNewLockedState)
 {
 	bIsLocked = bNewLockedState;
 }
 
-void UVRSeqStateComponent::SetGripPriority(int NewGripPriority)
+void UGS_SeqStateInteractible::SetGripPriority(int NewGripPriority)
 {
 	GripPriority = NewGripPriority;
 }
 
-void UVRSeqStateComponent::OnChildGrip_Implementation(UGripMotionControllerComponent * GrippingController, const FBPActorGripInformation & GripInformation) {}
-void UVRSeqStateComponent::OnChildGripRelease_Implementation(UGripMotionControllerComponent * ReleasingController, const FBPActorGripInformation & GripInformation, bool bWasSocketed) {}
-void UVRSeqStateComponent::OnSecondaryGrip_Implementation(UGripMotionControllerComponent * GripOwningController, USceneComponent * SecondaryGripComponent, const FBPActorGripInformation & GripInformation) {}
-void UVRSeqStateComponent::OnSecondaryGripRelease_Implementation(UGripMotionControllerComponent * GripOwningController, USceneComponent * ReleasingSecondaryGripComponent, const FBPActorGripInformation & GripInformation) {}
-void UVRSeqStateComponent::OnUsed_Implementation() {}
-void UVRSeqStateComponent::OnEndUsed_Implementation() {}
-void UVRSeqStateComponent::OnSecondaryUsed_Implementation() {}
-void UVRSeqStateComponent::OnEndSecondaryUsed_Implementation() {}
-void UVRSeqStateComponent::OnInput_Implementation(FKey Key, EInputEvent KeyEvent) {}
-bool UVRSeqStateComponent::RequestsSocketing_Implementation(USceneComponent *& ParentToSocketTo, FName & OptionalSocketName, FTransform_NetQuantize & RelativeTransform) { return false; }
+void UGS_SeqStateInteractible::OnChildGrip_Implementation(UGripMotionControllerComponent * GrippingController, const FBPActorGripInformation & GripInformation) {}
+void UGS_SeqStateInteractible::OnChildGripRelease_Implementation(UGripMotionControllerComponent * ReleasingController, const FBPActorGripInformation & GripInformation, bool bWasSocketed) {}
+void UGS_SeqStateInteractible::OnSecondaryGrip_Implementation(UGripMotionControllerComponent * GripOwningController, USceneComponent * SecondaryGripComponent, const FBPActorGripInformation & GripInformation) {}
+void UGS_SeqStateInteractible::OnSecondaryGripRelease_Implementation(UGripMotionControllerComponent * GripOwningController, USceneComponent * ReleasingSecondaryGripComponent, const FBPActorGripInformation & GripInformation) {}
+void UGS_SeqStateInteractible::OnUsed_Implementation() {}
+void UGS_SeqStateInteractible::OnEndUsed_Implementation() {}
+void UGS_SeqStateInteractible::OnSecondaryUsed_Implementation() {}
+void UGS_SeqStateInteractible::OnEndSecondaryUsed_Implementation() {}
+void UGS_SeqStateInteractible::OnInput_Implementation(FKey Key, EInputEvent KeyEvent) {}
+bool UGS_SeqStateInteractible::RequestsSocketing_Implementation(USceneComponent *& ParentToSocketTo, FName & OptionalSocketName, FTransform_NetQuantize & RelativeTransform) { return false; }
 
-bool UVRSeqStateComponent::DenyGripping_Implementation(UGripMotionControllerComponent * GripInitiator)
+bool UGS_SeqStateInteractible::DenyGripping_Implementation(UGripMotionControllerComponent * GripInitiator)
 {
 	return bDenyGripping;
 }
 
-EGripInterfaceTeleportBehavior UVRSeqStateComponent::TeleportBehavior_Implementation()
+EGripInterfaceTeleportBehavior UGS_SeqStateInteractible::TeleportBehavior_Implementation()
 {
 	return EGripInterfaceTeleportBehavior::DropOnTeleport;
 }
 
-bool UVRSeqStateComponent::SimulateOnDrop_Implementation()
+bool UGS_SeqStateInteractible::SimulateOnDrop_Implementation()
 {
 	return false;
 }
 
-/*EGripCollisionType UVRSeqStateComponent::SlotGripType_Implementation()
+EGripCollisionType UGS_SeqStateInteractible::GetPrimaryGripType_Implementation(bool bIsSlot)
 {
 	return EGripCollisionType::CustomGrip;
 }
 
-EGripCollisionType UVRSeqStateComponent::FreeGripType_Implementation()
-{
-	return EGripCollisionType::CustomGrip;
-}*/
-
-EGripCollisionType UVRSeqStateComponent::GetPrimaryGripType_Implementation(bool bIsSlot)
-{
-	return EGripCollisionType::CustomGrip;
-}
-
-ESecondaryGripType UVRSeqStateComponent::SecondaryGripType_Implementation()
+ESecondaryGripType UGS_SeqStateInteractible::SecondaryGripType_Implementation()
 {
 	return ESecondaryGripType::SG_None;
 }
 
 
-EGripMovementReplicationSettings UVRSeqStateComponent::GripMovementReplicationType_Implementation()
+EGripMovementReplicationSettings UGS_SeqStateInteractible::GripMovementReplicationType_Implementation()
 {
 	return MovementReplicationSetting;
 }
 
-EGripLateUpdateSettings UVRSeqStateComponent::GripLateUpdateSetting_Implementation()
+EGripLateUpdateSettings UGS_SeqStateInteractible::GripLateUpdateSetting_Implementation()
 {
 	return EGripLateUpdateSettings::LateUpdatesAlwaysOff;
 }
 
-/*float UVRSeqStateComponent::GripStiffness_Implementation()
-{
-	return 0.0f;
-}
-
-float UVRSeqStateComponent::GripDamping_Implementation()
-{
-	return 0.0f;
-}*/
-void UVRSeqStateComponent::GetGripStiffnessAndDamping_Implementation(float &GripStiffnessOut, float &GripDampingOut)
+void UGS_SeqStateInteractible::GetGripStiffnessAndDamping_Implementation(float &GripStiffnessOut, float &GripDampingOut)
 {
 	GripStiffnessOut = 0.0f;
 	GripDampingOut = 0.0f;
 }
 
-FBPAdvGripSettings UVRSeqStateComponent::AdvancedGripSettings_Implementation()
+FBPAdvGripSettings UGS_SeqStateInteractible::AdvancedGripSettings_Implementation()
 {
 	return FBPAdvGripSettings(GripPriority);
 }
 
-float UVRSeqStateComponent::GripBreakDistance_Implementation()
+float UGS_SeqStateInteractible::GripBreakDistance_Implementation()
 {
 	return BreakDistance;
 }
 
-/*void UVRSeqStateComponent::ClosestSecondarySlotInRange_Implementation(FVector WorldLocation, bool & bHadSlotInRange, FTransform & SlotWorldTransform, UGripMotionControllerComponent * CallingController, FName OverridePrefix)
-{
-	bHadSlotInRange = false;
-}
-
-void UVRSeqStateComponent::ClosestPrimarySlotInRange_Implementation(FVector WorldLocation, bool & bHadSlotInRange, FTransform & SlotWorldTransform, UGripMotionControllerComponent * CallingController, FName OverridePrefix)
-{
-	bHadSlotInRange = false;
-}*/
-
-void UVRSeqStateComponent::ClosestGripSlotInRange_Implementation(FVector WorldLocation, bool bSecondarySlot, bool & bHadSlotInRange, FTransform & SlotWorldTransform, FName & SlotName, UGripMotionControllerComponent * CallingController, FName OverridePrefix)
+void UGS_SeqStateInteractible::ClosestGripSlotInRange_Implementation(FVector WorldLocation, bool bSecondarySlot, bool & bHadSlotInRange, FTransform & SlotWorldTransform, FName & SlotName, UGripMotionControllerComponent * CallingController, FName OverridePrefix)
 {
 	if (OverridePrefix.IsNone())
 		bSecondarySlot ? OverridePrefix = "VRGripS" : OverridePrefix = "VRGripP";
@@ -341,12 +312,12 @@ void UVRSeqStateComponent::ClosestGripSlotInRange_Implementation(FVector WorldLo
 	UVRExpansionFunctionLibrary::GetGripSlotInRangeByTypeName_Component(OverridePrefix, this, WorldLocation, bSecondarySlot ? SecondarySlotRange : PrimarySlotRange, bHadSlotInRange, SlotWorldTransform, SlotName, CallingController);
 }
 
-bool UVRSeqStateComponent::AllowsMultipleGrips_Implementation()
+bool UGS_SeqStateInteractible::AllowsMultipleGrips_Implementation()
 {
 	return false;
 }
 
-void UVRSeqStateComponent::IsHeld_Implementation(TArray<FBPGripPair> & CurHoldingControllers, bool & bCurIsHeld)
+void UGS_SeqStateInteractible::IsHeld_Implementation(TArray<FBPGripPair> & CurHoldingControllers, bool & bCurIsHeld)
 {
 	CurHoldingControllers.Empty();
 	if (HoldingGrip.IsValid())
@@ -360,7 +331,7 @@ void UVRSeqStateComponent::IsHeld_Implementation(TArray<FBPGripPair> & CurHoldin
 	}
 }
 
-void UVRSeqStateComponent::Native_NotifyThrowGripDelegates(UGripMotionControllerComponent* Controller, bool bGripped, const FBPActorGripInformation& GripInformation, bool bWasSocketed)
+void UGS_SeqStateInteractible::Native_NotifyThrowGripDelegates(UGripMotionControllerComponent* Controller, bool bGripped, const FBPActorGripInformation& GripInformation, bool bWasSocketed)
 {
 	if (bGripped)
 	{
@@ -372,7 +343,7 @@ void UVRSeqStateComponent::Native_NotifyThrowGripDelegates(UGripMotionController
 	}
 }
 
-void UVRSeqStateComponent::SetHeld_Implementation(UGripMotionControllerComponent * NewHoldingController, uint8 GripID, bool bNewIsHeld)
+void UGS_SeqStateInteractible::SetHeld_Implementation(UGripMotionControllerComponent * NewHoldingController, uint8 GripID, bool bNewIsHeld)
 {
 	if (bNewIsHeld)
 	{
@@ -396,17 +367,12 @@ void UVRSeqStateComponent::SetHeld_Implementation(UGripMotionControllerComponent
 	bIsHeld = bNewIsHeld;
 }
 
-/*FBPInteractionSettings UVRSeqStateComponent::GetInteractionSettings_Implementation()
-{
-	return FBPInteractionSettings();
-}*/
-
-bool UVRSeqStateComponent::GetGripScripts_Implementation(TArray<UVRGripScriptBase*> & ArrayReference)
+bool UGS_SeqStateInteractible::GetGripScripts_Implementation(TArray<UVRGripScriptBase*> & ArrayReference)
 {
 	return false;
 }
 
-FVector UVRSeqStateComponent::ClampSlideVector(FVector ValueToClamp)
+FVector UGS_SeqStateInteractible::ClampSlideVector(FVector ValueToClamp)
 {
 	FVector fScaleFactor = FVector(1.0f);
 
@@ -427,7 +393,7 @@ FVector UVRSeqStateComponent::ClampSlideVector(FVector ValueToClamp)
 }
 
 
-float UVRSeqStateComponent::GetCurrentSliderProgress(FVector CurLocation, bool bUseKeyInstead, float CurKey)
+float UGS_SeqStateInteractible::GetCurrentSliderProgress(FVector CurLocation, bool bUseKeyInstead, float CurKey)
 {
 	// Should need the clamp normally, but if someone is manually setting locations it could go out of bounds
 	float Progress = 0.f;
@@ -439,14 +405,14 @@ float UVRSeqStateComponent::GetCurrentSliderProgress(FVector CurLocation, bool b
 }
 
 
-void UVRSeqStateComponent::ResetInitialSliderLocation()
+void UGS_SeqStateInteractible::ResetInitialSliderLocation()
 {
 	// Get our initial relative transform to our parent (or not if un-parented).
 	InitialRelativeTransform = this->GetRelativeTransform();
 	CurrentSliderProgress = GetCurrentSliderProgress(FVector(0, 0, 0));
 }
 
-void UVRSeqStateComponent::SetSliderProgress(float NewSliderProgress)
+void UGS_SeqStateInteractible::SetSliderProgress(float NewSliderProgress)
 {
 	NewSliderProgress = FMath::Clamp(NewSliderProgress, 0.0f, 1.0f);
 
@@ -466,7 +432,7 @@ void UVRSeqStateComponent::SetSliderProgress(float NewSliderProgress)
 	CurrentSliderProgress = NewSliderProgress;
 }
 
-float UVRSeqStateComponent::CalculateSliderProgress()
+float UGS_SeqStateInteractible::CalculateSliderProgress()
 {
 
 	FTransform ParentTransform = UVRInteractibleFunctionLibrary::Interactible_GetCurrentParentTransform(this);
@@ -476,4 +442,4 @@ float UVRSeqStateComponent::CalculateSliderProgress()
 	CurrentSliderProgress = GetCurrentSliderProgress(bSlideDistanceIsInParentSpace ? CalculatedLocation * InitialRelativeTransform.GetScale3D() : CalculatedLocation);
 
 	return CurrentSliderProgress;
-}
+}*/
