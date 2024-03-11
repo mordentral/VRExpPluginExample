@@ -4,12 +4,13 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameplayTagContainer.h"
-#include "VRGripInterface.h"
-#include "GameplayTagAssetInterface.h"
+//#include "GameplayTagContainer.h"
+//#include "VRGripInterface.h"
+//#include "GameplayTagAssetInterface.h"
 #include "Interactibles/VRInteractibleFunctionLibrary.h"
-#include "Components/StaticMeshComponent.h"
-#include "VRSeqStateComponent.generated.h"
+//#include "Components/StaticMeshComponent.h"
+#include "GripScripts/GS_Default.h"
+#include "GS_SeqStateInteractible.generated.h"
 
 class UGripMotionControllerComponent;
 

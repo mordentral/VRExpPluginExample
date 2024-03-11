@@ -1,11 +1,9 @@
 // Copyright 1998-2016 Epic Games, Inc. All Rights Reserved.
 
-#include "Interactibles/VRSeqStateComponent.h"
-#include UE_INLINE_GENERATED_CPP_BY_NAME(VRSeqStateComponent)
+#include "GripScripts/GS_SeqStateInteractible.h"
+#include UE_INLINE_GENERATED_CPP_BY_NAME(GS_SeqStateInteractible)
 
 #include "VRExpansionFunctionLibrary.h"
-#include "Components/SplineComponent.h"
-#include "GripMotionControllerComponent.h"
 #include "Net/UnrealNetwork.h"
 
   //=============================================================================
