@@ -7,7 +7,7 @@ public class VRExpPluginExampleEditorTarget : TargetRules
 {
 	public VRExpPluginExampleEditorTarget(TargetInfo Target) : base(Target)
 	{
-        DefaultBuildSettings = BuildSettingsVersion.V2;
+        DefaultBuildSettings = BuildSettingsVersion.Latest; // V5
 		IncludeOrderVersion = EngineIncludeOrderVersion.Latest;
 
         Type = TargetType.Editor;
