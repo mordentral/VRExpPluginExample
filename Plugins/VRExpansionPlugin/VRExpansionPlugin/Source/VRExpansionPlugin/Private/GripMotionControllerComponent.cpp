@@ -6536,7 +6536,7 @@ bool UGripMotionControllerComponent::SetUpPhysicsHandle(const FBPActorGripInform
 					NewLinDrive.Stiffness = Stiffness;
 					NewLinDrive.MaxForce = MaxForce;
 
-					HandleInfo->LinConstraint.bEnablePositionDrive = true;
+					//HandleInfo->LinConstraint.bEnablePositionDrive = true;
 					HandleInfo->LinConstraint.XDrive = NewLinDrive;
 					HandleInfo->LinConstraint.YDrive = NewLinDrive;
 					HandleInfo->LinConstraint.ZDrive = NewLinDrive;
@@ -6608,7 +6608,11 @@ bool UGripMotionControllerComponent::SetUpPhysicsHandle(const FBPActorGripInform
 						NewAngDrive.MaxForce = AngularMaxForce;
 						//NewAngDrive.MaxForce = MAX_FLT;
 
-						HandleInfo->LinConstraint.bEnablePositionDrive = true;
+						//HandleInfo->LinConstraint.bEnablePositionDrive = true;
+						HandleInfo->LinConstraint.XDrive.bEnablePositionDrive = true;
+						HandleInfo->LinConstraint.YDrive.bEnablePositionDrive = true;
+						HandleInfo->LinConstraint.ZDrive.bEnablePositionDrive = true;
+
 						HandleInfo->LinConstraint.XDrive = NewLinDrive;
 						HandleInfo->LinConstraint.YDrive = NewLinDrive;
 						HandleInfo->LinConstraint.ZDrive = NewLinDrive;
@@ -8264,7 +8268,7 @@ bool UGripMotionControllerComponent::GetIsComponentHeld(const UPrimitiveComponen
 
 	return (GrippedObjects.FindByKey(ComponentToCheck) || LocallyGrippedObjects.FindByKey(ComponentToCheck));
 
-	return false;
+	//return false;
 }
 
 bool UGripMotionControllerComponent::GetIsSecondaryAttachment(const USceneComponent * ComponentToCheck, FBPActorGripInformation & Grip)
