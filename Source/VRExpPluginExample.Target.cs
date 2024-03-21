@@ -8,7 +8,7 @@ public class VRExpPluginExampleTarget : TargetRules
 	public VRExpPluginExampleTarget(TargetInfo Target) : base(Target)
 	{
 
-        DefaultBuildSettings = BuildSettingsVersion.V2;
+        DefaultBuildSettings = BuildSettingsVersion.Latest;
         IncludeOrderVersion = EngineIncludeOrderVersion.Latest;
 
         //bUseLoggingInShipping = true;
