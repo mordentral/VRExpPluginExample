@@ -114,30 +114,6 @@ public class VRExpansionPlugin : ModuleRules
 			}
 			);
 
-
-        /*var EngineDir = Path.GetFullPath(Target.RelativeEnginePath);
-        PrivateIncludePaths.AddRange(
-            new string[] {
-                    EngineDir + "Plugins/Runtime/OpenXR/Source/OpenXRHMD/Private",
-                    EngineDir + "/Source/ThirdParty/OpenXR/include",
-                // ... add other private include paths required here ...
-            }
-            );*/
-
-        // For the physics replication function definitions
-        string EngineSourceDirectory = Path.GetFullPath(Target.RelativeEnginePath);
-        PrivateIncludePaths.Add(EngineSourceDirectory + "/Source/Runtime/Engine/Private/PhysicsEngine");
-
-        /* var EngineDir = Path.GetFullPath(Target.RelativeEnginePath);
-         PrivateIncludePaths.AddRange(
-             new string[] {
-                     EngineDir + "Plugins/Runtime/OpenXR/Source/OpenXRHMD/Private",
-                     EngineDir + "/Source/ThirdParty/OpenXR/include",
-                 // ... add other private include paths required here ...
-             }
-             );
-        */
-
         // Allow gameplay debugger on editor builds
         if (Target.bBuildDeveloperTools || (Target.Configuration != UnrealTargetConfiguration.Shipping && Target.Configuration != UnrealTargetConfiguration.Test))
         {
