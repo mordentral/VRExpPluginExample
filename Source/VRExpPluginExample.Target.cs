@@ -11,6 +11,8 @@ public class VRExpPluginExampleTarget : TargetRules
         DefaultBuildSettings = BuildSettingsVersion.Latest;
         IncludeOrderVersion = EngineIncludeOrderVersion.Latest;
 
+        bWithPushModel = true;
+
         //bUseLoggingInShipping = true;
         Type = TargetType.Game;
         ExtraModuleNames.AddRange(new string[] { "VRExpPluginExample" });
