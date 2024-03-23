@@ -11,7 +11,7 @@ public class VRExpPluginExampleTarget : TargetRules
         DefaultBuildSettings = BuildSettingsVersion.Latest;
         IncludeOrderVersion = EngineIncludeOrderVersion.Latest;
 
-        bWithPushModel = true;
+        //bWithPushModel = true;
 
         //bUseLoggingInShipping = true;
         Type = TargetType.Game;

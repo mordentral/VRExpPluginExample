@@ -10,7 +10,7 @@ public class VRExpPluginExampleEditorTarget : TargetRules
         DefaultBuildSettings = BuildSettingsVersion.Latest; // V5
 		IncludeOrderVersion = EngineIncludeOrderVersion.Latest;
 
-        bWithPushModel = true;
+        //bWithPushModel = true;
 
         Type = TargetType.Editor;
         ExtraModuleNames.AddRange(new string[] { "VRExpPluginExample" });
