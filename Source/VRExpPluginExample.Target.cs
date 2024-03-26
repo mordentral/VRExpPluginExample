@@ -11,7 +11,8 @@ public class VRExpPluginExampleTarget : TargetRules
         DefaultBuildSettings = BuildSettingsVersion.Latest;
         IncludeOrderVersion = EngineIncludeOrderVersion.Latest;
 
-        //bWithPushModel = true;
+        // For debugging with push disabled
+        //bWithPushModel = false;
 
         //bUseLoggingInShipping = true;
         Type = TargetType.Game;
