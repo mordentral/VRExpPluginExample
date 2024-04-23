@@ -6,6 +6,9 @@ public class VRExpPluginExample : ModuleRules
 {
 	public VRExpPluginExample(ReadOnlyTargetRules Target) : base(Target)
     {
+
+        //SetupIrisSupport(Target);
+
         PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
        // PrivatePCHHeaderFile = "Private/WindowsMixedRealityPrecompiled.h";
 
