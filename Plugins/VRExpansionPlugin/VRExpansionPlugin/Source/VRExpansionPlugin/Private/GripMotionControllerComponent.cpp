@@ -7310,7 +7310,7 @@ bool UGripMotionControllerComponent::GripPollControllerState_GameThread(FVector&
 				{
 					EControllerHand HandType;
 					GetHandType(HandType);
-					FName GripSource = HandType == EControllerHand::Left ? FName("LeftGrip") : FName("RightGrip");
+					FName GripSource = (HandType == EControllerHand::Left) ? FName("LeftGrip") : FName("RightGrip");
 
 					CurrentTrackingStatus = MotionController->GetControllerTrackingStatus(PlayerIndex, MotionSource);
 					if (!bIgnoreTrackingStatus && CurrentTrackingStatus == ETrackingStatus::NotTracked)
@@ -7382,7 +7382,7 @@ bool UGripMotionControllerComponent::GripPollControllerState_RenderThread(FVecto
 	{
 		EControllerHand HandType;
 		GetHandType(HandType);
-		FName GripSource = HandType == EControllerHand::Left ? FName("LeftGrip") : FName("RightGrip");
+		FName GripSource = (HandType == EControllerHand::Left) ? FName("LeftGrip") : FName("RightGrip");
 
 		CurrentTrackingStatus = PolledMotionController_RenderThread->GetControllerTrackingStatus(PlayerIndex, GripSource);
 		if (PolledMotionController_RenderThread->GetControllerOrientationAndPosition(PlayerIndex, MotionSource, Orientation, Position, WorldToMetersScale))
