@@ -245,7 +245,7 @@ void UVRGestureComponent::CaptureGestureFrame()
 		// Pop off oldest sample
 		if (GestureLog.Samples.Num() >= RecordingBufferSize)
 		{
-			GestureLog.Samples.Pop(false);
+			GestureLog.Samples.Pop(EAllowShrinking::No);
 			bClearLatestSpline = true;
 		}
 		
