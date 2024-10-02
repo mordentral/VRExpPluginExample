@@ -600,8 +600,8 @@ bool UGesturesDatabase::ImportSplineAsGesture(USplineComponent * HostSplineCompo
 
 	float LastDistance = 0.f;
 	float ThisDistance = 0.f;
-	FVector LastDistanceV;
-	FVector ThisDistanceV;
+	FVector LastDistanceV = FVector::ZeroVector;
+	FVector ThisDistanceV = FVector::ZeroVector;
 	FVector DistNormal;
 	float DistAlongSegment = 0.f;
 
