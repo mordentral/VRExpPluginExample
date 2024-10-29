@@ -72,12 +72,5 @@
 			"Name": "MoverExamples",
 			"Enabled": true
 		}
-	],
-	"TargetPlatforms": [
-		"PS4",
-		"WindowsNoEditor",
-		"Android",
-		"Windows",
-		"Linux"
 	]
 }
