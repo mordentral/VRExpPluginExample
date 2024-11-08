@@ -1259,6 +1259,8 @@ void AVRBaseCharacter::SetVRReplicateCapsuleHeight(bool bNewVRReplicateCapsuleHe
 
 bool FRepMovementVRCharacter::NetSerialize(FArchive& Ar, class UPackageMap* Map, bool& bOutSuccess)
 {
+	Ar.UsingCustomVersion(FEngineNetworkCustomVersion::Guid);
+
 	FRepMovement BaseSettings = Owner ? Owner->GetReplicatedMovement() : FRepMovement();
 
 	// pack bitfield with flags
