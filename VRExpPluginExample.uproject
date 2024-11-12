@@ -1,6 +1,6 @@
 {
 	"FileVersion": 3,
-	"EngineAssociation": "5.4",
+	"EngineAssociation": "5.5",
 	"Category": "",
 	"Description": "",
 	"Modules": [
@@ -72,12 +72,5 @@
 			"Name": "MoverExamples",
 			"Enabled": true
 		}
-	],
-	"TargetPlatforms": [
-		"PS4",
-		"WindowsNoEditor",
-		"Android",
-		"Windows",
-		"Linux"
 	]
 }

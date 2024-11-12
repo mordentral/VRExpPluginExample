@@ -50,67 +50,7 @@ public:
 	UPROPERTY(Transient)
 		TObjectPtr<AActor> Owner;
 
-	bool NetSerialize(FArchive& Ar, class UPackageMap* Map, bool& bOutSuccess)
-	{
-		FRepMovement BaseSettings = Owner ? Owner->GetReplicatedMovement() : FRepMovement();
-
-		// pack bitfield with flags
-		uint8 Flags = (bSimulatedPhysicSleep << 0) | (bRepPhysics << 1) | (bJustTeleported << 2) | (bJustTeleportedGrips << 3) | (bPausedTracking << 4);
-		Ar.SerializeBits(&Flags, 5);
-		bSimulatedPhysicSleep = (Flags & (1 << 0)) ? 1 : 0;
-		bRepPhysics = (Flags & (1 << 1)) ? 1 : 0;
-		bJustTeleported = (Flags & (1 << 2)) ? 1 : 0;
-		bJustTeleportedGrips = (Flags & (1 << 3)) ? 1 : 0;
-		bPausedTracking = (Flags & (1 << 4)) ? 1 : 0;
-
-		bOutSuccess = true;
-
-		if (bPausedTracking)
-		{
-			bOutSuccess &= PausedTrackingLoc.NetSerialize(Ar, Map, bOutSuccess);
-
-			uint16 Yaw = 0;
-			if (Ar.IsSaving())
-			{
-				Yaw = FRotator::CompressAxisToShort(PausedTrackingRot);
-				Ar << Yaw;
-			}
-			else
-			{
-				Ar << Yaw;
-				PausedTrackingRot = Yaw;
-			}
-
-		}
-
-		// update location, rotation, linear velocity
-		bOutSuccess &= SerializeQuantizedVector(Ar, Location, BaseSettings.LocationQuantizationLevel);
-
-		switch (BaseSettings.RotationQuantizationLevel)
-		{
-		case ERotatorQuantization::ByteComponents:
-		{
-			Rotation.SerializeCompressed(Ar);
-			break;
-		}
-
-		case ERotatorQuantization::ShortComponents:
-		{
-			Rotation.SerializeCompressedShort(Ar);
-			break;
-		}
-		}
-
-		bOutSuccess &= SerializeQuantizedVector(Ar, LinearVelocity, BaseSettings.VelocityQuantizationLevel);
-
-		// update angular velocity if required
-		if (bRepPhysics)
-		{
-			bOutSuccess &= SerializeQuantizedVector(Ar, AngularVelocity, BaseSettings.VelocityQuantizationLevel);
-		}
-
-		return true;
-	}
+	bool NetSerialize(FArchive& Ar, class UPackageMap* Map, bool& bOutSuccess);
 };
 
 template<>
