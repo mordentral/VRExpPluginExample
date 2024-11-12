@@ -258,8 +258,8 @@ void UVRPathFollowingComponent::UpdatePathSegment()
 			if (Path->GetPathPoints().IsValidIndex(MoveSegmentEndIndex) && Path->GetPathPoints().IsValidIndex(MoveSegmentStartIndex))
 			{
 				//LogBlockHelper(GetOwner(), MovementComp, MinAgentRadiusPct, MinAgentHalfHeightPct,
-					//*Path->GetPathPointLocation(MoveSegmentStartIndex),
-					//*Path->GetPathPointLocation(MoveSegmentEndIndex));
+					//Path->GetPathPointLocation(MoveSegmentStartIndex),
+					//Path->GetPathPointLocation(MoveSegmentEndIndex));
 			}
 			else
 			{
