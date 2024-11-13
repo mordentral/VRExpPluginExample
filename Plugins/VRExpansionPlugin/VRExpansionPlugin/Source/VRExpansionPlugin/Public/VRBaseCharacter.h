@@ -216,7 +216,7 @@ public:
 
 	/** BaseVR Character movement component belongs to */
 	UPROPERTY(Transient, DuplicateTransient)
-		AVRPlayerController* OwningVRPlayerController;
+		TObjectPtr<AVRPlayerController> OwningVRPlayerController;
 
 	// If true then we will retain roomscale tracking in relative space of the character.
 	// If false than the movement component will offset to the hmd tracking and the tracking will be nulled out

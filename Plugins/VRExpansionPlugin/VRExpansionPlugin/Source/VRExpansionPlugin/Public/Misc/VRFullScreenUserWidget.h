@@ -388,7 +388,7 @@ public:
 
 	/** */
 	UPROPERTY(VisibleAnywhere, Instanced, NoClear, Category = "User Interface", meta = (ShowOnlyInnerProperties))
-		UVRFullScreenUserWidget* ScreenUserWidget;
+		TObjectPtr<UVRFullScreenUserWidget> ScreenUserWidget;
 
 	UFUNCTION(BlueprintCallable, Category = "FullScreenWidgetActor")
 		UVRFullScreenUserWidget* GetPreviewWidgetComp();
