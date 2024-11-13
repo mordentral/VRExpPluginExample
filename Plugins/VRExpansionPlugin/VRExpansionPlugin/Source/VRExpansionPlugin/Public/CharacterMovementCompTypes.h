@@ -88,7 +88,7 @@ public:
 	UPROPERTY()
 		uint8 MoveActionFlags;
 	UPROPERTY()
-		TArray<UObject*> MoveActionObjectReferences;
+		TArray<TObjectPtr<UObject>> MoveActionObjectReferences;
 	UPROPERTY()
 		EVRMoveActionVelocityRetention VelRetentionSetting;
 
@@ -516,7 +516,7 @@ public:
 
 	// Moved these here to avoid having to duplicate tons of properties
 	UPROPERTY(Transient)
-		UPrimitiveComponent* ClientMovementBase;
+		TObjectPtr<UPrimitiveComponent> ClientMovementBase;
 	UPROPERTY(Transient)
 		FName ClientBaseBoneName;
 

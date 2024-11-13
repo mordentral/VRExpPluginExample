@@ -809,7 +809,7 @@ public:
 	}
 
 	UPROPERTY(BlueprintReadWrite, Category = "GripMotionController")
-	TArray<UPrimitiveComponent *> AdditionalLateUpdateComponents;
+	TArray<TObjectPtr<UPrimitiveComponent>> AdditionalLateUpdateComponents;
 
 	//  Movement Replication
 	// Actor needs to be replicated for this to work
