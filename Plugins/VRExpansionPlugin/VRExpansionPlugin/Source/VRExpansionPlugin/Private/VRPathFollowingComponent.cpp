@@ -3,6 +3,9 @@
 #include "VRPathFollowingComponent.h"
 #include UE_INLINE_GENERATED_CPP_BY_NAME(VRPathFollowingComponent)
 
+#include "AI/Navigation/NavigationTypes.h"
+#include "AI/Navigation/PathFollowingAgentInterface.h"
+
 #include "CoreMinimal.h"
 #include "Engine/World.h"
 //#include "Runtime/Engine/Private/EnginePrivate.h"
@@ -28,6 +31,21 @@ DEFINE_LOG_CATEGORY(LogPathFollowingVR);
 	}
 }*/
 
+void UVRPathFollowingComponent::SetNavMovementInterface(INavMovementInterface* NavMoveInterface)
+{
+	Super::SetNavMovementInterface(NavMoveInterface);
+
+	if (NavMovementInterface.IsValid() && NavMovementInterface->GetOwnerAsObject())
+	{
+		if (AVRBaseCharacter* VRMovement = Cast<AVRBaseCharacter>(NavMovementInterface->GetOwnerAsObject()))
+		{ 
+			if (IsValid(VRMovement->VRMovementReference))
+			{
+				OnRequestFinished.AddUObject(VRMovement->VRMovementReference, &UVRBaseCharacterMovementComponent::OnMoveCompleted);
+			}
+		}
+	}
+}
 
 void UVRPathFollowingComponent::GetDebugStringTokens(TArray<FString>& Tokens, TArray<EPathFollowingDebugTokens::Type>& Flags) const
 {
@@ -82,8 +100,8 @@ void UVRPathFollowingComponent::GetDebugStringTokens(TArray<FString>& Tokens, TA
 	Flags.Add(bFailedHeight ? EPathFollowingDebugTokens::FailedValue : EPathFollowingDebugTokens::PassedValue);
 }
 
-/*
-int32 UVRPathFollowingComponent::DetermineStartingPathPoint(const FNavigationPath* ConsideredPath) const
+
+/*int32 UVRPathFollowingComponent::DetermineStartingPathPoint(const FNavigationPath* ConsideredPath) const
 {
 	int32 PickedPathPoint = INDEX_NONE;
 
