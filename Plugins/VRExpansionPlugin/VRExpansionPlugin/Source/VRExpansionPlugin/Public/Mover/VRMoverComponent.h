@@ -28,8 +28,8 @@ struct VREXPANSIONPLUGIN_API FLayeredMove_VRMovement : public FLayeredMoveBase
 		FVector Velocity;
 
 	// Optional curve float for controlling the magnitude of the velocity applied to the actor over the duration of the move
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Mover)
-		TObjectPtr<UCurveFloat> MagnitudeOverTime;
+	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Mover)
+	//	TObjectPtr<UCurveFloat> MagnitudeOverTime;
 
 	// @see ELayeredMove_ConstantVelocitySettingsFlags
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Mover)

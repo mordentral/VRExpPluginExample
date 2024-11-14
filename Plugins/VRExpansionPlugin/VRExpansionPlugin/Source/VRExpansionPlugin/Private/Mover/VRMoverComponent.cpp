@@ -22,7 +22,7 @@ static const FName Name_CharacterMotionComponent(TEXT("MoverComponent"));
 
 FLayeredMove_VRMovement::FLayeredMove_VRMovement()
 	: Velocity(FVector::ZeroVector)
-	, MagnitudeOverTime(nullptr)
+	//, MagnitudeOverTime(nullptr)
 	, SettingsFlags(0)
 {
 	// This should never end
@@ -58,12 +58,12 @@ bool FLayeredMove_VRMovement::GenerateMove(const FMoverTickStartData& SimState, 
 		VelocityThisFrame = SyncState->GetOrientation_WorldSpace().RotateVector(Velocity);
 	}
 
-	if (MagnitudeOverTime && DurationMs > 0)
+	/*if (MagnitudeOverTime && DurationMs > 0)
 	{
 		const float TimeValue = DurationMs > 0.f ? FMath::Clamp((TimeStep.BaseSimTimeMs - StartSimTimeMs) / DurationMs, 0.f, 1.f) : TimeStep.BaseSimTimeMs;
 		const float TimeFactor = MagnitudeOverTime->GetFloatValue(TimeValue);
 		VelocityThisFrame *= TimeFactor;
-	}
+	}*/
 
 	OutProposedMove.LinearVelocity = VelocityThisFrame;
 
@@ -82,7 +82,7 @@ void FLayeredMove_VRMovement::NetSerialize(FArchive& Ar)
 
 	SerializePackedVector<10, 16>(Velocity, Ar);
 	Ar << SettingsFlags;
-	Ar << MagnitudeOverTime;
+	//Ar << MagnitudeOverTime;
 }
 
 UScriptStruct* FLayeredMove_VRMovement::GetScriptStruct() const
