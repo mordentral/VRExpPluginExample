@@ -233,7 +233,7 @@ void AGrippableSkeletalMeshActor::PreReplication(IRepChangedPropertyTracker& Cha
 
 void AGrippableSkeletalMeshActor::GatherCurrentMovement()
 {
-	if (IsReplicatingMovement() && (RootComponent && RootComponent->GetAttachParent()))
+	if (IsReplicatingMovement() || (RootComponent && RootComponent->GetAttachParent()))
 	{
 		bool bWasAttachmentModified = false;
 
@@ -246,7 +246,7 @@ void AGrippableSkeletalMeshActor::GatherCurrentMovement()
 		UPrimitiveComponent* RootPrimComp = Cast<UPrimitiveComponent>(GetRootComponent());
 		if (RootPrimComp && RootPrimComp->IsSimulatingPhysics())
 		{
-			//Super::GatherCurrentMovement();
+			Super::GatherCurrentMovement();
 		}
 		else if (RootComponent != nullptr)
 		{
@@ -270,19 +270,23 @@ void AGrippableSkeletalMeshActor::GatherCurrentMovement()
 
 				}
 			}
-
-			if (bWasAttachmentModified ||
-				OldAttachParent != AttachmentWeldReplication.AttachParent ||
-				OldAttachComponent != AttachmentWeldReplication.AttachComponent)
+			else
 			{
-				MARK_PROPERTY_DIRTY_FROM_NAME(AGrippableSkeletalMeshActor, AttachmentWeldReplication, this);
+				Super::GatherCurrentMovement();
 			}
+		}
 
-			return;
+		if (bWasAttachmentModified ||
+			OldAttachParent != AttachmentWeldReplication.AttachParent ||
+			OldAttachComponent != AttachmentWeldReplication.AttachComponent)
+		{
+			MARK_PROPERTY_DIRTY_FROM_NAME(AGrippableSkeletalMeshActor, AttachmentWeldReplication, this);
 		}
 	}
-
-	Super::GatherCurrentMovement();
+	else
+	{
+		Super::GatherCurrentMovement();
+	}
 }
 
 bool AGrippableSkeletalMeshActor::ReplicateSubobjects(UActorChannel* Channel, class FOutBunch* Bunch, FReplicationFlags* RepFlags)
