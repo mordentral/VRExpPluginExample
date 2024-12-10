@@ -129,9 +129,10 @@ void AGrippableActor::PreReplication(IRepChangedPropertyTracker & ChangedPropert
 
 void AGrippableActor::GatherCurrentMovement()
 {
-	if (IsReplicatingMovement() && (RootComponent && RootComponent->GetAttachParent()))
+	if (IsReplicatingMovement() || (RootComponent && RootComponent->GetAttachParent()))
 	{
 		bool bWasAttachmentModified = false;
+		//bool bWasRepMovementModified = false;
 
 		AActor* OldAttachParent = AttachmentWeldReplication.AttachParent;
 		USceneComponent* OldAttachComponent = AttachmentWeldReplication.AttachComponent;
@@ -139,10 +140,12 @@ void AGrippableActor::GatherCurrentMovement()
 		AttachmentWeldReplication.AttachParent = nullptr;
 		AttachmentWeldReplication.AttachComponent = nullptr;
 
+		//FRepMovement RepMovement = GetReplicatedMovement_Mutable();*/
+
 		UPrimitiveComponent* RootPrimComp = Cast<UPrimitiveComponent>(GetRootComponent());
 		if (RootPrimComp && RootPrimComp->IsSimulatingPhysics())
 		{
-			//Super::GatherCurrentMovement();
+			Super::GatherCurrentMovement();
 		}
 		else if (RootComponent != nullptr)
 		{
@@ -165,20 +168,20 @@ void AGrippableActor::GatherCurrentMovement()
 					bWasAttachmentModified = true;
 
 				}
-			}
 
-			if (bWasAttachmentModified ||
-				OldAttachParent != AttachmentWeldReplication.AttachParent ||
-				OldAttachComponent != AttachmentWeldReplication.AttachComponent)
+				if (bWasAttachmentModified ||
+					OldAttachParent != AttachmentWeldReplication.AttachParent ||
+					OldAttachComponent != AttachmentWeldReplication.AttachComponent)
+				{
+					MARK_PROPERTY_DIRTY_FROM_NAME(AGrippableActor, AttachmentWeldReplication, this);
+				}
+			}
+			else
 			{
-				MARK_PROPERTY_DIRTY_FROM_NAME(AGrippableActor, AttachmentWeldReplication, this);
+				Super::GatherCurrentMovement();
 			}
-
-			return;
 		}
 	}
-
-	Super::GatherCurrentMovement();
 }
 
 bool AGrippableActor::ShouldWeSkipAttachmentReplication(bool bConsiderHeld) const

@@ -233,9 +233,10 @@ void AGrippableSkeletalMeshActor::PreReplication(IRepChangedPropertyTracker& Cha
 
 void AGrippableSkeletalMeshActor::GatherCurrentMovement()
 {
-	if (IsReplicatingMovement() && (RootComponent && RootComponent->GetAttachParent()))
+	if (IsReplicatingMovement() || (RootComponent && RootComponent->GetAttachParent()))
 	{
 		bool bWasAttachmentModified = false;
+		//bool bWasRepMovementModified = false;
 
 		AActor* OldAttachParent = AttachmentWeldReplication.AttachParent;
 		USceneComponent* OldAttachComponent = AttachmentWeldReplication.AttachComponent;
@@ -243,10 +244,12 @@ void AGrippableSkeletalMeshActor::GatherCurrentMovement()
 		AttachmentWeldReplication.AttachParent = nullptr;
 		AttachmentWeldReplication.AttachComponent = nullptr;
 
+		//FRepMovement RepMovement = GetReplicatedMovement_Mutable();*/
+
 		UPrimitiveComponent* RootPrimComp = Cast<UPrimitiveComponent>(GetRootComponent());
 		if (RootPrimComp && RootPrimComp->IsSimulatingPhysics())
 		{
-			//Super::GatherCurrentMovement();
+			Super::GatherCurrentMovement();
 		}
 		else if (RootComponent != nullptr)
 		{
@@ -269,20 +272,20 @@ void AGrippableSkeletalMeshActor::GatherCurrentMovement()
 					bWasAttachmentModified = true;
 
 				}
-			}
 
-			if (bWasAttachmentModified ||
-				OldAttachParent != AttachmentWeldReplication.AttachParent ||
-				OldAttachComponent != AttachmentWeldReplication.AttachComponent)
+				if (bWasAttachmentModified ||
+					OldAttachParent != AttachmentWeldReplication.AttachParent ||
+					OldAttachComponent != AttachmentWeldReplication.AttachComponent)
+				{
+					MARK_PROPERTY_DIRTY_FROM_NAME(AGrippableSkeletalMeshActor, AttachmentWeldReplication, this);
+				}
+			}
+			else
 			{
-				MARK_PROPERTY_DIRTY_FROM_NAME(AGrippableSkeletalMeshActor, AttachmentWeldReplication, this);
+				Super::GatherCurrentMovement();
 			}
-
-			return;
 		}
 	}
-
-	Super::GatherCurrentMovement();
 }
 
 bool AGrippableSkeletalMeshActor::ReplicateSubobjects(UActorChannel* Channel, class FOutBunch* Bunch, FReplicationFlags* RepFlags)
