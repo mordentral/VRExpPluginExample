@@ -170,7 +170,9 @@ void AGrippableActor::GatherCurrentMovement()
 				OldAttachParent != AttachmentWeldReplication.AttachParent ||
 				OldAttachComponent != AttachmentWeldReplication.AttachComponent)
 			{
+#if WITH_PUSH_MODEL
 				MARK_PROPERTY_DIRTY_FROM_NAME(AGrippableActor, AttachmentWeldReplication, this);
+#endif
 			}
 		}
 	}

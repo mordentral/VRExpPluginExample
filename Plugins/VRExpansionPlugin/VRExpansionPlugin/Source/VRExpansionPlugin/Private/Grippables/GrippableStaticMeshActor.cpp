@@ -221,7 +221,9 @@ void AGrippableStaticMeshActor::GatherCurrentMovement()
 				OldAttachParent != AttachmentWeldReplication.AttachParent ||
 				OldAttachComponent != AttachmentWeldReplication.AttachComponent)
 			{
+#if WITH_PUSH_MODEL
 				MARK_PROPERTY_DIRTY_FROM_NAME(AGrippableStaticMeshActor, AttachmentWeldReplication, this);
+#endif
 			}
 		}
 	}
