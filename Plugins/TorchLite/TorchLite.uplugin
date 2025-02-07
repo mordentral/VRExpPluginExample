@@ -1,0 +1,21 @@
+{
+    "FileVersion" : 3,
+ 
+    "FriendlyName" : "TorchLite",
+    "Version" : 5.5,
+    "VersionName": "5.5",
+    "Description" : "Links TorchLib and provides some utility functions",
+    "Category" : "AI",
+    "CreatedBy" : "Joshua Statzer",
+    "CreatedByURL" : "N/A",
+ 
+    "Modules" :
+    [
+			{
+				"Name": "TorchLite",
+				"Type": "RunTime",
+				"LoadingPhase": "PostDefault"
+			} 
+    ],
+	"Plugins": []
+}
