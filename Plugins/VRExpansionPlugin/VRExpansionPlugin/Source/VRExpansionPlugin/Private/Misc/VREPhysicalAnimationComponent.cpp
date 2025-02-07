@@ -7,6 +7,7 @@
 #include "PhysicsEngine/ShapeElem.h"
 #include "PhysicsEngine/ConstraintInstance.h"
 #include "ReferenceSkeleton.h"
+#include "Engine/SkinnedAsset.h"
 #include "DrawDebugHelpers.h"
 
 #if UE_ENABLE_DEBUG_DRAWING
