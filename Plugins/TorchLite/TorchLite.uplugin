@@ -14,7 +14,7 @@
 			{
 				"Name": "TorchLite",
 				"Type": "RunTime",
-				"LoadingPhase": "PostDefault"
+				"LoadingPhase": "Default"
 			} 
     ],
 	"Plugins": []
