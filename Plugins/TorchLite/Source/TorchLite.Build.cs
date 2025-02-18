@@ -47,6 +47,6 @@ public class TorchLite : ModuleRules
 
         bUseRTTI = true;
         bEnableExceptions = true;
-        PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "CoreUObject"});
+        PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "CoreUObject", "VRExpansionPlugin"});
     }
 }
