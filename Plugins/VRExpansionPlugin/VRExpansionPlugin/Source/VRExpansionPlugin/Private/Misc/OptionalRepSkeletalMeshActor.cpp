@@ -5,6 +5,7 @@
 
 #include "TimerManager.h"
 #include "Net/UnrealNetwork.h"
+#include "Engine/SkeletalMesh.h"
 #include "PhysicsReplication.h"
 #include "PhysicsEngine/PhysicsAsset.h"
 #include "PhysicsEngine/BodySetup.h"
