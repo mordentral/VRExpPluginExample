@@ -28,13 +28,19 @@ public:
 	FVector COMPosition;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Settings")
-	FVector GripPosition;
+	FTransform GripPosition;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Settings")
 	float BoundsRadius = 0.0f;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Settings")
 	FVector CenterOfBounds;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Settings")
+	FVector LinearVelocity;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Settings")
+	FVector AngularVelocity;
 
 };
 

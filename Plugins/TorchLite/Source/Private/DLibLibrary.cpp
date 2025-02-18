@@ -29,9 +29,17 @@ FGripTrackedInfoStruct ATorchTrainer::GetTargetFrameProperties()
     {
         if (FBPActorGripInformation* GripInfo = TargetController->GetFirstActiveGrip())
         {
-          
-            //GripInfo->p
-           // TrackedInfo.BoundsRadius
+            if (UPrimitiveComponent* PrimTarget = GripInfo->GetGripPrimitiveComponent())
+            {
+                TrackedInfo.BoundsRadius = PrimTarget->Bounds.GetSphere().W; // World Space
+                TrackedInfo.CenterOfBounds = PrimTarget->Bounds.GetSphere().Center; // Save instead of get twice
+                TrackedInfo.COMPosition = PrimTarget->GetCenterOfMass(); // Bone name? - WorldSpace
+                TrackedInfo.GripPosition = GripInfo->RelativeTransform; // Relative to the controller, need to invert it likely
+                TrackedInfo.TargetTransform = GripInfo->RelativeTransform * TargetController->GetComponentTransform(); // Not using addition and ect, this is for training only
+                TrackedInfo.TotalMass = PrimTarget->GetMass();
+                TrackedInfo.LinearVelocity = PrimTarget->GetPhysicsLinearVelocity(); // In case we need these for a stable simulation
+                TrackedInfo.AngularVelocity = PrimTarget->GetPhysicsAngularVelocityInRadians();
+            }
         }
     }
 
@@ -51,6 +59,9 @@ void ATorchTrainer::SetTargetController(UGripMotionControllerComponent* Target)
 void ATorchTrainer::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
+
+    // Fill in the struct with the current frames information
+    FGripTrackedInfoStruct CurrentFrameProperties = GetTargetFrameProperties();
 }
 
 
