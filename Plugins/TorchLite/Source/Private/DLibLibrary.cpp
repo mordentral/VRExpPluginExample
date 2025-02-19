@@ -2,23 +2,11 @@
 #include "DLibLibrary.h"
 
 
-#pragma warning(push)
-#pragma warning(disable: 4800)
-#pragma warning(disable: 4668)
-#pragma warning(disable: 4686)
-#pragma warning(disable: 4541)
-#pragma warning(disable: 4702)
-#pragma push_macro("check")
-#undef check
-#pragma push_macro("ensure")
-#undef ensure
-//THIRD_PARTY_INCLUDES_START
-#include <torch/script.h>
-#include <torch/torch.h>
-//THIRD_PARTY_INCLUDES_END
-#pragma pop_macro("ensure")
-#pragma pop_macro("check")
-#pragma warning(pop)
+FVector ActorPPO::PredictForce(FVector State) {
+    auto InputTensor = torch::tensor({ State.X, State.Y, State.Z }).unsqueeze(0);
+    auto OutputTensor = Model.forward({ InputTensor }).toTensor();
+    return FVector(OutputTensor[0][0].item<float>(), OutputTensor[0][1].item<float>(), 0);
+}
 
 
 FGripTrackedInfoStruct ATorchTrainer::GetTargetFrameProperties()
@@ -31,6 +19,9 @@ FGripTrackedInfoStruct ATorchTrainer::GetTargetFrameProperties()
         {
             if (UPrimitiveComponent* PrimTarget = GripInfo->GetGripPrimitiveComponent())
             {
+                TrackedInfo.TargetComponent = PrimTarget;
+
+                TrackedInfo.CurrentTransform = PrimTarget->GetComponentTransform();
                 TrackedInfo.BoundsRadius = PrimTarget->Bounds.GetSphere().W; // World Space
                 TrackedInfo.CenterOfBounds = PrimTarget->Bounds.GetSphere().Center; // Save instead of get twice
                 TrackedInfo.COMPosition = PrimTarget->GetCenterOfMass(); // Bone name? - WorldSpace
@@ -53,6 +44,8 @@ void ATorchTrainer::SetTargetController(UGripMotionControllerComponent* Target)
         TargetController = Target;
         AddTickPrerequisiteComponent(Target);
         this->SetActorTickEnabled(true);
+
+        PostPhysicsTickFunction.SetTickFunctionEnable(true);
     }
 }
 
@@ -62,109 +55,105 @@ void ATorchTrainer::Tick(float DeltaTime)
 
     // Fill in the struct with the current frames information
     FGripTrackedInfoStruct CurrentFrameProperties = GetTargetFrameProperties();
+
+    // Implement training to position the object at the target transform
+    
+    // Get Action from PPO Policy
+    FVector State = CurrentFrameProperties.CurrentTransform.GetLocation();
+    InputTensor = torch::tensor({ State.X, State.Y, State.Z }).unsqueeze(0);
+    OutputTensor = (*Actor)->forward(InputTensor);
+    FVector Force(OutputTensor[0][0].item<float>(), OutputTensor[0][1].item<float>(), 0);
+
+    // Apply Force - prob won't work with unlocked physics thread
+    // Also need to look into handling COM and mass
+    // Also need to expand all of this to handle rotation as well
+    ApplyForce(CurrentFrameProperties, Force);
 }
 
-
-
-class GridWorld {
-public:
-    int state; // Position in grid (0 to 4)
-    const int goal = 4;
-
-    GridWorld() { reset(); }
-
-    int step(int action) {
-        if (action == 1) state++;  // Move Right
-        else if (action == 0) state--; // Move Left
-
-        // Clip state to stay within grid (0-4)
-        state = std::max(0, std::min(state, goal));
-
-        // Reward: +10 if at goal, else -1
-        return (state == goal) ? 10 : -1;
-    }
-
-    void reset() { state = 0; }
-};
-
-    // Define Q-Network using LibTorch
-struct QNetwork : torch::nn::Module {
-    torch::nn::Linear fc1{ nullptr }, fc2{ nullptr };
-
-    QNetwork(int state_size, int action_size)
-        : fc1(register_module("fc1", torch::nn::Linear(state_size, 16))),
-        fc2(register_module("fc2", torch::nn::Linear(16, action_size))) {}
-
-    torch::Tensor forward(torch::Tensor x) {
-        x = torch::relu(fc1->forward(x));
-        return fc2->forward(x);
-    }
-};
-
-
-FString  UDLibLibrary::Train()
+void ATorchTrainer::PostPhysicsTick(float DeltaTime, FATorchTrainerPostPhysicsTickFunction& ThisTickFunction)
 {
-    GridWorld env;
-    QNetwork model(1, 2);  // 1 state, 2 actions (left, right)
-    torch::optim::Adam optimizer(model.parameters(), 0.01);
 
-    const int episodes = 1000;
-    float gamma = 0.9, epsilon = 0.1;
+    FGripTrackedInfoStruct CurrentFrameProperties = GetTargetFrameProperties();
+    // Compute Reward
+    float Reward = ComputeReward(CurrentFrameProperties);
 
-    for (int episode = 0; episode < episodes; episode++) {
-        env.reset();
-        int state = env.state;
+    // Store Experience
+    FVector NextState = CurrentFrameProperties.CurrentTransform.GetLocation();
+    Memory.push_back({ InputTensor, OutputTensor, Reward, torch::tensor({NextState.X, NextState.Y, NextState.Z}) });
 
-        for (int t = 0; t < 10; t++) {
-            // Convert state to tensor
-            torch::Tensor state_tensor = torch::tensor({ (float)state });
-
-            // Choose action: epsilon-greedy
-            int action;
-            if ((rand() / double(RAND_MAX)) < epsilon) action = rand() % 2;
-            else {
-                auto q_values = model.forward(state_tensor);
-                action = q_values.argmax().item<int>();
-            }
-
-            // Take step
-            int reward = env.step(action);
-            int next_state = env.state;
-            torch::Tensor next_state_tensor = torch::tensor({ (float)next_state });
-
-            // Compute target Q-value
-            auto next_q_values = model.forward(next_state_tensor);
-            float max_next_q = next_q_values.max().item<float>();
-            float target_q = reward + gamma * max_next_q;
-
-            // Compute loss
-            auto q_values = model.forward(state_tensor);
-            torch::Tensor loss = torch::mse_loss(q_values[action], torch::tensor(target_q));
-
-            // Optimize model
-            optimizer.zero_grad();
-            loss.backward();
-            optimizer.step();
-
-            state = next_state;
-            if (state == env.goal) break;
-        }
+    // Train Every 100 Steps
+    if (Memory.size() >= 100) {
+        TrainPPO();
+        Memory.clear();
     }
-    std::cout << "Training Complete!" << std::endl;
-	return FString();
+
+
+
+    //torch::save(Actor, "PPO_Model.pt");
 }
 
-void UDLibLibrary::Play() {
-    GridWorld env;
-    QNetwork model(1, 2);  // Load trained model here
 
-    env.reset();
-    while (env.state != env.goal) {
-        torch::Tensor state_tensor = torch::tensor({ (float)env.state });
-        int action = model.forward(state_tensor).argmax().item<int>();
+// This needs to be called post physics
+float ATorchTrainer::ComputeReward(FGripTrackedInfoStruct& CurrentFrameProperties) {
+    return -FVector::Dist(CurrentFrameProperties.TargetComponent->GetComponentLocation(), CurrentFrameProperties.TargetTransform.GetLocation());
+}
 
-        env.step(action);
-        std::cout << "Agent moved to: " << env.state << std::endl;
+void ATorchTrainer::ApplyForce(FGripTrackedInfoStruct &CurrentFrameProperties, FVector Force) {
+    FVector AdjustedForce = Force * ForceScale;
+    CurrentFrameProperties.TargetComponent->AddForceAtLocation(AdjustedForce, CurrentFrameProperties.COMPosition); // Add Force At Location - COM?
+}
+
+void ATorchTrainer::TrainPPO() {
+    for (auto& [state, action, reward, next_state] : Memory) {
+        // Compute Advantage
+        torch::Tensor Value = (*Critic)->forward(state);
+        torch::Tensor NextValue = (*Critic)->forward(next_state);
+        torch::Tensor Advantage = reward + 0.99 * NextValue - Value;
+
+        // Actor Loss (PPO Clipped)
+        torch::Tensor OldAction = (*Actor)->forward(state).detach();
+        torch::Tensor Ratio = (action / OldAction).exp();
+        torch::Tensor ClippedRatio = Ratio.clamp(0.8, 1.2);
+        torch::Tensor ActorLoss = -torch::min(Ratio * Advantage, ClippedRatio * Advantage).mean();
+
+        // Critic Loss
+        torch::Tensor CriticLoss = torch::mse_loss(Value, reward + 0.99 * NextValue);
+
+        // Optimize Actor
+        ActorOptimizer->zero_grad();
+        ActorLoss.backward();
+        ActorOptimizer->step();
+
+        // Optimize Critic
+        CriticOptimizer->zero_grad();
+        CriticLoss.backward();
+        CriticOptimizer->step();
     }
-    std::cout << "Agent reached the goal!" << std::endl;
+}
+
+
+
+void FATorchTrainerPostPhysicsTickFunction::ExecuteTick(float DeltaTime, enum ELevelTick TickType, ENamedThreads::Type CurrentThread, const FGraphEventRef& MyCompletionGraphEvent)
+{
+    FActorComponentTickFunction::ExecuteTickHelper(Target->GetRootComponent(), /*bTickInEditor=*/ false, DeltaTime, TickType, [this](float DilatedTime)
+        {
+            Target->PostPhysicsTick(DilatedTime, *this);
+        });
+}
+
+/** Abstract function to describe this tick. Used to print messages about illegal cycles in the dependency graph **/
+FString FATorchTrainerPostPhysicsTickFunction::DiagnosticMessage()
+{
+    return Target->GetFullName() + TEXT("[UCharacterMovementComponent::PostPhysicsTick]");
+}
+
+/** Function used to describe this tick for active tick reporting. **/
+FName FATorchTrainerPostPhysicsTickFunction::DiagnosticContext(bool bDetailed)
+{
+    if (bDetailed)
+    {
+        return FName(*FString::Printf(TEXT("CharacterMovementComponentPostPhysicsTick/%s"), *GetFullNameSafe(Target)));
+    }
+
+    return FName(TEXT("CharacterMovementComponentPostPhysicsTick"));
 }
