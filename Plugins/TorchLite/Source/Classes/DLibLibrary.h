@@ -30,6 +30,58 @@ class UPrimitiveComponent;
 class UGripMotionController;
 class ATorchTrainer;
 
+
+
+class PPOModel {
+public:
+	static PPOModel& GetInstance() {
+		static PPOModel instance;
+		return instance;
+	}
+
+	torch::nn::Sequential& GetActorModel() { return Actor; }
+	torch::nn::Sequential& GetCriticModel() { return Critic; }
+
+	torch::optim::Adam& GetActorOptimizer() { return *ActorOptimizer.get(); }
+	torch::optim::Adam& GetCriticOptimizer() { return *CriticOptimizer.get(); }
+
+private:
+	PPOModel()
+	{
+		// Initialize Actor Model
+		Actor = torch::nn::Sequential(
+			torch::nn::Linear(3, 128),
+			torch::nn::ReLU(),
+			torch::nn::Linear(128, 64),
+			torch::nn::ReLU(),
+			torch::nn::Linear(64, 2),
+			torch::nn::Tanh()
+		);
+
+		// Initialize Critic Model
+		Critic = torch::nn::Sequential(
+			torch::nn::Linear(3, 128),
+			torch::nn::ReLU(),
+			torch::nn::Linear(128, 64),
+			torch::nn::ReLU(),
+			torch::nn::Linear(64, 1)
+		);
+
+		// Initialize optimizers AFTER models are created
+		ActorOptimizer = std::make_unique<torch::optim::Adam>(Actor->parameters(), torch::optim::AdamOptions(1e-3));
+		CriticOptimizer = std::make_unique<torch::optim::Adam>(Critic->parameters(), torch::optim::AdamOptions(1e-3));
+	}
+
+	// Models (Static, Single Instance)
+	torch::nn::Sequential Actor;
+	torch::nn::Sequential Critic;
+
+	// Initialize optimizers correctly
+	std::unique_ptr<torch::optim::Adam> ActorOptimizer;
+	std::unique_ptr<torch::optim::Adam> CriticOptimizer;
+};
+
+
 USTRUCT(BlueprintType, Category = "VRExpansionLibrary")
 struct TORCHLITE_API FGripTrackedInfoStruct
 {
@@ -71,21 +123,6 @@ public:
 	TObjectPtr<UPrimitiveComponent> TargetComponent;
 
 };
-
-class ActorPPO {
-public:
-	ActorPPO() {
-		Model = torch::jit::load("Path/To/SavedModel.pt");
-	}
-
-	FVector PredictForce(FVector State);
-
-
-private:
-	torch::jit::script::Module Model;
-};
-
-
 
 /**
  * Tick function that calls UCharacterMovementComponent::PostPhysicsTickComponent
@@ -141,29 +178,6 @@ public:
 		PostPhysicsTickFunction.bStartWithTickEnabled = false;
 		PostPhysicsTickFunction.SetTickFunctionEnable(false);
 		PostPhysicsTickFunction.TickGroup = TG_PostPhysics;
-
-		// Initialize optimizers dynamically
-	// Create models
-		Actor = std::make_shared<torch::nn::Sequential>(
-			torch::nn::Linear(3, 128),
-			torch::nn::ReLU(),
-			torch::nn::Linear(128, 64),
-			torch::nn::ReLU(),
-			torch::nn::Linear(64, 2), // Output: 2D force (Fx, Fy)
-			torch::nn::Tanh()
-		);
-
-		Critic = std::make_shared<torch::nn::Sequential>(
-			torch::nn::Linear(3, 128),
-			torch::nn::ReLU(),
-			torch::nn::Linear(128, 64),
-			torch::nn::ReLU(),
-			torch::nn::Linear(64, 1) // Output: value estimate
-		);
-
-		// Initialize optimizers dynamically
-		ActorOptimizer = std::make_unique<torch::optim::Adam>((*Actor)->parameters(), torch::optim::AdamOptions(1e-3));
-		CriticOptimizer = std::make_unique<torch::optim::Adam>((*Critic)->parameters(), torch::optim::AdamOptions(1e-3));
 	}
 
 	~ATorchTrainer()
@@ -188,11 +202,19 @@ public:
 	virtual void BeginPlay() override
 	{
 		Super::BeginPlay();
+
+		bool isEmpty = PPOModel::GetInstance().GetActorModel().is_empty();
+
 	}
 
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override
 	{
 		Super::EndPlay(EndPlayReason);
+	}
+
+	virtual void BeginDestroy() override
+	{
+		Super::BeginDestroy();
 	}
 
 	virtual void Tick(float DeltaTime) override;
@@ -212,11 +234,11 @@ public:
 
 	std::vector<std::tuple<torch::Tensor, torch::Tensor, float, torch::Tensor>> Memory;
 
-	// Declare models and optimizers
-	std::shared_ptr<torch::nn::Sequential> Actor;
-	std::shared_ptr<torch::nn::Sequential> Critic;
-	std::unique_ptr<torch::optim::Adam> ActorOptimizer;
-	std::unique_ptr<torch::optim::Adam> CriticOptimizer;
+	//std::shared_ptr<torch::nn::Sequential> Actor;
+	//std::shared_ptr<torch::nn::Sequential> Critic;
+
+	//std::unique_ptr<torch::optim::Adam> ActorOptimizer;
+	//std::unique_ptr<torch::optim::Adam> CriticOptimizer;
 };
 
 UCLASS()

@@ -1,14 +1,6 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 #include "DLibLibrary.h"
 
-
-FVector ActorPPO::PredictForce(FVector State) {
-    auto InputTensor = torch::tensor({ State.X, State.Y, State.Z }).unsqueeze(0);
-    auto OutputTensor = Model.forward({ InputTensor }).toTensor();
-    return FVector(OutputTensor[0][0].item<float>(), OutputTensor[0][1].item<float>(), 0);
-}
-
-
 FGripTrackedInfoStruct ATorchTrainer::GetTargetFrameProperties()
 {
     FGripTrackedInfoStruct TrackedInfo;
@@ -56,12 +48,17 @@ void ATorchTrainer::Tick(float DeltaTime)
     // Fill in the struct with the current frames information
     FGripTrackedInfoStruct CurrentFrameProperties = GetTargetFrameProperties();
 
+    if (!IsValid(CurrentFrameProperties.TargetComponent))
+    {
+        return;
+    }
+
     // Implement training to position the object at the target transform
     
     // Get Action from PPO Policy
     FVector State = CurrentFrameProperties.CurrentTransform.GetLocation();
     InputTensor = torch::tensor({ State.X, State.Y, State.Z }).unsqueeze(0);
-    OutputTensor = (*Actor)->forward(InputTensor);
+    OutputTensor = PPOModel::GetInstance().GetActorModel()->forward(InputTensor);
     FVector Force(OutputTensor[0][0].item<float>(), OutputTensor[0][1].item<float>(), 0);
 
     // Apply Force - prob won't work with unlocked physics thread
@@ -74,6 +71,13 @@ void ATorchTrainer::PostPhysicsTick(float DeltaTime, FATorchTrainerPostPhysicsTi
 {
 
     FGripTrackedInfoStruct CurrentFrameProperties = GetTargetFrameProperties();
+
+    if (!IsValid(CurrentFrameProperties.TargetComponent))
+    {
+        return;
+    }
+
+
     // Compute Reward
     float Reward = ComputeReward(CurrentFrameProperties);
 
@@ -106,12 +110,12 @@ void ATorchTrainer::ApplyForce(FGripTrackedInfoStruct &CurrentFrameProperties, F
 void ATorchTrainer::TrainPPO() {
     for (auto& [state, action, reward, next_state] : Memory) {
         // Compute Advantage
-        torch::Tensor Value = (*Critic)->forward(state);
-        torch::Tensor NextValue = (*Critic)->forward(next_state);
+        torch::Tensor Value = PPOModel::GetInstance().GetCriticModel()->forward(state);
+        torch::Tensor NextValue = PPOModel::GetInstance().GetCriticModel()->forward(next_state);
         torch::Tensor Advantage = reward + 0.99 * NextValue - Value;
 
         // Actor Loss (PPO Clipped)
-        torch::Tensor OldAction = (*Actor)->forward(state).detach();
+        torch::Tensor OldAction = PPOModel::GetInstance().GetActorModel()->forward(state).detach();
         torch::Tensor Ratio = (action / OldAction).exp();
         torch::Tensor ClippedRatio = Ratio.clamp(0.8, 1.2);
         torch::Tensor ActorLoss = -torch::min(Ratio * Advantage, ClippedRatio * Advantage).mean();
@@ -120,14 +124,14 @@ void ATorchTrainer::TrainPPO() {
         torch::Tensor CriticLoss = torch::mse_loss(Value, reward + 0.99 * NextValue);
 
         // Optimize Actor
-        ActorOptimizer->zero_grad();
+        PPOModel::GetInstance().GetActorOptimizer().zero_grad();
         ActorLoss.backward();
-        ActorOptimizer->step();
+        PPOModel::GetInstance().GetActorOptimizer().step();
 
         // Optimize Critic
-        CriticOptimizer->zero_grad();
+        PPOModel::GetInstance().GetCriticOptimizer().zero_grad();
         CriticLoss.backward();
-        CriticOptimizer->step();
+        PPOModel::GetInstance().GetCriticOptimizer().step();
     }
 }
 
