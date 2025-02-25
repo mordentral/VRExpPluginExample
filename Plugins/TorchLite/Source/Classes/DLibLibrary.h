@@ -32,7 +32,8 @@ class ATorchTrainer;
 
 
 
-class PPOModel {
+class PPOModel : public torch::nn::Module
+{
 public:
 	static PPOModel& GetInstance() {
 		static PPOModel instance;
@@ -45,36 +46,52 @@ public:
 	torch::optim::Adam& GetActorOptimizer() { return *ActorOptimizer.get(); }
 	torch::optim::Adam& GetCriticOptimizer() { return *CriticOptimizer.get(); }
 
+	torch::Tensor InputTensor;
+	torch::Tensor OutputTensor;
+
+	void SetInputState(FVector State)
+	{
+		InputTensor = torch::tensor({ State.X, State.Y, State.Z }).unsqueeze(0);
+		// Ensure input tensor is on the correct device
+		InputTensor = InputTensor.to(torch::kFloat32);
+
+		if (GetActorModel()->size() > 0) 
+		{ // Ensure model is initialized
+			OutputTensor = GetActorModel()->forward(InputTensor);
+		}
+	}
+
 private:
 	PPOModel()
 	{
 		// Initialize Actor Model
-		Actor = torch::nn::Sequential(
+		Actor = register_module("actor", torch::nn::Sequential(
 			torch::nn::Linear(3, 128),
 			torch::nn::ReLU(),
 			torch::nn::Linear(128, 64),
 			torch::nn::ReLU(),
 			torch::nn::Linear(64, 2),
 			torch::nn::Tanh()
-		);
+		));
 
 		// Initialize Critic Model
-		Critic = torch::nn::Sequential(
+		Critic = register_module("critic", torch::nn::Sequential(
 			torch::nn::Linear(3, 128),
 			torch::nn::ReLU(),
 			torch::nn::Linear(128, 64),
 			torch::nn::ReLU(),
 			torch::nn::Linear(64, 1)
-		);
+		));
 
 		// Initialize optimizers AFTER models are created
 		ActorOptimizer = std::make_unique<torch::optim::Adam>(Actor->parameters(), torch::optim::AdamOptions(1e-3));
 		CriticOptimizer = std::make_unique<torch::optim::Adam>(Critic->parameters(), torch::optim::AdamOptions(1e-3));
+
 	}
 
 	// Models (Static, Single Instance)
-	torch::nn::Sequential Actor;
-	torch::nn::Sequential Critic;
+	torch::nn::Sequential Actor{ nullptr };
+	torch::nn::Sequential Critic{ nullptr };
 
 	// Initialize optimizers correctly
 	std::unique_ptr<torch::optim::Adam> ActorOptimizer;
@@ -221,8 +238,8 @@ public:
 
 	FGripTrackedInfoStruct GetTargetFrameProperties();
 
-	torch::Tensor InputTensor;
-	torch::Tensor OutputTensor;
+	//torch::Tensor InputTensor;
+	//torch::Tensor OutputTensor;
 
 	UPROPERTY(EditAnywhere)
 	float ForceScale = 100.0f; // This likely needs to be treated differently based on mass

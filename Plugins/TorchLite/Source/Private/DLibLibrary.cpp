@@ -57,19 +57,18 @@ void ATorchTrainer::Tick(float DeltaTime)
     
     // Get Action from PPO Policy
     FVector State = CurrentFrameProperties.CurrentTransform.GetLocation();
-    InputTensor = torch::tensor({ State.X, State.Y, State.Z }).unsqueeze(0);
-    OutputTensor = PPOModel::GetInstance().GetActorModel()->forward(InputTensor);
-    FVector Force(OutputTensor[0][0].item<float>(), OutputTensor[0][1].item<float>(), 0);
+    PPOModel::GetInstance().SetInputState(State);
+    //FVector Force(PPOModel::GetInstance().OutputTensor[0][0].item<float>(), PPOModel::GetInstance().OutputTensor[0][1].item<float>(), 0);
 
     // Apply Force - prob won't work with unlocked physics thread
     // Also need to look into handling COM and mass
     // Also need to expand all of this to handle rotation as well
-    ApplyForce(CurrentFrameProperties, Force);
+    //ApplyForce(CurrentFrameProperties, Force);
 }
 
 void ATorchTrainer::PostPhysicsTick(float DeltaTime, FATorchTrainerPostPhysicsTickFunction& ThisTickFunction)
 {
-
+    return;
     FGripTrackedInfoStruct CurrentFrameProperties = GetTargetFrameProperties();
 
     if (!IsValid(CurrentFrameProperties.TargetComponent))
@@ -83,7 +82,7 @@ void ATorchTrainer::PostPhysicsTick(float DeltaTime, FATorchTrainerPostPhysicsTi
 
     // Store Experience
     FVector NextState = CurrentFrameProperties.CurrentTransform.GetLocation();
-    Memory.push_back({ InputTensor, OutputTensor, Reward, torch::tensor({NextState.X, NextState.Y, NextState.Z}) });
+    Memory.push_back({ PPOModel::GetInstance().InputTensor, PPOModel::GetInstance().OutputTensor, Reward, torch::tensor({NextState.X, NextState.Y, NextState.Z}) });
 
     // Train Every 100 Steps
     if (Memory.size() >= 100) {
