@@ -210,7 +210,7 @@ void UReplicatedVRCameraComponent::UpdateTracking(float DeltaTime)
 					FRotator StoredCameraRotOffset = FRotator::ZeroRotator;
 					if (AttachChar->VRMovementReference && AttachChar->VRMovementReference->GetReplicatedMovementMode() == EVRConjoinedMovementModes::C_VRMOVE_Seated)
 					{
-						AttachChar->SeatInformation.InitialRelCameraTransform.Rotator();
+						StoredCameraRotOffset = AttachChar->SeatInformation.InitialRelCameraTransform.Rotator();
 					}
 					else
 					{
@@ -250,7 +250,7 @@ void UReplicatedVRCameraComponent::RunNetworkedSmoothing(float DeltaTime)
 		FRotator StoredCameraRotOffset = FRotator::ZeroRotator;
 		if (AttachChar->VRMovementReference && AttachChar->VRMovementReference->GetReplicatedMovementMode() == EVRConjoinedMovementModes::C_VRMOVE_Seated)
 		{
-			AttachChar->SeatInformation.InitialRelCameraTransform.Rotator();
+			StoredCameraRotOffset = AttachChar->SeatInformation.InitialRelCameraTransform.Rotator();
 		}
 		else
 		{
@@ -480,12 +480,12 @@ void UReplicatedVRCameraComponent::HandleXRCamera(float DeltaTime)
 							//FRotator OffsetRotator = 
 							if (AttachChar->VRMovementReference && AttachChar->VRMovementReference->GetReplicatedMovementMode() != EVRConjoinedMovementModes::C_VRMOVE_Seated)
 							{
-								AttachChar->SeatInformation.InitialRelCameraTransform.Rotator();
+								//AttachChar->SeatInformation.InitialRelCameraTransform.Rotator();
 
 								FRotator StoredCameraRotOffset = FRotator::ZeroRotator;
 								if (AttachChar->VRMovementReference->GetReplicatedMovementMode() == EVRConjoinedMovementModes::C_VRMOVE_Seated)
 								{
-									AttachChar->SeatInformation.InitialRelCameraTransform.Rotator();
+									StoredCameraRotOffset = AttachChar->SeatInformation.InitialRelCameraTransform.Rotator();
 								}
 								else
 								{
@@ -536,7 +536,7 @@ void UReplicatedVRCameraComponent::OnRep_ReplicatedCameraTransform()
 		FRotator StoredCameraRotOffset = FRotator::ZeroRotator;
 		if (AttachChar->VRMovementReference && AttachChar->VRMovementReference->GetReplicatedMovementMode() == EVRConjoinedMovementModes::C_VRMOVE_Seated)
 		{
-			AttachChar->SeatInformation.InitialRelCameraTransform.Rotator();
+			StoredCameraRotOffset = AttachChar->SeatInformation.InitialRelCameraTransform.Rotator();
 		}
 		else
 		{
