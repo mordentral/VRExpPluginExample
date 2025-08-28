@@ -10,6 +10,8 @@ namespace UnrealBuildTool.Rules
         public OpenXRExpansionPlugin(ReadOnlyTargetRules Target) 
 				: base(Target)
         {
+		
+		    PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
             SetupIrisSupport(Target);
 
             PublicDependencyModuleNames.AddRange(
