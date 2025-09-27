@@ -71,6 +71,10 @@
 		{
 			"Name": "MoverExamples",
 			"Enabled": true
+		},
+		{
+			"Name": "SteamSockets",
+			"Enabled": true
 		}
 	]
 }
