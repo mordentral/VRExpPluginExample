@@ -79,12 +79,12 @@ public:
 
 	void SetReplicateGripScripts(bool NewReplicateGripScripts);
 	inline bool GetReplicateGripScripts() { return bReplicateGripScripts; };
+	 
 
 	// Get the grip script array, will automatically dirty it if they are replicated as it is assumed if you are directly accessing it you are altering it
 	TArray<TObjectPtr<UVRGripScriptBase>>& GetGripLogicScripts();
 
 	bool ReplicateSubobjects(UActorChannel* Channel, class FOutBunch* Bunch, FReplicationFlags* RepFlags) override;
-	virtual void GetSubobjectsWithStableNamesForNetworking(TArray<UObject*>& ObjList) override;
 
 	// Sets the Deny Gripping variable on the FBPInterfaceSettings struct
 	UFUNCTION(BlueprintCallable, Category = "VRGripInterface")
