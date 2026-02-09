@@ -2691,7 +2691,6 @@ void UVRCharacterMovementComponent::PhysFlying(float deltaTime, int32 Iterations
 	LastPreAdditiveVRVelocity = (AdditionalVRInputVector) / deltaTime;
 	bool bExtremeInput = false;
 	if (LastPreAdditiveVRVelocity.SizeSquared() > FMath::Square(TrackingLossThreshold))
-
 	{
 		// Default to always holding position during flight to avoid too much velocity injection
 		AdditionalVRInputVector = FVector::ZeroVector;
