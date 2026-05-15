@@ -1,4 +1,3 @@
-
 .hg/
 binaries/
 deriveddatacache/
@@ -11,3 +10,5 @@ saved/
 *.orig
 *.sln
 *.xlsx
+*.slnx
+.vsconfig
