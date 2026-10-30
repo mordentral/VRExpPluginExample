@@ -110,6 +110,27 @@ namespace CharacterMovementComponentStatics
 		ECVF_Default);
 }
 
+// Sets whether the root sweeps on the walking collision channel (only used if the override is active), restores the previous state on exit
+struct FVRWalkingCollisionSweepScope
+{
+	FVRWalkingCollisionSweepScope(UVRRootComponent* InRoot, bool bSweepWithWalkingCollision)
+		: Root(InRoot)
+		, bPrevious(InRoot ? InRoot->bSweepWithWalkingCollision : false)
+	{
+		if (Root)
+			Root->bSweepWithWalkingCollision = bSweepWithWalkingCollision;
+	}
+
+	~FVRWalkingCollisionSweepScope()
+	{
+		if (Root)
+			Root->bSweepWithWalkingCollision = bPrevious;
+	}
+
+	UVRRootComponent* Root;
+	bool bPrevious;
+};
+
 void UVRCharacterMovementComponent::StoreSetTrackingPaused(bool bNewTrackingPaused)
 {
 	FVRMoveActionContainer MoveAction;
@@ -1690,6 +1711,11 @@ void UVRCharacterMovementComponent::MoveAlongFloor(const FVector& InVelocity, fl
 		return;
 	}
 
+	// Planar floor moves sweep on the walking collision channel when the override is active (non retained roomscale only)
+	// StepUp is excluded below so its step down still finds the ground
+	const bool bWalkingCollisionSweep = VRRootCapsule && VRRootCapsule->bUseWalkingCollisionOverride && BaseVRCharacterOwner && !BaseVRCharacterOwner->bRetainRoomscale;
+	FVRWalkingCollisionSweepScope WalkingCollisionSweep(VRRootCapsule, bWalkingCollisionSweep);
+
 	// Move along the current floor
 	const FVector Delta = ProjectToGravityFloor(InVelocity) * DeltaSeconds;
 	FHitResult Hit(1.f);
@@ -1736,7 +1762,13 @@ void UVRCharacterMovementComponent::MoveAlongFloor(const FVector& InVelocity, fl
 				const FVector PreStepUpLocation = UpdatedComponent->GetComponentLocation();
 				const FVector GravDir = GetGravityDirection();
 
-				if (!StepUp(GetGravityDirection(), Delta * (1.f - PercentTimeApplied), Hit, OutStepDownResult))
+				bool bSteppedUp = false;
+				{
+					FVRWalkingCollisionSweepScope NoWalkingCollisionSweep(VRRootCapsule, false);
+					bSteppedUp = StepUp(GetGravityDirection(), Delta * (1.f - PercentTimeApplied), Hit, OutStepDownResult);
+				}
+
+				if (!bSteppedUp)
 				{
 					UE_LOGF(LogVRCharacterMovement, Verbose, "- StepUp (ImpactNormal %ls, Normal %ls", *Hit.ImpactNormal.ToString(), *Hit.Normal.ToString());
 					HandleImpact(Hit, LastMoveTimeSlice, RampVector);
@@ -2569,8 +2601,15 @@ void UVRCharacterMovementComponent::FindFloor(const FVector& CapsuleLocation, FF
 			if (OutFloorResult.HitResult.Component.IsValid())
 			{
 				FloorResponse = OutFloorResult.HitResult.Component->GetCollisionResponseToChannel(VRRootCapsule->WalkingCollisionOverride);
-				if (FloorResponse == ECR_Ignore || FloorResponse == ECR_Overlap)
+				// Non retained roomscale: the floor we are standing on is never a walk through object, keep the result so we pull out of it
+				const UPrimitiveComponent* PenetratedComp = OutFloorResult.HitResult.GetComponent();
+				const bool bIsStandingFloor = BaseVRCharacterOwner && !BaseVRCharacterOwner->bRetainRoomscale &&
+					(PenetratedComp == LastFloor.HitResult.GetComponent() || PenetratedComp == CharacterOwner->GetMovementBase());
+
+				if (!bIsStandingFloor && (FloorResponse == ECR_Ignore || FloorResponse == ECR_Overlap))
+				{
 					OutFloorResult = LastFloor;	// Move back to the last floor value, we are in penetration with a walking override
+				}
 			}
 		}
 	}
@@ -5030,7 +5069,12 @@ FVector UVRCharacterMovementComponent::GetPenetrationAdjustment(const FHitResult
 		ECollisionResponse WalkingResponse;
 		WalkingResponse = Hit.Component->GetCollisionResponseToChannel(VRRootCapsule->WalkingCollisionOverride);
 
-		if (WalkingResponse == ECR_Ignore || WalkingResponse == ECR_Overlap)
+		// Non retained roomscale: the floor we are standing on is never a walk through object, allow pulling out of it
+		const UPrimitiveComponent* PenetratedComp = Hit.GetComponent();
+		const bool bIsStandingFloor = CharacterOwner && BaseVRCharacterOwner && !BaseVRCharacterOwner->bRetainRoomscale &&
+			(PenetratedComp == CurrentFloor.HitResult.GetComponent() || PenetratedComp == CharacterOwner->GetMovementBase());
+
+		if (!bIsStandingFloor && (WalkingResponse == ECR_Ignore || WalkingResponse == ECR_Overlap))
 		{
 			return FVector::ZeroVector;
 		}

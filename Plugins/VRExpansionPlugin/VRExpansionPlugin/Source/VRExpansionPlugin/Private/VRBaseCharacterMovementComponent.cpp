@@ -24,6 +24,18 @@
 
 DEFINE_LOG_CATEGORY(LogVRBaseCharacterMovement);
 
+namespace VRBaseCharacterMovementComponentStatics
+{
+	static int32 WalkingCollisionForceNoInput = 0;
+	FAutoConsoleVariableRef CVarWalkingCollisionForceNoInput(
+		TEXT("vre.WalkingCollisionForceNoInput"),
+		WalkingCollisionForceNoInput,
+		TEXT("Testing: when on, the walking collision override treats movement as having no input (ignores acceleration).\n")
+		TEXT("Needs to be set on both client and server in multiplayer.\n")
+		TEXT("0: Disable, 1: Enable"),
+		ECVF_Cheat);
+}
+
 UVRBaseCharacterMovementComponent::UVRBaseCharacterMovementComponent(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {
@@ -1629,7 +1641,13 @@ void UVRBaseCharacterMovementComponent::PerformMovement(float DeltaSeconds)
 		if (MovementMode == EMovementMode::MOVE_Walking || MovementMode == EMovementMode::MOVE_NavWalking)
 			bAllowWalkingCollision = true;
 
-		BaseVRCharacterOwner->VRRootReference->SetCollisionOverride(bAllowWalkingCollision && GetCurrentAcceleration().IsNearlyZero());
+		const bool bNoInput = VRBaseCharacterMovementComponentStatics::WalkingCollisionForceNoInput != 0 || GetCurrentAcceleration().IsNearlyZero();
+		BaseVRCharacterOwner->VRRootReference->SetCollisionOverride(bAllowWalkingCollision && bNoInput);
+	}
+	else if (BaseVRCharacterOwner->VRRootReference->bIsOverridingCollision)
+	{
+		// Walking collision was turned off or roomscale was retained while overriding, clear it
+		BaseVRCharacterOwner->VRRootReference->SetCollisionOverride(false);
 	}
 
 	Super::PerformMovement(DeltaSeconds);
