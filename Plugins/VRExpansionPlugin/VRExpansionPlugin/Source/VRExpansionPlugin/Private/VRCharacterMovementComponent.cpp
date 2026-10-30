@@ -4321,9 +4321,11 @@ void UVRCharacterMovementComponent::ClientAdjustPositionVR_Implementation
 			{
 				BaseVRCharacterOwner->SetActorLocationAndRotationVR(WorldShiftedNewLocation, OptionalRotation.GetValue(), false, false, true, true);
 				//BaseVRCharacterOwner->SetActorRotation(OptionalRotation.GetValue(), ETeleportType::TeleportPhysics);
-			
-						// Trust the server's control yaw
-				if (ClientData->LastAckedMove.IsValid() && !ClientData->LastAckedMove->SavedControlRotation.Equals(OptionalRotation.GetValue()))
+
+				// Trust the server's control yaw
+				// Always rewind it with the correction, the saved moves replay from here and FaceRotation in PerformMovement
+				// would otherwise snap the first replayed move to our newest (unacked) rotation
+				//if (ClientData->LastAckedMove.IsValid() && !ClientData->LastAckedMove->SavedControlRotation.Equals(OptionalRotation.GetValue()))
 				{
 					if (BaseVRCharacterOwner)
 					{
@@ -4352,7 +4354,9 @@ void UVRCharacterMovementComponent::ClientAdjustPositionVR_Implementation
 				UpdatedComponent->SetWorldLocationAndRotation(WorldShiftedNewLocation, OptionalRotation.GetValue(), false, nullptr, ETeleportType::TeleportPhysics);
 
 				// Trust the server's control yaw
-				if (ClientData->LastAckedMove.IsValid() && !ClientData->LastAckedMove->SavedControlRotation.Equals(OptionalRotation.GetValue()))
+				// Always rewind it with the correction, the saved moves replay from here and FaceRotation in PerformMovement
+				// would otherwise snap the first replayed move to our newest (unacked) rotation
+				//if (ClientData->LastAckedMove.IsValid() && !ClientData->LastAckedMove->SavedControlRotation.Equals(OptionalRotation.GetValue()))
 				{
 					if (BaseVRCharacterOwner)
 					{
@@ -4452,7 +4456,9 @@ bool UVRCharacterMovementComponent::ServerCheckClientErrorVR(float ClientTimeSta
 			// If we are using default gravity direction just match to the yaw only for now (less precision errors)
 			if (GetGravityDirection().Equals(DefaultGravityDirection))
 			{
-				if (!FMath::IsNearlyEqual(FRotator::ClampAxis(ClientRot.Yaw), FRotator::ClampAxis(UpdatedComponent->GetComponentRotation().Yaw), CharacterMovementComponentStatics::fRotationCorrectionThreshold))
+				// Compare the shortest angle so yaw values either side of the 0 / 360 seam don't count as a full turn of error
+				//if (!FMath::IsNearlyEqual(FRotator::ClampAxis(ClientRot.Yaw), FRotator::ClampAxis(UpdatedComponent->GetComponentRotation().Yaw), CharacterMovementComponentStatics::fRotationCorrectionThreshold))
+				if (FMath::Abs(FMath::FindDeltaAngleDegrees(ClientRot.Yaw, UpdatedComponent->GetComponentRotation().Yaw)) > CharacterMovementComponentStatics::fRotationCorrectionThreshold)
 				{
 					return true;
 				}
@@ -4852,6 +4858,12 @@ void UVRCharacterMovementComponent::ServerMoveHandleClientErrorVR(float ClientTi
 			const FString BaseString = MovementBaseObject ? MovementBaseObject->GetPathName(MovementBaseObject->GetOutermost()) : TEXT("None");
 			UE_LOGF(LogNetPlayerMovement, Warning, "*** Server: Error for %ls at Time=%.3f is %3.3f LocDiff(%ls) ClientLoc(%ls) ServerLoc(%ls) Base: %ls Bone: %ls Accel(%ls) Velocity(%ls)",
 				*GetNameSafe(CharacterOwner), ClientTimeStamp, LocDiff.Size(), *LocDiff.ToString(), *ClientLoc.ToString(), *UpdatedComponent->GetComponentLocation().ToString(), *BaseString, *ServerData->PendingAdjustment.NewBaseBoneName.ToString(), *Accel.ToString(), *Velocity.ToString());
+
+			// Rotation side of the correction (only checked when not using client control rotation)
+			UE_LOGF(LogNetPlayerMovement, Warning, "*** Server: Rotation for %ls ClientRot(%ls) ServerRot(%ls) YawDiff %.4f (threshold %.4f, client control rotation %d)",
+				*GetNameSafe(CharacterOwner), *ClientRot.ToCompactString(), *UpdatedComponent->GetComponentRotation().ToCompactString(),
+				FMath::FindDeltaAngleDegrees(ClientRot.Yaw, UpdatedComponent->GetComponentRotation().Yaw),
+				CharacterMovementComponentStatics::fRotationCorrectionThreshold, bUseClientControlRotation ? 1 : 0);
 			const float DebugLifetime = CVarNetCorrectionLifetime->GetFloat();
 			DrawDebugCapsule(GetWorld(), UpdatedComponent->GetComponentLocation(), CharacterOwner->GetSimpleCollisionHalfHeight(), CharacterOwner->GetSimpleCollisionRadius(), FQuat::Identity, FColor(100, 255, 100), false, DebugLifetime);
 			DrawDebugCapsule(GetWorld(), ClientLoc, CharacterOwner->GetSimpleCollisionHalfHeight(), CharacterOwner->GetSimpleCollisionRadius(), FQuat::Identity, FColor(255, 100, 100), false, DebugLifetime);
