@@ -170,7 +170,7 @@ void AVRMoverBasePawn::BeginPlay()
 }
 
 
-UPrimitiveComponent* AVRMoverBasePawn::GetMovementBase() const
+UObject* AVRMoverBasePawn::GetMovementBaseObject() const
 {
 	return CharacterMotionComponent ? CharacterMotionComponent->GetMovementBase() : nullptr;
 }

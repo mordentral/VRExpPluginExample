@@ -134,7 +134,8 @@ public:
 
 protected:
 
-	virtual UPrimitiveComponent* GetMovementBase() const override;
+	// APawn::GetMovementBase is deprecated (5.8), the engine queries GetMovementBaseObject instead
+	virtual UObject* GetMovementBaseObject() const override;
 
 	// Entry point for input production. Do not override. To extend in derived character types, override OnProduceInput for native types or implement "Produce Input" blueprint event
 	virtual void ProduceInput_Implementation(int32 SimTimeMs, FMoverInputCmdContext& InputCmdResult) override;

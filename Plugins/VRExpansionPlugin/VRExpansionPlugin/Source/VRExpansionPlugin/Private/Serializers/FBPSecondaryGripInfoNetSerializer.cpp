@@ -334,7 +334,7 @@ namespace UE::Net
 			ObjMemberArgs.NetSerializerConfig = NetSerializerConfigParam(ObjSerializerConfig);
 			ObjMemberArgs.Target = NetSerializerValuePointer(&Target.SecondaryAttachment);
 			ObjMemberArgs.Source = NetSerializerValuePointer(&Source->SecondaryAttachment);
-			ObjSerializer->CloneDynamicState(Context, MemberArgs);
+			ObjSerializer->CloneDynamicState(Context, ObjMemberArgs);
 		}
 
 		static void FreeDynamicState(FNetSerializationContext& Context, const FNetFreeDynamicStateArgs& Args)
@@ -356,7 +356,7 @@ namespace UE::Net
 			FNetFreeDynamicStateArgs ObjMemberArgs = Args;
 			ObjMemberArgs.NetSerializerConfig = NetSerializerConfigParam(ObjSerializerConfig);
 			ObjMemberArgs.Source = NetSerializerValuePointer(&Source.SecondaryAttachment);
-			ObjSerializer->FreeDynamicState(Context, MemberArgs);
+			ObjSerializer->FreeDynamicState(Context, ObjMemberArgs);
 		}
 
 		static void Apply(FNetSerializationContext&, const FNetApplyArgs& Args)

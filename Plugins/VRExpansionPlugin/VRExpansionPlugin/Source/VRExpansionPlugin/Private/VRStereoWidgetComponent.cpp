@@ -896,6 +896,7 @@ public:
 	FStereoWidget3DSceneProxy(UVRStereoWidgetComponent* InComponent, ISlate3DRenderer& InRenderer)
 		: FPrimitiveSceneProxy(InComponent)
 		, Pivot(InComponent->GetPivot())
+		, QuadSize(InComponent->GetCurrentDrawSize().IntPoint())
 		, Renderer(InRenderer)
 		, RenderTarget(InComponent->GetRenderTarget())
 		, MaterialInstance(InComponent->GetMaterialInstance())
@@ -960,10 +961,12 @@ public:
 			{
 				if (GeometryMode == EWidgetGeometryMode::Plane)
 				{
-					float U = -RenderTarget->SizeX * static_cast<float>(Pivot.X);
-					float V = -RenderTarget->SizeY * static_cast<float>(Pivot.Y);
-					float UL = RenderTarget->SizeX * (1.0f - static_cast<float>(Pivot.X));
-					float VL = RenderTarget->SizeY * (1.0f - static_cast<float>(Pivot.Y));
+					// Vertex positions are in world cm; the render target may be a higher-density
+					// version of QuadSize when RenderTargetPixelsPerCentimeter != 1.0. UVs stay normalized.
+					float U = -QuadSize.X * static_cast<float>(Pivot.X);
+					float V = -QuadSize.Y * static_cast<float>(Pivot.Y);
+					float UL = QuadSize.X * (1.0f - static_cast<float>(Pivot.X));
+					float VL = QuadSize.Y * (1.0f - static_cast<float>(Pivot.Y));
 
 					int32 VertexIndices[4];
 
@@ -996,13 +999,15 @@ public:
 					const int32 NumSegments = FMath::Lerp(4, 32, ArcAngle / PI);
 
 
-					const double Radius = RenderTarget->SizeX / ArcAngle;
+					// Cylinder dimensions are in world cm; render-target pixel dimensions are
+					// decoupled from these when RenderTargetPixelsPerCentimeter != 1.0.
+					const double Radius = QuadSize.X / ArcAngle;
 					const double Apothem = Radius * FMath::Cos(0.5 * ArcAngle);
 					const double ChordLength = 2.0f * Radius * FMath::Sin(0.5 * ArcAngle);
 
 					const double PivotOffsetX = ChordLength * (0.5 - Pivot.X);
-					const double V = -RenderTarget->SizeY * Pivot.Y;
-					const double VL = RenderTarget->SizeY * (1.0 - Pivot.Y);
+					const double V = -QuadSize.Y * Pivot.Y;
+					const double VL = QuadSize.Y * (1.0 - Pivot.Y);
 
 					int32 VertexIndices[4];
 
@@ -1176,6 +1181,8 @@ public:
 private:
 	FVector Origin;
 	FVector2D Pivot;
+	// World size (cm) of the quad, decoupled from the render target pixel size when RenderTargetPixelsPerCentimeter != 1.0 (5.9)
+	FIntPoint QuadSize;
 	ISlate3DRenderer& Renderer;
 	UTextureRenderTarget2D* RenderTarget;
 	UMaterialInstanceDynamic* MaterialInstance;

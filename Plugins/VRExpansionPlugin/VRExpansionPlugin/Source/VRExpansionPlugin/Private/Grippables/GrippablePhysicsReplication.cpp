@@ -20,6 +20,7 @@
 #include "Chaos/ChaosMarshallingManager.h"
 #include "PhysicsProxy/SingleParticlePhysicsProxy.h"
 #include "Chaos/PhysicsObjectInternalInterface.h"
+#include "Chaos/ClusterUnionManager.h"
 
 #include "PBDRigidsSolver.h"
 #include "Chaos/PBDRigidsEvolutionGBF.h"
@@ -916,33 +917,49 @@ void FPhysicsReplicationVR::OnTick(float DeltaSeconds, TMap<TWeakObjectPtr<UPrim
 		return;
 	}
 
-	// Don't tick unless we have data to process
-	if (ComponentsToTargets.Num() == 0 && ReplicatedTargetsQueueVR.Num() == 0)
-	{
-		return;
-	}
-
-	using namespace Chaos;
-
-
 	NetworkPhysicsTickOffsetAssignedVR = false;
 	NetworkPhysicsTickOffsetVR = 0; // LocalFrame = ServerFrame - NetworkPhysicsTickOffset;
 
-	if (UPhysicsSettings::Get()->PhysicsPrediction.bEnablePhysicsPrediction)
+	const bool bPhysicsPredictionEnabled = UPhysicsSettings::Get()->PhysicsPrediction.bEnablePhysicsPrediction;
+	if (bPhysicsPredictionEnabled)
 	{
 		if (UWorld* World = GetOwningWorld())
 		{
-			if (APlayerController* PlayerController = World->GetFirstPlayerController())
+			// When multiple PlayerControllers coexist (e.g. a spectator controller alongside a
+			// gameplay controller), each is calibrated independently at different times. Pick the
+			// one whose offset was most recently assigned so we always use the freshest mapping.
+			APlayerController* BestController = nullptr;
+			double BestTime = -1.0;
+			for (FConstPlayerControllerIterator It = World->GetPlayerControllerIterator(); It; ++It)
 			{
-				NetworkPhysicsTickOffsetAssignedVR = PlayerController->GetNetworkPhysicsTickOffsetAssigned();
-				NetworkPhysicsTickOffsetVR = PlayerController->GetNetworkPhysicsTickOffset();
-
+				APlayerController* PC = It->Get();
+				if (IsValid(PC) && PC->GetNetworkPhysicsTickOffsetAssigned())
+				{
+					const double AssignedTime = PC->GetNetworkPhysicsTickOffsetLastAssignedTime();
+					if (AssignedTime > BestTime)
+					{
+						BestTime = AssignedTime;
+						BestController = PC;
+					}
+				}
+			}
+			if (BestController == nullptr)
+			{
+				BestController = World->GetFirstPlayerController();
+			}
+			if (BestController != nullptr)
+			{
+				NetworkPhysicsTickOffsetAssignedVR = BestController->GetNetworkPhysicsTickOffsetAssigned();
+				NetworkPhysicsTickOffsetVR = BestController->GetNetworkPhysicsTickOffset();
 			}
 		}
 	}
 
+	const bool bHasTargetsToProcess = ComponentsToTargets.Num() > 0 || ReplicatedTargetsQueueVR.Num() > 0;
+
+	// The tick offset has to reach the physics thread even when there is nothing else to process, so marshal it before the early out below.
 	const FRigidBodyErrorCorrection& PhysicErrorCorrection = UPhysicsSettings::Get()->PhysicErrorCorrection;
-	if (PhysicsReplicationAsyncVR)
+	if (PhysicsReplicationAsyncVR && (bPhysicsPredictionEnabled || bHasTargetsToProcess))
 	{
 		PrepareAsyncData_ExternalVR(PhysicErrorCorrection);
 		if (ensure(AsyncInputVR))
@@ -950,6 +967,13 @@ void FPhysicsReplicationVR::OnTick(float DeltaSeconds, TMap<TWeakObjectPtr<UPrim
 			AsyncInputVR->NetworkPhysicsTickOffsetAssigned = NetworkPhysicsTickOffsetAssignedVR;
 			AsyncInputVR->NetworkPhysicsTickOffset = NetworkPhysicsTickOffsetVR;
 		}
+	}
+
+	// The tick offset is marshaled above, but the rest of the tick needs targets to act on
+	if (!bHasTargetsToProcess)
+	{
+		AsyncInputVR = nullptr;
+		return;
 	}
 
 	// Get the ping between this PC & the server
@@ -1609,6 +1633,7 @@ void FPhysicsReplicationAsyncVR::RemoveObjectFromReplication(Chaos::FConstPhysic
 
 	// Remove from Object-Target map
 	ObjectToTarget.Remove(PhysicsObject);
+	ObjectToLastTeleportSeq.Remove(PhysicsObject);
 
 	// Remove cached replicated ParticleID
 	Chaos::FReadPhysicsObjectInterface_Internal Interface = Chaos::FPhysicsObjectInternalInterface::GetRead();
@@ -1747,6 +1772,84 @@ void FPhysicsReplicationAsyncVR::UpdateAsyncTarget(const FPhysicsRepAsyncInputDa
 		Target->AccumulatedSleepSeconds = 0.0f;
 		Target->SimDecayTimeScale = 1.0f;
 
+		// Predictive interpolation error accumulation limit, used to force hard snaps on teleports
+		static const auto CVarPIErrorAccumulationSeconds = IConsoleManager::Get().FindConsoleVariable(TEXT("np2.PredictiveInterpolation.ErrorAccumulationSeconds"));
+
+		// Teleport sequence dispatch (5.9). Any change in the 3-bit seq value means the server bumped at least once since last observation.
+		// Last-seen seq is stored in ObjectToLastTeleportSeq (persists across Target lifecycle, which is per-tick in Resim).
+		// First observation must baseline the entry without flagging a teleport, otherwise a late-joining client (or
+		// relevancy re-subscribe) whose first packet carries any non-zero seq would interpret it as a teleport against
+		// a default-constructed zero.
+		bool bTeleportFound = false;
+		static const auto CVarTeleportSequenceEnabled = IConsoleManager::Get().FindConsoleVariable(TEXT("np2.PhysicsReplication.Teleport.Enabled"));
+		if (!CVarTeleportSequenceEnabled || CVarTeleportSequenceEnabled->GetInt() != 0)
+		{
+			const uint8 IncomingSeq = Input.TargetState.TeleportSeq;
+			const bool bFirstObservation = !ObjectToLastTeleportSeq.Contains(Input.PhysicsObject);
+			uint8& LastSeq = ObjectToLastTeleportSeq.FindOrAdd(Input.PhysicsObject);
+			bTeleportFound = !bFirstObservation && (IncomingSeq != LastSeq);
+
+			if (bTeleportFound)
+			{
+#if !UE_BUILD_SHIPPING
+				static const auto CVarLogTeleportSequence = IConsoleManager::Get().FindConsoleVariable(TEXT("np2.PhysicsReplication.Teleport.LogVerbose"));
+				const bool bLogTeleportSequence = CVarLogTeleportSequence && CVarLogTeleportSequence->GetInt() != 0;
+				if (bLogTeleportSequence)
+				{
+					UE_LOG(LogPhysics, Log, TEXT("[TeleportSeq] advance %u -> %u on ServerFrame=%d RepMode=%d"),
+						LastSeq, IncomingSeq, Input.ServerFrame, (int32)Input.RepMode);
+				}
+#endif
+
+				// Stamp the particle (and any cluster-union children) so AccumulateErrorIfNecessary skips error
+				// accumulation if a resim window ever covers this teleport frame. Don't create RewindData here.
+				if (Chaos::FRewindData* RewindData = RigidsSolver ? RigidsSolver->GetRewindData() : nullptr)
+				{
+					const int32 LocalFrameOfTeleport = Input.ServerFrame - NetworkPhysicsTickOffset;
+
+					Chaos::FReadPhysicsObjectInterface_Internal Interface = Chaos::FPhysicsObjectInternalInterface::GetRead();
+					if (Chaos::FGeometryParticleHandle* Handle = Interface.GetParticle(Input.PhysicsObject))
+					{
+						RewindData->StampTeleportLocalFrame(*Handle, LocalFrameOfTeleport);
+
+						if (Chaos::FPBDRigidParticleHandle* RigidParent = Handle->CastToRigidParticle())
+						{
+							if (auto* Evolution = RigidsSolver->GetEvolution())
+							{
+								Chaos::FClusterUnionManager& ClusterUnionManager = Evolution->GetRigidClustering().GetClusterUnionManager();
+								if (const Chaos::FClusterUnion* Union = ClusterUnionManager.FindClusterUnionFromParticle(RigidParent))
+								{
+									for (Chaos::FPBDRigidParticleHandle* Child : Union->GeometryChildParticles)
+									{
+										if (Child)
+										{
+											RewindData->StampTeleportLocalFrame(*Child, LocalFrameOfTeleport);
+										}
+									}
+								}
+							}
+						}
+
+#if !UE_BUILD_SHIPPING
+						if (bLogTeleportSequence)
+						{
+							UE_LOG(LogPhysics, Log, TEXT("[TeleportSeq] stamped TeleportLocalFrame=%d"), LocalFrameOfTeleport);
+						}
+#endif
+					}
+				}
+
+				if (Input.RepMode == EPhysicsReplicationMode::PredictiveInterpolation)
+				{
+					// Force a hard snap via the existing AccumulatedErrorSeconds threshold. The snap target is
+					// Target->PrevPosTarget which is assigned below the legacy heuristic and read by ApplyTargetStatesAsync.
+					Target->AccumulatedErrorSeconds = CVarPIErrorAccumulationSeconds->GetFloat() + 1.0f;
+				}
+			}
+
+			LastSeq = IncomingSeq;
+		}
+
 		// Update waiting state
 		Target->UpdateWaiting(Input.ServerFrame);
 
@@ -1755,9 +1858,9 @@ void FPhysicsReplicationAsyncVR::UpdateAsyncTarget(const FPhysicsRepAsyncInputDa
 		Target->PrevTickCountCached = PrevTickCount;
 		Target->bPrevAllowTargetAlteringCached = bPrevAllowTargetAltering;
 
-		// Teleport detection, we don't have specific data that tells us a teleport has happened on the server, so try to detect it by examining the previous and next state
+		// Heuristic teleport detection. Skip if the explicit seq dispatch already handled this receive.
 		static const auto CVarTeleportDetectionEnabled = IConsoleManager::Get().FindConsoleVariable(TEXT("np2.PredictiveInterpolation.TeleportDetection.Enabled"));
-		if (CVarTeleportDetectionEnabled->GetInt() == 1 && !bFirstTarget && SendInterval > 0 && RigidsSolver->IsUsingFixedDt())
+		if (!bTeleportFound && CVarTeleportDetectionEnabled->GetInt() == 1 && !bFirstTarget && SendInterval > 0 && RigidsSolver->IsUsingFixedDt())
 		{
 			const FVector PosOffset = (Input.TargetState.Position - Target->PrevPosTarget);
 			static const auto CVarTeleportDetectionMinDistance = IConsoleManager::Get().FindConsoleVariable(TEXT("np2.PredictiveInterpolation.TeleportDetection.MinDistance"));
@@ -1773,8 +1876,7 @@ void FPhysicsReplicationAsyncVR::UpdateAsyncTarget(const FPhysicsRepAsyncInputDa
 				{
 					// A teleport has most likely happened, set accumulated error seconds to above limit for hard snapping
 					// TODO: Don't piggyback on AccumulatedErrorSeconds (potentially implement ERigidBodyFlags::Teleported)
-					static const auto CVarErrorAccumulationSeconds = IConsoleManager::Get().FindConsoleVariable(TEXT("p.ErrorAccumulationSeconds"));
-					Target->AccumulatedErrorSeconds = CVarErrorAccumulationSeconds->GetFloat() + 1.0f;
+					Target->AccumulatedErrorSeconds = CVarPIErrorAccumulationSeconds->GetFloat() + 1.0f;
 				}
 			}
 		}
@@ -1868,6 +1970,7 @@ void FPhysicsReplicationAsyncVR::ApplyTargetStatesAsync(const float DeltaSeconds
 		FGeometryParticleHandle* Handle = Interface.GetParticle(POHandle);
 		if (!Handle)
 		{
+			ObjectToLastTeleportSeq.Remove(POHandle);
 			RemoveTargetHelper(Itr, nullptr);
 			continue;
 		}
@@ -1875,6 +1978,7 @@ void FPhysicsReplicationAsyncVR::ApplyTargetStatesAsync(const float DeltaSeconds
 		FPBDRigidParticleHandle* RigidHandle = Handle->CastToRigidParticle();
 		if (!RigidHandle)
 		{
+			ObjectToLastTeleportSeq.Remove(POHandle);
 			RemoveTargetHelper(Itr, Handle);
 			continue;
 		}
@@ -2703,7 +2807,8 @@ bool FPhysicsReplicationAsyncVR::PredictiveInterpolation(Chaos::FPBDRigidParticl
 
 	/** --- Reconciliation --- */
 	static const auto CVarKinematicHardSnap = IConsoleManager::Get().FindConsoleVariable(TEXT("np2.PredictiveInterpolation.KinematicHardSnap"));
-	static const auto CVarErrorAccumulationSeconds = IConsoleManager::Get().FindConsoleVariable(TEXT("p.ErrorAccumulationSeconds"));
+	// Predictive interpolation uses its own error accumulation cvar (default 3.0), not the legacy p.ErrorAccumulationSeconds (default -1, which hard snapped every tick)
+	static const auto CVarErrorAccumulationSeconds = IConsoleManager::Get().FindConsoleVariable(TEXT("np2.PredictiveInterpolation.ErrorAccumulationSeconds"));
 	static const auto CVarAlwaysHardSnap = IConsoleManager::Get().FindConsoleVariable(TEXT("np2.PredictiveInterpolation.AlwaysHardSnap"));
 	const bool bHardSnap = (!bCanSimulate && CVarKinematicHardSnap->GetBool())
 		|| Target.AccumulatedErrorSeconds > CVarErrorAccumulationSeconds->GetFloat()

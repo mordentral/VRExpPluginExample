@@ -449,6 +449,7 @@ void AVRBaseCharacter::OnRep_ReplicatedMovement()
 	ReppedMovement.ServerPhysicsHandle = ReplicatedMovementVR.ServerPhysicsHandle;
 	ReppedMovement.bRepAcceleration = ReplicatedMovementVR.bRepAcceleration;
 	ReppedMovement.Acceleration = ReplicatedMovementVR.Acceleration;
+	ReppedMovement.TeleportSeq = ReplicatedMovementVR.TeleportSeq;
 
 	Super::OnRep_ReplicatedMovement();
 
@@ -489,6 +490,7 @@ void AVRBaseCharacter::GatherCurrentMovement()
 	ReplicatedMovementVR.ServerPhysicsHandle = ReppedMovement.ServerPhysicsHandle;
 	ReplicatedMovementVR.bRepAcceleration = ReppedMovement.bRepAcceleration;
 	ReplicatedMovementVR.Acceleration = ReppedMovement.Acceleration;
+	ReplicatedMovementVR.TeleportSeq = ReppedMovement.TeleportSeq;
 
 	ReplicatedMovementVR.bJustTeleported = bFlagTeleported;
 	ReplicatedMovementVR.bJustTeleportedGrips = bFlagTeleportedGrips;
@@ -1331,6 +1333,14 @@ bool FRepMovementVRCharacter::NetSerialize(FArchive& Ar, class UPackageMap* Map,
 	if (bRepPhysics)
 	{
 		bOutSuccess &= SerializeQuantizedVector(Ar, AngularVelocity, BaseSettings.VelocityQuantizationLevel);
+	}
+
+	// Teleport sequence (3 bits, gated on bRepPhysics) - matches FRepMovement::NetSerialize (5.9)
+	if (bRepPhysics)
+	{
+		uint8 TeleportSeqBits = TeleportSeq & 0x07; // 3bit-mask
+		Ar.SerializeBits(&TeleportSeqBits, 3);
+		TeleportSeq = TeleportSeqBits;
 	}
 
 	if (bRepServerFrame)

@@ -82,6 +82,9 @@ private:
 	TArray<int32> ParticlesInResimIslands;
 	TArray<Chaos::FParticleID> ReplicatedParticleIDs;
 
+	// Last observed FRigidBodyState::TeleportSeq per object (5.9), persists across target lifecycle
+	TMap<Chaos::FConstPhysicsObjectHandle, uint8> ObjectToLastTeleportSeq;
+
 	int32 ResimOutOfBoundsCounter = 0;
 	float ResimErrorLogTimer = 0.0f;
 

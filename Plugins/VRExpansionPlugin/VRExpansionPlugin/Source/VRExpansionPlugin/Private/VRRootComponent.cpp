@@ -833,6 +833,13 @@ void UVRRootComponent::OnUpdateTransform(EUpdateTransformFlags UpdateTransformFl
 	}
 
 	GenerateOffsetToWorld();
+
+	// Mirrors UPrimitiveComponent::OnUpdateTransform (5.9), which we skip below, so the renderer resets motion history on teleports
+	if (Teleport == ETeleportType::TeleportPhysics)
+	{
+		GetSceneData().bRenderTransformTeleported = true;
+	}
+
 	// Using the physics flag for all of this anyway, no reason for a custom flag, it handles it fine
 	if (!(UpdateTransformFlags & EUpdateTransformFlags::SkipPhysicsUpdate))
 	{
@@ -1379,7 +1386,8 @@ bool UVRRootComponent::UpdateOverlapsImpl(const TOverlapArrayView* NewPendingOve
 							const bool bCheckOverlapFlags = false; // Already checked above
 							if (!ShouldIgnoreOverlapResult(MyWorld, MyActor, *this, Result.OverlapObjectHandle.FetchActor(), *HitComp, bCheckOverlapFlags))
 							{
-								OverlapMultiResult.Emplace(HitComp, Result.GetItemIndex());		// don't need to add unique unless the overlap check can return dupes
+								FOverlapInfo& NewOverlap = OverlapMultiResult.Emplace_GetRef(HitComp, Result.GetItemIndex());		// don't need to add unique unless the overlap check can return dupes
+								NewOverlap.OverlapInfo.MyItem = Result.MyItemIndex;
 							}
 						}
 					}

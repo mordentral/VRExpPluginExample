@@ -66,7 +66,8 @@ namespace UE::Net
             uint16 LocationQuantizationLevel : 2;
             uint16 RotationQuantizationLevel : 1;
             uint16 RepAcceleration : 1;
-            uint16 Unused : 6;
+            uint16 TeleportSeq : 3; // Added 5.9
+            uint16 Unused : 3;
             uint16 Padding[3];
         };
 

@@ -2400,18 +2400,28 @@ void UVRCharacterMovementComponent::UpdateBasedMovement(float DeltaSeconds)
 		}
 		else
 		{
-			// Set MovementBase's root actor as ignored when moving the character primitive component, 
-			// only perform if bDeferUpdateBasedMovement is true since this means the MovementBase is simulating physics
-			const bool bIgnoreBaseActor = bDeferUpdateBasedMovement && bBasedMovementIgnorePhysicsBase;
+			// Set MovementBase's root actor (and everything attached to it) as ignored when moving the character primitive component.
+			// bBasedMovementIgnorePhysicsBase only takes effect when the base is simulating physics (bDeferUpdateBasedMovement);
+			// bIgnoreBaseAttachedActors generalizes the same behavior to kinematic bases (e.g. SetActorLocation-driven platforms)
+			// so that child actors attached to the base do not collide with the character during based movement.
+			const bool bIgnoreBaseActor = (bDeferUpdateBasedMovement && bBasedMovementIgnorePhysicsBase) || bBasedMovementIgnoreAttachedActors;
 			AActor* MovementBaseRootActor = nullptr;
 			if (bIgnoreBaseActor)
 			{
 				if (MovementBaseInterfaceData && MovementBaseInterfaceData->IsValid())
 				{
-					MovementBaseRootActor = Cast<AActor>(MovementBaseInterfaceData->GetBodyInstanceOwner()->GetPhysicsOwnerAttachmentRoot());
+					static const auto CVarUseMovementBaseObjectOwnerForIgnoreActor = IConsoleManager::Get().FindConsoleVariable(TEXT("p.UseMovementBaseObjectOwnerForIgnoreActor"));
+					if (!CVarUseMovementBaseObjectOwnerForIgnoreActor || CVarUseMovementBaseObjectOwnerForIgnoreActor->GetBool())
+					{
+						MovementBaseRootActor = Cast<AActor>(MovementBaseInterfaceData->GetMovementBaseObjectOwner());
+					}
+					else
+					{
+						MovementBaseRootActor = Cast<AActor>(MovementBaseInterfaceData->GetBodyInstanceOwner()->GetPhysicsOwnerAttachmentRoot());
+					}
 				}
 				UpdatedPrimitive->IgnoreActorWhenMoving(MovementBaseRootActor, true);
-				MoveComponentFlags |= MOVECOMP_CheckBlockingRootActorInIgnoreList; // Hit actors during MoveUpdatedComponent will have their root actor compared with the ignored actors array 
+				MoveComponentFlags |= MOVECOMP_CheckBlockingRootActorInIgnoreList; // Hit actors during MoveUpdatedComponent will have their root actor compared with the ignored actors array
 			}
 
 			// hack - transforms between local and world space introducing slight error FIXMESTEVE - discuss with engine team: just skip the transforms if no rotation?
@@ -2604,7 +2614,7 @@ void UVRCharacterMovementComponent::FindFloor(const FVector& CapsuleLocation, FF
 				// Non retained roomscale: the floor we are standing on is never a walk through object, keep the result so we pull out of it
 				const UPrimitiveComponent* PenetratedComp = OutFloorResult.HitResult.GetComponent();
 				const bool bIsStandingFloor = BaseVRCharacterOwner && !BaseVRCharacterOwner->bRetainRoomscale &&
-					(PenetratedComp == LastFloor.HitResult.GetComponent() || PenetratedComp == CharacterOwner->GetMovementBase());
+					(PenetratedComp == LastFloor.HitResult.GetComponent() || PenetratedComp == CharacterOwner->GetMovementBaseObject());
 
 				if (!bIsStandingFloor && (FloorResponse == ECR_Ignore || FloorResponse == ECR_Overlap))
 				{
@@ -5078,7 +5088,7 @@ FVector UVRCharacterMovementComponent::GetPenetrationAdjustment(const FHitResult
 		// Non retained roomscale: the floor we are standing on is never a walk through object, allow pulling out of it
 		const UPrimitiveComponent* PenetratedComp = Hit.GetComponent();
 		const bool bIsStandingFloor = CharacterOwner && BaseVRCharacterOwner && !BaseVRCharacterOwner->bRetainRoomscale &&
-			(PenetratedComp == CurrentFloor.HitResult.GetComponent() || PenetratedComp == CharacterOwner->GetMovementBase());
+			(PenetratedComp == CurrentFloor.HitResult.GetComponent() || PenetratedComp == CharacterOwner->GetMovementBaseObject());
 
 		if (!bIsStandingFloor && (WalkingResponse == ECR_Ignore || WalkingResponse == ECR_Overlap))
 		{
