@@ -1344,11 +1344,11 @@ void FPhysicsReplicationAsyncVR::OnPreSimulate_Internal()
 	{
 		bReturnedSlotToEngine = true;
 
-		if (Chaos::FPBDRigidsSolver* Solver = static_cast<Chaos::FPBDRigidsSolver*>(GetSolver()))
+		if (Chaos::FPBDRigidsSolver* RigidsSolver = static_cast<Chaos::FPBDRigidsSolver*>(GetSolver()))
 		{
-			if (EngineReplicationAsync && Solver->GetPhysicsReplication_Internal() == this)
+			if (EngineReplicationAsync && RigidsSolver->GetPhysicsReplication_Internal() == this)
 			{
-				Solver->SetPhysicsReplication_Internal(EngineReplicationAsync);
+				RigidsSolver->SetPhysicsReplication_Internal(EngineReplicationAsync);
 			}
 		}
 	}
