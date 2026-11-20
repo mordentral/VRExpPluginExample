@@ -1278,16 +1278,19 @@ bool FRepMovementVRCharacter::NetSerialize(FArchive& Ar, class UPackageMap* Map,
 
 	// pack bitfield with flags
 	const bool bServerFrameAndHandleSupported = Ar.EngineNetVer() >= FEngineNetworkCustomVersion::RepMoveServerFrameAndHandle && Ar.EngineNetVer() != FEngineNetworkCustomVersion::Ver21AndViewPitchOnly_DONOTUSE;
-	uint8 Flags = (bSimulatedPhysicSleep << 0) | (bRepPhysics << 1) | (bJustTeleported << 2) | (bJustTeleportedGrips << 3) | (bPausedTracking << 4);
-	Ar.SerializeBits(&Flags, 5);
+	// Bits 0-3 match FRepMovement::NetSerialize (ServerFrame / ServerPhysicsHandle get their own bits and are sent whenever they are valid)
+	// Bits 4-6 are the VR flags
+	uint8 Flags = (bSimulatedPhysicSleep << 0) | (bRepPhysics << 1) | ((ServerFrame > 0) << 2) | ((ServerPhysicsHandle != INDEX_NONE) << 3) |
+		(bJustTeleported << 4) | (bJustTeleportedGrips << 5) | (bPausedTracking << 6);
+	Ar.SerializeBits(&Flags, 7);
 	bSimulatedPhysicSleep = (Flags & (1 << 0)) ? 1 : 0;
 	bRepPhysics = (Flags & (1 << 1)) ? 1 : 0;
 	const bool bRepServerFrame = (Flags & (1 << 2) && bServerFrameAndHandleSupported) ? 1 : 0;
 	const bool bRepServerHandle = (Flags & (1 << 3) && bServerFrameAndHandleSupported) ? 1 : 0;
 
-	bJustTeleported = (Flags & (1 << 2)) ? 1 : 0;
-	bJustTeleportedGrips = (Flags & (1 << 3)) ? 1 : 0;
-	bPausedTracking = (Flags & (1 << 4)) ? 1 : 0;
+	bJustTeleported = (Flags & (1 << 4)) ? 1 : 0;
+	bJustTeleportedGrips = (Flags & (1 << 5)) ? 1 : 0;
+	bPausedTracking = (Flags & (1 << 6)) ? 1 : 0;
 
 	bOutSuccess = true;
 
@@ -1556,6 +1559,10 @@ namespace UE::Net
 		static constexpr bool bUseDefaultDelta = true;
 		// TODO: This is actually a struct that could use some delta serialization implementations.
 
+		// SeatParent is an object reference, Iris needs it reported through CollectNetReferences so that
+		// references not yet known to the client are exported and re-resolved once the object arrives
+		static constexpr bool bHasCustomNetReference = true;
+
 		  // Called to create a "quantized snapshot" of the struct
 		static void Quantize(FNetSerializationContext& Context, const FNetQuantizeArgs& Args)
 		{
@@ -1763,9 +1770,23 @@ namespace UE::Net
 				if (!L.StoredTargetTransform.Equals(R.StoredTargetTransform)) return false;
 
 				if (L.bSitting && !L.InitialRelCameraTransform.Equals(R.InitialRelCameraTransform)) return false;
+				if (L.PostSeatedMovementMode != R.PostSeatedMovementMode) return false;
 
 				return true;
 			}
+		}
+
+		static void CollectNetReferences(FNetSerializationContext& Context, const FNetCollectReferencesArgs& Args)
+		{
+			const QuantizedType& Source = *reinterpret_cast<const QuantizedType*>(Args.Source);
+
+			const FNetSerializer* ObjSerializer = FObjectPtrNetSerializerPtr;
+			const FNetSerializerConfig* ObjSerializerConfig = FObjectPtrSerializerConfigPtr;
+
+			FNetCollectReferencesArgs CollectNetReferencesArgs = Args;
+			CollectNetReferencesArgs.NetSerializerConfig = NetSerializerConfigParam(ObjSerializerConfig);
+			CollectNetReferencesArgs.Source = NetSerializerValuePointer(&Source.SeatParent);
+			ObjSerializer->CollectNetReferences(Context, CollectNetReferencesArgs);
 		}
 
 		static void Apply(FNetSerializationContext&, const FNetApplyArgs& Args)

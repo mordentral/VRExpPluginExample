@@ -2046,6 +2046,10 @@ namespace UE::Net
 
 		static constexpr bool bHasDynamicState = true;
 
+		// Texture / Material are soft object references, non stably named objects are sent as object references
+		// that Iris needs reported through CollectNetReferences
+		static constexpr bool bHasCustomNetReference = true;
+
 		class FNetSerializerRegistryDelegates final : private UE::Net::FNetSerializerRegistryDelegates
 		{
 		public:
@@ -2076,6 +2080,7 @@ namespace UE::Net
 			QuantizedType& Target = *reinterpret_cast<QuantizedType*>(Args.Target);
 
 			Target.OwnerID = Source.OwnerID;
+			ReleaseStaleDynamicState(Context, Target, (uint8)Source.OperationType);
 			Target.OperationType = (uint8)Source.OperationType;
 
 
@@ -2350,7 +2355,9 @@ namespace UE::Net
 			FNetBitStreamReader* Reader = Context.GetBitStreamReader();
 
 			Target.OwnerID = Reader->ReadBits(32);
-			Target.OperationType = Reader->ReadBits(8);
+			const uint8 NewOperationType = (uint8)Reader->ReadBits(8);
+			ReleaseStaleDynamicState(Context, Target, NewOperationType);
+			Target.OperationType = NewOperationType;
 
 
 			switch ((ERenderManagerOperationType)Target.OperationType)
@@ -2496,17 +2503,88 @@ namespace UE::Net
 				ObjMemberArgs.Source = NetSerializerValuePointer(&Source->Material);
 				ObjSerializer->CloneDynamicState(Context, ObjMemberArgs);
 
-				// Tris
-				Target->Tris.Clone(Context, Source->Tris);
-
 			}break;
 			}
+
+			// Always clone the tris, the state was memcpy'd so any allocation would otherwise be shared and double freed
+			Target->Tris.Clone(Context, Source->Tris);
 		}
 
 		static void FreeDynamicState(FNetSerializationContext& Context, const FNetFreeDynamicStateArgs& Args)
 		{
 			QuantizedType& Target = *reinterpret_cast<QuantizedType*>(Args.Source);
 			Target.Tris.Free(Context);
+
+			// The soft object references hold string allocations (asset paths) that need to be released as well
+			switch ((ERenderManagerOperationType)Target.OperationType)
+			{
+			case ERenderManagerOperationType::Op_TexDraw:
+			{
+				FreeSoftObjectRef(Context, Target.Texture);
+			}break;
+			case ERenderManagerOperationType::Op_TriDraw:
+			{
+				FreeSoftObjectRef(Context, Target.Material);
+			}break;
+			default: break;
+			}
+		}
+
+		static void CollectNetReferences(FNetSerializationContext& Context, const FNetCollectReferencesArgs& Args)
+		{
+			const QuantizedType& Source = *reinterpret_cast<const QuantizedType*>(Args.Source);
+
+			const FQuantizedSoftObjectRef* SoftRef = nullptr;
+			switch ((ERenderManagerOperationType)Source.OperationType)
+			{
+			case ERenderManagerOperationType::Op_TexDraw: SoftRef = &Source.Texture; break;
+			case ERenderManagerOperationType::Op_TriDraw: SoftRef = &Source.Material; break;
+			default: break;
+			}
+
+			if (!SoftRef)
+			{
+				return;
+			}
+
+			FNetCollectReferencesArgs CollectArgs = Args;
+			CollectArgs.NetSerializerConfig = NetSerializerConfigParam(FObjectPtrSerializerConfigPtr);
+			CollectArgs.Source = NetSerializerValuePointer(SoftRef);
+			FObjectPtrNetSerializerPtr->CollectNetReferences(Context, CollectArgs);
+		}
+
+		static void FreeSoftObjectRef(FNetSerializationContext& Context, FQuantizedSoftObjectRef& Ref)
+		{
+			FNetFreeDynamicStateArgs FreeArgs = {};
+			FreeArgs.NetSerializerConfig = NetSerializerConfigParam(FObjectPtrSerializerConfigPtr);
+			FreeArgs.Source = NetSerializerValuePointer(&Ref);
+			FObjectPtrNetSerializerPtr->FreeDynamicState(Context, FreeArgs);
+
+			// Back to a valid zero state
+			FMemory::Memzero(Ref);
+		}
+
+		// Called before a new operation is written into existing quantized storage.
+		// Releases dynamic state owned by the previous operation type that the new type will not overwrite.
+		static void ReleaseStaleDynamicState(FNetSerializationContext& Context, QuantizedType& Target, uint8 NewOperationType)
+		{
+			const ERenderManagerOperationType OldType = (ERenderManagerOperationType)Target.OperationType;
+			const ERenderManagerOperationType NewType = (ERenderManagerOperationType)NewOperationType;
+
+			if (OldType == NewType)
+			{
+				return;
+			}
+
+			if (OldType == ERenderManagerOperationType::Op_TexDraw)
+			{
+				FreeSoftObjectRef(Context, Target.Texture);
+			}
+			else if (OldType == ERenderManagerOperationType::Op_TriDraw)
+			{
+				FreeSoftObjectRef(Context, Target.Material);
+				Target.Tris.Free(Context);
+			}
 		}
 	};
 

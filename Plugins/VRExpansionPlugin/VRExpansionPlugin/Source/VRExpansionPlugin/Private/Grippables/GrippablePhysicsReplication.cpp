@@ -908,6 +908,12 @@ void FPhysicsReplicationVR::OnTick(float DeltaSeconds, TMap<TWeakObjectPtr<UPrim
 	{
 		if (World->GetNetMode() == ENetMode::NM_Client)
 		{
+			// Clients use the engine replication callback, let ours give the solver slot back to it
+			if (PhysicsReplicationAsyncVR)
+			{
+				PhysicsReplicationAsyncVR->SetIsNetClient_External(true);
+			}
+
 			return FPhysicsReplication::OnTick(DeltaSeconds, ComponentsToTargets);
 		}
 	}
@@ -1092,18 +1098,6 @@ FRepMovementVR::FRepMovementVR() : FRepMovement()
 	RotationQuantizationLevel = ERotatorQuantization::ShortComponents;
 }
 
-FRepMovementVR::FRepMovementVR(FRepMovement& other) : FRepMovement()
-{
-	FRepMovementVR();
-
-	LinearVelocity = other.LinearVelocity;
-	AngularVelocity = other.AngularVelocity;
-	Location = other.Location;
-	Rotation = other.Rotation;
-	bSimulatedPhysicSleep = other.bSimulatedPhysicSleep;
-	bRepPhysics = other.bRepPhysics;
-}
-
 void FRepMovementVR::CopyTo(FRepMovement& other) const
 {
 	other.LinearVelocity = LinearVelocity;
@@ -1237,6 +1231,13 @@ void FPhysicsReplicationAsyncVR::OnPostInitialize_Internal()
 		return;
 	}
 
+	// The base FPhysicsReplication registered the engine's callback first, remember it so that net clients can hand the slot back
+	IPhysicsReplicationAsync* PreviousReplication = RigidsSolver->GetPhysicsReplication_Internal();
+	if (PreviousReplication != this)
+	{
+		EngineReplicationAsync = PreviousReplication;
+	}
+
 	RigidsSolver->SetPhysicsReplication_Internal(this);
 }
 
@@ -1336,6 +1337,22 @@ void FPhysicsReplicationAsyncVR::AddResimulationRequest_Internal(const float Del
 
 void FPhysicsReplicationAsyncVR::OnPreSimulate_Internal()
 {
+	// Net clients feed their targets to the engine's replication callback (FPhysicsReplicationVR forwards to the base flow on clients).
+	// With physics prediction on, the solver only hands targets to the callback in its replication slot (AddResimulationRequest_Internal),
+	// and settings / sim decay / tick offset queries go there as well, so it has to be the engine instance on clients.
+	if (!bReturnedSlotToEngine && bIsNetClient.load(std::memory_order_relaxed))
+	{
+		bReturnedSlotToEngine = true;
+
+		if (Chaos::FPBDRigidsSolver* Solver = static_cast<Chaos::FPBDRigidsSolver*>(GetSolver()))
+		{
+			if (EngineReplicationAsync && Solver->GetPhysicsReplication_Internal() == this)
+			{
+				Solver->SetPhysicsReplication_Internal(EngineReplicationAsync);
+			}
+		}
+	}
+
 	const FPhysicsReplicationAsyncInput* AsyncInputVR = GetConsumerInput_Internal();
 
 	if (AsyncInputVR)

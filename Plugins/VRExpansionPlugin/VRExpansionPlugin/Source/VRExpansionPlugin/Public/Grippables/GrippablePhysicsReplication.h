@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include <atomic>
 #include "Physics/PhysicsInterfaceUtils.h"
 #include "PhysicsReplication.h"
 
@@ -68,7 +69,17 @@ public:
 	virtual void RemoveParticleSimDecaySettings(Chaos::FConstPhysicsObjectHandle PhysicsObject) override;
 	//~ End IPhysicsReplicationAsync interface
 
+	// Net clients route their targets through the engine's FPhysicsReplicationAsync (base FPhysicsReplication flow),
+	// so on clients this callback hands the solver's physics replication slot back to the engine instance.
+	void SetIsNetClient_External(bool bInIsNetClient) { bIsNetClient.store(bInIsNetClient, std::memory_order_relaxed); }
+
 private:
+
+	// The engine replication callback that held the solver slot before this one claimed it in OnPostInitialize_Internal
+	IPhysicsReplicationAsync* EngineReplicationAsync = nullptr;
+	std::atomic<bool> bIsNetClient{ false };
+	bool bReturnedSlotToEngine = false;
+
 	float LatencyOneWay;
 	FRigidBodyErrorCorrection ErrorCorrectionDefault;
 	FNetworkPhysicsSettingsData SettingsCurrent;
@@ -204,7 +215,6 @@ struct VREXPANSIONPLUGIN_API FRepMovementVR : public FRepMovement
 public:
 
 	FRepMovementVR();
-	FRepMovementVR(FRepMovement& other);
 	void CopyTo(FRepMovement& other) const;
 	bool NetSerialize(FArchive& Ar, class UPackageMap* Map, bool& bOutSuccess);
 	bool GatherActorsMovement(AActor* OwningActor);

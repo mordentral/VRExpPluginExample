@@ -80,7 +80,9 @@ namespace UE::Net
         /** Set to false when a same value delta compression method is undesirable, for example when the serializer only writes a single bit for the state. */
         static constexpr bool bUseDefaultDelta = true;
 		static constexpr bool bHasDynamicState = true;
-		//static constexpr bool bHasCustomNetReference = true;
+		// SecondaryAttachment is an object reference, Iris needs it reported through CollectNetReferences so that
+		// references not yet known to the client are exported and re-resolved once the object arrives
+		static constexpr bool bHasCustomNetReference = true;
 
           // Called to create a "quantized snapshot" of the struct
 		static void Quantize(FNetSerializationContext& Context, const FNetQuantizeArgs& Args)
@@ -391,17 +393,24 @@ namespace UE::Net
 			//FVector LastRelativeLocation;
 		}
 
-		/*static void CollectNetReferences(FNetSerializationContext& Context, const FNetCollectReferencesArgs& Args)
+		static void CollectNetReferences(FNetSerializationContext& Context, const FNetCollectReferencesArgs& Args)
 		{
 			const QuantizedType& Source = *reinterpret_cast<const QuantizedType*>(Args.Source);
+
+			// The attachment is only quantized / serialized when set, the storage can hold a stale reference otherwise
+			if (Source.bHasSecondaryAttachment == 0)
+			{
+				return;
+			}
+
 			const FNetSerializer* ObjSerializer = FObjectPtrNetSerializerPtr;
 			const FNetSerializerConfig* ObjSerializerConfig = FObjectPtrSerializerConfigPtr;
 
 			FNetCollectReferencesArgs CollectNetReferencesArgs = Args;
-			CollectNetReferencesArgs.NetSerializerConfig = FObjectPtrSerializerConfigPtr;
+			CollectNetReferencesArgs.NetSerializerConfig = NetSerializerConfigParam(ObjSerializerConfig);
 			CollectNetReferencesArgs.Source = NetSerializerValuePointer(&Source.SecondaryAttachment);
 			ObjSerializer->CollectNetReferences(Context, CollectNetReferencesArgs);
-		}*/
+		}
     };
 
 
